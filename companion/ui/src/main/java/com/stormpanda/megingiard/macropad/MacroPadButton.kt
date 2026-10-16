@@ -66,12 +66,7 @@ private const val TAG = "MacroPadButton"
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-internal const val MP_BTN_PRESSED_ALPHA = 0.80f
-internal const val MP_BTN_NORMAL_ALPHA = 0.25f
-
-// Pulsing animation for running macros: alpha cycles between low and high.
-private const val MP_BTN_RUNNING_PULSE_LOW = 0.30f
-private const val MP_BTN_RUNNING_PULSE_HIGH = 0.80f
+// Pulsing animation for running macros.
 private const val MP_PULSE_HALF_PERIOD_MS = 600
 
 internal val MP_BTN_SQUARE_RADIUS = 4.dp
@@ -89,6 +84,17 @@ private const val MP_BTN_LABEL_MAX_HEIGHT_RATIO = 0.4f
 
 private const val MP_PRESS_ANIM_MS = 80
 private const val MP_RELEASE_ANIM_MS = 160
+private const val MP_BTN_BREATHE_SCALE_MAX = 1.12f
+private const val MP_BTN_PRESSED_SCALE = 0.95f
+private val MP_BTN_RIPPLE_STROKE_WIDTH = 2.dp
+private const val MP_BTN_RIPPLE_MAX_RADIUS_RATIO = 0.75f
+private const val MP_BTN_RIPPLE_MIN_RADIUS_FACTOR = 0.2f
+private const val MP_BTN_RIPPLE_RANGE_FACTOR = 0.8f
+private const val MP_BTN_RIPPLE_MAX_ALPHA = 0.6f
+private val MP_SCROLL_CHEVRON_SIZE = 18.dp
+private val MP_SCROLL_CHEVRON_GAP = 4.dp
+private const val MP_SCROLL_CHEVRON_DIM_ALPHA = 0.5f
+private val MP_PEEK_ICON_SIZE = 24.dp
 
 // Outer gradient edge alpha at resting state; intermediate stops follow r² quadratic curve.
 internal const val MP_BTN_GRADIENT_OUTER = 0.7f
@@ -111,7 +117,6 @@ internal fun PadButton(
     isPressed: Boolean,
     canvasSize: IntSize,
     accentColor: Color,
-    isDeviceDisabled: Boolean,
     isRunning: Boolean = false,
 ) {
     if (btn.invisible) {
@@ -129,65 +134,47 @@ internal fun PadButton(
     val effectiveTextTint = resolveColorOption(resolvedTextColorOption, accentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val effectiveContentAccent = effectiveTextTint
 
-    val alphaTarget = if (isPressed) MP_BTN_PRESSED_ALPHA else MP_BTN_NORMAL_ALPHA
     val animDuration = if (isPressed) MP_PRESS_ANIM_MS else MP_RELEASE_ANIM_MS
-    val pressedAlpha by animateFloatAsState(
-        targetValue = alphaTarget,
-        animationSpec = tween(animDuration),
-        label = "btnAlpha",
-    )
-    val alpha =
+    val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
+
+    val infiniteTransition =
         if (isRunning) {
-            val infiniteTransition = rememberInfiniteTransition(label = "btnPulse")
-            val runningAlpha by infiniteTransition.animateFloat(
-                initialValue = MP_BTN_RUNNING_PULSE_LOW,
-                targetValue = MP_BTN_RUNNING_PULSE_HIGH,
+            rememberInfiniteTransition(label = "btnRunning")
+        } else {
+            null
+        }
+    val runningBreatheState =
+        infiniteTransition?.animateFloat(
+            initialValue = 1.0f,
+            targetValue = MP_BTN_BREATHE_SCALE_MAX,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "btnBreathe",
+        )
+    val rippleProgressState =
+        if (isIconOnly) {
+            infiniteTransition?.animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
                 animationSpec =
                     infiniteRepeatable(
-                        animation = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse,
+                        animation = tween(MP_PULSE_HALF_PERIOD_MS * 2, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
                     ),
-                label = "btnRunningAlpha",
+                label = "btnRippleProgress",
             )
-            runningAlpha
         } else {
-            pressedAlpha
+            null
         }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "btnRunning")
-    val runningBreathe by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.12f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "btnBreathe",
-    )
-    val rippleProgress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(MP_PULSE_HALF_PERIOD_MS * 2, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "btnRippleProgress",
-    )
-    val pressedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1.0f,
-        animationSpec = tween(animDuration),
-        label = "btnPressedScale",
-    )
-    val contentScale =
-        if (isPressed) {
-            pressedScale
-        } else if (isRunning) {
-            runningBreathe
-        } else {
-            1.0f
-        }
+    val pressedScaleState =
+        animateFloatAsState(
+            targetValue = if (isPressed) MP_BTN_PRESSED_SCALE else 1.0f,
+            animationSpec = tween(animDuration),
+            label = "btnPressedScale",
+        )
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
 
@@ -206,8 +193,6 @@ internal fun PadButton(
             }
         }
 
-    val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
-
     val btnWidthDp = btn.widthDp.dp
     val btnHeightDp = btn.heightDp.dp
 
@@ -220,7 +205,7 @@ internal fun PadButton(
 
     val rippleStroke =
         remember(density) {
-            Stroke(width = with(density) { 2.dp.toPx() })
+            Stroke(width = with(density) { MP_BTN_RIPPLE_STROKE_WIDTH.toPx() })
         }
 
     Box(
@@ -232,9 +217,11 @@ internal fun PadButton(
                 .height(btnHeightDp)
                 .drawBehind {
                     if (isRunning && isIconOnly) {
-                        val maxRadius = minOf(size.width, size.height) * 0.75f
-                        val currentRadius = maxRadius * (0.2f + rippleProgress * 0.8f)
-                        val rippleAlpha = (1f - rippleProgress) * 0.6f
+                        val rippleProgress = rippleProgressState?.value ?: 0f
+                        val maxRadius = minOf(size.width, size.height) * MP_BTN_RIPPLE_MAX_RADIUS_RATIO
+                        val currentRadius =
+                            maxRadius * (MP_BTN_RIPPLE_MIN_RADIUS_FACTOR + rippleProgress * MP_BTN_RIPPLE_RANGE_FACTOR)
+                        val rippleAlpha = (1f - rippleProgress) * MP_BTN_RIPPLE_MAX_ALPHA
                         drawCircle(
                             color = effectiveContentAccent.copy(alpha = rippleAlpha),
                             radius = currentRadius,
@@ -249,7 +236,6 @@ internal fun PadButton(
             height = btnHeightDp,
             shape = chipShape,
             isIconOnly = isIconOnly,
-            isDeviceDisabled = isDeviceDisabled,
             borderColor = effectiveBorder,
             bgColor = effectiveBg,
             modifier = Modifier.fillMaxSize(),
@@ -257,6 +243,14 @@ internal fun PadButton(
             Box(
                 modifier =
                     Modifier.graphicsLayer {
+                        val contentScale =
+                            if (isPressed) {
+                                pressedScaleState.value
+                            } else if (isRunning) {
+                                runningBreatheState?.value ?: 1.0f
+                            } else {
+                                1.0f
+                            }
                         scaleX = contentScale
                         scaleY = contentScale
                     },
@@ -425,22 +419,32 @@ internal fun ScrollWheelFace(accentColor: Color) {
         modifier = Modifier.fillMaxSize(),
     ) {
         // Up chevrons
-        Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
         Icon(
             Icons.Rounded.KeyboardArrowUp,
             contentDescription = null,
-            tint = accentColor.copy(alpha = 0.5f * accentColor.alpha),
-            modifier = Modifier.size(18.dp),
+            tint = accentColor,
+            modifier = Modifier.size(MP_SCROLL_CHEVRON_SIZE),
         )
-        Spacer(Modifier.height(4.dp))
+        Icon(
+            Icons.Rounded.KeyboardArrowUp,
+            contentDescription = null,
+            tint = accentColor.copy(alpha = MP_SCROLL_CHEVRON_DIM_ALPHA * accentColor.alpha),
+            modifier = Modifier.size(MP_SCROLL_CHEVRON_SIZE),
+        )
+        Spacer(Modifier.height(MP_SCROLL_CHEVRON_GAP))
         // Down chevrons
         Icon(
             Icons.Rounded.KeyboardArrowDown,
             contentDescription = null,
-            tint = accentColor.copy(alpha = 0.5f * accentColor.alpha),
-            modifier = Modifier.size(18.dp),
+            tint = accentColor.copy(alpha = MP_SCROLL_CHEVRON_DIM_ALPHA * accentColor.alpha),
+            modifier = Modifier.size(MP_SCROLL_CHEVRON_SIZE),
         )
-        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+        Icon(
+            Icons.Rounded.KeyboardArrowDown,
+            contentDescription = null,
+            tint = accentColor,
+            modifier = Modifier.size(MP_SCROLL_CHEVRON_SIZE),
+        )
     }
 }
 
@@ -455,7 +459,7 @@ internal fun BackgroundPeekFace(accentColor: Color) {
         imageVector = if (isPeekActive) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
         contentDescription = null,
         tint = accentColor,
-        modifier = Modifier.size(24.dp),
+        modifier = Modifier.size(MP_PEEK_ICON_SIZE),
     )
 }
 

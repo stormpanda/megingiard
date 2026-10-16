@@ -1,20 +1,14 @@
 package com.stormpanda.megingiard.privd
 
 import android.content.Context
-import android.net.nsd.NsdManager
-import android.net.nsd.NsdServiceInfo
-import android.provider.Settings
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.security.BinaryIntegrity
 import com.stormpanda.megingiard.security.HmacUtil
 import io.github.muntashirakon.adb.AdbPairingRequiredException
 import io.github.muntashirakon.adb.AdbStream
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -22,46 +16,22 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
-import android.os.Process as AndroidProcess
 
 private const val TAG = "PrivdBootstrapper"
-private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
-
-private const val PORT_RELEASE_START = 51234
-private const val PORT_DEBUG_START = 51244
-
-private fun isDebugPackage(context: Context): Boolean = context.packageName.contains(".debug")
-
-private fun getDaemonRemotePath(context: Context): String =
-    if (isDebugPackage(context)) "/data/local/tmp/megingiard_privd_debug" else "/data/local/tmp/megingiard_privd"
-
-private fun getDaemonProcessName(context: Context): String = if (isDebugPackage(context)) "megingiard_privd_debug" else "megingiard_privd"
-
-private const val MIRROR_DEX_ASSET_NAME = "megingiard_mirror.dex"
-
-private fun getMirrorDexRemotePath(context: Context): String =
-    if (isDebugPackage(context)) "/data/local/tmp/megingiard_mirror_debug.dex" else "/data/local/tmp/megingiard_mirror.dex"
-
-private fun getStateKeyFilePath(context: Context): String =
-    if (isDebugPackage(context)) "/data/local/tmp/megingiard_privd_debug.key" else "/data/local/tmp/megingiard_privd.key"
-
-private fun getPortStart(context: Context): Int = if (isDebugPackage(context)) PORT_DEBUG_START else PORT_RELEASE_START
 
 private const val MIRROR_DEX_REMOTE_MODE_RAW = 33188 // 0100644 = regular + rw-r--r--
 
 // Marker echoed by the daemon's --provision mode on success (exits 0, then shell echoes this).
 private const val PROVISION_OK_MARKER = "MGRD_PROVISION_OK"
 private const val SHELL_READ_TIMEOUT_MS = 8_000L
-private const val VERIFY_INITIAL_DELAY_MS = 500L
 private const val VERIFY_RETRY_COUNT = 20
 private const val VERIFY_RETRY_DELAY_MS = 300L
 private const val SYNC_SERVICE = "sync:"
 private const val SYNC_SEND = "SEND"
 private const val GETPROP_TIMEOUT_MS = 2_000L
-private const val NSD_DISCOVERY_TIMEOUT_MS = 3_000L
 private const val PORT_READ_RETRY_COUNT = 5
 private const val PORT_READ_RETRY_DELAY_MS = 200L
-private const val ADB_CONNECT_RETRY_COUNT = 3
+private const val ADB_CONNECT_RETRY_COUNT = 2
 private const val ADB_CONNECT_RETRY_DELAY_MS = 500L
 private const val SYNC_DATA = "DATA"
 private const val SYNC_DONE = "DONE"
@@ -105,7 +75,7 @@ enum class BootstrapStage {
  *    via the ADB `sync:` protocol, then verify the remote byte size.
  * 4. **Spawn** the daemon as a detached background process; closing the shell
  *    stream is safe because the daemon `setsid()`s and ignores `SIGHUP`.
- * 5. **Verify** by calling [PrivdManager.connect] which opens the abstract socket.
+ * 5. **Verify** by calling [PrivdManager.verifyConnect] which opens the loopback TCP socket.
  *
  * All work is synchronous; the caller must invoke from a coroutine on
  * `Dispatchers.IO`. The [stage] flow drives the wizard UI; [PrivdManager] still
@@ -146,18 +116,10 @@ object PrivdBootstrapper {
         return try {
             val mgr = PrivdAdbConnectionManager.getInstance(context)
             disconnectQuietly(mgr)
-            val hosts = listOf(host, "127.0.0.1", "::1", "localhost").distinct()
-            var ok = false
-            for (h in hosts) {
-                try {
-                    AppLog.d(TAG, "Attempting ADB pair to $h:$port")
-                    if (mgr.pair(h, port, pairingCode)) {
-                        ok = true
-                        break
-                    }
-                } catch (e: Exception) {
-                    AppLog.w(TAG, "pair($h:$port) failed: $e")
-                }
+            AppLog.d(TAG, "Attempting ADB pair to $host:$port")
+            val ok = mgr.pair(host, port, pairingCode)
+            if (ok) {
+                mgr.persistCredentials(context)
             }
             AppLog.i(TAG, "pair() → $ok")
             if (!ok) {
@@ -190,7 +152,7 @@ object PrivdBootstrapper {
         host: String,
     ): Boolean {
         PrivdClient.setPackageName(context.packageName)
-        val connectPort = readAdbTlsConnectPortWithRetry(context)
+        val connectPort = readAdbTlsConnectPortWithRetry()
         clearScreenConnectPort() // Clean up any cached port after the read attempt
         if (connectPort <= 0) {
             AppLog.w(TAG, "bootstrapAndConnect: wireless debugging port not available (port=$connectPort) — is Wireless Debugging enabled?")
@@ -203,25 +165,22 @@ object PrivdBootstrapper {
         disconnectQuietly(mgr)
         // Connect directly to adbd — mDNS self-discovery is unreliable on-device.
         _stage.value = BootstrapStage.CONNECTING_ADB
-        val hosts = listOf(host, "127.0.0.1", "::1", "localhost").distinct()
         var connected = false
         var pairingRequired = false
         for (attempt in 1..ADB_CONNECT_RETRY_COUNT) {
-            for (h in hosts) {
-                try {
-                    AppLog.d(TAG, "Attempting ADB connect to $h:$connectPort (attempt $attempt/$ADB_CONNECT_RETRY_COUNT)")
-                    if (mgr.connect(h, connectPort)) {
-                        connected = true
-                        break
-                    }
-                } catch (e: Exception) {
-                    AppLog.w(TAG, "connect($h:$connectPort) failed (attempt $attempt): $e")
-                    if (e is AdbPairingRequiredException) {
-                        pairingRequired = true
-                    }
+            try {
+                AppLog.d(TAG, "Attempting ADB connect to $host:$connectPort (attempt $attempt/$ADB_CONNECT_RETRY_COUNT)")
+                if (mgr.connect(host, connectPort)) {
+                    mgr.persistCredentials(context)
+                    connected = true
+                    break
+                }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "connect($host:$connectPort) failed (attempt $attempt): $e")
+                if (e is AdbPairingRequiredException) {
+                    pairingRequired = true
                 }
             }
-            if (connected) break
             if (attempt < ADB_CONNECT_RETRY_COUNT) {
                 try {
                     Thread.sleep(ADB_CONNECT_RETRY_DELAY_MS)
@@ -268,7 +227,7 @@ object PrivdBootstrapper {
         }
         val provisionOk =
             runCatching {
-                provisionDaemon(context, mgr, HmacUtil.bytesToHex(keyBytes), AndroidProcess.myUid())
+                provisionDaemon(context, mgr, HmacUtil.bytesToHex(keyBytes))
             }.getOrElse { e ->
                 AppLog.w(TAG, "provisionDaemon() threw: $e")
                 false
@@ -281,7 +240,7 @@ object PrivdBootstrapper {
         }
         // Key is now stored on both sides. Update in-memory copy before verifyConnect().
         PrivdClient.setKey(keyBytes)
-        AppLog.i(TAG, "bootstrapAndConnect: per-install key provisioned (app UID=${AndroidProcess.myUid()})")
+        AppLog.i(TAG, "bootstrapAndConnect: per-install key provisioned")
 
         // Spawn
         _stage.value = BootstrapStage.SPAWNING_DAEMON
@@ -296,12 +255,10 @@ object PrivdBootstrapper {
             _stage.value = BootstrapStage.IDLE
             return false
         }
-        // Verify via abstract-socket round-trip.
-        // Give the daemon time to setsid() and bind the socket before the first attempt.
+        // Verify via loopback socket round-trip.
         // Use verifyConnect() instead of connect() to avoid CONNECTING→FAILED UI flicker
         // on each retry while PrivdManager.state is still BOOTSTRAPPING.
         _stage.value = BootstrapStage.VERIFYING
-        Thread.sleep(VERIFY_INITIAL_DELAY_MS)
         var ok = false
         for (i in 0 until VERIFY_RETRY_COUNT) {
             if (PrivdManager.verifyConnect()) {
@@ -334,7 +291,7 @@ object PrivdBootstrapper {
     // Internal
     // -------------------------------------------------------------------------
 
-    private fun readAdbTlsConnectPortWithRetry(context: Context): Int {
+    private fun readAdbTlsConnectPortWithRetry(): Int {
         val port = readAdbTlsConnectPort()
         if (port > 0) return port
 
@@ -344,10 +301,6 @@ object PrivdBootstrapper {
             AppLog.i(TAG, "getprop returned 0, attempting screen-scanned connect port fallback: $scannedPort")
             return scannedPort
         }
-
-        AppLog.i(TAG, "getprop service.adb.tls.port returned 0, attempting NSD discovery fallback...")
-        val nsdPort = discoverAdbTlsPortWithNsd(context)
-        if (nsdPort > 0) return nsdPort
 
         for (i in 0 until PORT_READ_RETRY_COUNT) {
             val p = readAdbTlsConnectPort()
@@ -374,134 +327,34 @@ object PrivdBootstrapper {
     fun clearCredentials(context: Context) = PrivdAdbConnectionManager.clearCredentials(context)
 
     /**
-     * Returns true if the device's ADB Wireless-Debugging service is enabled and active.
-     */
-    fun isWirelessDebuggingActive(context: Context): Boolean {
-        val toggleEnabled =
-            try {
-                Settings.Global.getInt(context.contentResolver, "adb_wifi_enabled", 0) != 0
-            } catch (e: Exception) {
-                false
-            }
-        if (toggleEnabled) return true
-        return readAdbTlsConnectPort(context) > 0
-    }
-
-    /**
      * Reads the ADB Wireless-Debugging TLS connect port from the system property
      * `service.adb.tls.port`. Returns 0 if the property is absent (Wireless Debugging
      * not enabled), if the `getprop` invocation hangs beyond [GETPROP_TIMEOUT_MS],
      * or if the output cannot be parsed.
      */
-    fun readAdbTlsConnectPort(context: Context? = null): Int {
+    fun readAdbTlsConnectPort(): Int {
         var proc: Process? = null
-        val port =
-            try {
-                proc =
-                    ProcessBuilder("getprop", "service.adb.tls.port")
-                        .redirectErrorStream(true)
-                        .start()
-                val exited = proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                if (!exited) {
-                    AppLog.w(TAG, "readAdbTlsConnectPort() getprop timed out after $GETPROP_TIMEOUT_MS ms")
-                    proc.destroyForcibly()
-                    0
-                } else {
-                    val output =
-                        proc.inputStream.bufferedReader().use { reader ->
-                            reader.readLine()?.trim().orEmpty()
-                        }
-                    output.toIntOrNull() ?: 0
-                }
-            } catch (e: Exception) {
-                AppLog.w(TAG, "readAdbTlsConnectPort() threw: $e")
-                proc?.destroyForcibly()
+        return try {
+            proc =
+                ProcessBuilder("getprop", "service.adb.tls.port")
+                    .redirectErrorStream(true)
+                    .start()
+            val exited = proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            if (!exited) {
+                AppLog.w(TAG, "readAdbTlsConnectPort() getprop timed out after $GETPROP_TIMEOUT_MS ms")
+                proc.destroyForcibly()
                 0
-            }
-
-        if (port > 0) return port
-        if (context != null) {
-            AppLog.d(TAG, "readAdbTlsConnectPort getprop returned 0, attempting NSD discovery")
-            return discoverAdbTlsPortWithNsd(context)
-        }
-        return 0
-    }
-
-    @Suppress("DEPRECATION")
-    private fun discoverAdbTlsPortWithNsd(
-        context: Context,
-        timeoutMs: Long = NSD_DISCOVERY_TIMEOUT_MS,
-    ): Int {
-        val nsdManager = context.getSystemService(Context.NSD_SERVICE) as? NsdManager ?: return 0
-        val deferredPort = CompletableDeferred<Int>()
-
-        val discoveryListener =
-            object : NsdManager.DiscoveryListener {
-                override fun onStartDiscoveryFailed(
-                    serviceType: String?,
-                    errorCode: Int,
-                ) {
-                    AppLog.w(TAG, "NSD start discovery failed: $errorCode")
-                    deferredPort.complete(0)
-                }
-
-                override fun onStopDiscoveryFailed(
-                    serviceType: String?,
-                    errorCode: Int,
-                ) {
-                    AppLog.w(TAG, "NSD stop discovery failed: $errorCode")
-                }
-
-                override fun onDiscoveryStarted(serviceType: String?) {
-                    AppLog.d(TAG, "NSD discovery started for $serviceType")
-                }
-
-                override fun onDiscoveryStopped(serviceType: String?) {
-                    AppLog.d(TAG, "NSD discovery stopped")
-                }
-
-                override fun onServiceFound(serviceInfo: NsdServiceInfo?) {
-                    AppLog.d(TAG, "NSD service found: ${serviceInfo?.serviceName}")
-                    if (serviceInfo != null) {
-                        nsdManager.resolveService(
-                            serviceInfo,
-                            object : NsdManager.ResolveListener {
-                                override fun onResolveFailed(
-                                    serviceInfo: NsdServiceInfo?,
-                                    errorCode: Int,
-                                ) {
-                                    AppLog.w(TAG, "NSD resolve failed: $errorCode")
-                                }
-
-                                override fun onServiceResolved(resolvedInfo: NsdServiceInfo?) {
-                                    if (resolvedInfo != null) {
-                                        val port = resolvedInfo.port
-                                        AppLog.i(TAG, "NSD resolved port: $port")
-                                        deferredPort.complete(port)
-                                    }
-                                }
-                            },
-                        )
+            } else {
+                val output =
+                    proc.inputStream.bufferedReader().use { reader ->
+                        reader.readLine()?.trim().orEmpty()
                     }
-                }
-
-                override fun onServiceLost(serviceInfo: NsdServiceInfo?) {
-                    AppLog.d(TAG, "NSD service lost")
-                }
-            }
-
-        try {
-            nsdManager.discoverServices("_adb-tls-connect._tcp", NsdManager.PROTOCOL_DNS_SD, discoveryListener)
-            return runBlocking {
-                withTimeoutOrNull(timeoutMs) {
-                    deferredPort.await()
-                } ?: 0
-            }.also {
-                runCatching { nsdManager.stopServiceDiscovery(discoveryListener) }
+                output.toIntOrNull() ?: 0
             }
         } catch (e: Exception) {
-            AppLog.w(TAG, "NSD discovery threw: $e")
-            return 0
+            AppLog.w(TAG, "readAdbTlsConnectPort() threw: $e")
+            proc?.destroyForcibly()
+            0
         }
     }
 
@@ -509,8 +362,9 @@ object PrivdBootstrapper {
         context: Context,
         mgr: PrivdAdbConnectionManager,
     ) {
-        val processName = getDaemonProcessName(context)
-        val remotePath = getDaemonRemotePath(context)
+        val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
+        val processName = PrivdConstants.getDaemonProcessName(isDebug)
+        val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
         val killCmd = "shell:kill -9 \$(pidof $processName 2>/dev/null) 2>/dev/null; rm -f $remotePath; sleep 1"
         AppLog.d(TAG, "stopExistingDaemon cmd: $killCmd")
         runCatching {
@@ -538,12 +392,13 @@ object PrivdBootstrapper {
         context: Context,
         mgr: PrivdAdbConnectionManager,
     ): Boolean {
-        val binaryBytes = context.assets.open(DAEMON_ASSET_NAME).use { it.readBytes() }
-        if (!BinaryIntegrity.verify(DAEMON_ASSET_NAME, binaryBytes)) {
-            AppLog.e(TAG, "Refusing to push $DAEMON_ASSET_NAME — integrity check failed")
+        val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
+        val binaryBytes = context.assets.open(PrivdConstants.DAEMON_ASSET_NAME).use { it.readBytes() }
+        if (!BinaryIntegrity.verify(PrivdConstants.DAEMON_ASSET_NAME, binaryBytes)) {
+            AppLog.e(TAG, "Refusing to push ${PrivdConstants.DAEMON_ASSET_NAME} — integrity check failed")
             return false
         }
-        val remotePath = getDaemonRemotePath(context)
+        val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
         AppLog.d(TAG, "push: ${binaryBytes.size} bytes -> $remotePath")
         val daemonOk =
             mgr.openStream(SYNC_SERVICE)?.use { s ->
@@ -555,13 +410,13 @@ object PrivdBootstrapper {
         // Also push the privileged-mirror DEX (used by Privileged Mode mirror).
         // The DEX is harmless if Privileged Mirror is never enabled, so we always
         // push it as part of the bootstrap to avoid a separate setup flow.
-        val dexBytes = context.assets.open(MIRROR_DEX_ASSET_NAME).use { it.readBytes() }
-        if (!BinaryIntegrity.verify(MIRROR_DEX_ASSET_NAME, dexBytes)) {
-            AppLog.e(TAG, "Refusing to push $MIRROR_DEX_ASSET_NAME — integrity check failed")
+        val dexBytes = context.assets.open(PrivdConstants.MIRROR_DEX_ASSET_NAME).use { it.readBytes() }
+        if (!BinaryIntegrity.verify(PrivdConstants.MIRROR_DEX_ASSET_NAME, dexBytes)) {
+            AppLog.e(TAG, "Refusing to push ${PrivdConstants.MIRROR_DEX_ASSET_NAME} — integrity check failed")
             // Daemon push already succeeded; treat as DEX failure (non-fatal below).
             return true
         }
-        val dexRemotePath = getMirrorDexRemotePath(context)
+        val dexRemotePath = PrivdConstants.getMirrorDexRemotePath(isDebug)
         AppLog.d(TAG, "push: ${dexBytes.size} bytes -> $dexRemotePath")
         val dexOk =
             mgr.openStream(SYNC_SERVICE)?.use { s ->
@@ -683,9 +538,9 @@ object PrivdBootstrapper {
     private fun currentEpochSeconds(): Int = ((System.currentTimeMillis() / MS_PER_SECOND) and UINT_MASK).toInt()
 
     /**
-     * Runs the daemon in provisioning mode: `megingiard_privd --provision <keyHex> <appUid>`.
+     * Runs the daemon in provisioning mode: `megingiard_privd --provision <keyHex>`.
      *
-     * The daemon writes the per-install HMAC key and the expected app UID to a shell-owned
+     * The daemon writes the per-install HMAC key to a shell-owned
      * 0600 state file (`/data/local/tmp/megingiard_privd.key`), then exits with 0.
      * The shell then echoes [PROVISION_OK_MARKER] confirming success.
      *
@@ -694,20 +549,19 @@ object PrivdBootstrapper {
      *
      * @param mgr   The open ADB connection to use.
      * @param keyHex 64 uppercase hex characters (32 bytes) — the per-install HMAC key.
-     * @param appUid The Android UID of the Megingiard app process.
      * @return `true` if the daemon wrote the state file successfully.
      */
     private fun provisionDaemon(
         context: Context,
         mgr: PrivdAdbConnectionManager,
         keyHex: String,
-        appUid: Int,
     ): Boolean {
-        val remotePath = getDaemonRemotePath(context)
-        val stateFilePath = getStateKeyFilePath(context)
-        val portStart = getPortStart(context)
-        val cmd = "shell:$remotePath --keyfile $stateFilePath --port $portStart --provision $keyHex $appUid && echo $PROVISION_OK_MARKER"
-        AppLog.d(TAG, "provision cmd issued (keyHex redacted, appUid=$appUid)")
+        val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
+        val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
+        val stateFilePath = PrivdConstants.getStateKeyFilePath(isDebug)
+        val portStart = PrivdConstants.getPortStart(isDebug)
+        val cmd = "shell:$remotePath --keyfile $stateFilePath --port $portStart --provision $keyHex && echo $PROVISION_OK_MARKER"
+        AppLog.d(TAG, "provision cmd issued (keyHex redacted)")
         val stream = mgr.openStream(cmd) ?: return false
         return stream.use { s -> readUntilMarker(s, PROVISION_OK_MARKER) }
     }
@@ -716,35 +570,15 @@ object PrivdBootstrapper {
         context: Context,
         mgr: PrivdAdbConnectionManager,
     ): Boolean {
-        // Kill any previous daemon instance before spawning a fresh one.
-        // An old daemon (e.g. built without HMAC support) holds the abstract Unix
-        // socket and prevents the new binary from binding it.  Without this kill step
-        // the new binary exits immediately with EADDRINUSE and the old one continues
-        // to serve connections without the expected HMAC challenge — which is exactly
-        // the failure mode we saw after the HMAC feature was added in commit 6de02b3.
-        //
-        // SIGTERM (default kill) is insufficient: the daemon calls signal() which sets
-        // SA_RESTART on Android/Linux.  While the daemon is blocked in accept() waiting
-        // for a client, SIGTERM fires the handler (sets g_should_exit=1) but accept()
-        // is automatically restarted — the while(!g_should_exit) guard is never
-        // re-evaluated, so the process stays alive indefinitely.
-        // SIGKILL cannot be caught, blocked, or ignored — it unconditionally removes
-        // the process and releases the abstract socket immediately.
-        // The `sleep 1` after kill gives the kernel time to fully release the abstract
-        // socket before the new binary tries to bind it.  Without this delay there is
-        // a race: kill(2) returns as soon as the signal is queued, but the process may
-        // not have been fully reaped yet when the shell continues to the next command,
-        // causing the new binary to fail with EADDRINUSE and exit immediately.
-        val processName = getDaemonProcessName(context)
-        val remotePath = getDaemonRemotePath(context)
-        val dexPath = getMirrorDexRemotePath(context)
-        val stateFilePath = getStateKeyFilePath(context)
-        val portStart = getPortStart(context)
-        val killCmd = "kill -9 \$(pidof $processName 2>/dev/null) 2>/dev/null; sleep 1"
+        val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
+        val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
+        val dexPath = PrivdConstants.getMirrorDexRemotePath(isDebug)
+        val stateFilePath = PrivdConstants.getStateKeyFilePath(isDebug)
+        val portStart = PrivdConstants.getPortStart(isDebug)
         // Run the daemon in the foreground. Since the daemon forks inside
         // detach_from_shell(), the parent exits immediately after writing the
         // token, which cleanly closes the shell stdout pipe without any race.
-        val cmd = "shell:$killCmd; $remotePath --keyfile $stateFilePath --dexfile $dexPath --port $portStart"
+        val cmd = "shell:$remotePath --keyfile $stateFilePath --dexfile $dexPath --port $portStart"
         AppLog.d(TAG, "spawn cmd: $cmd")
         val stream = mgr.openStream(cmd) ?: return false
         return stream.use { s ->

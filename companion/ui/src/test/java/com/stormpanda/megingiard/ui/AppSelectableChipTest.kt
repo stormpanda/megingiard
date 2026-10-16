@@ -1,14 +1,12 @@
 package com.stormpanda.megingiard.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.stormpanda.megingiard.settings.ThemeMode
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -47,23 +45,20 @@ class AppSelectableChipTest {
     }
 
     @Test
-    fun appSelectableChip_disabledDoesNotTriggerClick() {
+    fun appSelectableChip_selectedStateSetsSemantics() {
         val testColors = paletteFor(ThemeMode.DARK)
-        var clicked = false
 
         composeTestRule.setContent {
             CompositionLocalProvider(LocalAppColors provides testColors) {
                 AppSelectableChip(
-                    text = "Disabled Pill",
-                    selected = false,
-                    enabled = false,
-                    onClick = { clicked = true },
+                    text = "Selected Pill",
+                    selected = true,
+                    onClick = {},
                 )
             }
         }
 
-        composeTestRule.onNodeWithText("Disabled Pill").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Disabled Pill").performClick()
-        assertFalse(clicked)
+        composeTestRule.onNodeWithText("Selected Pill").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Selected Pill").assertIsSelected()
     }
 }

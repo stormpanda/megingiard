@@ -6,7 +6,7 @@ import androidx.annotation.StringRes
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.media.SteamGridDbException
 
-private const val TAG = "GameFocusEditGameSupport"
+private const val TAG = "GFEditGameSupport"
 private const val MIN_SAMPLE_SIZE = 1
 private const val SAMPLE_SIZE_STEP = 2
 

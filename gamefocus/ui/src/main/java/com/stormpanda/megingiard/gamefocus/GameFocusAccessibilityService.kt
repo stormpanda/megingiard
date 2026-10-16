@@ -11,7 +11,7 @@ import com.stormpanda.megingiard.gamefocus.domain.COMPANION_PACKAGE_DEBUG
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusSessionTracker
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 
-private const val TAG = "GameFocusAccessibilityService"
+private const val TAG = "GFAccessibilityService"
 private const val THOR_SECONDARY_DISPLAY_FALLBACK = 4
 private const val SYSTEM_UI_PACKAGE = "com.android.systemui"
 private const val ANDROID_FRAMEWORK_PACKAGE = "android"

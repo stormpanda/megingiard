@@ -11,37 +11,26 @@ class MirrorSettingsTest {
         val prefs = mutablePreferencesOf()
         MirrorSettings.loadFrom(prefs)
 
-        assertFalse(MirrorSettings.rememberViewport.value)
-        assertFalse(MirrorSettings.rememberLock.value)
-        assertFalse(MirrorSettings.rememberProjection.value)
+        assertTrue(MirrorSettings.cutoutAlignmentSnapping.value)
     }
 
     @Test
     fun loadFrom_customPreferences() {
         val prefs =
             mutablePreferencesOf(
-                KEY_REMEMBER_VIEWPORT to true,
-                KEY_REMEMBER_LOCK to true,
-                KEY_REMEMBER_PROJECTION to true,
+                KEY_MIRROR_SNAP_ALIGNMENT to false,
             )
         MirrorSettings.loadFrom(prefs)
 
-        assertTrue(MirrorSettings.rememberViewport.value)
-        assertTrue(MirrorSettings.rememberLock.value)
-        assertTrue(MirrorSettings.rememberProjection.value)
+        assertFalse(MirrorSettings.cutoutAlignmentSnapping.value)
     }
 
     @Test
     fun setters_updateStateFlow() {
-        MirrorSettings.setRememberViewport(true)
-        assertTrue(MirrorSettings.rememberViewport.value)
+        MirrorSettings.setCutoutAlignmentSnapping(false)
+        assertFalse(MirrorSettings.cutoutAlignmentSnapping.value)
 
-        MirrorSettings.setRememberLock(true)
-        assertTrue(MirrorSettings.rememberLock.value)
-
-        MirrorSettings.setRememberProjection(true)
-        assertTrue(MirrorSettings.rememberProjection.value)
-
-        MirrorSettings.saveMirrorSessionState()
+        MirrorSettings.setCutoutAlignmentSnapping(true)
+        assertTrue(MirrorSettings.cutoutAlignmentSnapping.value)
     }
 }

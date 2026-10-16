@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.mirror
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Rect
-import android.view.Surface
 import android.view.TextureView
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.Dispatchers
@@ -29,32 +28,21 @@ internal object MirrorFrameSampler {
         get() = activeTextureView
 
     @Volatile
-    private var activeSurface: WeakReference<Surface>? = null
-
-    @Volatile
     private var reusableFullFrameBitmap: Bitmap? = null
 
     private val reusableCanvas = Canvas()
     private val reusableSrcRect = Rect()
     private val reusableDstRect = Rect()
 
-    fun registerTextureView(
-        tv: TextureView,
-        surface: Surface? = null,
-    ) {
-        AppLog.d(TAG, "Registering active TextureView and Surface for frame sampling")
+    fun registerTextureView(tv: TextureView) {
+        AppLog.d(TAG, "Registering active TextureView for frame sampling")
         activeTextureView = WeakReference(tv)
-        activeSurface = surface?.let { WeakReference(it) }
     }
 
     fun unregisterTextureView(tv: TextureView) {
         if (activeTextureView?.get() == tv) {
-            AppLog.d(TAG, "Unregistering active TextureView and Surface")
+            AppLog.d(TAG, "Unregistering active TextureView")
             activeTextureView = null
-            activeSurface = null
-            reusableFullFrameBitmap?.let {
-                if (!it.isRecycled) it.recycle()
-            }
             reusableFullFrameBitmap = null
         }
     }
@@ -105,9 +93,6 @@ internal object MirrorFrameSampler {
                     } else {
                         var fullFrame = reusableFullFrameBitmap
                         if (fullFrame == null || fullFrame.width != fullW || fullFrame.height != fullH || fullFrame.isRecycled) {
-                            if (fullFrame != null && !fullFrame.isRecycled) {
-                                fullFrame.recycle()
-                            }
                             fullFrame =
                                 try {
                                     Bitmap.createBitmap(fullW, fullH, Bitmap.Config.ARGB_8888)
@@ -186,9 +171,6 @@ internal object MirrorFrameSampler {
                 val fullH = tv.height
                 var fullFrame = reusableFullFrameBitmap
                 if (fullFrame == null || fullFrame.width != fullW || fullFrame.height != fullH || fullFrame.isRecycled) {
-                    if (fullFrame != null && !fullFrame.isRecycled) {
-                        fullFrame.recycle()
-                    }
                     fullFrame =
                         try {
                             Bitmap.createBitmap(fullW, fullH, Bitmap.Config.ARGB_8888)

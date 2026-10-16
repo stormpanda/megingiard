@@ -100,13 +100,7 @@ fun PrimaryModalHost(
             }
         }
 
-        PrimaryModalType.BACKGROUND_SETTINGS,
-        PrimaryModalType.MACROPAD_EDITOR,
-        PrimaryModalType.MACROPAD_INSPECTOR,
-        PrimaryModalType.LAYOUT_SETTINGS,
-        PrimaryModalType.PROFILE_SETTINGS,
-        PrimaryModalType.MACRO_TIMELINE_EDITOR,
-        -> {
+        PrimaryModalType.MACROPAD_EDITOR -> {
             val handleEditorDismissRequest: () -> Boolean = {
                 val shouldPromptReactivate =
                     AppStateManager.wasAutoSwitchDeactivatedInEditor.value &&
@@ -196,7 +190,6 @@ fun PrimaryModalHost(
 
         PrimaryModalType.MIRROR_VIEWPORT_EDITOR -> {
             val closeViewportEdit = {
-                AppStateManager.setViewportEditActive(false)
                 AppStateManager.openPrimaryModal(
                     PrimaryModalConfig(
                         type = PrimaryModalType.MACROPAD_EDITOR,

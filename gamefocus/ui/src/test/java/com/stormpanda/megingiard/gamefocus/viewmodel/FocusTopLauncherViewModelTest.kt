@@ -12,7 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-private const val TAG = "FocusTopLauncherViewModelTest"
+private const val TAG = "FocusTopVMTest"
 
 class FocusTopLauncherViewModelTest {
     private lateinit var viewModel: FocusTopLauncherViewModel
@@ -152,11 +152,7 @@ class FocusTopLauncherViewModelTest {
 
     @Test
     fun testLifecycleState() {
-        assertFalse(viewModel.isResumed.value)
         assertFalse(viewModel.isStarted.value)
-
-        viewModel.setResumed(true)
-        assertTrue(viewModel.isResumed.value)
 
         viewModel.setStarted(true)
         assertTrue(viewModel.isStarted.value)

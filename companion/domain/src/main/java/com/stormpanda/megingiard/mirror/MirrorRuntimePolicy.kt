@@ -9,12 +9,11 @@ import com.stormpanda.megingiard.privd.PrivdState
 fun isPrivdMirrorConnecting(
     privdState: PrivdState,
     promptActive: Boolean,
-    hasCreds: Boolean,
     dismissed: Boolean,
-    isManuallyDisconnected: Boolean,
+    isManuallyDisconnected: Boolean = false,
 ): Boolean {
     val autoConnectPending = !isManuallyDisconnected
-    val promptShouldShow = privdState == PrivdState.FAILED && hasCreds && !dismissed
+    val promptShouldShow = privdState == PrivdState.FAILED && !dismissed
     return privdState == PrivdState.CONNECTING ||
         privdState == PrivdState.BOOTSTRAPPING ||
         (privdState == PrivdState.OFF && autoConnectPending) ||
@@ -45,12 +44,8 @@ data class MirrorRuntimePolicyState(
     val privdMirrorConnecting: Boolean = false,
     /** True if welcome onboarding or quick menu swipe tutorial is actively shown. */
     val tutorialsActive: Boolean = false,
-    /** True if the fullscreen mouse/touchpad overlay is currently active. */
-    val isFullscreenMouseActive: Boolean = false,
-    /** True if the fullscreen keyboard overlay is currently active. */
-    val isFullscreenKeyboardActive: Boolean = false,
-    /** True if screen capture was explicitly initiated by the touchpad overlay. */
-    val wasMirroringStartedByTouchpad: Boolean = false,
+    /** True if the fullscreen touchpad overlay is in Absolute Touch mode with touchpad mirroring enabled. */
+    val touchpadWantsMirror: Boolean = false,
 )
 
 enum class MirrorRuntimeAction {
@@ -63,19 +58,14 @@ enum class MirrorRuntimeAction {
  * Reconciles runtime capture state with the active layout's persisted mirror state.
  *
  * `PadLayout.mirrorAutoStart` is the single source of truth for individual layouts, supplemented
- * by active input overlays and profile-level autonomous layout switching requirements.
- * A running capture stops whenever neither the active layout, active overlay, nor autonomous
+ * by touchpad mirroring and profile-level autonomous layout switching requirements.
+ * A running capture stops whenever neither the active layout, touchpad mirroring, nor autonomous
  * layout switching wants capture.
  */
 fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAction {
     if (!state.isOnValidScreen || state.layoutId == null) return MirrorRuntimeAction.NONE
 
-    val overlayActive =
-        state.isFullscreenMouseActive ||
-            state.isFullscreenKeyboardActive ||
-            state.wasMirroringStartedByTouchpad
-
-    val captureWanted = state.layoutWantsMirror || state.autoSwitchWantsMirror || overlayActive
+    val captureWanted = state.layoutWantsMirror || state.autoSwitchWantsMirror || state.touchpadWantsMirror
 
     return when {
         state.isCapturing && !captureWanted -> MirrorRuntimeAction.STOP

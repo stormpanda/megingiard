@@ -46,9 +46,9 @@ fun UpdatesSettingsTab(
 
     val updateBadgeText =
         when {
-            !hasTriggeredManualCheck -> null
             isCheckingUpdates -> stringResource(R.string.gamepad_action_checking)
             updateAvailable -> stringResource(R.string.settings_update_now_btn)
+            !hasTriggeredManualCheck -> null
             updateCheckError != null -> stringResource(R.string.settings_check_failed)
             else -> stringResource(R.string.settings_up_to_date)
         }
@@ -56,7 +56,7 @@ fun UpdatesSettingsTab(
     GamepadActionCard(
         title = stringResource(R.string.settings_check_for_updates),
         description =
-            if (hasTriggeredManualCheck && updateAvailable) {
+            if (updateAvailable) {
                 stringResource(R.string.settings_update_available_tag, latestReleaseInfo?.tagName ?: "")
             } else {
                 stringResource(R.string.settings_app_version, BuildConfig.VERSION_NAME)
@@ -69,7 +69,7 @@ fun UpdatesSettingsTab(
                         text = text,
                         isAccent = updateAvailable,
                         isHighlighted = isCheckingUpdates,
-                        isDestructive = updateCheckError != null,
+                        isDestructive = !updateAvailable && !isCheckingUpdates && updateCheckError != null,
                     )
                 }
             },

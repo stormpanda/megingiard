@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-private const val TAG = "FocusTopLauncherViewModel"
+private const val TAG = "FocusTopLauncherVM"
 const val DEFAULT_LIBRARY_GRID_COLUMNS = 6
 const val DEFAULT_PAIRING_GRID_COLUMNS = 5
 
@@ -90,12 +90,6 @@ class FocusTopLauncherViewModel : ViewModel() {
     private val _pairingFocusedIndex = MutableStateFlow(0)
     val pairingFocusedIndex: StateFlow<Int> = _pairingFocusedIndex.asStateFlow()
 
-    private val _confirmPairingTrigger = MutableStateFlow(0)
-    val confirmPairingTrigger: StateFlow<Int> = _confirmPairingTrigger.asStateFlow()
-
-    private val _isResumed = MutableStateFlow(false)
-    val isResumed: StateFlow<Boolean> = _isResumed.asStateFlow()
-
     private val _isStarted = MutableStateFlow(false)
     val isStarted: StateFlow<Boolean> = _isStarted.asStateFlow()
 
@@ -121,22 +115,16 @@ class FocusTopLauncherViewModel : ViewModel() {
         AppLog.i(TAG, "Opening pairing dialog for ${appInfo.label} at index $initialIndex")
         _pairingTargetApp.value = appInfo
         _pairingFocusedIndex.value = initialIndex
-        _confirmPairingTrigger.value = 0
     }
 
     fun dismissPairingDialog() {
         AppLog.i(TAG, "Dismissing pairing dialog")
         _pairingTargetApp.value = null
         _pairingFocusedIndex.value = 0
-        _confirmPairingTrigger.value = 0
     }
 
     fun setPairingFocusedIndex(index: Int) {
         _pairingFocusedIndex.value = index
-    }
-
-    fun triggerConfirmPairing() {
-        _confirmPairingTrigger.value += 1
     }
 
     fun stepPairingFocus(
@@ -360,10 +348,6 @@ class FocusTopLauncherViewModel : ViewModel() {
         _focusedApp.value = appInfo
     }
 
-    fun setResumed(resumed: Boolean) {
-        _isResumed.value = resumed
-    }
-
     fun setStarted(started: Boolean) {
         _isStarted.value = started
     }
@@ -479,7 +463,6 @@ class FocusTopLauncherViewModel : ViewModel() {
             _newlyAddedFolder.value = null
             _pairingTargetApp.value = null
             _pairingFocusedIndex.value = 0
-            _confirmPairingTrigger.value = 0
             return true
         }
         return false

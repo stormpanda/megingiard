@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.gamefocus
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.test.core.app.ApplicationProvider
-import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
@@ -20,7 +19,6 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 
-private const val TAG = "FocusImageCacheTest"
 private const val ICO_TEST_DIMENSION_PX = 64
 private const val ICO_SINGLE_ENTRY_PAYLOAD_OFFSET = 22
 
@@ -125,14 +123,13 @@ class FocusImageCacheTest {
         val tempFile = File.createTempFile("ico_icon", ".png")
         try {
             tempFile.writeBytes(icoBytes)
-            val sampled = FocusImageCache.decodeSampledIcon(tempFile, maxDimensionPx = 256)
-            assertNotNull(sampled)
-            AppLog.i(TAG, "ICO decode: wasIcoContainer=${sampled!!.wasIcoContainer}")
-            assertEquals(ICO_TEST_DIMENSION_PX, sampled.bitmap.width)
-            assertEquals(ICO_TEST_DIMENSION_PX, sampled.bitmap.height)
-            // decodeSampledIcon must be side-effect free
+            val decoded = FocusImageCache.decodeSampledIconBitmap(tempFile, maxDimensionPx = 256)
+            assertNotNull(decoded)
+            assertEquals(ICO_TEST_DIMENSION_PX, decoded!!.width)
+            assertEquals(ICO_TEST_DIMENSION_PX, decoded.height)
+            // decodeSampledIconBitmap must be side-effect free
             assertArrayEquals(icoBytes, tempFile.readBytes())
-            sampled.bitmap.recycle()
+            decoded.recycle()
         } finally {
             tempFile.delete()
         }
@@ -202,53 +199,11 @@ class FocusImageCacheTest {
             testBmp.recycle()
 
             val updatedTimestamp = 123456789L
-            val updatedRom = initialRom.withLogoLastModified(updatedTimestamp)
+            val updatedRom = initialRom.copy(logoLastModified = updatedTimestamp)
 
             val loadedBmp = FocusImageCache.getIconBitmapAsync(context, updatedRom)
             assertNotNull(loadedBmp)
             assertNotNull(FocusImageCache.getCachedIconBitmap(updatedRom))
-        }
-    }
-
-    @Test
-    fun testOversizedLogoRewrite_rewritesDiskFileAsThumbnail() {
-        runBlocking {
-            val context = ApplicationProvider.getApplicationContext<Context>()
-            FocusImageCache.clearForTesting()
-
-            val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
-            val logoFile = File(logosDir, "rom:switch:HugeGame.nsp.png")
-
-            val hugeBmp = Bitmap.createBitmap(800, 800, Bitmap.Config.ARGB_8888)
-            // Fill with varied pixels to ensure uncompressed PNG exceeds 256KB
-            for (x in 0 until 800 step 10) {
-                for (y in 0 until 800 step 10) {
-                    hugeBmp.setPixel(x, y, android.graphics.Color.rgb(x % 255, y % 255, (x + y) % 255))
-                }
-            }
-            FileOutputStream(logoFile).use { out ->
-                hugeBmp.compress(Bitmap.CompressFormat.PNG, 100, out)
-            }
-            hugeBmp.recycle()
-
-            val originalLength = logoFile.length()
-            assertTrue("Original file should exceed 256KB for this test, was $originalLength", originalLength > 256 * 1024L)
-
-            val romApp =
-                InstalledAppInfo(
-                    packageName = "rom:switch:HugeGame.nsp",
-                    activityName = "",
-                    label = "Huge Game",
-                    isRom = true,
-                    systemId = "switch",
-                )
-
-            val bitmap = FocusImageCache.getIconBitmapAsync(context, romApp)
-            assertNotNull(bitmap)
-
-            val newLength = logoFile.length()
-            assertTrue("Rewritten file should be smaller than original ($originalLength -> $newLength)", newLength < originalLength)
-            logoFile.delete()
         }
     }
 

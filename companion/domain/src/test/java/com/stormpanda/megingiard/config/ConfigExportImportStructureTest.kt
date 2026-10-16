@@ -9,10 +9,10 @@ import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.security.HmacUtil
 import com.stormpanda.megingiard.settings.KEY_ACCENT_COLOR
-import com.stormpanda.megingiard.settings.KEY_MACROPAD_AMBIENT_DIM
-import com.stormpanda.megingiard.settings.KEY_MACROPAD_RECENT_COLORS
+import com.stormpanda.megingiard.settings.KEY_GAMEPAD_SWAP_FACE_BUTTONS
 import com.stormpanda.megingiard.settings.KEY_OVERLAY_AT_BOTTOM
 import com.stormpanda.megingiard.settings.KEY_PRIVD_DEADZONE_LEFT
+import com.stormpanda.megingiard.settings.KEY_THEME_MODE
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
@@ -293,11 +293,11 @@ class ConfigExportImportStructureTest {
                             mapOf(
                                 "accent_color" to kotlinx.serialization.json.JsonPrimitive(-6087623),
                                 "overlay_at_bottom" to kotlinx.serialization.json.JsonPrimitive(false),
+                                "theme_mode" to kotlinx.serialization.json.JsonPrimitive("DARK"),
                             ),
                         "macropad_settings" to
                             mapOf(
-                                "macropad_recent_colors" to kotlinx.serialization.json.JsonPrimitive("-1716912067,-421677056,-430776976"),
-                                "macropad_ambient_dim" to kotlinx.serialization.json.JsonPrimitive(0.0),
+                                "gamepad_swap_face_buttons" to kotlinx.serialization.json.JsonPrimitive(true),
                                 "privd_deadzone_left" to kotlinx.serialization.json.JsonPrimitive(0.15),
                             ),
                     )
@@ -307,14 +307,14 @@ class ConfigExportImportStructureTest {
 
                 assertTrue(firstPrefs[KEY_ACCENT_COLOR] is Int)
                 assertTrue(firstPrefs[KEY_OVERLAY_AT_BOTTOM] is Boolean)
-                assertTrue(firstPrefs[KEY_MACROPAD_RECENT_COLORS] is String)
-                assertTrue(firstPrefs[KEY_MACROPAD_AMBIENT_DIM] is Float)
+                assertTrue(firstPrefs[KEY_THEME_MODE] is String)
+                assertTrue(firstPrefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] is Boolean)
                 assertTrue(firstPrefs[KEY_PRIVD_DEADZONE_LEFT] is Float)
 
                 assertEquals(-6087623, firstPrefs[KEY_ACCENT_COLOR])
                 assertEquals(false, firstPrefs[KEY_OVERLAY_AT_BOTTOM])
-                assertEquals("-1716912067,-421677056,-430776976", firstPrefs[KEY_MACROPAD_RECENT_COLORS])
-                assertEquals(0.0f, firstPrefs[KEY_MACROPAD_AMBIENT_DIM])
+                assertEquals("DARK", firstPrefs[KEY_THEME_MODE])
+                assertEquals(true, firstPrefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS])
                 assertEquals(0.15f, firstPrefs[KEY_PRIVD_DEADZONE_LEFT])
             } finally {
                 Dispatchers.resetMain()
@@ -526,7 +526,7 @@ class ConfigExportImportStructureTest {
             )
 
         ConfigManager.setInAppParsedImport(testExport)
-        assertEquals(testExport, ConfigManager.pendingInAppParsedImport.value)
+        assertEquals(testExport, ConfigManager.pendingInAppParsedImport.value?.export)
 
         ConfigManager.setInAppImportError("Corrupted archive")
         assertEquals("Corrupted archive", ConfigManager.inAppImportError.value)
@@ -534,7 +534,7 @@ class ConfigExportImportStructureTest {
         ConfigManager.clearInAppPendingImport()
         assertEquals(null, ConfigManager.pendingInAppParsedImport.value)
         assertEquals(null, ConfigManager.inAppImportError.value)
-        assertEquals(emptyMap<String, ByteArray>(), ConfigManager.getPendingInAppImages())
+        assertEquals(0, ConfigManager.getPendingInAppImageCount())
     }
 
     // ── 5. Background Image Restoration Tests ─────────────────────────────────
@@ -546,7 +546,7 @@ class ConfigExportImportStructureTest {
                 isProfileImport = false,
                 layoutId = "layout-bg-import-1",
                 profileName = "ProfileToImport",
-                imageKey = "layout-bg-import-1",
+                imageKey = "bg_layout-bg-import-1",
             )
         }
 

@@ -8,14 +8,14 @@
 
 ### Multi-Cutout Edge Blending
 
-To allow seamless transitions between adjacent or independent cutouts, we implement a hybrid border gradient mask in `MultiCutoutContainer`:
+To allow seamless transitions around cutouts and between adjacent cutouts, `MultiCutoutContainer` applies a symmetric border gradient mask on non-boundary edges:
 
-- **Per-Layout Value Storage & Sync**: The edge blending width is defined per-layout via the `mirrorEdgeBlendWidth` property in `PadLayout`. At runtime, `ScreenCaptureManager` observes `activeLayout` and publishes updates via the read-only `edgeBlendWidthDp` state flow. `MultiCutoutContainer` uses this value to invalidate and redraw.
-- **Edge Touching Detection**: We check each of the four edges (left, right, top, bottom) of each cutout against all other cutouts. If the distance between their destination boundaries is within a tolerance (`TOUCH_TOLERANCE = 0.005f`), they are flagged as touching (`touchesOtherLeft`, etc.).
-- **Hybrid Gradient Coordinates**:
-   - For background-facing edges (e.g. `touchesOtherLeft == false`), the gradient goes from `-leftExt` (TRANSPARENT) to `0f` (BLACK). Using `Shader.TileMode.CLAMP`, the interior of the cutout remains 100% opaque.
-   - For touching edges (e.g. `touchesOtherLeft == true`), the gradient goes from `-leftExt` (TRANSPARENT) to `leftExt` (BLACK), creating a symmetric blend that extends `leftExt` inside the cutout boundary.
-- **Additive Blending**: Drawing the cutouts with `PorterDuff.Mode.ADD` combined with their corresponding edge gradients ensures that overlapping areas have a combined opacity of exactly 1.0, eliminating dark rendering seams.
+- **Per-Layout Value Storage & Sync**: The edge blending width is defined per-layout via the `mirrorEdgeBlendWidth` property in `PadLayout`. At runtime, `ScreenCaptureManager` derives `edgeBlendWidthDp` from `MacroPadState.activeLayout`. `MultiCutoutContainer` uses this value to invalidate and redraw.
+- **Screen-Boundary Detection**: Each of the four edges (left, right, top, bottom) of a cutout is checked against the outer screen boundary (`0f` and `1f`) within a tolerance (`0.005f`): `fadeLeft = cutout.destX > tolerance`, `fadeRight = cutout.destX + cutout.destWidth < 1f - tolerance`, `fadeTop = cutout.destY > tolerance`, `fadeBottom = cutout.destY + cutout.destHeight < 1f - tolerance`.
+- **Symmetric Gradient Coordinates**:
+   - Edges touching the outer screen boundary (`<= 0.005f` from `0f` or `1f`) are not faded (`ext = 0f`), keeping the outer screen edge crisp.
+   - Interior edges (`fade* == true`) apply a linear gradient from `-ext` (`TRANSPARENT`) to `+ext` (`BLACK`) using `Shader.TileMode.CLAMP`, creating a symmetric feathering zone that extends `ext` outside and inside the cutout boundary.
+- **Additive Blending**: Drawing the cutouts with `PorterDuff.Mode.ADD` combined with their symmetric edge gradients ensures that adjacent cutouts whose boundaries meet have a combined opacity of `1.0`, eliminating dark rendering seams.
 
 
 ### Cutout Shape Rendering (Circular Clipping & Edge Blending)
@@ -27,26 +27,26 @@ When a cutout's shape is set to `CIRCLE`:
 
 ### Mirror Refresh Rate (FPS) Limiting
 
-*(Note: The user-facing layout editor slider is currently hidden, but the system and app-level throttling pipeline remains active and functional based on the layout's configured setting).*
+*(Note: The user-facing layout editor slider is currently hidden, but the GPU throttling pipeline remains functional based on the layout's configured setting).*
 
 To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support limiting the refresh rate of the mirrored screens:
 
-1. **App-Level Rendering Conservation (`ThrottledTextureView`)**:
-   Since Android's compositor (SurfaceFlinger) often ignores the `Surface.setFrameRate` hint for virtual displays and pushes frames as fast as they update, we enforce the limit in the application layer. We use `ThrottledTextureView` which overrides `invalidate()` to drop invalidation requests if they arrive faster than the configured `maxFps` interval. This prevents the view hierarchy from redrawing and avoids enqueuing new GPU textures too frequently, directly reducing rendering resource usage.
+1. **GPU-Level Frame Pacing (`GpuMotionSmoother`)**:
+   `ScreenCaptureManager.maxFps` is derived from `PadLayout.mirrorMaxFps` and passed to `GpuMotionSmoother`, which paces output frame presentation on its OpenGL ES thread to avoid redrawing `TextureView` faster than the configured `maxFps` interval.
 
 ### Motion Smoothing & Hardware Stream Delay (`GpuMotionSmoother`)
 
 To stabilize mirrored UI elements against fast-moving backgrounds and provide leak-free visual anchor freeze transitions with zero CPU memory overhead, we support a 100% GPU-accelerated temporal blending and stream delay pipeline:
 
 1. **Unified GPU Pipeline (`GpuMotionSmoother`)**:
-   Video frames from `DirectMirrorServer` or `MediaProjection` are received on `GpuMotionSmoother.inputSurface`, providing a constant target surface that never changes during profile, layout, or touchpad transitions.
+   Video frames from `DirectMirrorServer` are received on `GpuMotionSmoother.inputSurface`, providing a constant target surface that never changes during profile, layout, or touchpad transitions.
 2. **0% Pass-Through Mode**:
    When motion smoothing is disabled (0% strength or active Touchpad mode) and stream delay is 0, `GpuMotionSmoother` executes a single-pass 2D quad texture copy (`drawProgram`) directly into `masterSurface`, bypassing FBO blending with ~0.05ms GPU overhead and 0 input latency.
 3. **Temporal FBO Blending & Circular Delay Queue**:
    When motion smoothing is active (e.g. 75%, 80%, 85%) or stream delay is configured ($1 \le \text{delay} \le 10$), `GpuMotionSmoother` maintains an OpenGL ES 2.0 FBO circular ring buffer in GPU VRAM (`fboCount = streamDelayFrames + 1`).
    - **Pass 1 (Input & Blend):** Incoming OES textures are either blended with the previous frame texture (`blendProgram`) or copied (`passthroughProgram`) into `fboFramebuffers[writeIndex]`.
-   - **Pass 2 (GL Live Anchor Evaluation):** Evaluates the active visual reference anchor signature directly from `fboFramebuffers[writeIndex]` on the GL thread using a localized `glReadPixels` crop ($< 0.05\text{ ms}$). If anchor loss is detected, output presentation is frozen immediately on the GPU without rendering the transitional frame to the screen while `AnchorPresenceManager` snapshots the pristine delayed frame for frozen cutouts, after which presentation resumes to allow real-time candidate layout evaluation and automatic switching.
-   - **Pass 3 (Delayed Presentation):** When not frozen, draws `fboTextureIds[delayedIndex]` (`(writeIndex - streamDelayFrames + fboCount) % fboCount`) onto `masterSurface` (`TextureView`). This guarantees smooth 60 FPS presentation without frame drops and with zero menu leakage upon anchor loss.
+   - **Pass 2 (GL Live Anchor Evaluation):** Evaluates the active visual reference anchor signature directly from `fboFramebuffers[writeIndex]` on the GL thread using a localized `glReadPixels` crop ($< 0.05\text{ ms}$). If anchor loss is detected (and `CutoutLostAnchorEffect.FREEZE` is enabled), `AnchorPresenceManager` sets `GpuMotionSmoother.setFrozen(true)` for the duration of `AnchorPresenceState.LOST` (and unfreezes when the anchor returns to `PRESENT` or the active layout changes), keeping the pristine delayed FBO texture on `TextureView` without any Main-thread `tv.bitmap` CPU readback.
+   - **Pass 3 (Delayed Presentation):** Draws `fboTextureIds[delayedIndex]` (`(writeIndex - streamDelayFrames + fboCount) % fboCount`) onto `masterSurface` (`TextureView`). This guarantees smooth 60 FPS presentation without frame drops and with zero menu leakage upon anchor loss.
 
 ### Automated HUD / UI Isolation & Hardware Transparency Mask Pipeline
 
@@ -87,7 +87,7 @@ Mirrored cutouts support discrete 90° orientation changes (`rotation`: 0°, 90�
      }
      canvas.translate(-contentW / 2f, -contentH / 2f)
      ```
-   - Content feeds (video stream, frozen frames, delayed frame buffers, static UI assets), frosted blur backgrounds, and `DST_IN` hardware transparency masks render in unrotated content bounds `(contentW, contentH)`. This ensures that transparency masks and blur layers rotate and flip synchronously with the source video.
+   - Content feeds (video stream, frozen frames, static UI assets), frosted blur backgrounds, and `DST_IN` hardware transparency masks render in unrotated content bounds `(contentW, contentH)`. This ensures that transparency masks and blur layers rotate and flip synchronously with the source video.
    - Screen-space boundary effects (ambient dimming veils and hybrid edge blending gradients) are rendered in unrotated screen bounds `(dw, dh)` outside the transformed canvas scope.
 
 2. **Bounding Box Geometry & Collision Prevention (`MirrorCoordinateTransform.calculateRotatedCutoutBounds`)**:
@@ -123,26 +123,34 @@ For future iterations of the privileged mirroring backend (`:mirrorserver` / `Di
 
 | File | Responsibility |
 | --- | --- |
-| `ScreenCaptureService.kt` | Foreground service; `MediaProjection` token; `VirtualDisplay` lifecycle |
-| `EmbeddedMirrorView.kt` | Main Compose embedded mirror view hosting `MultiCutoutContainer` |
-| `MasterSurfaceRegistry.kt` | Process-wide master surface holder bridging `ThrottledTextureView` to `ScreenCaptureService` |
-| `MultiCutoutContainer.kt` | Multi-cutout canvas rendering, clipping, hybrid edge blending, rotation/flip transforms, and PorterDuff DST_IN transparency masking |
+| `ScreenCaptureService.kt` | Foreground service; privileged `DirectMirrorServer` lifecycle and reactive surface/freeze reconciliation |
+| `EmbeddedMirrorView.kt` | Main Compose embedded mirror view hosting `MultiCutoutContainer` and `TextureView` |
+| `MasterSurfaceRegistry.kt` | Process-wide master surface holder bridging `TextureView` to `ScreenCaptureService` |
+| `DirectMirrorSurfaceBridge.kt` | Binder client passing the target `Surface` (`TRANSACTION_SET_SURFACE` / `TRANSACTION_CLEAR_SURFACE`) to `DirectMirrorServer` |
+| `GpuMotionSmoother.kt` | OpenGL ES 2.0 temporal motion smoother, VRAM FBO delay ring buffer, and GL-thread anchor evaluator |
+| `MultiCutoutContainer.kt` | Multi-cutout canvas rendering, clipping, edge blending, rotation/flip transforms, and PorterDuff DST_IN transparency masking |
 | `MirrorCoordinateTransform.kt` | Pure coordinate transformations: touch projection inversion, rotated bounds calculation, aspect ratio adjustment |
+| `MirrorRuntimePolicy.kt` | Pure policy evaluating whether the runtime mirror session should auto-start or stop |
+| `TouchProjectionController.kt` | Multi-touch coordinate projection and `TouchInjector` dispatch for mirrored cutouts |
 | `CutoutMaskManager.kt` | Manages disk persistence and in-memory bitmap cache for cutout transparency masks |
 | `CutoutAutoTuner.kt` | Computer vision engine for pixel-level color change detection, despeckling, and Gaussian anti-aliasing |
 | `VisualAutoTuneCoordinator.kt` | Orchestrates interactive calibration lifecycle, live preview streaming, overlay suspension, and mask/anchor generation |
 | `AutoTuneCalibrationSheet.kt` | Secondary screen interactive calibration sheet with live dynamic transparency preview and user Finish/Cancel actions |
-| `ScreenCaptureManager.kt` | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap, follow state |
-| `InteractiveCutoutController.kt` | Transient interactive cutout viewport controller: pan, pinch-zoom, elastic bounce-back, and snap-back animations |
+| `ScreenCaptureManager.kt` | Singleton state: layout-derived cutouts/edgeBlend/maxFps/touchProjection, freeze, lock, frozen bitmap, follow-touch tracking |
+| `InteractiveCutoutController.kt` | Transient interactive cutout viewport controller: pan, pinch-zoom, follow-touch overrides, elastic bounce-back, and snap-back animations |
 | `CutoutGestureMath.kt` | Shared pure Kotlin math helper in `:shared:core`: pan delta, pinch zoom, bounds clamping, and lerp math |
-| `TouchScreenObserver.kt` | Listens to raw `/dev/input/event6` touchscreen events in background thread and maps coordinates |
+| `TouchScreenObserver.kt` | Subscribes to `PrivdClient.subscribeTouch()` (`SUB TOUCH`) in background coroutine and forwards normalized touch coordinates |
 | `CropSelectorOverlay.kt` | Primary display crop selector overlay Composable UI |
-| `CropSelectorActivity.kt` | Translucent Activity hosting CropSelectorOverlay on the primary display |
 | `CutoutLayoutEditor.kt` | Secondary display cutout placement arrange editor and visual alignment guides overlay (`CutoutAlignmentGuidesOverlay`) |
 | `MirrorEditorTopOverlay.kt` | Top-screen vertical controller toolbox and live crop bounds overlay |
+| `EditorToolbox.kt` | Shared top-screen controller toolbox primitives, resize handle views (`ResizeHandleView`), and `RememberTopOverlayFocusEffect` |
+| `AnchorSelectorOverlay.kt` | Top-screen interactive overlay for positioning and resizing a layout's visual reference anchor |
+| `AnchorPositioningSheet.kt` | Secondary display companion sheet showing magnified live anchor crop during positioning |
+| `AnchorTestCoordinator.kt` | Orchestrates real-time visual reference anchor testing and live probe point evaluation |
+| `AnchorTestingSheet.kt` | Secondary display companion sheet for interactive visual anchor testing and threshold tuning |
 | `ScreenCutout.kt` | Serializable data model representing a crop/placement pair with cutout isolation filter configuration |
-| `MirrorFrameSampler.kt` | Low-latency hardware layer TextureView crop extraction for anchor calibration and real-time presence detection |
-| `AnchorPresenceManager.kt` | Real-time 60 Hz visual anchor presence detection, zero-allocation ring buffers, freeze caching, and layout auto-switching |
+| `MirrorFrameSampler.kt` | Low-latency hardware layer `TextureView` crop extraction for anchor calibration, candidate scanning, and testing |
+| `AnchorPresenceManager.kt` | Real-time 60 Hz visual anchor presence detection, GPU freeze coordination, and candidate layout auto-switching |
 | `VisualAnchorSignature.kt` | Serializable data model representing visual anchor reference points and color signatures |
 | `AnchorPresenceEvaluator.kt` | Mathematical evaluation of sample frame points against reference signature |
 | `CutoutLostAnchorEffect.kt` | Serializable enum modeling extensible cutout behavior on visual anchor loss (Freeze, Blur) |

@@ -65,7 +65,7 @@ import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlin.math.ceil
 
-private const val TAG = "AutoTuneCalibrationSheet"
+private const val TAG = "AutoTuneCalibSheet"
 
 private const val SHEET_MAX_WIDTH_FRACTION = 0.88f
 private val SHEET_CORNER_RADIUS = 16.dp
@@ -114,9 +114,10 @@ internal fun AutoTuneCalibrationSheet(
     val bezelBrush = rememberBezelBrush()
     val context = LocalContext.current
 
-    val calibrationType by VisualAutoTuneCoordinator.calibrationType.collectAsStateWithLifecycle()
-    val canFinish by VisualAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
-    val isPaused by VisualAutoTuneCoordinator.isPaused.collectAsStateWithLifecycle()
+    val uiState by VisualAutoTuneCoordinator.uiState.collectAsStateWithLifecycle()
+    val calibrationType = uiState.calibrationType
+    val canFinish = uiState.canFinish
+    val isPaused = uiState.isPaused
 
     val title =
         when (calibrationType) {
@@ -348,8 +349,9 @@ internal fun AutoTuneCalibrationSheet(
 @Composable
 private fun SampleCounterBadge() {
     val colors = LocalAppColors.current
-    val sampleCount by VisualAutoTuneCoordinator.sampleCount.collectAsStateWithLifecycle()
-    val canFinish by VisualAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
+    val uiState by VisualAutoTuneCoordinator.uiState.collectAsStateWithLifecycle()
+    val sampleCount = uiState.sampleCount
+    val canFinish = uiState.canFinish
 
     Box(
         modifier =
@@ -384,8 +386,9 @@ private fun CalibrationPreviewBox(
 ) {
     val colors = LocalAppColors.current
     val previewBitmap by VisualAutoTuneCoordinator.previewBitmap.collectAsStateWithLifecycle()
-    val canFinish by VisualAutoTuneCoordinator.canFinish.collectAsStateWithLifecycle()
-    val dynamicPercent by VisualAutoTuneCoordinator.dynamicPercent.collectAsStateWithLifecycle()
+    val uiState by VisualAutoTuneCoordinator.uiState.collectAsStateWithLifecycle()
+    val canFinish = uiState.canFinish
+    val dynamicPercent = uiState.dynamicPercent
 
     val checkerColor1 = colors.surfaceVariant
     val checkerColor2 = colors.surface

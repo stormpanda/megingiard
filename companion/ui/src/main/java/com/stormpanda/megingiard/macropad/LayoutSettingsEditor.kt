@@ -113,7 +113,7 @@ internal fun EditLayoutSubPageContent(
     onNameChange: (String) -> Unit,
     onInvisibleButtonsChange: (Boolean) -> Unit,
     onOpenAutomaticLayoutSwitching: () -> Unit,
-    onOpenColorSubMenu: (target: LayoutColorTarget) -> Unit,
+    onOpenColorSubMenu: (target: EditorColorTarget) -> Unit,
     onOpenTouchpadSettings: () -> Unit,
     onDeleteLayout: () -> Unit,
     onDiscard: () -> Unit = {},
@@ -329,8 +329,8 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
 ) {
     AppLog.d(TAG, "AutomaticLayoutSwitchingSubPageContent for layout: ${layout.name} (${layout.id})")
     val context = LocalContext.current
-    val isCalibrating by VisualAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
-    var calibrationRevision by remember { mutableIntStateOf(0) }
+    val autoTuneState by VisualAutoTuneCoordinator.uiState.collectAsStateWithLifecycle()
+    val isCalibrating = autoTuneState.isCalibrating
 
     if (isCalibrating) {
         GamepadActionCard(
@@ -405,7 +405,6 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                 itemKey = "layout_${layout.id}_calibrate_anchor",
                 onClick = {
                     VisualAutoTuneCoordinator.startLayoutAnchorCalibration(context, layout) { updatedLayout, _ ->
-                        calibrationRevision++
                         onUpdateLayout(updatedLayout)
                     }
                 },
@@ -525,7 +524,6 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                     isDestructive = true,
                     itemKey = "layout_${layout.id}_remove_anchor",
                     onConfirm = {
-                        calibrationRevision++
                         onUpdateLayout(
                             layout.copy(
                                 visualAnchor = layout.visualAnchor.copy(enabled = false, signature = null),
@@ -542,8 +540,7 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
 internal fun LayoutColorSubPageContent(
     layout: PadLayout,
     savedLayout: PadLayout?,
-    target: LayoutColorTarget,
-    accentColor: Color,
+    target: EditorColorTarget,
     onColorOptionChanged: (ColorOption) -> Unit,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightLayout: PadLayout) -> Unit,
 ) {

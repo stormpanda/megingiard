@@ -76,10 +76,9 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `non-trackpoint keycodes are within 0 to 255 range`() {
+    fun `all keycodes are within 0 to 255 range`() {
         for ((name, layout) in layouts) {
             for (key in layout.flatten()) {
-                if (key.type == KeyType.TRACKPOINT) continue
                 assertTrue(
                     "$name key '${key.id}' has out-of-range keycode ${key.linuxKeycode}",
                     key.linuxKeycode in 0..255,
@@ -126,9 +125,7 @@ class KeyboardLayoutTest {
     @Test
     fun `symbols layouts contain ABC switcher key`() {
         val sym1 = qwertzLayout(KeyboardMode.SYMBOLS_1)
-        val sym2 = qwertzLayout(KeyboardMode.SYMBOLS_2)
         assertNotNull("Symbols 1 has ABC switcher key", findKeyInLayout(sym1, "mode_switch_abc"))
-        assertNotNull("Symbols 2 has ABC switcher key", findKeyInLayout(sym2, "mode_switch_abc"))
     }
 
     @Test
@@ -166,17 +163,16 @@ class KeyboardLayoutTest {
     @Test
     fun `getPopupOptions generates expected options list`() {
         val eKey = KeyDef("e", "e", 18, superscript = "3")
-        assertEquals(listOf("3"), getPopupOptions(eKey, isUpper = false))
-        assertEquals(listOf("3"), getPopupOptions(eKey, isUpper = true))
-        assertTrue(getPopupOptions(KeyDef("f", "f", 33), isUpper = false).isEmpty())
-        assertEquals(listOf("!"), getPopupOptions(KeyDef("1", "1", 2, shiftLabel = "!"), isUpper = false))
+        assertEquals(listOf("3"), getPopupOptions(eKey))
+        assertTrue(getPopupOptions(KeyDef("f", "f", 33)).isEmpty())
+        assertEquals(listOf("!"), getPopupOptions(KeyDef("1", "1", 2, shiftLabel = "!")))
         assertEquals(
             listOf("(", "[", "{", "<"),
-            getPopupOptions(KeyDef("j", "j", 36, superscript = "(", popupOptions = listOf("(", "[", "{", "<")), isUpper = false),
+            getPopupOptions(KeyDef("j", "j", 36, superscript = "(", popupOptions = listOf("(", "[", "{", "<"))),
         )
         assertEquals(
             listOf("[", "{", "<"),
-            getPopupOptions(KeyDef("lparen", "(", 10, popupOptions = listOf("[", "{", "<")), isUpper = false),
+            getPopupOptions(KeyDef("lparen", "(", 10, popupOptions = listOf("[", "{", "<"))),
         )
     }
 
@@ -188,5 +184,38 @@ class KeyboardLayoutTest {
         )
         assertEquals("[ { <", getSuperscriptDisplayLabel(KeyDef("lparen", "(", 10, popupOptions = listOf("[", "{", "<"))))
         assertEquals("3", getSuperscriptDisplayLabel(KeyDef("e", "e", 18, superscript = "3")))
+    }
+
+    @Test
+    fun `all ergonomic popup options resolve via LinuxKeycodes charToKeyMapping`() {
+        val ergoModes = listOf(KeyboardMode.LETTERS, KeyboardMode.SYMBOLS_1, KeyboardMode.NUMERIC)
+        for (mode in ergoModes) {
+            val modeGrids = listOf(qwertzLayout(mode), qwertyLayout(mode), azertyLayout(mode))
+            for (grid in modeGrids) {
+                for (row in grid) {
+                    for (key in row) {
+                        for (opt in getPopupOptions(key)) {
+                            if (key.shiftLabel == opt) continue
+                            val mapping = opt.singleOrNull()?.let(LinuxKeycodes::charToKeyMapping)
+                            assertNotNull("Expected mapping for popup option '$opt' on key '${key.id}'", mapping)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `resolveDisplayLabel returns normal, shift, caps, and altGr labels`() {
+        val letterKey = KeyDef("q", "q", LinuxKeycodes.KEY_Q, altGrLabel = "@")
+        assertEquals("q", letterKey.resolveDisplayLabel(isShiftActive = false, isCapsActive = false, isAltGrActive = false))
+        assertEquals("Q", letterKey.resolveDisplayLabel(isShiftActive = true, isCapsActive = false, isAltGrActive = false))
+        assertEquals("Q", letterKey.resolveDisplayLabel(isShiftActive = false, isCapsActive = true, isAltGrActive = false))
+        assertEquals("@", letterKey.resolveDisplayLabel(isShiftActive = false, isCapsActive = false, isAltGrActive = true))
+        assertEquals("@", letterKey.resolveDisplayLabel(isShiftActive = true, isCapsActive = false, isAltGrActive = true))
+
+        val digitKey = KeyDef("1", "1", LinuxKeycodes.KEY_1, shiftLabel = "!")
+        assertEquals("1", digitKey.resolveDisplayLabel(isShiftActive = false, isCapsActive = false, isAltGrActive = false))
+        assertEquals("!", digitKey.resolveDisplayLabel(isShiftActive = true, isCapsActive = false, isAltGrActive = false))
     }
 }

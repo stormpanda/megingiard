@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.input
 
-import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.PrivdClient
 
@@ -28,41 +27,6 @@ object TouchInjector {
     // These are fixed hardware constants; they do not change with display rotation.
     const val THOR_SENSOR_W = 1080f
     const val THOR_SENSOR_H = 1920f
-
-    private val activeClients = mutableSetOf<String>()
-
-    /**
-     * Starts the native touch injector for a specific client [token].
-     * Coordinates start/stop across multiple active clients. Safe to call if already running.
-     */
-    @Synchronized
-    fun start(
-        context: Context? = null,
-        token: String,
-    ) {
-        activeClients.add(token)
-        AppLog.i(TAG, "start() client='$token' activeClients=$activeClients")
-    }
-
-    /**
-     * Stops the native touch injector for a specific client [token].
-     * Coordinates teardown by only releasing slots when all clients have released it.
-     */
-    @Synchronized
-    fun stop(token: String) {
-        if (!activeClients.contains(token)) {
-            AppLog.d(TAG, "stop() called for non-active client '$token'. Ignoring.")
-            return
-        }
-        activeClients.remove(token)
-        AppLog.i(TAG, "stop() client='$token' activeClients=$activeClients")
-        if (activeClients.isEmpty()) {
-            releaseAllSlots()
-        }
-    }
-
-    val isRunning: Boolean
-        get() = activeClients.isNotEmpty() && PrivdClient.isConnected
 
     /**
      * Injects a touch event using normalised coordinates.
@@ -104,12 +68,9 @@ object TouchInjector {
     }
 
     fun releaseAllSlots() {
+        AppLog.i(TAG, "releaseAllSlots()")
         for (slot in TOUCH_SLOT_MIN..TOUCH_SLOT_MAX) {
             PrivdClient.send("U $slot\n")
         }
-    }
-
-    internal fun resetForTesting() {
-        activeClients.clear()
     }
 }

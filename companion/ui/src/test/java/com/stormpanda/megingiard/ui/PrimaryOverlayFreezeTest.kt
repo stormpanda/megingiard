@@ -13,7 +13,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
 
-private const val TAG = "PrimaryOverlayFreezeTest"
+private const val TAG = "PrimaryOvlyFreezeTest"
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])

@@ -136,34 +136,26 @@ private val IH_BATTERY_LOW_COLOR = AppPalettes.batteryLow
 fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val colors = LocalAppColors.current
 
-    val clientPackage by AppStateManager.externalClientPackage.collectAsStateWithLifecycle()
-    val isClientActive by AppStateManager.isExternalClientActive.collectAsStateWithLifecycle()
+    val focusState by AppStateManager.effectiveFocusState.collectAsStateWithLifecycle()
     val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
-    val hoveredAppLabel by AppStateManager.hoveredAppLabel.collectAsStateWithLifecycle()
 
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsStateWithLifecycle()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
     val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsStateWithLifecycle()
     val isUpdateAvailable by UpdateManager.updateAvailable.collectAsStateWithLifecycle()
-
-    val hoveredPrimaryColor by AppStateManager.hoveredAppPrimaryColor.collectAsStateWithLifecycle()
-    val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsStateWithLifecycle()
-    val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsStateWithLifecycle()
-    val hoveredRomPath by AppStateManager.hoveredRomPath.collectAsStateWithLifecycle()
-    val hoveredRomIdentifier by AppStateManager.hoveredRomIdentifier.collectAsStateWithLifecycle()
-    val hoveredSystemId by AppStateManager.hoveredSystemId.collectAsStateWithLifecycle()
     val activeSession by EmulatorDetectionFunnel.activeSession.collectAsStateWithLifecycle()
     val lastDetectedSession by EmulatorDetectionFunnel.lastDetectedSession.collectAsStateWithLifecycle()
-    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsStateWithLifecycle()
-    val focusedRomPath by AppStateManager.focusedRomPath.collectAsStateWithLifecycle()
-    val focusedRomIdentifier by AppStateManager.focusedRomIdentifier.collectAsStateWithLifecycle()
 
-    val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
+    val isGameFocus =
+        focusState.isExternalClientActive &&
+            focusState.externalClientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
+    val hoveredPrimaryColor = focusState.hoveredAppPrimaryColor
+    val hoveredSecondaryColor = focusState.hoveredAppSecondaryColor
 
     val targetPrimary =
         remember(isGameFocus, hoveredPrimaryColor, colors.accent) {
             if (isGameFocus && hoveredPrimaryColor != null) {
-                Color(hoveredPrimaryColor!!).copy(alpha = IH_AMBIENT_PRIMARY_ALPHA)
+                Color(hoveredPrimaryColor).copy(alpha = IH_AMBIENT_PRIMARY_ALPHA)
             } else {
                 colors.accent.copy(alpha = IH_AMBIENT_PRIMARY_ALPHA)
             }
@@ -171,7 +163,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val targetSecondary =
         remember(isGameFocus, hoveredSecondaryColor, colors.onSurfaceSecondary) {
             if (isGameFocus && hoveredSecondaryColor != null) {
-                Color(hoveredSecondaryColor!!).copy(alpha = IH_AMBIENT_SECONDARY_ALPHA)
+                Color(hoveredSecondaryColor).copy(alpha = IH_AMBIENT_SECONDARY_ALPHA)
             } else {
                 colors.onSurfaceSecondary.copy(alpha = IH_AMBIENT_SECONDARY_ALPHA)
             }
@@ -199,29 +191,15 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
 
     val targetInfo =
         remember(
-            hoveredPackage,
-            hoveredAppLabel,
-            hoveredRomPath,
-            hoveredRomIdentifier,
-            hoveredSystemId,
+            focusState,
             activeSession,
             lastDetectedSession,
-            focusedAppPackageName,
-            focusedRomPath,
-            focusedRomIdentifier,
             installedApps,
         ) {
             resolveTargetAppInfo(
-                hoveredPackage = hoveredPackage,
-                hoveredAppLabel = hoveredAppLabel,
-                hoveredRomPath = hoveredRomPath,
-                hoveredRomIdentifier = hoveredRomIdentifier,
-                hoveredSystemId = hoveredSystemId,
+                focusState = focusState,
                 activeSession = activeSession,
                 lastDetectedSession = lastDetectedSession,
-                focusedAppPackageName = focusedAppPackageName,
-                focusedRomPath = focusedRomPath,
-                focusedRomIdentifier = focusedRomIdentifier,
                 installedApps = installedApps,
                 resolveAppLabel = { pkg -> resolveAppLabel(context, pkg) },
             )
@@ -235,17 +213,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
 
     val associatedProfile =
         remember(profiles, targetPkg, targetRomIdentifier, targetSystem) {
-            if (targetPkg == null) {
-                null
-            } else {
-                profiles.firstOrNull { profile ->
-                    profile.association?.romFileName != null &&
-                        profile.matches(targetPkg, targetRomIdentifier, targetSystem)
-                } ?: profiles.firstOrNull { profile ->
-                    profile.association?.romFileName == null &&
-                        profile.matches(targetPkg, targetRomIdentifier, targetSystem)
-                }
-            }
+            MacroPadState.findBestMatchingProfile(targetPkg, targetRomIdentifier, targetSystem)
         }
 
     LaunchedEffect(targetPkg, targetRomIdentifier, associatedProfile?.id) {
@@ -460,14 +428,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                     Button(
                         onClick = {
                             val pkg = targetPkg ?: return@Button
-                            val romTarget = targetRomIdentifier ?: targetRom
-                            val romFileName = romTarget?.substringAfterLast('/')?.substringAfterLast('\\')
-                            val assoc =
-                                ProfileAssociation(
-                                    packageName = pkg,
-                                    systemId = targetSystem,
-                                    romFileName = romFileName,
-                                )
+                            val assoc = buildTargetProfileAssociation(pkg, targetRom, targetRomIdentifier, targetSystem)
                             MacroPadState.updateProfile(pendingProfile.copy(association = assoc))
                             profileToRelink = null
                         },
@@ -517,13 +478,18 @@ private fun CompanionHubHelpModal(
         HelpSection(stringResource(R.string.help_companion_hub_sec_hero))
         HelpEntry(
             icon = Icons.Rounded.Visibility,
-            label = stringResource(R.string.integration_home_show_macropad),
+            label = stringResource(R.string.integration_home_launch_controls),
             description = stringResource(R.string.help_companion_hub_hero_show_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Edit,
             label = stringResource(R.string.integration_home_edit_layout),
             description = stringResource(R.string.help_companion_hub_hero_edit_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Add,
+            label = stringResource(R.string.integration_home_create_profile),
+            description = stringResource(R.string.help_companion_hub_hero_create_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Link,
@@ -738,17 +704,16 @@ private fun HeroCompanionCard(
                         Row(horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING)) {
                             Button(
                                 onClick = {
-                                    val targetRom = targetRomIdentifier ?: targetRomPath
-                                    val romFileName = targetRom?.substringAfterLast('/')?.substringAfterLast('\\')
                                     val assoc =
-                                        ProfileAssociation(
-                                            packageName = targetPackage,
-                                            systemId = targetSystemId,
-                                            romFileName = romFileName,
+                                        buildTargetProfileAssociation(
+                                            pkg = targetPackage,
+                                            targetRom = targetRomPath,
+                                            targetRomIdentifier = targetRomIdentifier,
+                                            targetSystem = targetSystemId,
                                         )
                                     AppStateManager.openPrimaryModal(
                                         PrimaryModalConfig(
-                                            type = PrimaryModalType.PROFILE_SETTINGS,
+                                            type = PrimaryModalType.MACROPAD_EDITOR,
                                             payload =
                                                 PrimaryModalPayload.ProfileSettings(
                                                     isNewProfile = true,
@@ -875,13 +840,12 @@ private fun HeroCompanionCard(
                                                     if (isAlreadyLinked) {
                                                         onRelinkRequested(profile)
                                                     } else {
-                                                        val targetRom = targetRomIdentifier ?: targetRomPath
-                                                        val romFileName = targetRom?.substringAfterLast('/')?.substringAfterLast('\\')
                                                         val assoc =
-                                                            ProfileAssociation(
-                                                                packageName = targetPackage,
-                                                                systemId = targetSystemId,
-                                                                romFileName = romFileName,
+                                                            buildTargetProfileAssociation(
+                                                                pkg = targetPackage,
+                                                                targetRom = targetRomPath,
+                                                                targetRomIdentifier = targetRomIdentifier,
+                                                                targetSystem = targetSystemId,
                                                             )
                                                         val updatedProfile = profile.copy(association = assoc)
                                                         MacroPadState.updateProfile(updatedProfile)
@@ -1152,24 +1116,38 @@ internal data class TargetAppInfo(
     val systemId: String?,
 )
 
+private fun buildTargetProfileAssociation(
+    pkg: String,
+    targetRom: String?,
+    targetRomIdentifier: String?,
+    targetSystem: String?,
+): ProfileAssociation {
+    val romTarget = targetRomIdentifier ?: targetRom
+    val romFileName = romTarget?.substringAfterLast('/')?.substringAfterLast('\\')
+    return ProfileAssociation(
+        packageName = pkg,
+        systemId = targetSystem,
+        romFileName = romFileName,
+    )
+}
+
 internal fun resolveTargetAppInfo(
-    hoveredPackage: String?,
-    hoveredAppLabel: String?,
-    hoveredRomPath: String?,
-    hoveredRomIdentifier: String? = null,
-    hoveredSystemId: String?,
+    focusState: AppStateManager.EffectiveFocusState,
     activeSession: ActiveGameSession?,
     lastDetectedSession: ActiveGameSession?,
-    focusedAppPackageName: String?,
-    focusedRomPath: String?,
-    focusedRomIdentifier: String? = null,
     installedApps: List<InstalledAppInfo>,
     resolveAppLabel: (String) -> String? = { null },
 ): TargetAppInfo {
     val active = activeSession
     val last = lastDetectedSession
-    val focused = focusedAppPackageName
-    val hovered = hoveredPackage
+    val focused = focusState.focusedAppPackageName
+    val focusedRomPath = focusState.focusedRomPath
+    val focusedRomIdentifier = focusState.focusedRomIdentifier
+    val hovered = focusState.hoveredAppPackageName
+    val hoveredAppLabel = focusState.hoveredAppLabel
+    val hoveredRomPath = focusState.hoveredRomPath
+    val hoveredRomIdentifier = focusState.hoveredRomIdentifier
+    val hoveredSystemId = focusState.hoveredSystemId
 
     return if (hovered != null) {
         val label =

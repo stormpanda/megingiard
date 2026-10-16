@@ -8,7 +8,7 @@
 
 ### Security Model
 
-Privileged Mode crosses the app sandbox boundary by delegating selected kernel I/O to `megingiard_privd`, a shell-UID helper started through ADB Wireless Debugging. The socket is therefore treated as a privileged command channel: every connection must authenticate before feature commands are accepted.
+Privileged Mode crosses the app sandbox boundary by delegating selected kernel I/O to `megingiard_privd`, a shell-UID helper started through the Tier-1 hardware root bridge (`PServerBootstrapper`) or Tier-2 ADB Wireless Debugging (`PrivdBootstrapper`). The loopback TCP socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug) is therefore treated as a privileged command channel: every connection must authenticate before feature commands are accepted.
 
 #### Per-install Key Scheme
 
@@ -16,8 +16,8 @@ The authentication key is **never embedded in the APK**. Instead:
 
 1. During bootstrap the app generates 32 random bytes with `SecureRandom`.
 2. The key is encrypted under an AES-256-GCM Keystore key (`megingiard_privd_pair_key_v1`, hardware-backed where available) and stored in `noBackupFilesDir/privd_pair_key.enc`. Backup is explicitly excluded so the key never leaves the device.
-3. The plaintext key is transmitted to the daemon over the already-authenticated ADB TLS channel: `megingiard_privd [--keyfile <path>] [--port <port>] --provision <key_hex> <app_uid>`.
-4. The daemon writes it to the designated state keyfile, e.g. `/data/local/tmp/megingiard_privd.key` for release or `/data/local/tmp/megingiard_privd_debug.key` for debug (mode 0600, shell-owned) together with the provisioned app UID.
+3. The plaintext key is transmitted to the daemon over the privileged root bridge or authenticated ADB TLS channel: `megingiard_privd [--keyfile <path>] [--port <port>] --provision <key_hex>`.
+4. The daemon writes `KEY=<key_hex>` to the designated state keyfile (`/data/local/tmp/megingiard_privd.key` for release or `/data/local/tmp/megingiard_privd_debug.key` for debug, mode `0600`, `shell:shell` owned).
 5. On every subsequent app start `PrivdPairKey.load()` decrypts the key from Keystore storage and `PrivdClient.loadKey()` places it in memory.
 
 Android destroys the Keystore AES key when the app is uninstalled, making the stored ciphertext permanently unreadable. A reinstalled app therefore cannot silently inherit the old daemon's trust relationship — re-bootstrap is required.
@@ -28,7 +28,7 @@ OS-level peer credential checks (`SO_PEERCRED` / `peerCredentials.uid` checks) a
 
 #### Mutual HMAC-SHA256 Handshake & Protocol Version Verification
 
-Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`):
+Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`, currently `17`):
 
 ```
 Daemon -> App     CHAL <32-hex-nonce1>\n
@@ -47,7 +47,7 @@ The first half (`CHAL/AUTH/OK`) proves the app knows the key before the daemon a
 - **Legacy Daemon / Legacy App Handling**:
   - Legacy pre-versioning daemons ignore `VERSION` and produce no `VERSION_OK` response; the app's 1-second version read times out and treats the connection as failed.
   - Legacy pre-versioning apps fail to issue `VERSION` as their initial command; new daemons reject unverified initial commands with `VERSION_MISMATCH` and close the socket.
-- **Auto-Update & Reconnect Prompt**: Connection failure triggers background auto-rebootstrap (or `PrivdState.FAILED` with `PrivdError.VERSION_MISMATCH`), guiding daemon replacement during app upgrades or downgrades.
+- **Auto-Update & Reconnect Prompt**: Connection failure triggers background auto-rebootstrap (or `PrivdState.FAILED` with `PrivdError.DAEMON_UNREACHABLE`), guiding daemon replacement during app upgrades or downgrades.
 - **Mandatory Version Increment Rule**: Whenever the daemon source code (`megingiard_privd.c`) or protocol behavior is updated, developers and agents **must** increment `PRIVD_VERSION` in both `megingiard_privd.c` and `PrivdConstants.kt` and run `./scripts/build_megingiard_privd.sh`.
 
 Malformed messages, missing messages, wrong HMAC values, version mismatch, or timeout expiration fail closed and close the socket. The handshake read timeout is 5 seconds for HMAC and 1 second for version check, and is reset to normal blocking I/O only after the full exchange succeeds.
@@ -56,7 +56,7 @@ The daemon compares the app's `AUTH` proof with a constant-time XOR accumulator.
 
 #### Native Asset Verification & Pre-Push Cleanup During Bootstrap
 
-`PrivdBootstrapper` kills any running daemon process (`kill -9`) and deletes `/data/local/tmp/megingiard_privd` over ADB shell prior to pushing fresh binaries to clear `ETXTBSY` file locks from active daemon instances. It verifies the SHA-256 pin of `megingiard_privd_arm64` before pushing it over ADB `sync:`. It also verifies `megingiard_mirror.dex` before pushing the privileged mirror server asset. A verification failure aborts bootstrap.
+`PServerBootstrapper` and `PrivdBootstrapper` kill any running daemon process (`kill -9`) and delete `/data/local/tmp/megingiard_privd` prior to staging/pushing fresh binaries to clear `ETXTBSY` file locks from active daemon instances. Both bootstrappers verify the SHA-256 pin of `megingiard_privd_arm64` and `megingiard_mirror.dex` via `BinaryIntegrity.verify()` before deployment. A verification failure aborts bootstrap.
 
 Upon daemon replacement and reconnection, active subsystems automatically recover:
 - **Screen Mirroring (`ScreenCaptureService`):** Observes `PrivdClient.state` and automatically starts a new `DirectPrivdMirrorSession` on the new daemon, restoring mirror output without user intervention.
@@ -66,13 +66,13 @@ Detailed native rebuild and generated hash behavior are documented in [BUILD_NAT
 
 #### Operational Notes
 
-- The HMAC key is provisioned automatically during the Privileged Mode setup wizard. No manual key management is required.
+- The HMAC key is provisioned automatically during Privileged Mode bootstrap. No manual key management is required.
 - Re-running the setup wizard generates a fresh key, replaces the daemon binary, and re-provisions the daemon.
 - Key rotation and signing-certificate rotation are manual re-bootstrap / redeploy operations today.
 
 ### Wire Protocol
 
-ASCII, newline-terminated, both directions. Each feature uses a two-letter
+ASCII, newline-terminated, both directions. Each feature uses a short
 command prefix; new feature modules can claim new prefixes without breaking
 the existing protocol.
 
@@ -106,17 +106,24 @@ the existing protocol.
 | D → App | `MIRROR_DIRECT_ERR <reason>\n` | Direct mirror child failed to start |
 | App → D | `MIRROR STOP\n` | Terminate the running mirror child (idempotent) |
 | D → App | `MIRROR_STOPPED\n` | Mirror child has been reaped |
-| App → D | `SCREENSHOT <path>\n` | Take primary display screenshot, output to path |
+| App → D | `SCREENSHOT [<display_id>] <path>\n` | Take display screenshot (defaults to primary if display_id omitted), output to path |
 | D → App | `SCREENSHOT_OK\n` | Screenshot completed successfully |
 | D → App | `SCREENSHOT_ERR <reason>\n` | Screenshot failed (e.g. invalid path / execution error) |
 | App → D | `READ_FILE <path>\n` | Read text file (up to 128KB) from storage under shell UID |
 | D → App | `READ_BEGIN\n` | Stream file contents start marker |
 | D → App | `READ_END\n` | Stream file contents end marker |
 | D → App | `READ_ERR <reason>\n` | File read failed (e.g. file not found) |
+| App → D | `LIST_PROCESSES\n` | List running processes from `/proc` under shell UID |
+| D → App | `PROC_BEGIN\n` | Stream process list start marker |
+| D → App | `PROC <pid> <uid> <cmdline>\n` | Running process entry |
+| D → App | `PROC_END\n` | Stream process list end marker |
+| D → App | `PROC_ERR <reason>\n` | Process listing failed |
 
 For the privileged mirror (`MIRROR START_DIRECT`), the `app_process` child registers the Binder service `megingiard.direct.surface` to receive multiple target `Surface` instances and their physical dimensions. This allows the direct mirror server to set up and capture multiple concurrent virtual displays mapping to different cutout regions without process restarts.
 
 `SUB GAMEPAD` and `SUB TOUCH` open the physical evdev nodes (`/dev/input/event*` for gamepad, `/dev/input/event6` for touchscreen) read-only/read-write and start dedicated reader threads that forward filtered `EVT` and `EVT_TOUCH` lines to the app. The fds are **not** grabbed via `EVIOCGRAB` — evdev is multicast, so Android's EventHub continues to dispatch the same events to the foreground game in parallel. Recording is therefore purely passive observation; nothing is intercepted or replayed.
+
+Active multi-touch slots are automatically tracked; when a client disconnects or sends `QUIT`, any remaining active touch slots are automatically released (via synthesized UP events) to prevent stuck touch points on the screen.
 
 On startup the daemon prints exactly one line on **stdout** so the
 spawn command can detect success:
@@ -127,7 +134,7 @@ spawn command can detect success:
 | `N\n` | No suitable gamepad found, daemon exits 1 |
 | `E\n` | Generic startup failure (e.g. socket bind), daemon exits 1 |
 
-> **Note:** The bootstrapper spawns the daemon process in the foreground and reads its stdout stream directly. The daemon prints `R\n`, `N\n`, or `E\n` and forks inside `detach_from_shell()`. The parent process exits immediately (which cleanly closes the stdout pipe and terminates the shell), while the child daemon starts a new session (`setsid()`), ignores `SIGHUP`, and redirects standard streams to `/dev/null`. This fork-detach sequence guarantees that SIGHUP immunity is fully established before the shell channel is closed, preventing any race conditions. The bootstrapper decodes this token to verify daemon readiness or immediately fail with a descriptive error.
+> **Note:** The bootstrapper spawns the daemon process in the foreground and reads its stdout stream directly. The daemon binds its TCP socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug) with `SO_REUSEADDR`, prints `R\n`, `N\n`, or `E\n`, and forks inside `detach_from_shell()`. The parent process exits immediately (which cleanly closes the stdout pipe and terminates the shell), while the child daemon starts a new session (`setsid()`), ignores `SIGHUP`, and redirects standard streams to `/dev/null`. This fork-detach sequence guarantees that the socket is already listening and SIGHUP immunity is fully established before the shell channel is closed.
 
 ### State Machine
 
@@ -137,57 +144,34 @@ OFF ──────────────────────▶ CONNEC
  ▲                              │
  │                              └── socket refused ──▶ FAILED
  │
- │   [wizard: pair → push → spawn → verify]
+ │   [root bridge or wizard: pair → push → spawn → verify]
  OFF ──────────────────────▶ BOOTSTRAPPING ── verify ✓ ──▶ RUNNING
                                   │
                                   └── any stage failed ──▶ FAILED
 ```
 
-During the VERIFYING phase of bootstrap, `PrivdBootstrapper` calls
+During the VERIFYING phase of bootstrap, `PServerBootstrapper` and `PrivdBootstrapper` call
 `PrivdManager.verifyConnect()` (not the public `connect()`) for each retry.
-`verifyConnect()` attempts `PrivdClient.connect()` without publishing
-`CONNECTING` or `FAILED` state transitions, so the UI stays in `BOOTSTRAPPING`
-throughout all retries. Only on success does state advance to `RUNNING`;
-if all retries are exhausted, `reportBootstrapFailure(DAEMON_UNREACHABLE)`
-explicitly sets `FAILED`.
+`verifyConnect()` attempts `PrivdClient.connect()` while `_isBootstrapping` remains `true`,
+so `PrivdManager.state` stays in `BOOTSTRAPPING` throughout all retries. Only on success does
+state advance to `RUNNING`; if all retries are exhausted, `reportBootstrapFailure(DAEMON_UNREACHABLE)`
+sets `FAILED`.
 
-`PrivdClient.isConnected` is the source of truth for the running status.
-`PrivdManager.state` is the user-visible projection. The `BOOTSTRAPPING`
-state covers the entire wizard flow; the finer-grained `BootstrapStage`
-enum (IDLE / PAIRING / CONNECTING_ADB / PUSHING_BINARY / SPAWNING_DAEMON /
-VERIFYING / DONE) is exposed by `PrivdBootstrapper.stage` for the wizard
-UI.
+`PrivdClient.state` is the transport source of truth, and `PrivdManager.state` is derived reactively
+via `combine(PrivdClient.state, _isBootstrapping, _lastError)`. The finer-grained `BootstrapStage`
+enum (`IDLE`, `PAIRING`, `CONNECTING_ADB`, `PUSHING_BINARY`, `SPAWNING_DAEMON`, `VERIFYING`, `DONE`)
+is exposed by `PrivdBootstrapper.stage` for the manual wizard UI.
 
-### Threading
+### Threading & Single-Flight RPC Framing
 
-`PrivdClient` owns two background threads after `connect()`:
+`PrivdClient` performs blocking TCP socket connect (`127.0.0.1:51234` / `51244`) and mutual HMAC + version handshake outside `stateLock`, then spawns two background threads:
 
-1. **Writer** — drains a `LinkedBlockingQueue<String>` of ASCII commands
-   into the LocalSocket output stream.
-2. **Reader** — continuously reads `\n`-terminated daemon responses;
-   completes the pending `pingDeferred` on `PONG`.
+1. **Writer (`PrivdClientWriter`)** — drains a `LinkedBlockingQueue<String>` of ASCII commands into the TCP `Socket` output stream (`BufferedWriter`), flushing whenever the queue empties.
+2. **Reader (`PrivdClientReader`)** — continuously reads `\n`-terminated daemon lines; routes `EVT ` and `EVT_TOUCH ` lines to `SharedFlow`s and dispatches request-response lines to the active `PendingRpc` (`SingleLine` or `MultiLine`).
 
-Both threads exit when the socket fails, calling `markBroken()` which
-flips `running = false`, updates `_state` to `DISCONNECTED`, and schedules
-a full `disconnect()` on a daemon thread to close the socket fd and
-unblock the writer thread safely without risk of deadlock.
+All 6 request-response RPCs (`ping`, `startDirectMirror`, `stopMirror`, `takeScreenshot`, `readTextFile`, `getRunningProcesses`) are serialized through `commandMutex` and share a single `@Volatile private var pendingRpc: PendingRpc?` reference (`executeSingleLineRpc` / `executeMultiLineRpc`).
 
-`PrivdManager` launches a coroutine on its own `CoroutineScope` (backed by
-`SupervisorJob() + Dispatchers.Default`) that collects `PrivdClient.state`.
-When the state drops to `DISCONNECTED` while `PrivdManager.state == RUNNING`,
-the manager automatically transitions to `FAILED` with
-`PrivdError.DAEMON_UNREACHABLE`, keeping the UI in sync with the real transport
-state even after an unexpected drop.
-
-`GlobalSettingsViewModel.privdConnect()` dispatches to `Dispatchers.IO` via
-`viewModelScope` so the blocking `LocalSocket.connect()` never runs on the
-main thread.
-
-The `BOOTSTRAPPING` state covers the entire wizard flow; the finer-grained `BootstrapStage`
-enum (IDLE / PAIRING / CONNECTING_ADB / PUSHING_BINARY / SPAWNING_DAEMON /
-VERIFYING / DONE) is exposed by `PrivdBootstrapper.stage` for the wizard UI.
-Key provisioning happens during the `PUSHING_BINARY` stage (after a successful binary push
-but before spawning the daemon) — no separate `PROVISIONING` stage is needed.
+When the socket fails, `markBroken()` acquires `stateLock`, runs `cleanupLocked()` directly to close the socket and cancel any pending RPC, transitions `_state` to `DISCONNECTED`, and notifies `PrivdManager.onClientDisconnected()`.
 
 ### Megingiard System Service Requirement in GamepadInjector
 
@@ -197,19 +181,23 @@ but before spawning the daemon) — no separate `PROVISIONING` stage is needed.
 
 | File | Responsibility |
 | --- | --- |
-| `companion/ui/src/main/cpp/megingiard_privd.c` | Native daemon source (TCP socket loopback server, evdev writer, passive read-only physical gamepad event stream) |
-| `companion/ui/src/main/assets/megingiard_privd_arm64` | Pre-built static daemon binary |
-| `domain/.../privd/PrivdPairKey.kt` | Per-install Keystore-encrypted HMAC key: `generateAndStore()`, `load()`, `delete()` |
-| `domain/.../privd/PrivdClient.kt` | TCP Socket transport singleton (writer + reader threads, ping support, physical evdev event stream) |
-| `domain/.../privd/PrivdConnectionState.kt` | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED) |
-| `domain/.../privd/PrivdGamepadInjector.kt` | Sends GD/GU/HD/JS gamepad commands via `PrivdClient` for physical evdev merge |
-| `domain/.../privd/PrivdManager.kt` | Top-level state machine, `PrivdState` (incl. `BOOTSTRAPPING`), `PrivdError` (6 codes), `PrivdFeature` enum |
-| `domain/.../privd/PrivdAdbConnectionManager.kt` | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`connect` |
-| `domain/.../privd/PrivdBootstrapper.kt` | `BootstrapStage` state flow + pair / push (`sync:` + byte-size verification) / spawn (detached) / verify orchestration |
-| `app/.../privd/PrivdSettingsCard.kt` | Compose card: status badge, connect/test buttons, wizard trigger, auto-connect Switch |
-| `companion/ui/src/main/java/com/stormpanda/megingiard/privd/PrivdSetupWizard.kt` | `PrivdSetupWizardDialog` — in-tree modal dialog (scrim + centered card) hosting the 4-step wizard; hosted on the secondary display (bottom screen) via `MainAppScreen` / `AppStateManager` |
-| `app/.../MainActivity.kt` | Auto-connect hook (`combine(privdAutoConnect, state)` one-shot) |
-| `domain/.../macropad/GamepadInjector.kt` | Public facade delegating directly to `PrivdGamepadInjector` physical merge |
-| `domain/.../macropad/PhysicalGamepadRecordingManager.kt` | Converts physical evdev events into macro steps while recording (`GamepadButtonTap`, `DPadTap`, `JoystickPath`) |
-| `domain/.../settings/MacroPadSettings.kt` | `privdAutoConnect` flag |
-| `domain/.../settings/SettingsKeys.kt` | `KEY_PRIVD_AUTO_CONNECT` DataStore key |
+| `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` | Shared daemon version (`PRIVD_VERSION = 17`), asset names, canonical TCP ports (`51234` / `51244`), and remote file/process path helpers |
+| `companion/ui/src/main/cpp/megingiard_privd.c` | Native daemon source (TCP loopback server, HMAC-SHA256 auth, evdev/uinput writers, passive gamepad/touch streams, `SCREENSHOT`, `READ_FILE`, `LIST_PROCESSES`) |
+| `companion/ui/src/main/cpp/cmd_parsers.h` | Pure C command parsers (`parse_touch_command`, `parse_mouse_command`, `parse_key_command`, `parse_gamepad_command`) shared with native unit tests |
+| `companion/ui/src/main/assets/megingiard_privd_arm64` | Pre-built static arm64 daemon binary |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdPairKey.kt` | Per-install Keystore-encrypted HMAC key: `generateAndStore()`, `load()`, `delete()` |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdClient.kt` | Loopback TCP transport singleton (writer + reader threads, `PendingRpc` single-flight RPC framing, evdev/touch event streams) |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdConnectionState.kt` | Transport connection-state enum (`DISCONNECTED`, `CONNECTING`, `CONNECTED`) |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdGamepadInjector.kt` | Sends `GD`/`GU`/`HD`/`JS` gamepad commands via `PrivdClient` for physical evdev merge |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdManager.kt` | Top-level reactive state machine (`PrivdState`, `PrivdError`), Tier-1/Tier-2 connect orchestration |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PServiceBridge.kt` | Binder IPC client for the AYN Thor `/system/bin/pservice` hardware root service (`PServerBinder`) |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PServerBootstrapper.kt` | Tier-1 root-bridge bootstrapper: stages binaries, verifies SHA-256 hashes, provisions HMAC key, and spawns daemon under UID 2000 |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdAdbConnectionManager.kt` | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `noBackupFilesDir`, `pair`/`connect` |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdBootstrapper.kt` | Tier-2 ADB Wireless Debugging bootstrapper (`BootstrapStage` flow, `pair`, `sync:` push, HMAC key provisioning, daemon spawn, verify) |
+| `companion/ui/src/main/java/com/stormpanda/megingiard/privd/AutoSetupLanguageConfig.kt` | Localized UI node matchers (`en`, `de`, `zh-TW`) for Accessibility-driven Wireless Debugging auto-setup |
+| `companion/ui/src/main/java/com/stormpanda/megingiard/privd/PrivdPairScreenTextScanner.kt` | Accessibility node tree scanner extracting pairing code, pairing port, and connect port from Settings |
+| `companion/ui/src/main/java/com/stormpanda/megingiard/privd/PrivdSetupWizard.kt` | `PrivdSetupWizardDialog` — 4-step manual Wireless Debugging pairing & bootstrap wizard modal |
+| `companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrivdReconnectPromptDialog.kt` | Modal gatekeeper reconnect wizard sharing `SystemSetupStepContent` and `OnboardingWizardFooter` with `OnboardingWizardDialog` |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/macropad/GamepadInjector.kt` | Public facade delegating directly to `PrivdGamepadInjector` physical merge |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/macropad/PhysicalGamepadRecordingManager.kt` | Converts physical evdev events into macro steps while recording (`GamepadButtonTap`, `DPadTap`, `JoystickPath`) |
+

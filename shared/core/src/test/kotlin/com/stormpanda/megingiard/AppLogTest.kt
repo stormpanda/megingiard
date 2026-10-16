@@ -22,6 +22,7 @@ class AppLogTest {
     fun testLogLevelHierarchy() {
         AppLog.level = AppLog.Level.VERBOSE
         assertEquals(AppLog.Level.VERBOSE, AppLog.level)
+        assertEquals(AppLog.Level.VERBOSE, AppLog.levelFlow.value)
         AppLog.v("Test", "verbose message")
         AppLog.d("Test", "debug message")
         AppLog.i("Test", "info message")
@@ -31,11 +32,19 @@ class AppLogTest {
 
         AppLog.level = AppLog.Level.NONE
         assertEquals(AppLog.Level.NONE, AppLog.level)
+        assertEquals(AppLog.Level.NONE, AppLog.levelFlow.value)
         AppLog.v("Test", "suppressed")
         AppLog.d("Test", "suppressed")
         AppLog.i("Test", "suppressed")
         AppLog.w("Test", "suppressed")
         AppLog.e("Test", "suppressed")
         AppLog.e("Test", "suppressed", RuntimeException("suppressed ex"))
+
+        assertEquals(2, AppLog.Level.VERBOSE.priority)
+        assertEquals(3, AppLog.Level.DEBUG.priority)
+        assertEquals(4, AppLog.Level.INFO.priority)
+        assertEquals(5, AppLog.Level.WARN.priority)
+        assertEquals(6, AppLog.Level.ERROR.priority)
+        assertEquals(Int.MAX_VALUE, AppLog.Level.NONE.priority)
     }
 }

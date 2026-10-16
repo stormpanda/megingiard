@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.media.SteamGridDbClient
@@ -70,6 +71,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 private const val TAG = "SteamGridDbScrapeDlg"
 
@@ -133,7 +135,7 @@ internal fun SteamGridDbScrapeSubPageContent(
 
     var activeFetchJob by remember { mutableStateOf<Job?>(null) }
 
-    val apiKey = SettingsManager.steamGridDbApiToken.value
+    val apiKey by SettingsManager.steamGridDbApiToken.collectAsStateWithLifecycle()
     val rowState = rememberLazyListState()
     val imagesCache = remember { HashMap<Pair<Int, String>, List<SteamGridDbImage>>() }
 
@@ -322,8 +324,12 @@ internal fun SteamGridDbScrapeSubPageContent(
                         scope.launch {
                             val cacheDir = context.cacheDir
                             SteamGridDbClient
-                                .downloadImageToTempFile(currentImage.url, cacheDir)
-                                .onSuccess { tempFile ->
+                                .downloadImageBytes(currentImage.url)
+                                .mapCatching { bytes ->
+                                    val tempFile = File(cacheDir, "steamgriddb_temp_${System.currentTimeMillis()}.png")
+                                    tempFile.writeBytes(bytes)
+                                    tempFile
+                                }.onSuccess { tempFile ->
                                     AppLog.i(TAG, "Download successful, file saved to: ${tempFile.absolutePath}")
                                     onImageSelected(Uri.fromFile(tempFile))
                                     isDownloading = false
@@ -539,9 +545,14 @@ private fun SteamGridDbImageThumbnail(
         isLoading = true
         isError = false
         val bytes = SteamGridDbClient.downloadImageBytes(url).getOrNull()
-        val decoded = bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+        val decoded =
+            bytes?.let {
+                withContext(Dispatchers.Default) {
+                    BitmapFactory.decodeByteArray(it, 0, it.size)?.asImageBitmap()
+                }
+            }
         if (decoded != null) {
-            bitmap = decoded.asImageBitmap()
+            bitmap = decoded
         } else {
             isError = true
         }

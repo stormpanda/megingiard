@@ -22,22 +22,21 @@ class AnchorTestCoordinatorTest {
     @Before
     fun setUp() {
         AnchorTestCoordinator.stopTesting(resumeSuspended = false)
-        AnchorPositioningCoordinator.consumeDoneRequest()
     }
 
     @Test
     fun `isTesting defaults to false`() {
-        assertFalse(AnchorTestCoordinator.isTesting.value)
+        assertFalse(AnchorTestCoordinator.uiState.value.isTesting)
     }
 
     @Test
     fun `currentMatchRatio defaults to 0`() {
-        assertEquals(0f, AnchorTestCoordinator.currentMatchRatio.value, 0.001f)
+        assertEquals(0f, AnchorTestCoordinator.uiState.value.currentMatchRatio, 0.001f)
     }
 
     @Test
     fun `isAnchorActive defaults to false`() {
-        assertFalse(AnchorTestCoordinator.isAnchorActive.value)
+        assertFalse(AnchorTestCoordinator.uiState.value.isAnchorActive)
     }
 
     @Test
@@ -48,34 +47,26 @@ class AnchorTestCoordinatorTest {
 
     @Test
     fun `pointMatches and targetPoints default to empty and counts to zero`() {
-        assertTrue(AnchorTestCoordinator.pointMatches.value.isEmpty())
-        assertTrue(AnchorTestCoordinator.targetPoints.value.isEmpty())
-        assertEquals(0, AnchorTestCoordinator.matchedPointCount.value)
-        assertEquals(0, AnchorTestCoordinator.totalPointCount.value)
+        val state = AnchorTestCoordinator.uiState.value
+        assertTrue(state.pointMatches.isEmpty())
+        assertTrue(state.targetPoints.isEmpty())
+        assertEquals(0, state.matchedPointCount)
+        assertEquals(0, state.totalPointCount)
     }
 
     @Test
     fun `stopTesting resets all test states`() {
         AnchorTestCoordinator.stopTesting(resumeSuspended = false)
-        assertFalse(AnchorTestCoordinator.isTesting.value)
-        assertFalse(AnchorTestCoordinator.isAnchorActive.value)
-        assertEquals(0f, AnchorTestCoordinator.currentMatchRatio.value, 0.001f)
+        val state = AnchorTestCoordinator.uiState.value
+        assertFalse(state.isTesting)
+        assertFalse(state.isAnchorActive)
+        assertEquals(0f, state.currentMatchRatio, 0.001f)
         assertNull(AnchorTestCoordinator.referenceBitmap.value)
         assertNull(AnchorTestCoordinator.liveCropBitmap.value)
-        assertTrue(AnchorTestCoordinator.pointMatches.value.isEmpty())
-        assertTrue(AnchorTestCoordinator.targetPoints.value.isEmpty())
-        assertEquals(0, AnchorTestCoordinator.matchedPointCount.value)
-        assertEquals(0, AnchorTestCoordinator.totalPointCount.value)
-    }
-
-    @Test
-    fun `AnchorPositioningCoordinator requestDone and consumeDoneRequest roundtrip`() {
-        assertFalse(AnchorPositioningCoordinator.isDoneRequested.value)
-        AnchorPositioningCoordinator.requestDone()
-        assertTrue(AnchorPositioningCoordinator.isDoneRequested.value)
-        val consumed = AnchorPositioningCoordinator.consumeDoneRequest()
-        assertTrue(consumed)
-        assertFalse(AnchorPositioningCoordinator.isDoneRequested.value)
+        assertTrue(state.pointMatches.isEmpty())
+        assertTrue(state.targetPoints.isEmpty())
+        assertEquals(0, state.matchedPointCount)
+        assertEquals(0, state.totalPointCount)
     }
 
     @Test
@@ -93,10 +84,10 @@ class AnchorTestCoordinatorTest {
 
         assertNull(AppStateManager.activePrimaryModal.value)
         assertEquals(editorModal, AppStateManager.suspendedPrimaryModal.value)
-        assertTrue(AnchorTestCoordinator.isTesting.value)
+        assertTrue(AnchorTestCoordinator.uiState.value.isTesting)
 
         AnchorTestCoordinator.stopTesting(resumeSuspended = true)
-        assertFalse(AnchorTestCoordinator.isTesting.value)
+        assertFalse(AnchorTestCoordinator.uiState.value.isTesting)
         assertEquals(editorModal, AppStateManager.activePrimaryModal.value)
     }
 }

@@ -53,7 +53,6 @@ import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.LayoutTransitionManager
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 
@@ -87,7 +86,7 @@ private val PM_PANEL_SHAPE = RoundedCornerShape(PM_PANEL_CORNER)
  *
  * Two-card layout:
  * - **Bottom card** (always visible): Profile / Layout selectors + action buttons.
- * - **Top card** (only when mirroring): Ambient Settings + mirror control icon buttons.
+ * - **Top card** (always visible): Screen mirroring and screenshot control buttons.
  *
  * Tapping the scrim calls [onDismiss].
  */
@@ -122,10 +121,7 @@ fun QuickMenu(
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = PM_SCRIM_ALPHA))
                     .pointerInput(Unit) {
-                        detectTapGestures(onTap = {
-                            AppStateManager.closeQuickMenu()
-                            onDismiss()
-                        })
+                        detectTapGestures(onTap = { onDismiss() })
                     },
         ) {
             // ── Top card — Mirror controls (always visible) ───────────────
@@ -133,9 +129,6 @@ fun QuickMenu(
                 colors = colors,
                 isCapturing = isCapturing,
                 isFrozen = isFrozen,
-                isTopScreenshotEnabled = true,
-                isBottomScreenshotEnabled = true,
-                isBothScreenshotEnabled = true,
                 isCompanionHub = showIntegrationHome,
                 modifier =
                     Modifier
@@ -157,18 +150,6 @@ fun QuickMenu(
                 onTakeBottomScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTTOM) },
                 onTakeBothScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH) },
             )
-
-            fun ensureMacroPadModeForProfile(profile: PadProfile?) {
-                val matchesFocused =
-                    profile?.matches(
-                        AppStateManager.focusedAppPackageName.value,
-                        AppStateManager.focusedRomPath.value,
-                        isActiveProfile = true,
-                    ) == true
-                if (companionViewMode != CompanionViewMode.AUTO || !matchesFocused) {
-                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                }
-            }
 
             // ── Bottom card — Profiles / Layouts / Actions ─────────────────
             Column(
@@ -245,7 +226,7 @@ fun QuickMenu(
                             icon = Icons.Rounded.Gamepad,
                             colors = colors,
                             onClick = {
-                                ensureMacroPadModeForProfile(MacroPadState.activeProfile.value)
+                                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                             },
                             modifier = Modifier.weight(1f),
                         )
@@ -353,11 +334,6 @@ private fun QuickMenuHelpModal(
             icon = Icons.Rounded.Pause,
             label = stringResource(R.string.help_quickmenu_freeze_label),
             description = stringResource(R.string.help_quickmenu_freeze_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Edit,
-            label = stringResource(R.string.quick_menu_screen_mirroring),
-            description = stringResource(R.string.help_quickmenu_viewport_desc),
         )
         HelpEntry(
             symbolName = "splitscreen_bottom",

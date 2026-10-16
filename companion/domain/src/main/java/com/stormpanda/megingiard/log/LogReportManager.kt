@@ -2,15 +2,14 @@ package com.stormpanda.megingiard.log
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.Process
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -23,6 +22,10 @@ private const val LOG_REPORT_MAX_LINES = 3000
 /** Logcat verbosity tag requested for the report. */
 private const val LOG_REPORT_FORMAT = "time"
 
+/** Shared timestamp formatter for report headers and suggested filenames. */
+private val REPORT_TIMESTAMP_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+
 /**
  * Coordinates the log-report save flow.
  *
@@ -30,26 +33,6 @@ private const val LOG_REPORT_FORMAT = "time"
  * response, mirroring the pattern used by [ConfigManager] for config exports.
  */
 object LogReportManager {
-    /** Result of the most recent save attempt; cleared by [clearSaveResult]. */
-    sealed class SaveResult {
-        data object Success : SaveResult()
-
-        data class Failure(
-            val message: String?,
-        ) : SaveResult()
-    }
-
-    private val _saveResult = MutableStateFlow<SaveResult?>(null)
-    val saveResult: StateFlow<SaveResult?> = _saveResult.asStateFlow()
-
-    fun setSaveResult(result: SaveResult) {
-        _saveResult.value = result
-    }
-
-    fun clearSaveResult() {
-        _saveResult.value = null
-    }
-
     // ── Save request (Settings → MainActivity) ────────────────────────────────
 
     private val _saveRequest =
@@ -65,7 +48,7 @@ object LogReportManager {
      */
     val saveRequest: SharedFlow<Unit> = _saveRequest.asSharedFlow()
 
-    /** Posted by [GlobalSettingsViewModel.requestSaveLogReport] on the main thread. */
+    /** Posted by the Diagnostics settings tab on the main thread. */
     fun requestSaveReport() {
         AppLog.d(TAG, "requestSaveReport")
         _saveRequest.tryEmit(Unit)
@@ -78,9 +61,10 @@ object LogReportManager {
         context: Context,
         uri: Uri,
         appVersion: String,
-        deviceModel: String,
-        androidVersion: String,
-        pid: Int,
+        deviceModel: String = Build.MODEL,
+        androidVersion: String = Build.VERSION.RELEASE,
+        pid: Int = Process.myPid(),
+        logcatReader: (Int) -> String = ::readLogcatLines,
     ): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
@@ -89,12 +73,9 @@ object LogReportManager {
                         appVersion = appVersion,
                         deviceModel = deviceModel,
                         androidVersion = androidVersion,
-                        timestamp =
-                            LocalDateTime
-                                .now()
-                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
+                        timestamp = LocalDateTime.now().format(REPORT_TIMESTAMP_FORMATTER),
                     )
-                val body = readLogcatLines(pid)
+                val body = logcatReader(pid)
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
                     stream.bufferedWriter().use { writer ->
                         writer.write(header)
@@ -103,10 +84,8 @@ object LogReportManager {
                 } ?: error("Could not open output stream for $uri")
             }.onSuccess {
                 AppLog.i(TAG, "Log report written to $uri")
-                setSaveResult(SaveResult.Success)
             }.onFailure { e ->
                 AppLog.e(TAG, "Log report save failed", e)
-                setSaveResult(SaveResult.Failure(e.message))
             }
         }
 
@@ -119,7 +98,8 @@ object LogReportManager {
      * [timestamp] should be an ISO-8601-style local date-time string
      * (passed in so the caller can supply a fixed value in tests).
      */
-    fun buildReportFilename(timestamp: String): String = "megingiard_log_${timestamp.replace(':', '-').replace(' ', '_')}.txt"
+    fun buildReportFilename(timestamp: String = LocalDateTime.now().format(REPORT_TIMESTAMP_FORMATTER)): String =
+        "megingiard_log_${timestamp.replace(':', '-').replace(' ', '_')}.txt"
 
     /**
      * Builds the plain-text header block that precedes the logcat lines.
@@ -127,8 +107,8 @@ object LogReportManager {
      * All parameters are explicit so the function is pure and easily testable.
      *
      * @param appVersion e.g. `"0.2.0-SNAPSHOT"` from [BuildConfig.VERSION_NAME]
-     * @param deviceModel e.g. `"AYN Thor 2"` from [android.os.Build.MODEL]
-     * @param androidVersion e.g. `"14"` from [android.os.Build.VERSION.RELEASE]
+     * @param deviceModel e.g. `"AYN Thor 2"` from [Build.MODEL]
+     * @param androidVersion e.g. `"14"` from [Build.VERSION.RELEASE]
      * @param timestamp e.g. `"2026-05-18 14:32:00"`
      */
     fun buildReportHeader(
@@ -156,7 +136,6 @@ object LogReportManager {
      * a blocking I/O operation.
      *
      * @throws Exception if logcat cannot be started or exits with a non-zero exit code.
-     * The caller is responsible for handling the exception and surfacing a [SaveResult.Failure].
      */
     fun readLogcatLines(pid: Int): String {
         val process =

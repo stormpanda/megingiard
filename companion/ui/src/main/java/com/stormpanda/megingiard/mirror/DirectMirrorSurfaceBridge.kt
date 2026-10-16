@@ -12,8 +12,20 @@ private const val DIRECT_SURFACE_DESCRIPTOR = "com.stormpanda.megingiard.mirrors
 private const val TRANSACTION_SET_SURFACE = IBinder.FIRST_CALL_TRANSACTION
 
 internal object DirectMirrorSurfaceBridge {
-    fun sendToDirectServer(surfaces: List<Triple<Surface, Int, Int>>): Boolean {
-        val validSurfaces = surfaces.filter { it.first.isValid }
+    fun clearDirectSurfaces(): Boolean = transactSurface(null, 0, 0)
+
+    fun sendToDirectServer(
+        surface: Surface,
+        width: Int,
+        height: Int,
+    ): Boolean = transactSurface(surface, width, height)
+
+    private fun transactSurface(
+        surface: Surface?,
+        width: Int,
+        height: Int,
+    ): Boolean {
+        val validSurface = surface?.takeIf { it.isValid }
         val binder =
             getService(DIRECT_SURFACE_SERVICE_NAME) ?: run {
                 AppLog.w(TAG, "sendToDirectServer: direct service not registered")
@@ -23,12 +35,13 @@ internal object DirectMirrorSurfaceBridge {
         val reply = Parcel.obtain()
         return try {
             data.writeInterfaceToken(DIRECT_SURFACE_DESCRIPTOR)
-            data.writeInt(validSurfaces.size)
-            for ((surface, width, height) in validSurfaces) {
+            if (validSurface != null) {
+                data.writeInt(1)
                 data.writeInt(width)
                 data.writeInt(height)
-                data.writeInt(1)
-                surface.writeToParcel(data, 0)
+                validSurface.writeToParcel(data, 0)
+            } else {
+                data.writeInt(0)
             }
             if (!binder.transact(TRANSACTION_SET_SURFACE, data, reply, 0)) {
                 AppLog.w(TAG, "sendToDirectServer: transact returned false")
@@ -36,8 +49,8 @@ internal object DirectMirrorSurfaceBridge {
             } else {
                 reply.readException()
                 val serverResult = reply.readInt()
-                val ok = serverResult == 1 || (validSurfaces.isEmpty() && serverResult == 0)
-                AppLog.i(TAG, "sendToDirectServer: ok=$ok (validSurfaces=${validSurfaces.size}, serverResult=$serverResult)")
+                val ok = if (validSurface != null) serverResult == 1 else serverResult == 0
+                AppLog.i(TAG, "sendToDirectServer: ok=$ok (hasSurface=${validSurface != null}, serverResult=$serverResult)")
                 ok
             }
         } catch (e: Exception) {
@@ -48,14 +61,6 @@ internal object DirectMirrorSurfaceBridge {
             data.recycle()
         }
     }
-
-    fun clearDirectSurfaces(): Boolean = sendToDirectServer(emptyList())
-
-    fun sendToDirectServer(
-        surface: Surface,
-        width: Int,
-        height: Int,
-    ): Boolean = sendToDirectServer(listOf(Triple(surface, width, height)))
 
     private fun getService(name: String): IBinder? =
         try {

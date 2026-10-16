@@ -32,12 +32,7 @@
   - In the **button list** (`MacroPadEditor`, `ButtonsDeck`): the icon is shown at 18 dp in the indicator box instead of the two-character label abbreviation.
 - When `iconName` is `null`, the existing label rendering is used unchanged; the label field is still stored and used in the editor button list.
 - When the action type is `ScrollWheel`, `TrackpointMove`, or `BackgroundPeek`, `iconName` is forced to `null` (these action types have fixed rendering and do not support icons).
-- Icon selection opens `IconPickerDialog`, a full-screen overlay with three zones:
-  1. **Header** — Cancel (text button) | title | ✓ confirm (icon button).
-  2. **Search row** — `AppTextField` + Filled checkbox.
-  3. **Selection row** (only visible when an icon is pending) — preview box (48 dp) + icon name + "Currently selected" subtext + 🗑 delete button.
-     Tapping a grid icon sets a local `pendingIcon` state (does **not** close the dialog). The user confirms with ✓ or clears via 🗑. Cancel discards any pending change.
-     The icon grid is a `LazyVerticalGrid` (5 columns) of all available icons. The list (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`) is auto-generated from the font — see _Icon Name List Generation_ in the Technical Implementation section.
+- Icon selection opens `ChooseIconSubPageContent` (`IconPickerDialog.kt`), an in-deck sub-page with a search field, a current-selection two-step clear card (when an icon is selected), and a 5-column `LazyVerticalGrid` of all available icons (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`).
 - The `iconName` field defaults to `null`, so existing saved profiles load without any migration.
 - No runtime reflection or Proguard keep-rules are required.
 
@@ -114,7 +109,6 @@
 - **TrackpointMove:** Vibration fires continuously while the finger moves, with a **speed-adaptive rate**: the faster the trackpoint moves, the shorter the interval between pulses. The engine passes `sqrt(dx² + dy²)` as a magnitude to the callback; `PadSurface` computes `interval = clamp(2000 / magnitude, 50 ms, 333 ms)`. Slow movement (magnitude ≈ 6) → ~333 ms interval; fast movement (magnitude ≥ 40) → 50 ms minimum.
 - **ScrollWheel:** One tick fires per discrete scroll batch (no speed-adaptive throttle). Each batch represents a fixed number of scroll units dispatched in one gesture step.
 - **Discrete button press:** magnitude is always `0f`; the interval guard evaluates to 0 ms so the pulse fires immediately regardless of prior activity.
-- **Disabled-device buttons:** No haptic is triggered — the engine returns early before the callback is invoked.
 - **Implementation:** `MacroPadHitTestEngine` receives an `onHapticFeedback: ((String, HapticStrength, Int, Int, Float) -> Unit)?` constructor parameter (args: buttonId, strength, customDurationMs, customAmplitude, magnitude). The `PadSurface` composable in `MacroPadScreen.kt` resolves a `Vibrator` from the system service and passes a per-button rate-limiting closure that computes the dynamic interval. `triggerHaptic()` in `HapticFeedback.kt` (`:companion:ui`) performs the `VibrationEffect.createOneShot()` call, clamping custom params to safe ranges. The `:companion:domain` module remains Android-UI-free; only `HapticStrength` (an enum in `:shared:core`) crosses the boundary.
 
 ### FR-P15: App-Aware Automatic Profile Switching
@@ -136,9 +130,8 @@
 
 ### FR-P16: Entity Duplication and Copying
 
-- **Name Collision Formatting**: All copy and duplication operations MUST avoid adding a `(Copy)` suffix. Instead, standard conflict resolution numbering (e.g. `Combo (2)` or `Lay1 (2)`) is appended on name collision. If no collision occurs, the original name is kept.
-- **Contextual Dropdowns ("...")**: Individual action buttons in management bars and lists are merged into unified contextual "..." dropdown menus to keep the editor interface clean:
-  - **Profiles**: Edit, Duplicate, and Reorder options are accessed via a "..." dropdown in the profiles management row. Duplicating a profile deep-copies all its layouts and macros, and maps macro IDs within layout buttons.
-  - **Layouts**: Edit, Duplicate, Copy to Profile, and Reorder options are accessed via a "..." dropdown in the layouts management bar. Duplicating a layout clones all its buttons with new UUIDs within the active profile.
-  - **Button List**: Each item in the button list replaces the individual Delete button with a "..." dropdown providing Edit, Duplicate, Copy to Layout, and Delete options. Drag-reorder handles remain separate.
-  - **Dialogs & Overlays**: Property configuration dialogs (e.g., `ButtonEditDialog`) and inline configuration overlays (e.g., `InlineLayoutSettingsOverlay`) remain focused strictly on metadata settings editing, without copy or duplicate options.
+- **Name Collision Formatting**: All copy and duplication operations MUST avoid adding a `(Copy)` suffix via `nextUniqueName(baseName)` in `MacroPadLayout.kt`. Instead, standard conflict resolution numbering (e.g. `Combo (2)` or `Lay1 (2)`) is appended on name collision. If no collision occurs, the original name is kept.
+- **In-Deck Management Cards & Copy Sub-Pages**:
+  - **Profiles**: Edit, Duplicate, Reorder, Unlink, and Delete options are presented as dedicated `GamepadActionCard` and `GamepadTwoStepConfirmCard` rows in the **Profiles Deck** (`ProfilesDeck`). Duplicating a profile deep-copies all its layouts and macros, and maps macro IDs within layout buttons.
+  - **Layouts**: Edit, Duplicate, Copy to Profile (`CopyLayoutSubPageContent`), Reorder (`ReorderLayouts`), and Delete options are presented in the **Layouts Deck** (`LayoutsDeck`). Duplicating a layout clones all its buttons and cutouts with new UUIDs and duplicates background/mask media files under the new layout ID.
+  - **Buttons**: Edit, Duplicate, Copy to Layout (`CopyButtonSubPageContent`), and Delete options are accessible inside `EditButtonSubPageContent` (`PadButtonEditDialog.kt`), while reordering is accessible via the **Reorder Buttons** sub-page (`ReorderButtons`) in the **Buttons Deck**.

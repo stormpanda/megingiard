@@ -23,12 +23,19 @@ object GameFocusPairManager {
     private val persistSupervisor = SupervisorJob()
     private val persistScope = CoroutineScope(Dispatchers.IO + persistSupervisor)
     private val persistLock = Any()
+    private val stateLock = Any()
+
+    @Volatile
+    private var isPairsLoaded = false
 
     private val _pairedApps = MutableStateFlow<Map<String, String>>(emptyMap())
     val pairedApps: StateFlow<Map<String, String>> = _pairedApps.asStateFlow()
 
     internal fun resetForTesting() {
-        _pairedApps.value = emptyMap()
+        synchronized(stateLock) {
+            isPairsLoaded = false
+            _pairedApps.value = emptyMap()
+        }
     }
 
     internal suspend fun awaitPersistenceForTesting() {
@@ -36,26 +43,30 @@ object GameFocusPairManager {
     }
 
     fun loadPairs(context: Context) {
-        val file = File(context.filesDir, FILE_APP_PAIRS)
-        if (!file.exists()) {
-            _pairedApps.value = emptyMap()
-            AppLog.d(TAG, "No app pairs file found, initialized with empty map")
-            return
-        }
-
-        try {
-            val atomicFile = AtomicFile(file)
-            val jsonStr = atomicFile.readFully().toString(Charsets.UTF_8)
-            if (jsonStr.isBlank()) {
+        synchronized(stateLock) {
+            if (isPairsLoaded) return
+            isPairsLoaded = true
+            val file = File(context.filesDir, FILE_APP_PAIRS)
+            if (!file.exists()) {
                 _pairedApps.value = emptyMap()
+                AppLog.d(TAG, "No app pairs file found, initialized with empty map")
                 return
             }
-            val map = Json.decodeFromString<Map<String, String>>(jsonStr)
-            _pairedApps.value = map
-            AppLog.i(TAG, "Loaded ${map.size} app pair(s) from $FILE_APP_PAIRS")
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to load app pairs from $FILE_APP_PAIRS: ${e.message}", e)
-            _pairedApps.value = emptyMap()
+
+            try {
+                val atomicFile = AtomicFile(file)
+                val jsonStr = atomicFile.readFully().toString(Charsets.UTF_8)
+                if (jsonStr.isBlank()) {
+                    _pairedApps.value = emptyMap()
+                    return
+                }
+                val map = Json.decodeFromString<Map<String, String>>(jsonStr)
+                _pairedApps.value = map
+                AppLog.i(TAG, "Loaded ${map.size} app pair(s) from $FILE_APP_PAIRS")
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to load app pairs from $FILE_APP_PAIRS: ${e.message}", e)
+                _pairedApps.value = emptyMap()
+            }
         }
     }
 
@@ -64,18 +75,21 @@ object GameFocusPairManager {
         topPackageName: String,
         bottomPackageName: String?,
     ) {
-        val current = _pairedApps.value.toMutableMap()
-        if (bottomPackageName.isNullOrBlank()) {
-            val removed = current.remove(topPackageName)
-            if (removed != null) {
-                AppLog.i(TAG, "Removed pairing for $topPackageName")
+        loadPairs(context)
+        synchronized(stateLock) {
+            val current = _pairedApps.value.toMutableMap()
+            if (bottomPackageName.isNullOrBlank()) {
+                val removed = current.remove(topPackageName)
+                if (removed != null) {
+                    AppLog.i(TAG, "Removed pairing for $topPackageName")
+                }
+            } else {
+                current[topPackageName] = bottomPackageName
+                AppLog.i(TAG, "Set pairing: $topPackageName -> $bottomPackageName")
             }
-        } else {
-            current[topPackageName] = bottomPackageName
-            AppLog.i(TAG, "Set pairing: $topPackageName -> $bottomPackageName")
+            _pairedApps.value = current.toMap()
         }
-        _pairedApps.value = current
-        persistPairs(context, current)
+        persistPairs(context)
     }
 
     fun removePair(
@@ -87,12 +101,10 @@ object GameFocusPairManager {
 
     fun getPairedPackage(topPackageName: String): String? = _pairedApps.value[topPackageName]
 
-    private fun persistPairs(
-        context: Context,
-        pairs: Map<String, String>,
-    ) {
+    private fun persistPairs(context: Context) {
         persistScope.launch {
             synchronized(persistLock) {
+                val pairs = synchronized(stateLock) { _pairedApps.value }
                 val file = File(context.filesDir, FILE_APP_PAIRS)
                 val atomicFile = AtomicFile(file)
                 var fos: FileOutputStream? = null

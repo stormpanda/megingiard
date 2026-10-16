@@ -1,16 +1,31 @@
 package com.stormpanda.megingiard.touchpad
 
+import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.privd.PrivdConnectionState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TouchpadGestureProcessorTest {
     private val testDispatcher = UnconfinedTestDispatcher()
+
+    @Before
+    fun setUp() {
+        PrivdClient.setStateForTesting(PrivdConnectionState.CONNECTED)
+        PrivdClient.clearQueueForTest()
+    }
+
+    @After
+    fun tearDown() {
+        PrivdClient.clearQueueForTest()
+        PrivdClient.setStateForTesting(null)
+    }
 
     private fun TestScope.createProcessor(
         useMouse: () -> Boolean = { false },
@@ -22,16 +37,20 @@ class TouchpadGestureProcessorTest {
         scrollSpeed: Float = 1.0f,
         onHapticFeedback: () -> Unit = {},
     ) = TouchpadGestureProcessor(
-        useMouse = useMouse,
         scope = this,
-        sensitivity = { 1.0f },
-        twoFingerScrollEnabled = { true },
-        tapToClick = { tapToClick },
-        tapDrag = { tapDrag },
-        twoFingerTap = { twoFingerTap },
-        threeFingerTap = { threeFingerTap },
-        naturalScrollEnabled = { naturalScrollEnabled },
-        scrollSpeed = { scrollSpeed },
+        config = {
+            TouchpadGestureConfig(
+                useMouse = useMouse(),
+                sensitivity = 1.0f,
+                twoFingerScrollEnabled = true,
+                naturalScrollEnabled = naturalScrollEnabled,
+                scrollSpeed = scrollSpeed,
+                tapToClick = tapToClick,
+                twoFingerTap = twoFingerTap,
+                threeFingerTap = threeFingerTap,
+                tapDrag = tapDrag,
+            )
+        },
         onHapticFeedback = onHapticFeedback,
     )
 
@@ -39,8 +58,7 @@ class TouchpadGestureProcessorTest {
         id: Long,
         x: Float,
         y: Float,
-        isHover: Boolean = false,
-    ) = onPress(id, x, y, 1000f, 1000f, isHover)
+    ) = onPress(id, x, y, 1000f, 1000f)
 
     private fun TouchpadGestureProcessor.release(
         id: Long,
@@ -57,38 +75,43 @@ class TouchpadGestureProcessorTest {
     ) = onMove(id, x, y, dx, dy, 1000f, 1000f)
 
     @Test
-    fun `absolute mode updates touch positions`() =
+    fun `absolute mode dispatches touch commands`() =
         runTest(testDispatcher) {
             val processor = createProcessor()
-            assertNull(processor.touchPos.value)
+            assertEquals(false, processor.hasActivePointers.value)
 
             processor.press(1L, 100f, 200f)
-            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+            assertEquals(true, processor.hasActivePointers.value)
+            assertEquals("D 0 864 192\n", PrivdClient.pollCommandForTest())
 
             processor.move(1L, 150f, 250f, 50f, 50f)
-            assertEquals(Pair(150f, 250f), processor.touchPos.value)
+            assertEquals("M 0 810 288\n", PrivdClient.pollCommandForTest())
 
             processor.release(1L, 150f, 250f)
-            assertNull(processor.touchPos.value)
+            assertEquals(false, processor.hasActivePointers.value)
+            assertEquals("U 0\n", PrivdClient.pollCommandForTest())
         }
 
     @Test
     fun `absolute mode multi touch allocates distinct slots`() =
         runTest(testDispatcher) {
             val processor = createProcessor()
-            assertNull(processor.touchPos.value)
 
             processor.press(1L, 100f, 200f)
-            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+            assertEquals(true, processor.hasActivePointers.value)
+            assertEquals("D 0 864 192\n", PrivdClient.pollCommandForTest())
 
             processor.press(2L, 300f, 400f)
-            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+            assertEquals(true, processor.hasActivePointers.value)
+            assertEquals("D 1 648 576\n", PrivdClient.pollCommandForTest())
 
             processor.release(1L, 150f, 250f)
-            assertNull(processor.touchPos.value)
+            assertEquals(true, processor.hasActivePointers.value)
+            assertEquals("U 0\n", PrivdClient.pollCommandForTest())
 
             processor.release(2L, 350f, 450f)
-            assertNull(processor.touchPos.value)
+            assertEquals(false, processor.hasActivePointers.value)
+            assertEquals("U 1\n", PrivdClient.pollCommandForTest())
         }
 
     @Test
@@ -198,15 +221,32 @@ class TouchpadGestureProcessorTest {
         }
 
     @Test
+    fun `haptic feedback does not trigger on four finger tap`() =
+        runTest(testDispatcher) {
+            var hapticCount = 0
+            val processor = createProcessor(useMouse = { true }, threeFingerTap = true, onHapticFeedback = { hapticCount++ })
+
+            processor.press(1L, 100f, 200f)
+            processor.press(2L, 120f, 220f)
+            processor.press(3L, 140f, 240f)
+            processor.press(4L, 160f, 260f)
+            processor.release(1L, 100f, 200f)
+            processor.release(2L, 120f, 220f)
+            processor.release(3L, 140f, 240f)
+            processor.release(4L, 160f, 260f)
+            assertEquals(0, hapticCount)
+        }
+
+    @Test
     fun `onCancel cleans absolute mode touch slots`() =
         runTest(testDispatcher) {
             val processor = createProcessor()
 
             processor.press(1L, 100f, 200f)
-            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+            assertEquals("D 0 864 192\n", PrivdClient.pollCommandForTest())
 
             processor.onCancel()
-            assertNull(processor.touchPos.value)
+            assertEquals("U 0\n", PrivdClient.pollCommandForTest())
         }
 
     @Test
@@ -216,11 +256,11 @@ class TouchpadGestureProcessorTest {
             val processor = createProcessor(useMouse = { currentUseMouse })
 
             processor.press(1L, 100f, 200f)
-            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+            assertEquals("D 0 864 192\n", PrivdClient.pollCommandForTest())
 
             currentUseMouse = true
             processor.onCancel()
-            assertNull(processor.touchPos.value)
+            assertEquals("U 0\n", PrivdClient.pollCommandForTest())
         }
 
     @Test
@@ -230,5 +270,33 @@ class TouchpadGestureProcessorTest {
             processor.press(1L, 100f, 200f)
             processor.move(1L, 110f, 210f, dx = 10f, dy = 10f)
             processor.release(1L, 110f, 210f)
+        }
+
+    @Test
+    fun `onCancel during tap click window sends buttonUp`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor(useMouse = { true }, tapToClick = true)
+
+            processor.press(1L, 100f, 200f)
+            processor.release(1L, 100f, 200f)
+            assertEquals("MB L D\n", PrivdClient.pollCommandForTest())
+
+            processor.onCancel()
+            assertEquals("MB L U\n", PrivdClient.pollCommandForTest())
+        }
+
+    @Test
+    fun `relative mode continues moving when first finger releases while second finger stays down`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor(useMouse = { true })
+
+            processor.press(1L, 100f, 200f)
+            processor.press(2L, 120f, 220f)
+            processor.release(1L, 100f, 200f)
+
+            processor.move(2L, 130f, 225f, dx = 10f, dy = 5f)
+            assertEquals("MM 20 10\n", PrivdClient.pollCommandForTest())
+
+            processor.release(2L, 130f, 225f)
         }
 }

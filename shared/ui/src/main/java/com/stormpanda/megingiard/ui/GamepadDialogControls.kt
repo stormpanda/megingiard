@@ -57,6 +57,8 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "GamepadDialogControls"
+private const val GC_SPLIT_ANIM_DURATION_MS = 220
+private const val GC_SIDEBAR_FOCUS_RETRY_MS = 50L
 
 /**
  * State holder for in-flight changes exit confirmation prompt.
@@ -102,17 +104,12 @@ fun rememberSaveExitPromptState(
     val currentOnDiscard by rememberUpdatedState(onDiscard)
 
     val refocusSaveAction: () -> Unit = {
-        try {
-            inputModeManager.requestInputMode(InputMode.Keyboard)
-            focusRequester.requestFocus()
-        } catch (_: Exception) {
-        }
         coroutineScope.launch {
             try {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 bringIntoViewRequester.bringIntoView()
                 focusRequester.requestFocus()
-            } catch (_: Exception) {
+            } catch (_: IllegalStateException) {
             }
         }
     }
@@ -121,15 +118,9 @@ fun rememberSaveExitPromptState(
         remember {
             {
                 if (currentHasChanges) {
-                    if (!currentShowExitPrompt) {
-                        showExitPrompt = true
-                        refocusSaveAction()
-                        true
-                    } else {
-                        showExitPrompt = false
-                        refocusSaveAction()
-                        true
-                    }
+                    showExitPrompt = !currentShowExitPrompt
+                    refocusSaveAction()
+                    true
                 } else {
                     false
                 }
@@ -148,32 +139,24 @@ fun rememberSaveExitPromptState(
     }
 
     val activeCategoryRequester = LocalActiveCategoryRequester.current
-    val firstContentRequester = LocalFirstContentRequester.current
 
     val transferFocusToSidebar: () -> Unit = {
+        inputModeManager.requestInputMode(InputMode.Keyboard)
+        val targetRequester = activeCategoryRequester ?: focusRequester
         try {
-            inputModeManager.requestInputMode(InputMode.Keyboard)
-            if (activeCategoryRequester != null) {
-                try {
-                    activeCategoryRequester.requestFocus()
-                } catch (_: Exception) {
-                    focusRequester.requestFocus()
-                }
-            } else {
-                focusRequester.requestFocus()
-            }
-        } catch (_: Exception) {
+            targetRequester.requestFocus()
+        } catch (_: IllegalStateException) {
             coroutineScope.launch {
-                delay(50)
+                delay(GC_SIDEBAR_FOCUS_RETRY_MS)
                 try {
-                    activeCategoryRequester?.requestFocus() ?: focusRequester.requestFocus()
-                } catch (_: Exception) {
+                    targetRequester.requestFocus()
+                } catch (_: IllegalStateException) {
                 }
             }
         }
     }
 
-    return remember(showExitPrompt, focusRequester, bringIntoViewRequester, activeCategoryRequester, firstContentRequester) {
+    return remember(showExitPrompt, focusRequester, bringIntoViewRequester, activeCategoryRequester) {
         SaveExitPromptState(
             showExitPrompt = showExitPrompt,
             focusRequester = focusRequester,
@@ -209,15 +192,12 @@ fun GamepadSaveExitActionRow(
     description: String? = null,
     saveIcon: ImageVector = Icons.Rounded.Save,
     saveActionText: String = stringResource(R.string.gamepad_action_save),
-    saveActionLeadingContent: (@Composable () -> Unit)? = null,
-    cardBgColor: Color? = null,
     pulseOnChanges: Boolean = false,
     enabled: Boolean = true,
     showExitPrompt: Boolean = false,
     onDismissPrompt: (() -> Unit)? = null,
     saveFocusRequester: FocusRequester? = null,
     bringIntoViewRequester: BringIntoViewRequester? = null,
-    itemKey: Any? = title,
 ) {
     val bivrModifier =
         if (bringIntoViewRequester != null) {
@@ -297,12 +277,10 @@ fun GamepadSaveExitActionRow(
                 description = effectiveDescription,
                 actionText = saveActionText,
                 icon = saveIcon,
-                cardBgColor = cardBgColor,
                 pulseOnChanges = pulseOnChanges,
-                actionLeadingContent = if (!showExitPrompt) saveActionLeadingContent else null,
                 enabled = enabled,
                 onClick = onSave,
-                itemKey = itemKey,
+                itemKey = title,
                 modifier =
                     Modifier
                         .width(card1VisibleWidth)
@@ -428,12 +406,9 @@ fun GamepadReorderCard(
     modifier: Modifier = Modifier,
     description: String? = null,
     icon: ImageVector? = null,
-    leadingContent: (@Composable () -> Unit)? = null,
     isDragging: Boolean = false,
     dragHandleModifier: Modifier = Modifier,
-    cardFocusRequester: FocusRequester = remember { FocusRequester() },
     itemKey: Any? = title,
-    enabled: Boolean = true,
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
@@ -444,14 +419,8 @@ fun GamepadReorderCard(
     }
 
     GamepadFocusCard(
-        onClick = {
-            if (enabled) {
-                onToggleMoving()
-            }
-        },
-        cardFocusRequester = cardFocusRequester,
+        onClick = onToggleMoving,
         itemKey = itemKey,
-        enabled = enabled,
         modifier = modifier,
         isAdjusting = isMoving,
         onCustomKeyEvent = { keyEvent ->
@@ -520,13 +489,12 @@ fun GamepadReorderCard(
             title = title,
             description = description,
             icon = icon,
-            leadingContent =
-                leadingContent ?: {
-                    GamepadPositionBadge(
-                        index = index,
-                        isFocused = isFocused || isMoving || isDragging,
-                    )
-                },
+            leadingContent = {
+                GamepadPositionBadge(
+                    index = index,
+                    isFocused = isFocused || isMoving || isDragging,
+                )
+            },
             isFocused = isFocused || isMoving || isDragging,
             trailingContent = {
                 Row(

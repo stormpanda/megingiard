@@ -15,7 +15,6 @@ class MainAppScreenHubVisibilityTest {
                 showIntegrationHome = false,
                 isEditorActive = false,
                 isViewportEditActive = false,
-                isBackgroundSettingsActive = false,
             ),
         )
         assertFalse(
@@ -23,7 +22,6 @@ class MainAppScreenHubVisibilityTest {
                 showIntegrationHome = false,
                 isEditorActive = true,
                 isViewportEditActive = false,
-                isBackgroundSettingsActive = false,
             ),
         )
         assertFalse(
@@ -31,15 +29,6 @@ class MainAppScreenHubVisibilityTest {
                 showIntegrationHome = false,
                 isEditorActive = false,
                 isViewportEditActive = true,
-                isBackgroundSettingsActive = false,
-            ),
-        )
-        assertFalse(
-            shouldShowCompanionHub(
-                showIntegrationHome = false,
-                isEditorActive = false,
-                isViewportEditActive = false,
-                isBackgroundSettingsActive = true,
             ),
         )
     }
@@ -51,7 +40,6 @@ class MainAppScreenHubVisibilityTest {
                 showIntegrationHome = true,
                 isEditorActive = false,
                 isViewportEditActive = false,
-                isBackgroundSettingsActive = false,
             ),
         )
     }
@@ -63,7 +51,6 @@ class MainAppScreenHubVisibilityTest {
                 showIntegrationHome = true,
                 isEditorActive = true,
                 isViewportEditActive = false,
-                isBackgroundSettingsActive = false,
             ),
         )
     }
@@ -75,19 +62,6 @@ class MainAppScreenHubVisibilityTest {
                 showIntegrationHome = true,
                 isEditorActive = false,
                 isViewportEditActive = true,
-                isBackgroundSettingsActive = false,
-            ),
-        )
-    }
-
-    @Test
-    fun `when showIntegrationHome is true but background settings is active, hub is suppressed`() {
-        assertFalse(
-            shouldShowCompanionHub(
-                showIntegrationHome = true,
-                isEditorActive = false,
-                isViewportEditActive = false,
-                isBackgroundSettingsActive = true,
             ),
         )
     }

@@ -148,7 +148,6 @@ private val METO_PILL_SHAPE = RoundedCornerShape(METO_PILL_CORNER)
 private val METO_PILL_PADDING_H = 7.dp
 private val METO_PILL_PADDING_V = 2.dp
 
-private const val METO_INITIAL_FOCUS_DELAY_MS = 100L
 private const val METO_EXIT_PROMPT_DISMISS_DELAY_MS = 100L
 private val METO_SCROLL_EXTRA_PADDING = 0.dp
 private val METO_TOAST_TOP_PADDING = 16.dp
@@ -199,7 +198,6 @@ fun MirrorEditorTopOverlay(
     var showExitPrompt by remember { mutableStateOf(false) }
     var isMinimized by remember { mutableStateOf(false) }
 
-    val inputModeManager = LocalInputModeManager.current
     val firstItemFocusRequester = remember { FocusRequester() }
     val addCutoutFocusRequester = remember { FocusRequester() }
     val saveFocusRequester = remember { FocusRequester() }
@@ -244,42 +242,18 @@ fun MirrorEditorTopOverlay(
         }
     }
 
-    // Request initial focus and keyboard input mode on presentation
-    LaunchedEffect(Unit) {
-        inputModeManager.requestInputMode(InputMode.Keyboard)
-        val targetRequester = if (cutouts.isNotEmpty()) firstItemFocusRequester else addCutoutFocusRequester
-        try {
-            targetRequester.requestFocus()
-            AppLog.d(TAG, "MirrorEditorTopOverlay: initial focus requested")
-        } catch (_: IllegalStateException) {
-            AppLog.w(TAG, "MirrorEditorTopOverlay: targetRequester unattached on initial focus attempt")
-        }
-        delay(METO_INITIAL_FOCUS_DELAY_MS)
-        try {
-            targetRequester.requestFocus()
-            AppLog.d(TAG, "MirrorEditorTopOverlay: post-settle focus requested")
-        } catch (_: IllegalStateException) {
-            AppLog.w(TAG, "MirrorEditorTopOverlay: targetRequester unattached after settle delay")
-        }
-    }
-
-    // Listen to focus recovery events from PrimaryOverlayInputBridge
-    LaunchedEffect(Unit) {
-        PrimaryOverlayInputBridge.focusRecoveryEvents.collect { keyCode ->
-            inputModeManager.requestInputMode(InputMode.Keyboard)
-            try {
-                if (showExitPrompt) {
-                    saveFocusRequester.requestFocus()
-                } else {
-                    val targetRequester = if (cutouts.isNotEmpty()) firstItemFocusRequester else addCutoutFocusRequester
-                    targetRequester.requestFocus()
-                }
-                AppLog.d(TAG, "MirrorEditorTopOverlay: focus recovered on keyCode=$keyCode")
-            } catch (_: IllegalStateException) {
-                AppLog.w(TAG, "MirrorEditorTopOverlay: focus requester unattached on focus recovery")
+    RememberTopOverlayFocusEffect(
+        initialTarget = { if (cutouts.isNotEmpty()) firstItemFocusRequester else addCutoutFocusRequester },
+        recoveryTarget = {
+            if (showExitPrompt) {
+                saveFocusRequester
+            } else if (cutouts.isNotEmpty()) {
+                firstItemFocusRequester
+            } else {
+                addCutoutFocusRequester
             }
-        }
-    }
+        },
+    )
 
     val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
     val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsStateWithLifecycle()
@@ -287,10 +261,8 @@ fun MirrorEditorTopOverlay(
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else METO_FALLBACK_SRC_WIDTH
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else METO_FALLBACK_SRC_HEIGHT
 
-    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsStateWithLifecycle()
-    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsStateWithLifecycle()
-    val secScreenW = if (surfaceWidth > 0f) surfaceWidth else METO_FALLBACK_SEC_WIDTH
-    val secScreenH = if (surfaceHeight > 0f) surfaceHeight else METO_FALLBACK_SEC_HEIGHT
+    val secScreenW = METO_FALLBACK_SEC_WIDTH
+    val secScreenH = METO_FALLBACK_SEC_HEIGHT
 
     var topHToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
     var topVToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
@@ -923,7 +895,6 @@ private fun AspectRatioCard(
         var updatedCutout =
             cutout.copy(
                 aspectRatioMode = nextMode,
-                keepAspectRatio = (nextMode == AspectRatioMode.TOP),
             )
 
         if (nextMode == AspectRatioMode.TOP) {

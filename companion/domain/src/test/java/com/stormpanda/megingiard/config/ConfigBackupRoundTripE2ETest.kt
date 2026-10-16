@@ -171,15 +171,16 @@ class ConfigBackupRoundTripE2ETest {
             assertTrue(tempFile.length() > 0)
 
             // 5. Read and verify from URI
-            val readResult = ConfigManager.readFromUri(context, exportUri, isInApp = true)
+            val readResult = ConfigManager.readFromUri(context, exportUri)
             assertTrue("Expected readFromUri to succeed", readResult.isSuccess)
-            val parsedExport = readResult.getOrThrow()
+            val parsedArchive = readResult.getOrThrow()
+            val parsedExport = parsedArchive.export
             assertEquals(SCHEMA_VERSION, parsedExport.schemaVersion)
             assertEquals(export.checksum, parsedExport.checksum)
             assertEquals(2, parsedExport.profiles.size)
 
-            val extractedImages = ConfigManager.getPendingInAppImages()
-            assertTrue("Expected background image extracted from ZIP", extractedImages.containsKey(layoutId))
+            val extractedImages = parsedArchive.images
+            assertTrue("Expected background image extracted from ZIP", extractedImages.containsKey("bg_$layoutId"))
 
             // 6. Reset all settings and MacroPad profiles to clean/default state
             SettingsManager.setThemeMode(ThemeMode.DARK)
@@ -303,5 +304,37 @@ class ConfigBackupRoundTripE2ETest {
                 "Expected checksum mismatch exception message",
                 exception.message?.contains("Checksum mismatch") == true,
             )
+        }
+
+    @Test
+    fun testImportRejectsMediaPathsOutsideMediaSubdirectories() =
+        runTest(testDispatcher) {
+            val datastoreDir = File(context.filesDir, "datastore").apply { mkdirs() }
+            val secretFile = File(datastoreDir, "megingiard_settings.preferences_pb")
+            secretFile.writeBytes("secret_token".toByteArray(Charsets.UTF_8))
+
+            val maliciousLayout =
+                PadLayout(
+                    id = "layout-malicious",
+                    name = "Malicious",
+                    backgroundImagePath = "datastore/megingiard_settings.preferences_pb",
+                    maskImagePath = "datastore/megingiard_settings.preferences_pb",
+                )
+            val maliciousProfile =
+                PadProfile(
+                    id = "profile-malicious",
+                    name = "Malicious Profile",
+                    layouts = listOf(maliciousLayout),
+                    activeLayoutId = maliciousLayout.id,
+                )
+
+            val export = ConfigManager.buildProfileExport(testMetadata, maliciousProfile, context, includeBackgrounds = true)
+            ConfigManager.applyProfileImport(context, export, emptyMap())
+            testScheduler.advanceUntilIdle()
+
+            val imported = MacroPadState.profiles.value.first { it.name == "Malicious Profile" }
+            val importedLayout = imported.layouts.single()
+            assertEquals(null, importedLayout.backgroundImagePath)
+            assertEquals(null, importedLayout.maskImagePath)
         }
 }

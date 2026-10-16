@@ -53,6 +53,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -68,6 +69,7 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
@@ -75,6 +77,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -86,10 +89,12 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.handle2DAdjustmentKeyEvent
 import com.stormpanda.megingiard.ui.launchDirectionalRepeat
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
@@ -138,6 +143,7 @@ const val TOOLBOX_SURFACE_ALPHA = 0.70f
 const val TOOLBOX_NORMAL_STEP_PX = 10
 const val TOOLBOX_FINE_STEP_PX = 1
 const val TOOLBOX_ADJUST_TOAST_DURATION_MS = 5000L
+private const val TOOLBOX_INITIAL_FOCUS_DELAY_MS = 100L
 
 /**
  * Reusable vertical docked controller toolbox container with 2D touch drag positioning,
@@ -782,4 +788,49 @@ fun AdjustCoordinatesCard(
                 )
             },
     )
+}
+
+/**
+ * Shared top-screen overlay effect that requests initial keyboard focus (with a settle retry)
+ * and restores focus whenever [PrimaryOverlayInputBridge.focusRecoveryEvents] emits.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+internal fun RememberTopOverlayFocusEffect(
+    initialTarget: () -> FocusRequester,
+    recoveryTarget: () -> FocusRequester? = { initialTarget() },
+) {
+    val inputModeManager = LocalInputModeManager.current
+    val currentInitialTarget by rememberUpdatedState(initialTarget)
+    val currentRecoveryTarget by rememberUpdatedState(recoveryTarget)
+
+    LaunchedEffect(Unit) {
+        inputModeManager.requestInputMode(InputMode.Keyboard)
+        try {
+            currentInitialTarget().requestFocus()
+            AppLog.d(TAG, "RememberTopOverlayFocusEffect: initial focus requested")
+        } catch (_: IllegalStateException) {
+            AppLog.w(TAG, "RememberTopOverlayFocusEffect: targetRequester unattached on initial focus attempt")
+        }
+        delay(TOOLBOX_INITIAL_FOCUS_DELAY_MS)
+        try {
+            currentInitialTarget().requestFocus()
+            AppLog.d(TAG, "RememberTopOverlayFocusEffect: post-settle focus requested")
+        } catch (_: IllegalStateException) {
+            AppLog.w(TAG, "RememberTopOverlayFocusEffect: targetRequester unattached after settle delay")
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        PrimaryOverlayInputBridge.focusRecoveryEvents.collect { keyCode ->
+            inputModeManager.requestInputMode(InputMode.Keyboard)
+            val target = currentRecoveryTarget() ?: return@collect
+            try {
+                target.requestFocus()
+                AppLog.d(TAG, "RememberTopOverlayFocusEffect: focus recovered on keyCode=$keyCode")
+            } catch (_: IllegalStateException) {
+                AppLog.w(TAG, "RememberTopOverlayFocusEffect: focus requester unattached on focus recovery")
+            }
+        }
+    }
 }

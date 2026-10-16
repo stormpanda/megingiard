@@ -19,7 +19,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-private const val TAG = "GameFocusDefaultLauncherManagerTest"
+private const val TAG = "GFDefaultLauncherTest"
 private const val TEST_SECONDARY_DISPLAY_ID = 4
 private const val ANOTHER_LAUNCHER_PACKAGE = "com.android.launcher3"
 

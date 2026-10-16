@@ -70,9 +70,6 @@ internal enum class EditorColorTarget(
     ),
 }
 
-internal typealias LayoutColorTarget = EditorColorTarget
-internal typealias ButtonColorTarget = EditorColorTarget
-
 internal fun PadLayout.getColorOption(target: EditorColorTarget): ColorOption =
     when (target) {
         EditorColorTarget.TEXT -> buttonTextColor
@@ -143,7 +140,7 @@ internal sealed interface MacroPadSubPage {
 
     data class LayoutColor(
         val layoutId: String,
-        val target: LayoutColorTarget,
+        val target: EditorColorTarget,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.LAYOUTS
     }
@@ -204,59 +201,51 @@ internal sealed interface MacroPadSubPage {
     }
 
     data class EditButton(
-        val button: PadButton?,
-        val draftButton: PadButton? = null,
+        val buttonId: String? = null,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
 
     data class ButtonColor(
-        val button: PadButton?,
-        val draftButton: PadButton,
-        val target: ButtonColorTarget,
+        val buttonId: String?,
+        val target: EditorColorTarget,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
 
     data class ChooseKeyboardKey(
-        val button: PadButton?,
-        val draftButton: PadButton,
+        val buttonId: String?,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
 
     data class ChooseGamepadButton(
-        val button: PadButton?,
-        val draftButton: PadButton,
+        val buttonId: String?,
         val slotIndex: Int = 0,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
 
     data class ChooseMouseAction(
-        val button: PadButton?,
-        val draftButton: PadButton,
+        val buttonId: String?,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
 
     data class ChooseMirrorAction(
-        val button: PadButton?,
-        val draftButton: PadButton,
+        val buttonId: String?,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
 
     data class ChooseOverlayAction(
-        val button: PadButton?,
-        val draftButton: PadButton,
+        val buttonId: String?,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
 
     data class ChooseLayoutAction(
-        val button: PadButton?,
-        val draftButton: PadButton,
+        val buttonId: String?,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
@@ -272,8 +261,7 @@ internal sealed interface MacroPadSubPage {
     }
 
     data class ChooseMacroAction(
-        val button: PadButton?,
-        val draftButton: PadButton,
+        val buttonId: String?,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
@@ -283,73 +271,42 @@ internal sealed interface MacroPadSubPage {
     }
 
     data class MacroTimeline(
-        val macro: Macro? = null,
-        val draftMacro: Macro? = null,
-        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+        val macroId: String,
     ) : MacroPadSubPage {
-        constructor(macroId: String) : this(macro = null, draftMacro = null, macroId = macroId)
-
-        val effectiveMacro: Macro? get() = draftMacro ?: macro
         override val parentSection = EditorSection.MACROS
     }
 
     data class ManualMacroSteps(
-        val macro: Macro? = null,
-        val draftMacro: Macro? = null,
-        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+        val macroId: String,
     ) : MacroPadSubPage {
-        constructor(macroId: String) : this(macro = null, draftMacro = null, macroId = macroId)
-
-        val effectiveMacro: Macro? get() = draftMacro ?: macro
         override val parentSection = EditorSection.MACROS
     }
 
     data class MacroStepEdit(
-        val macro: Macro? = null,
-        val draftMacro: Macro? = null,
-        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+        val macroId: String,
         val stepIndex: Int? = null,
         val draftStep: MacroStep? = null,
     ) : MacroPadSubPage {
-        constructor(
-            macroId: String,
-            stepIndex: Int?,
-        ) : this(macro = null, draftMacro = null, macroId = macroId, stepIndex = stepIndex, draftStep = null)
-
-        val effectiveMacro: Macro? get() = draftMacro ?: macro
         override val parentSection = EditorSection.MACROS
     }
 
     data class ChooseKeyboardKeyForStep(
-        val macro: Macro? = null,
-        val draftMacro: Macro? = null,
-        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+        val macroId: String,
         val stepIndex: Int? = null,
         val draftStep: MacroStep.KeyboardKeyTap? = null,
     ) : MacroPadSubPage {
-        val effectiveMacro: Macro? get() = draftMacro ?: macro
         override val parentSection = EditorSection.MACROS
     }
 
     data class TextSequenceGenerator(
-        val macro: Macro? = null,
-        val draftMacro: Macro? = null,
-        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+        val macroId: String,
     ) : MacroPadSubPage {
-        constructor(macroId: String) : this(macro = null, draftMacro = null, macroId = macroId)
-
-        val effectiveMacro: Macro? get() = draftMacro ?: macro
         override val parentSection = EditorSection.MACROS
     }
 
     data class ReorderMacroSteps(
-        val macro: Macro? = null,
-        val draftMacro: Macro? = null,
-        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+        val macroId: String,
     ) : MacroPadSubPage {
-        constructor(macroId: String) : this(macro = null, draftMacro = null, macroId = macroId)
-
-        val effectiveMacro: Macro? get() = draftMacro ?: macro
         override val parentSection = EditorSection.MACROS
     }
 

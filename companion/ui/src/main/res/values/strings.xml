@@ -434,7 +434,6 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_blur_desc">Apply frosted-glass blur when the reference anchor is lost.</string>
     <string name="layout_settings_visual_anchor_remove_title">Delete Anchor Calibration</string>
     <string name="layout_settings_visual_anchor_remove_desc">Remove calibrated reference signature and disable visual anchor</string>
-    <string name="help_layout_settings_auto_switch_desc">Configure visual anchoring and automatic layout switching for this layout. Monitors a reference region on the primary screen to freeze or blur cutouts or switch layouts whenever this layout\'s intended content is not shown.</string>
 
     <string name="settings_profile_automation_header">Automation</string>
     <string name="settings_profile_auto_layout_switching_title">Automatic Layout Switching</string>
@@ -639,6 +638,7 @@ Open Settings to create a layout.</string>
     <string name="config_restore_option_external">External File</string>
     <string name="config_restore_option_external_sub">Select a .mgrd file from storage</string>
     <string name="config_restore_option_internal_sub">%1$d profiles • %2$d layouts • %3$d macros</string>
+    <string name="config_restore_option_internal_sub_with_backgrounds">%1$d profiles • %2$d layouts • %3$d macros • %4$d backgrounds</string>
     <string name="config_restore_automatic_backups">Automatic Backups</string>
     <string name="config_import_review_title">Review &amp; Apply</string>
     <string name="config_import_archive_title">Megingiard Backup Archive</string>
@@ -810,24 +810,6 @@ Open Settings to create a layout.</string>
     <string name="help_ambient_dim_desc" formatted="false">Reduces the brightness of the mirrored display with a black veil overlay. 0% means no dimming; 90% is near black.</string>
     <string name="help_ambient_blend_desc">Fades the edges of the mirrored display inward so content softly transitions into the background rather than clipping abruptly. Higher values create a stronger vignette.</string>
 
-    <!-- Mirror editor (Cutout Layout Editor) help -->
-    <string name="help_mirror_editor_title">Mirror Editor — Help</string>
-    <string name="help_mirror_editor_intro">The Mirror Editor lets you add, position, resize, and configure the viewport cutouts that appear on the secondary screen during mirroring. Select a cutout by tapping it on screen, then use the toolbar buttons below to act on it.</string>
-    <string name="help_mirror_editor_section_selected">Selected cutout</string>
-    <string name="help_mirror_editor_aspect_desc">Cycles through three aspect ratio modes for the selected cutout. Free — no constraint, resize independently. Top — lock aspect ratio to match the crop on the Top screen. Bottom — lock aspect ratio to match the cutout on the Bottom screen.</string>
-    <string name="help_mirror_editor_shape_label">Shape</string>
-    <string name="help_mirror_editor_shape_desc">Toggles the selected cutout between rectangle and circle shapes. Useful for game mini-maps or round gauges that look better clipped to a circle.</string>
-    <string name="help_mirror_editor_rotation_label">Rotation</string>
-    <string name="help_mirror_editor_rotation_desc">Rotates the selected cutout in 90° increments (0°, 90°, 180°, 270°). When rotating between landscape and portrait, the bounding box automatically adjusts while preventing collisions.</string>
-    <string name="help_mirror_editor_flip_label">Flip</string>
-    <string name="help_mirror_editor_flip_desc">Cycles mirror flipping modes for the selected cutout: None, Horizontal, Vertical, or Both.</string>
-    <string name="help_mirror_editor_adjust_label">Adjust Coordinates</string>
-    <string name="help_mirror_editor_adjust_desc" formatted="false">Enters fine-tuning mode. Use D-Pad to move the cutout pixel-by-pixel. Hold R2 while pressing D-Pad to resize the cutout (expanding or shrinking symmetrically around its center, down to 1% of the screen). Below 5%, touch resize handles are hidden to keep the display clear.</string>
-    <string name="help_mirror_editor_hide_bg_desc">Temporarily hides the layout background image on the secondary display while editing to make it easier to see and adjust cutout boundaries. Does not change your saved layout settings.</string>
-    <string name="help_mirror_editor_section_finish">Finish</string>
-    <string name="help_mirror_editor_done_desc">Saves all changes made in this session and closes the editor. The updated cutout layout becomes immediately active.</string>
-    <string name="help_mirror_editor_cancel_desc">Discards all changes made since the editor was opened and reverts the layout to its previous state. No modifications are saved.</string>
-
     <!-- Global Settings card descriptions -->
     <string name="help_settings_overlay_position_desc">Recommended if your hand grip naturally rests near the bottom of the device, making the Quick Menu easier to swipe open without shifting your thumbs.</string>
     <string name="help_settings_language_desc">Changes the language of all app menus, overlays, and help tutorials. Choose English, German, or Traditional Chinese depending on your preference.</string>
@@ -848,10 +830,9 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_intro">The Quick Menu gives you fast access to profiles, layouts, and the most common actions — all without leaving your current game. Tap the quick menu bar on the screen edge to open it; tap the scrim to close.</string>
     <string name="help_quickmenu_section_mirror">Mirror controls (top card)</string>
     <string name="help_quickmenu_start_label">Start / Stop mirroring</string>
-    <string name="help_quickmenu_start_desc">Starts or stops the screen mirroring capture. When mirroring is active the top card expands to show additional controls.</string>
+    <string name="help_quickmenu_start_desc">Starts or stops the screen mirroring capture.</string>
     <string name="help_quickmenu_freeze_label">Freeze / Unfreeze</string>
     <string name="help_quickmenu_freeze_desc">Freezes the mirrored image so it shows a still frame instead of the live feed. Useful for pausing a game scene while you read it carefully.</string>
-    <string name="help_quickmenu_viewport_desc">Opens the Cutout Layout Editor on the secondary screen so you can resize, move, or add transparent cutout windows in the mirror overlay.</string>
     <string name="help_quickmenu_screenshot_top_label">Top Screen Screenshot</string>
     <string name="help_quickmenu_screenshot_top_desc">Takes a screenshot of the top screen. If mirroring is not active, this requires Megingiard System Service to be connected.</string>
     <string name="help_quickmenu_screenshot_bottom_label">Bottom Screen Screenshot</string>
@@ -878,7 +859,8 @@ Open Settings to create a layout.</string>
     <string name="help_companion_hub_sec_hero">Active Game &amp; Control Profile</string>
     <string name="help_companion_hub_hero_show_desc">Opens the MacroPad touch layout for the active game full-screen on the bottom display.</string>
     <string name="help_companion_hub_hero_edit_desc">Launches the profile and layout editor to customize button positions, styling, and macro assignments.</string>
-    <string name="help_companion_hub_hero_link_desc">Links a custom MacroPad control profile or creates a new dedicated profile for the currently active or selected game.</string>
+    <string name="help_companion_hub_hero_create_desc">Creates a new dedicated MacroPad control profile pre-linked to the currently active or selected game.</string>
+    <string name="help_companion_hub_hero_link_desc">Links an existing custom MacroPad control profile to the currently active or selected game.</string>
     <string name="help_companion_hub_sec_tools">Companion Tools</string>
     <string name="help_companion_hub_macropad_desc">Quick shortcut to open the active MacroPad touch control surface.</string>
     <string name="help_companion_hub_settings_desc">Access app-wide settings including theme colors, system service status, input deadzones, and configuration backups.</string>
@@ -890,7 +872,6 @@ Open Settings to create a layout.</string>
     <string name="welcome_desc">Megingiard is a companion app for the AYN Thor dual-screen handheld. It allows you to configure custom MacroPad profiles, virtual keyboard maps, virtual touchpads, and screen mirroring between displays.</string>
     <string name="welcome_help_title">How to Get Help</string>
     <string name="welcome_help_intro">Look for the help icon (?) in the top-right corner of each screen to view detailed guides and best practices for that feature.</string>
-    <string name="welcome_btn_got_it">Got it</string>
     <string name="settings_reset_tutorials">Reset tutorials</string>
     <string name="settings_reset_tutorials_desc">Reset all tutorial popups to show them again on next access</string>
     <string name="settings_reset_tutorials_toast">Tutorials will now be shown again</string>
@@ -935,7 +916,6 @@ Open Settings to create a layout.</string>
     <string name="onboarding_finished_desc">You have completed the welcome tour. You can re-run this tour at any time from Global Settings → General.</string>
     <string name="onboarding_btn_next">Next</string>
     <string name="onboarding_btn_back">Back</string>
-    <string name="onboarding_btn_skip">Skip</string>
     <string name="onboarding_btn_finish">Yeah man, I wanna do it!</string>
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Opening the Menu</string>
@@ -1068,7 +1048,6 @@ Open Settings to create a layout.</string>
     <string name="integration_home_relink_dialog_cancel">Cancel</string>
     <string name="integration_home_new_profile">New Profile</string>
     <string name="integration_home_default_layout">Default</string>
-    <string name="integration_home_show_macropad">Show</string>
     <string name="integration_home_hero_idle_title">Megingiard Companion Hub</string>
     <string name="integration_home_hero_idle_subtitle">Select a game on the top screen or launch companion tools below.</string>
     <string name="integration_home_launch_controls">Show</string>

@@ -22,7 +22,7 @@ class TouchRecordingManagerTest {
         normX: Float,
         normY: Float,
     ) {
-        TouchScreenObserver.onTouchEvent?.invoke(slot, action, normX, normY)
+        TouchScreenObserver.dispatchTouchEvent(slot, action, normX, normY)
     }
 
     @Before
@@ -276,5 +276,24 @@ class TouchRecordingManagerTest {
         assertEquals(6, path.samples.size)
         assertEquals(3, path.samples.count { it.pointerId == 0 })
         assertEquals(3, path.samples.count { it.pointerId == 1 })
+    }
+
+    @Test
+    fun `finishRecording flushes in-progress gesture when pointers are still down`() {
+        TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
+
+        sendTouch(0, TouchAction.DOWN, 0.2f, 0.3f)
+        sendTouch(0, TouchAction.MOVE, 0.4f, 0.5f)
+
+        // finishRecording while pointer is still down (no UP received)
+        TouchRecordingManager.finishRecording()
+
+        val done = TouchRecordingManager.state.value as TouchRecordingState.Done
+        assertEquals(1, done.steps.size)
+        val path = done.steps[0] as MacroStep.TouchPath
+        assertTrue(path.samples.isNotEmpty())
+        assertEquals(0.2f, path.samples[0].normX)
+        assertEquals(0.4f, path.samples[1].normX)
+        assertEquals(TouchAction.UP, path.samples.last().action)
     }
 }

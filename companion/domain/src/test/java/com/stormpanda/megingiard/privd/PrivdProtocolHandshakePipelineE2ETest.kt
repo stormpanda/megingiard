@@ -61,7 +61,7 @@ class PrivdProtocolHandshakePipelineE2ETest {
         runBlocking {
             val serverSocket = ServerSocket(0)
             val port = serverSocket.localPort
-            PrivdClient.setPortRangeForTesting(port, port)
+            PrivdClient.setPortForTesting(port)
 
             val serverJob =
                 testScope.launch {
@@ -200,7 +200,7 @@ class PrivdProtocolHandshakePipelineE2ETest {
         runBlocking {
             val serverSocket = ServerSocket(0)
             val port = serverSocket.localPort
-            PrivdClient.setPortRangeForTesting(port, port)
+            PrivdClient.setPortForTesting(port)
 
             val serverJob =
                 testScope.launch {
@@ -250,7 +250,7 @@ class PrivdProtocolHandshakePipelineE2ETest {
         runBlocking {
             val serverSocket = ServerSocket(0)
             val port = serverSocket.localPort
-            PrivdClient.setPortRangeForTesting(port, port)
+            PrivdClient.setPortForTesting(port)
 
             val serverJob =
                 testScope.launch {

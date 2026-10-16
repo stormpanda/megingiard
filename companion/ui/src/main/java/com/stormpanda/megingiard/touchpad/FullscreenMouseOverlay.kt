@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.touchpad
 import android.os.Vibrator
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,7 +11,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -36,10 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -48,17 +43,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -74,7 +64,6 @@ import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
 import com.stormpanda.megingiard.mirror.MasterSurfaceRegistry
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
-import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.detectHoldPointerEvents
@@ -86,6 +75,10 @@ private const val TAG = "FullscreenMouseOverlay"
 private val TP_BOTTOM_BAR_HEIGHT = 50.dp
 private val TP_GLOBE_BUTTON_WIDTH = 72.dp
 private val TP_ICON_SIZE_MEDIUM = 24.dp
+private val TP_SURFACE_PADDING = 8.dp
+private val TP_SURFACE_BOTTOM_OFFSET = 4.dp
+private val TP_SURFACE_BORDER_WIDTH = 1.dp
+private const val TP_TOUCH_ASPECT_RATIO = 16f / 9f
 
 private val TP_ROUNDED_12 = RoundedCornerShape(12.dp)
 private val TP_ROUNDED_8 = RoundedCornerShape(8.dp)
@@ -101,12 +94,10 @@ private val TP_MOUSE_4_5_MARGIN_TOP = 6.dp
 private val TP_MOUSE_4_5_SIZE = 56.dp
 
 @Composable
-fun FullscreenMouseOverlay() {
+fun rememberGlobalTouchpadProcessor(forceMouseMode: Boolean = false): TouchpadGestureProcessor {
     val context = LocalContext.current
-    val colors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
-    var outerCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
-    var innerCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val vibrator = remember { context.getSystemService(Vibrator::class.java) }
 
     val touchpadUseMouse by TouchpadSettings.touchpadUseMouse.collectAsStateWithLifecycle()
     val sensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsStateWithLifecycle()
@@ -116,91 +107,138 @@ fun FullscreenMouseOverlay() {
     val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsStateWithLifecycle()
     val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsStateWithLifecycle()
     val tapDrag by TouchpadSettings.touchpadTapDrag.collectAsStateWithLifecycle()
-    val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsStateWithLifecycle()
     val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsStateWithLifecycle()
     val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsStateWithLifecycle()
     val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsStateWithLifecycle()
-    val vibrator = remember { context.getSystemService(Vibrator::class.java) }
 
-    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
-    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
-    val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsStateWithLifecycle()
-    val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsStateWithLifecycle()
-    val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
-    val isMirroringActive = !touchpadUseMouse && touchpadMirroringEnabled && isCapturing
-
-    val useMouseState = rememberUpdatedState(touchpadUseMouse)
-    val tapToClickState = rememberUpdatedState(tapToClick)
-    val twoFingerTapState = rememberUpdatedState(twoFingerTap)
-    val threeFingerTapState = rememberUpdatedState(threeFingerTap)
-    val tapDragState = rememberUpdatedState(tapDrag)
-    val twoFingerScrollState = rememberUpdatedState(twoFingerScroll)
-
-    // Recreate processor parameters dynamically via rememberUpdatedState so values apply immediately without stale closures.
-    val finalSensitivity = touchpadSensitivity * sensitivity
-    val sensitivityState = rememberUpdatedState(finalSensitivity)
-    val naturalScrollState = rememberUpdatedState(touchpadNaturalScroll)
-    val scrollSpeedState = rememberUpdatedState(touchpadScrollSpeed)
+    val effectiveUseMouse = forceMouseMode || touchpadUseMouse
+    val finalSensitivity =
+        if (forceMouseMode) {
+            touchpadSensitivity
+        } else {
+            touchpadSensitivity * sensitivity
+        }
+    val gestureConfig by rememberUpdatedState(
+        TouchpadGestureConfig(
+            useMouse = effectiveUseMouse,
+            sensitivity = finalSensitivity,
+            twoFingerScrollEnabled = twoFingerScroll,
+            naturalScrollEnabled = touchpadNaturalScroll,
+            scrollSpeed = touchpadScrollSpeed,
+            tapToClick = tapToClick,
+            twoFingerTap = twoFingerTap,
+            threeFingerTap = threeFingerTap,
+            tapDrag = tapDrag,
+        ),
+    )
     val currentOnHapticFeedback by rememberUpdatedState {
         if (touchpadHapticsEnabled && vibrator != null) {
             triggerHaptic(vibrator, HapticStrength.LIGHT)
         }
     }
-    val processor =
-        remember {
-            TouchpadGestureProcessor(
-                useMouse = { useMouseState.value },
-                scope = coroutineScope,
-                sensitivity = { sensitivityState.value },
-                twoFingerScrollEnabled = { twoFingerScrollState.value },
-                naturalScrollEnabled = { naturalScrollState.value },
-                scrollSpeed = { scrollSpeedState.value },
-                tapToClick = { tapToClickState.value },
-                twoFingerTap = { twoFingerTapState.value },
-                threeFingerTap = { threeFingerTapState.value },
-                tapDrag = { tapDragState.value },
-                onHapticFeedback = { currentOnHapticFeedback() },
-            )
-        }
-
-    val pointersInsideTouchpad = remember { HashSet<Long>() }
-    var hasActivePointers by remember { mutableStateOf(false) }
-
-    LaunchedEffect(touchpadUseMouse) {
-        processor.onCancel()
-        pointersInsideTouchpad.clear()
-        hasActivePointers = false
+    return remember(coroutineScope) {
+        TouchpadGestureProcessor(
+            scope = coroutineScope,
+            config = { gestureConfig },
+            onHapticFeedback = { currentOnHapticFeedback() },
+        )
     }
+}
 
-    LaunchedEffect(isFullscreenMouseActive, touchpadUseMouse, touchpadMirroringEnabled) {
-        if (isFullscreenMouseActive && !touchpadUseMouse && touchpadMirroringEnabled) {
-            if (!isCapturing) {
-                AppStateManager.setWasMirroringStartedByTouchpad(true)
-                AppStateManager.requestMirrorStart()
-            }
-        } else {
-            if (AppStateManager.wasMirroringStartedByTouchpad.value) {
-                AppStateManager.requestMirrorStop()
-                AppStateManager.setWasMirroringStartedByTouchpad(false)
-            }
-        }
-    }
+fun Modifier.touchpadSurfaceInput(
+    processor: TouchpadGestureProcessor,
+    useMouse: Boolean,
+): Modifier =
+    this.pointerInput(processor, useMouse) {
+        try {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Main)
+                    val sw = size.width.toFloat().coerceAtLeast(1f)
+                    val sh = size.height.toFloat().coerceAtLeast(1f)
+                    for (change in event.changes) {
+                        val id = change.id.value
+                        val localPos = change.position
+                        val clampedX = localPos.x.coerceIn(0f, sw)
+                        val clampedY = localPos.y.coerceIn(0f, sh)
+                        val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
 
-    DisposableEffect(Unit) {
-        onDispose {
-            AppLog.i(TAG, "dispose: resetting gesture processor state")
+                        when (event.type) {
+                            PointerEventType.Press -> {
+                                if (!change.previousPressed && isInside && !change.isConsumed) {
+                                    processor.onPress(
+                                        pointerId = id,
+                                        x = clampedX,
+                                        y = clampedY,
+                                        surfaceW = sw,
+                                        surfaceH = sh,
+                                    )
+                                }
+                            }
+
+                            PointerEventType.Move -> {
+                                if (!isInside && !useMouse) {
+                                    processor.onRelease(
+                                        pointerId = id,
+                                        x = clampedX,
+                                        y = clampedY,
+                                        surfaceW = sw,
+                                        surfaceH = sh,
+                                    )
+                                } else if (!change.isConsumed) {
+                                    val delta = change.positionChange()
+                                    processor.onMove(
+                                        pointerId = id,
+                                        x = clampedX,
+                                        y = clampedY,
+                                        deltaX = delta.x,
+                                        deltaY = delta.y,
+                                        surfaceW = sw,
+                                        surfaceH = sh,
+                                    )
+                                }
+                            }
+
+                            PointerEventType.Release -> {
+                                if (!change.pressed) {
+                                    processor.onRelease(
+                                        pointerId = id,
+                                        x = clampedX,
+                                        y = clampedY,
+                                        surfaceW = sw,
+                                        surfaceH = sh,
+                                    )
+                                }
+                            }
+
+                            else -> {
+                                Unit
+                            }
+                        }
+                        change.consume()
+                    }
+                }
+            }
+        } finally {
+            AppLog.d(TAG, "touchpadSurfaceInput finally: resetting gesture processor state")
             processor.onCancel()
-            pointersInsideTouchpad.clear()
-            hasActivePointers = false
-            if (AppStateManager.wasMirroringStartedByTouchpad.value && !isFullscreenMouseActive) {
-                AppStateManager.requestMirrorStop()
-                AppStateManager.setWasMirroringStartedByTouchpad(false)
-            }
-            if (AppStateManager.isTouchpadSettingsOpen.value) {
-                AppStateManager.setTouchpadSettingsOpen(false)
-            }
         }
     }
+
+@Composable
+fun FullscreenMouseOverlay() {
+    val colors = LocalAppColors.current
+
+    val touchpadUseMouse by TouchpadSettings.touchpadUseMouse.collectAsStateWithLifecycle()
+    val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsStateWithLifecycle()
+
+    val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsStateWithLifecycle()
+    val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsStateWithLifecycle()
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
+    val isMirroringActive = !touchpadUseMouse && touchpadMirroringEnabled && isCapturing
+
+    val processor = rememberGlobalTouchpadProcessor(forceMouseMode = false)
+    val hasActivePointers by processor.hasActivePointers.collectAsStateWithLifecycle()
 
     val insetBezelBrush = rememberBezelBrush()
 
@@ -210,236 +248,117 @@ fun FullscreenMouseOverlay() {
                 .fillMaxSize()
                 .background(colors.keyboardBackground),
     ) {
-        // 1. Outer Box (touch receiver)
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .onGloballyPositioned { outerCoords = it }
-                    .pointerInput(processor) {
-                        try {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent(PointerEventPass.Main)
-                                    val inner = innerCoords
-                                    val outer = outerCoords
-                                    for (change in event.changes) {
-                                        val id = change.id.value
-                                        val wasTracked = pointersInsideTouchpad.contains(id)
-
-                                        // 1. Maintain active pointer tracking state & dispatch to processor
-                                        val sw = inner?.size?.width?.toFloat() ?: 1f
-                                        val sh = inner?.size?.height?.toFloat() ?: 1f
-                                        val localPos =
-                                            if (inner != null && outer != null) {
-                                                inner.localPositionOf(outer, change.position)
-                                            } else {
-                                                Offset.Zero
-                                            }
-                                        val clampedX = localPos.x.coerceIn(0f, sw)
-                                        val clampedY = localPos.y.coerceIn(0f, sh)
-                                        val isInside = inner != null && outer != null && localPos.x in 0f..sw && localPos.y in 0f..sh
-
-                                        when (event.type) {
-                                            PointerEventType.Press -> {
-                                                if (!change.previousPressed && isInside) {
-                                                    pointersInsideTouchpad.add(id)
-                                                    if (!change.isConsumed) {
-                                                        processor.onPress(
-                                                            pointerId = id,
-                                                            x = clampedX,
-                                                            y = clampedY,
-                                                            surfaceW = sw,
-                                                            surfaceH = sh,
-                                                            overlayOpen = false,
-                                                        )
-                                                    }
-                                                }
-                                            }
-
-                                            PointerEventType.Move -> {
-                                                if (wasTracked) {
-                                                    if (!isInside && !useMouseState.value) {
-                                                        pointersInsideTouchpad.remove(id)
-                                                        processor.onRelease(
-                                                            pointerId = id,
-                                                            x = clampedX,
-                                                            y = clampedY,
-                                                            surfaceW = sw,
-                                                            surfaceH = sh,
-                                                        )
-                                                    } else if (!change.isConsumed) {
-                                                        val delta = change.positionChange()
-                                                        processor.onMove(
-                                                            pointerId = id,
-                                                            x = clampedX,
-                                                            y = clampedY,
-                                                            deltaX = delta.x,
-                                                            deltaY = delta.y,
-                                                            surfaceW = sw,
-                                                            surfaceH = sh,
-                                                        )
-                                                    }
-                                                }
-                                            }
-
-                                            PointerEventType.Release -> {
-                                                if (!change.pressed) {
-                                                    pointersInsideTouchpad.remove(id)
-                                                    if (wasTracked) {
-                                                        processor.onRelease(
-                                                            pointerId = id,
-                                                            x = clampedX,
-                                                            y = clampedY,
-                                                            surfaceW = sw,
-                                                            surfaceH = sh,
-                                                        )
-                                                    }
-                                                }
-                                            }
-
-                                            else -> {
-                                                Unit
-                                            }
-                                        }
-                                        change.consume()
-                                    }
-                                    hasActivePointers = pointersInsideTouchpad.isNotEmpty()
-                                }
-                            }
-                        } finally {
-                            pointersInsideTouchpad.clear()
-                            hasActivePointers = false
-                            processor.onCancel()
-                        }
-                    },
-        ) {
-            // 2. Inner Touchpad Box
-            Crossfade(
-                targetState = touchpadUseMouse,
+        Crossfade(
+            targetState = touchpadUseMouse,
+            modifier = Modifier.fillMaxSize(),
+            animationSpec = tween(300),
+            label = "Touchpad Switch",
+        ) { useMouse ->
+            Box(
                 modifier = Modifier.fillMaxSize(),
-                animationSpec = tween(300),
-                label = "Touchpad Switch",
-            ) { useMouse ->
+                contentAlignment = Alignment.BottomCenter,
+            ) {
+                val sizeModifier =
+                    if (useMouse) {
+                        Modifier.fillMaxSize()
+                    } else {
+                        Modifier.aspectRatio(TP_TOUCH_ASPECT_RATIO)
+                    }
+                val surfaceBg =
+                    if (!useMouse && isMirroringActive) {
+                        Color.Transparent
+                    } else {
+                        colors.appBackground
+                    }
                 Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.BottomCenter,
+                    modifier =
+                        Modifier
+                            .padding(
+                                top = TP_SURFACE_PADDING,
+                                bottom = TP_BOTTOM_BAR_HEIGHT + TP_SURFACE_BOTTOM_OFFSET,
+                                start = TP_SURFACE_PADDING,
+                                end = TP_SURFACE_PADDING,
+                            ).then(sizeModifier)
+                            .clip(TP_ROUNDED_12)
+                            .background(surfaceBg)
+                            .border(
+                                width = TP_SURFACE_BORDER_WIDTH,
+                                brush = insetBezelBrush,
+                                shape = TP_ROUNDED_12,
+                            ).touchpadSurfaceInput(processor, useMouse = useMouse),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    key(useMouse) {
-                        if (useMouse) {
-                            Box(
+                    if (useMouse) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.BottomCenter,
+                        ) {
+                            Row(
                                 modifier =
                                     Modifier
-                                        .padding(
-                                            top = 8.dp,
-                                            bottom = TP_BOTTOM_BAR_HEIGHT + 4.dp,
-                                            start = 8.dp,
-                                            end = 8.dp,
-                                        ).fillMaxSize()
-                                        .onGloballyPositioned { innerCoords = it }
-                                        .clip(TP_ROUNDED_12)
-                                        .background(colors.appBackground)
-                                        .border(
-                                            width = 1.dp,
-                                            brush = insetBezelBrush,
-                                            shape = TP_ROUNDED_12,
-                                        ),
-                                contentAlignment = Alignment.Center,
+                                        .fillMaxWidth()
+                                        .height(56.dp)
+                                        .padding(start = 4.dp, end = 4.dp, bottom = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.BottomCenter,
-                                ) {
-                                    Row(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .height(56.dp)
-                                                .padding(start = 4.dp, end = 4.dp, bottom = 2.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    ) {
-                                        TouchpadMouseButton(
-                                            onDown = { MouseInjector.leftDown() },
-                                            onUp = { MouseInjector.leftUp() },
-                                            modifier = Modifier.weight(1.2f).fillMaxHeight(),
-                                        )
-                                        TouchpadMouseButton(
-                                            onDown = { MouseInjector.middleDown() },
-                                            onUp = { MouseInjector.middleUp() },
-                                            modifier = Modifier.weight(0.4f).fillMaxHeight(),
-                                        )
-                                        TouchpadMouseButton(
-                                            onDown = { MouseInjector.rightDown() },
-                                            onUp = { MouseInjector.rightUp() },
-                                            modifier = Modifier.weight(1.2f).fillMaxHeight(),
-                                        )
-                                    }
-
-                                    if (touchpadMouse45Enabled) {
-                                        TouchpadMouseButton(
-                                            onDown = { MouseInjector.mouse4Down() },
-                                            onUp = { MouseInjector.mouse4Up() },
-                                            text = stringResource(R.string.settings_touchpad_m4_label),
-                                            modifier =
-                                                Modifier
-                                                    .align(Alignment.TopStart)
-                                                    .padding(
-                                                        start = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
-                                                        top = TP_MOUSE_4_5_MARGIN_TOP,
-                                                    ).size(TP_MOUSE_4_5_SIZE),
-                                        )
-                                        TouchpadMouseButton(
-                                            onDown = { MouseInjector.mouse5Down() },
-                                            onUp = { MouseInjector.mouse5Up() },
-                                            text = stringResource(R.string.settings_touchpad_m5_label),
-                                            modifier =
-                                                Modifier
-                                                    .align(Alignment.TopEnd)
-                                                    .padding(
-                                                        end = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
-                                                        top = TP_MOUSE_4_5_MARGIN_TOP,
-                                                    ).size(TP_MOUSE_4_5_SIZE),
-                                        )
-                                    }
-                                }
+                                TouchpadMouseButton(
+                                    onDown = { MouseInjector.leftDown() },
+                                    onUp = { MouseInjector.leftUp() },
+                                    modifier = Modifier.weight(1.2f).fillMaxHeight(),
+                                )
+                                TouchpadMouseButton(
+                                    onDown = { MouseInjector.middleDown() },
+                                    onUp = { MouseInjector.middleUp() },
+                                    modifier = Modifier.weight(0.4f).fillMaxHeight(),
+                                )
+                                TouchpadMouseButton(
+                                    onDown = { MouseInjector.rightDown() },
+                                    onUp = { MouseInjector.rightUp() },
+                                    modifier = Modifier.weight(1.2f).fillMaxHeight(),
+                                )
                             }
-                        } else {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .padding(
-                                            top = 8.dp,
-                                            bottom = TP_BOTTOM_BAR_HEIGHT + 4.dp,
-                                            start = 8.dp,
-                                            end = 8.dp,
-                                        ).aspectRatio(16f / 9f)
-                                        .onGloballyPositioned { innerCoords = it }
-                                        .clip(TP_ROUNDED_12)
-                                        .background(if (isMirroringActive) Color.Transparent else colors.appBackground)
-                                        .border(
-                                            width = 1.dp,
-                                            brush = insetBezelBrush,
-                                            shape = TP_ROUNDED_12,
-                                        ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (isMirroringActive) {
-                                    EmbeddedMirrorView(
-                                        modifier = Modifier.fillMaxSize(),
-                                        surfaceOwner = MasterSurfaceRegistry.OWNER_TOUCHPAD,
-                                        surfacePriority = MasterSurfaceRegistry.PRIORITY_TOUCHPAD,
-                                        overrideCutouts = listOf(ScreenCutout.FULLSCREEN),
-                                        showLayoutBackground = false,
-                                    )
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxSize()
-                                                .background(Color.Black.copy(alpha = touchpadMirrorDim / 100f)),
-                                    )
-                                }
+
+                            if (touchpadMouse45Enabled) {
+                                TouchpadMouseButton(
+                                    onDown = { MouseInjector.mouse4Down() },
+                                    onUp = { MouseInjector.mouse4Up() },
+                                    text = stringResource(R.string.settings_touchpad_m4_label),
+                                    modifier =
+                                        Modifier
+                                            .align(Alignment.TopStart)
+                                            .padding(
+                                                start = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
+                                                top = TP_MOUSE_4_5_MARGIN_TOP,
+                                            ).size(TP_MOUSE_4_5_SIZE),
+                                )
+                                TouchpadMouseButton(
+                                    onDown = { MouseInjector.mouse5Down() },
+                                    onUp = { MouseInjector.mouse5Up() },
+                                    text = stringResource(R.string.settings_touchpad_m5_label),
+                                    modifier =
+                                        Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(
+                                                end = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
+                                                top = TP_MOUSE_4_5_MARGIN_TOP,
+                                            ).size(TP_MOUSE_4_5_SIZE),
+                                )
                             }
                         }
+                    } else if (isMirroringActive) {
+                        EmbeddedMirrorView(
+                            modifier = Modifier.fillMaxSize(),
+                            surfaceOwner = MasterSurfaceRegistry.OWNER_TOUCHPAD,
+                            surfacePriority = MasterSurfaceRegistry.PRIORITY_TOUCHPAD,
+                            overrideCutouts = listOf(ScreenCutout.FULLSCREEN),
+                            showLayoutBackground = false,
+                        )
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = touchpadMirrorDim / 100f)),
+                        )
                     }
                 }
             }

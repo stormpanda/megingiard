@@ -124,4 +124,32 @@ class MacroTimingRandomizationTest {
         assertEquals(500L + durationOffsetA, randomized[3].startTimeMs)
         assertEquals(150L, randomized[3].durationMs)
     }
+
+    @Test
+    fun `simultaneous steps share cumulative delay and propagate combined offsets to later steps`() {
+        val steps = listOf(tap(200L, 100L, 3, "X"), tap(0L, 100L, 1, "A"), tap(0L, 100L, 2, "B"))
+        val macro = Macro(id = "test", name = "test", steps = steps, randomizeTimingEnabled = true, randomizeTimingRangeMs = 20)
+
+        val mockRandom =
+            object : Random() {
+                private val values = mutableListOf(5L, 10L, 7L)
+
+                override fun nextBits(bitCount: Int): Int = 0
+
+                override fun nextLong(
+                    from: Long,
+                    until: Long,
+                ): Long = if (values.isNotEmpty()) values.removeAt(0) else 0L
+            }
+
+        val randomized = macro.randomized(mockRandom).steps
+
+        // Original index 1 and 2 are both at t=0, so neither delays the other; both offsets (5 + 10 = 15) delay index 0 at t=200
+        assertEquals(215L, randomized[0].startTimeMs)
+        assertEquals(107L, randomized[0].durationMs)
+        assertEquals(0L, randomized[1].startTimeMs)
+        assertEquals(105L, randomized[1].durationMs)
+        assertEquals(0L, randomized[2].startTimeMs)
+        assertEquals(110L, randomized[2].durationMs)
+    }
 }

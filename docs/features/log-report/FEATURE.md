@@ -2,9 +2,11 @@
 
 > **Related source:**
 >
-> - `companion/domain/src/main/java/com/stormpanda/megingiard/log/` — coordinator singleton
-> - `companion/ui/src/main/java/com/stormpanda/megingiard/MainActivity.kt` — SAF launcher + write
-> - `companion/ui/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsScreen.kt` — UI entry point
+> - `shared/core/src/main/kotlin/com/stormpanda/megingiard/AppLog.kt` — runtime log-level gate and reactive `levelFlow`
+> - `companion/domain/src/main/java/com/stormpanda/megingiard/log/LogReportManager.kt` — coordinator singleton and pure formatting helpers
+> - `companion/ui/src/main/java/com/stormpanda/megingiard/MainActivity.kt` — SAF launcher, report write dispatch, and toast feedback
+> - `companion/ui/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsScreen.kt` — settings category host
+> - `companion/ui/src/main/java/com/stormpanda/megingiard/settings/tabs/DiagnosticsSettingsTab.kt` — Diagnostics tab UI (`Log Level` picker and `Save log report` action)
 
 ---
 
@@ -18,7 +20,7 @@ to be sent to the developer without requiring USB or ADB access.
 
 ### FR-LR1: Log Report Save
 
-- A **Log Level** picker and a **Save log report** row MUST be present together in a dedicated **Settings → Diagnostics** section, located at the bottom of the settings screen (after Privileged Mode).
+- A **Log Level** picker and a **Save log report** row MUST be present together in a dedicated **Settings → Diagnostics** category (`SettingsCategory.DIAGNOSTICS`, located after **Updates** in the two-pane settings category deck).
 - Tapping the row MUST open the SAF "Create Document" picker with a pre-filled filename of the form `megingiard_log_<timestamp>.txt`.
 - The saved file MUST contain a plain-text header (app version, device model, Android version, generation timestamp) followed by up to 3 000 recent logcat lines from the app's own process.
 - On success or failure, an in-overlay toast notification MUST be shown to the user.
@@ -39,59 +41,50 @@ to be sent to the developer without requiring USB or ADB access.
 
 ### Architecture
 
-The save flow mirrors the config-export pattern:
+The save flow uses a one-shot `SharedFlow` request and direct `Result<Unit>` toast feedback:
 
 ```
-User taps "Save log report" (GlobalSettingsScreen)
-      │
-      ▼
-GlobalSettingsViewModel.requestSaveLogReport()
+User taps "Save log report" (DiagnosticsSettingsTab / GlobalSettingsScreen)
       │
       ▼
 LogReportManager.requestSaveReport()   ← emits saveRequest SharedFlow
       │
       ▼
 MainActivity (lifecycle-aware collector)
-      │  opens SAF CreateDocument("text/plain")
+      │  opens SAF CreateDocument("text/plain") with LogReportManager.buildReportFilename()
       ▼
 createLogDocumentLauncher callback
-      │  delegates to LogReportManager.writeReportToUri()
-      │  (Dispatchers.IO: readLogcatLines + buildReportHeader + contentResolver.openOutputStream)
+      │  delegates to LogReportManager.writeReportToUri(context, uri, appVersion)
+      │  (Dispatchers.IO: buildReportHeader + readLogcatLines + contentResolver.openOutputStream)
       ▼
-LogReportManager.setSaveResult(Success | Failure)
-      │
-      ▼
-GlobalSettingsScreen (collectAsState) → DialogToast feedback
+DialogToastManager.show(...)           ← displays localized success or error toast
 ```
 
-### LogReportManager (`:domain`)
+### LogReportManager (`:companion:domain`)
 
-`LogReportManager` is an `object` singleton in `domain/…/log/`.
+`LogReportManager` is an `object` singleton in `companion/domain/…/log/`.
 
-| Member                                        | Purpose                                                                                    |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `saveRequest: SharedFlow<Unit>`               | One-shot signal to `MainActivity` to open the file picker                                  |
-| `requestSaveReport()`                         | Posted by `GlobalSettingsViewModel`; emits to `saveRequest`                                |
-| `saveResult: StateFlow<SaveResult?>`          | Success/Failure for UI feedback; cleared after dismiss                                     |
-| `setSaveResult(result)` / `clearSaveResult()` | Managed by `LogReportManager` during report generation                                     |
-| `writeReportToUri(context, uri, ...)`         | Coroutine: reads logcat output, formats header, and writes report to `uri` stream on IO    |
-| `buildReportFilename(timestamp)`              | Pure: `megingiard_log_<timestamp>.txt` (colons/spaces → hyphens/underscores)               |
-| `buildReportHeader(...)`                      | Pure: multi-line text block with app version, device, Android version, timestamp           |
-| `readLogcatLines(pid)`                        | Blocking: runs `logcat -d --pid=<pid> -v time -t 3000`; returns output or an error message |
+| Member                                          | Purpose                                                                                                   |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `saveRequest: SharedFlow<Unit>`                 | One-shot signal to `MainActivity` to open the file picker                                                 |
+| `requestSaveReport()`                           | Posted by `DiagnosticsSettingsTab` via `GlobalSettingsScreen`; emits to `saveRequest`                     |
+| `writeReportToUri(context, uri, ...)`           | Coroutine (`Dispatchers.IO`): formats header, reads logcat output, and writes report to `uri` (`Result`)  |
+| `buildReportFilename(timestamp)`                | Pure: `megingiard_log_<timestamp>.txt` (colons/spaces → hyphens/underscores; defaults to current time)    |
+| `buildReportHeader(...)`                        | Pure: multi-line text block with app version, device, Android version, timestamp, and line cap            |
+| `readLogcatLines(pid)`                          | Blocking: runs `logcat -d --pid=<pid> -v time -t 3000`; returns output or throws on non-zero exit / error |
 
 `readLogcatLines` is blocking I/O and **must** be called from a background thread
-(`Dispatchers.IO` in the `MainActivity` launcher callback).
+(`Dispatchers.IO` inside `LogReportManager.writeReportToUri`).
 
 ### SAF File Picker (`:companion:ui` — `MainActivity`)
 
 `createLogDocumentLauncher` is a standard `ActivityResultContracts.CreateDocument("text/plain")` launcher registered in `MainActivity`. Its callback:
 
-1. If the user cancels (URI is null), returns early.
-2. On `Dispatchers.IO`: calls `LogReportManager.readLogcatLines(pid)` and `buildReportHeader(...)`, writes header + body to the URI via `contentResolver.openOutputStream`.
-3. Posts `LogReportManager.setSaveResult(Success | Failure)`.
+1. If the user cancels (`uri == null`), returns early.
+2. Launches a coroutine that calls `LogReportManager.writeReportToUri(context = applicationContext, uri = uri, appVersion = BuildConfig.VERSION_NAME)`.
+3. Chains `.onSuccess` and `.onFailure` on the returned `Result<Unit>` to display localized feedback via `DialogToastManager.show(...)`.
 
-### Pure Helper Unit Tests (`:domain`)
+### Unit & Integration Tests (`:companion:domain`)
 
-`LogReportManagerTest` covers `buildReportFilename` and `buildReportHeader` on the JVM
-without any Android framework dependency. Located at
-`companion/domain/src/test/java/com/stormpanda/megingiard/log/LogReportManagerTest.kt`.
+- `LogReportManagerTest` covers `buildReportFilename`, `buildReportHeader`, and `requestSaveReport` on the JVM without Android framework dependencies (`companion/domain/src/test/java/com/stormpanda/megingiard/log/LogReportManagerTest.kt`).
+- `LogReportSanitizationPipelineE2ETest` verifies `saveRequest` emission, SAF `OutputStream` serialization, and I/O failure propagation in `writeReportToUri` under Robolectric (`companion/domain/src/test/java/com/stormpanda/megingiard/log/LogReportSanitizationPipelineE2ETest.kt`).

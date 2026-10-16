@@ -26,19 +26,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlin.math.abs
-import kotlin.math.max
 
-private const val TAG = "PrimaryOverlayInputBridge"
+private const val TAG = "PrimaryOvlyInputBridge"
 
 private const val STICK_DEADZONE = 0.5f
-private const val REPEAT_INITIAL_DELAY_MS = 250L
 private const val REPEAT_START_DELAY_MS = 120L
 private const val REPEAT_MIN_DELAY_MS = 60L
 private const val REPEAT_ACCEL_FACTOR = 0.90f
@@ -168,14 +163,14 @@ object PrimaryOverlayInputBridge {
             lastJoystickKeyCode = targetKeyCode
             onDpadKey(KeyEvent.ACTION_DOWN, targetKeyCode)
             repeatJob =
-                scope.launch(Dispatchers.Main) {
-                    delay(REPEAT_INITIAL_DELAY_MS)
-                    var delayMs = REPEAT_START_DELAY_MS
-                    while (isActive && lastJoystickKeyCode == targetKeyCode) {
-                        onDpadKey(KeyEvent.ACTION_DOWN, targetKeyCode)
-                        delay(delayMs)
-                        delayMs = max(REPEAT_MIN_DELAY_MS, (delayMs * REPEAT_ACCEL_FACTOR).toLong())
-                    }
+                scope.launchDirectionalRepeat(
+                    keyCode = targetKeyCode,
+                    isActiveCheck = { lastJoystickKeyCode == targetKeyCode },
+                    startDelayMs = REPEAT_START_DELAY_MS,
+                    minDelayMs = REPEAT_MIN_DELAY_MS,
+                    accelFactor = REPEAT_ACCEL_FACTOR,
+                ) {
+                    onDpadKey(KeyEvent.ACTION_DOWN, targetKeyCode)
                 }
         }
 

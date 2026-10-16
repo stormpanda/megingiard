@@ -19,7 +19,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
-import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SwitchEmulators
@@ -58,10 +57,10 @@ fun RomFolderCoreChooserDialog(
     val systemDef =
         remember(folder.systemId) {
             SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
-        }
+        } ?: return
     val cores =
         remember(systemDef) {
-            if (systemDef != null) listOf(null) + systemDef.retroArchCoreAlternatives else emptyList()
+            listOf(null) + systemDef.retroArchCoreAlternatives
         }
 
     LaunchedEffect(folder) {
@@ -70,16 +69,11 @@ fun RomFolderCoreChooserDialog(
 
     LaunchedEffect(confirmTrigger) {
         if (confirmTrigger > 0) {
-            if (systemDef == null) {
-                onDismiss()
-            } else if (isSwitchSystem) {
+            if (isSwitchSystem) {
                 val safeIdx = selectedIndex.coerceIn(0, switchEmulators.lastIndex.coerceAtLeast(0))
                 val chosen = switchEmulators.getOrNull(safeIdx)?.packageName
                 AppLog.i(TAG, "Confirming Switch emulator selection via trigger: index=$safeIdx, package='$chosen'")
                 onConfirm(chosen)
-            } else if (systemDef.emulatorId != EMULATOR_ID_RETROARCH) {
-                AppLog.i(TAG, "Confirming native emulation dialog via trigger")
-                onConfirm(null)
             } else {
                 val safeIdx = selectedIndex.coerceIn(0, cores.lastIndex.coerceAtLeast(0))
                 val chosen = cores.getOrNull(safeIdx)
@@ -97,29 +91,6 @@ fun RomFolderCoreChooserDialog(
         widthFraction = DIALOG_WIDTH_FRACTION,
         modifier = modifier,
     ) {
-        if (systemDef == null) {
-            Text(
-                text = stringResource(R.string.gamefocus_dialog_unknown_system),
-                style = MaterialTheme.typography.titleMedium,
-                color = appColors.onSurface,
-            )
-            Spacer(modifier = Modifier.height(DIALOG_SPACING))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                GamePadButtonAction(
-                    button = GamePadButton.BUTTON_A,
-                    text = stringResource(R.string.gamefocus_dialog_core_native_close),
-                    onClick = {
-                        AppLog.d(TAG, "Dismissing due to unknown system definition")
-                        onDismiss()
-                    },
-                )
-            }
-            return@AppModalDialog
-        }
-
         Text(
             text =
                 stringResource(
@@ -188,27 +159,6 @@ fun RomFolderCoreChooserDialog(
                     onClick = {
                         AppLog.d(TAG, "User cancelled Switch emulator assignment dialog")
                         onDismiss()
-                    },
-                )
-            }
-        } else if (systemDef.emulatorId != EMULATOR_ID_RETROARCH) {
-            Text(
-                text = stringResource(R.string.gamefocus_dialog_core_native_msg),
-                style = MaterialTheme.typography.bodyMedium,
-                color = appColors.onSurfaceSecondary,
-                modifier = Modifier.padding(bottom = DIALOG_SPACING),
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                GamePadButtonAction(
-                    button = GamePadButton.BUTTON_A,
-                    text = stringResource(R.string.gamefocus_dialog_core_native_close),
-                    onClick = {
-                        AppLog.i(TAG, "Native emulation folder added. Dismissing dialog.")
-                        onConfirm(null)
                     },
                 )
             }

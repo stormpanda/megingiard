@@ -87,15 +87,19 @@ const val GAMEPAD_REPEAT_ACCEL_FACTOR = 0.85f
 fun CoroutineScope.launchDirectionalRepeat(
     keyCode: Int,
     isActiveCheck: () -> Boolean,
+    initialDelayMs: Long = GAMEPAD_REPEAT_INITIAL_DELAY_MS,
+    startDelayMs: Long = GAMEPAD_REPEAT_START_DELAY_MS,
+    minDelayMs: Long = GAMEPAD_REPEAT_MIN_DELAY_MS,
+    accelFactor: Float = GAMEPAD_REPEAT_ACCEL_FACTOR,
     action: () -> Unit,
 ): Job =
     launch {
-        delay(GAMEPAD_REPEAT_INITIAL_DELAY_MS)
-        var delayMs = GAMEPAD_REPEAT_START_DELAY_MS
+        delay(initialDelayMs)
+        var delayMs = startDelayMs
         while (isActive && isActiveCheck()) {
             action()
             delay(delayMs)
-            delayMs = max(GAMEPAD_REPEAT_MIN_DELAY_MS, (delayMs * GAMEPAD_REPEAT_ACCEL_FACTOR).toLong())
+            delayMs = max(minDelayMs, (delayMs * accelFactor).toLong())
         }
     }
 

@@ -3,15 +3,12 @@ package com.stormpanda.megingiard.macropad
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Speed
-import androidx.compose.material.icons.rounded.SwapVert
-import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -20,17 +17,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.TouchpadSettings
+import com.stormpanda.megingiard.touchpad.TouchpadGestureAndScrollCards
 import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
-import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import kotlin.math.roundToInt
 
-private const val TAG = "BackgroundTouchpadSettingsEditor"
+private const val TAG = "BgTouchpadEditor"
 
 @Composable
 internal fun LayoutTouchpadSubPageContent(
@@ -109,7 +107,7 @@ internal fun LayoutTouchpadSubPageContent(
             title = stringResource(R.string.settings_touchpad_sensitivity),
             description = stringResource(R.string.settings_touchpad_sensitivity_desc),
             value = cfg.sensitivity,
-            valueRange = 0.5f..3.0f,
+            valueRange = TouchpadSettings.SENSITIVITY_MIN..TouchpadSettings.SENSITIVITY_MAX,
             onValueChange = { onUpdate(cfg.copy(sensitivity = it), false) },
             valueLabel = "${(cfg.sensitivity * 10f).roundToInt() / 10f}x",
             step = 0.1f,
@@ -121,71 +119,26 @@ internal fun LayoutTouchpadSubPageContent(
             color = accentColor,
         )
 
-        GamepadToggleCard(
-            title = stringResource(R.string.settings_touchpad_tap_to_click),
-            description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
-            checked = cfg.tapToClick,
-            icon = Icons.Rounded.TouchApp,
-            onCheckedChange = { onUpdate(cfg.copy(tapToClick = it), false) },
-        )
-
-        GamepadToggleCard(
-            title = stringResource(R.string.settings_touchpad_two_finger_tap),
-            description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
-            checked = cfg.twoFingerTap,
-            icon = Icons.Rounded.TouchApp,
-            onCheckedChange = { onUpdate(cfg.copy(twoFingerTap = it), false) },
-        )
-
-        GamepadToggleCard(
-            title = stringResource(R.string.settings_touchpad_three_finger_tap),
-            description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
-            checked = cfg.threeFingerTap,
-            icon = Icons.Rounded.TouchApp,
-            onCheckedChange = { onUpdate(cfg.copy(threeFingerTap = it), false) },
-        )
-
-        GamepadToggleCard(
-            title = stringResource(R.string.settings_touchpad_tap_drag),
-            description = stringResource(R.string.settings_touchpad_tap_drag_desc),
-            checked = cfg.tapDrag,
-            icon = Icons.Rounded.TouchApp,
-            onCheckedChange = { onUpdate(cfg.copy(tapDrag = it), false) },
-        )
-
-        GamepadSectionHeader(
-            text = stringResource(R.string.settings_section_scrolling),
-            color = accentColor,
-        )
-
-        GamepadToggleCard(
-            title = stringResource(R.string.settings_touchpad_two_finger_scroll),
-            description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
-            checked = cfg.twoFingerScroll,
-            icon = Icons.Rounded.SwapVert,
-            onCheckedChange = { onUpdate(cfg.copy(twoFingerScroll = it), false) },
-        )
-
-        GamepadToggleCard(
-            title = stringResource(R.string.settings_touchpad_natural_scroll),
-            description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
-            checked = cfg.naturalScroll,
-            icon = Icons.Rounded.SwapVert,
-            onCheckedChange = { onUpdate(cfg.copy(naturalScroll = it), false) },
-        )
-
-        GamepadStepperCard(
-            title = stringResource(R.string.settings_touchpad_scroll_speed),
-            description = stringResource(R.string.settings_touchpad_scroll_speed_desc),
-            valueText = "${(cfg.scrollSpeed * 10f).roundToInt() / 10f}x",
-            icon = Icons.Rounded.Speed,
-            onDecrement = {
-                val newVal = ((cfg.scrollSpeed - 0.1f) * 10f).roundToInt() / 10f
-                onUpdate(cfg.copy(scrollSpeed = newVal.coerceIn(0.1f, 3.0f)), false)
-            },
-            onIncrement = {
-                val newVal = ((cfg.scrollSpeed + 0.1f) * 10f).roundToInt() / 10f
-                onUpdate(cfg.copy(scrollSpeed = newVal.coerceIn(0.1f, 3.0f)), false)
+        TouchpadGestureAndScrollCards(
+            tapToClick = cfg.tapToClick,
+            onTapToClickChange = { onUpdate(cfg.copy(tapToClick = it), false) },
+            twoFingerTap = cfg.twoFingerTap,
+            onTwoFingerTapChange = { onUpdate(cfg.copy(twoFingerTap = it), false) },
+            threeFingerTap = cfg.threeFingerTap,
+            onThreeFingerTapChange = { onUpdate(cfg.copy(threeFingerTap = it), false) },
+            tapDrag = cfg.tapDrag,
+            onTapDragChange = { onUpdate(cfg.copy(tapDrag = it), false) },
+            twoFingerScroll = cfg.twoFingerScroll,
+            onTwoFingerScrollChange = { onUpdate(cfg.copy(twoFingerScroll = it), false) },
+            naturalScroll = cfg.naturalScroll,
+            onNaturalScrollChange = { onUpdate(cfg.copy(naturalScroll = it), false) },
+            scrollSpeed = cfg.scrollSpeed,
+            onScrollSpeedChange = { onUpdate(cfg.copy(scrollSpeed = it), false) },
+            scrollingHeader = {
+                GamepadSectionHeader(
+                    text = stringResource(R.string.settings_section_scrolling),
+                    color = accentColor,
+                )
             },
         )
 

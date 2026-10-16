@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Anchor
 import androidx.compose.material.icons.rounded.Check
@@ -19,8 +18,6 @@ import androidx.compose.material.icons.rounded.FilterCenterFocus
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -42,7 +39,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -53,16 +49,13 @@ import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.GamepadConfirmModal
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.isBackKey
-import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 private const val TAG = "AnchorSelectorOverlay"
 private const val MIN_ANCHOR_SIZE = 0.01f
 private const val ASO_SCRIM_ALPHA = 0.40f
-private const val ASO_INITIAL_FOCUS_DELAY_MS = 80L
 
 private val ASO_BORDER_WIDTH = 2.dp
 
@@ -71,8 +64,6 @@ private val ASO_EDGE_HANDLE_THICKNESS = 6.dp
 private val ASO_EDGE_HANDLE_MARGIN = 6.dp
 private val ASO_EDGE_TOUCH_LENGTH = 56.dp
 private val ASO_EDGE_TOUCH_THICKNESS = 36.dp
-private val ASO_EDGE_HANDLE_CORNER = 3.dp
-private val ASO_EDGE_HANDLE_SHAPE = RoundedCornerShape(ASO_EDGE_HANDLE_CORNER)
 private val ASO_TOAST_TOP_PADDING = 16.dp
 
 /**
@@ -103,49 +94,11 @@ fun AnchorSelectorOverlay(
     val firstItemFocusRequester = remember { FocusRequester() }
     val collapseButtonFocusRequester = remember { FocusRequester() }
     val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
-    val isDoneRequested by AnchorPositioningCoordinator.isDoneRequested.collectAsStateWithLifecycle()
 
-    LaunchedEffect(isDoneRequested) {
-        if (isDoneRequested) {
-            AnchorPositioningCoordinator.consumeDoneRequest()
-            showCalibratePrompt = true
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            AnchorPositioningCoordinator.consumeDoneRequest()
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        try {
-            firstItemFocusRequester.requestFocus()
-            AppLog.d(TAG, "AnchorSelectorOverlay: initial focus requested")
-        } catch (_: IllegalStateException) {
-            AppLog.w(TAG, "AnchorSelectorOverlay: firstItemFocusRequester unattached on initial focus attempt")
-        }
-        delay(ASO_INITIAL_FOCUS_DELAY_MS)
-        try {
-            firstItemFocusRequester.requestFocus()
-            AppLog.d(TAG, "AnchorSelectorOverlay: post-settle focus requested")
-        } catch (_: IllegalStateException) {
-            AppLog.w(TAG, "AnchorSelectorOverlay: firstItemFocusRequester unattached after settle delay")
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        PrimaryOverlayInputBridge.focusRecoveryEvents.collect { keyCode ->
-            if (!showCalibratePrompt) {
-                try {
-                    firstItemFocusRequester.requestFocus()
-                    AppLog.d(TAG, "AnchorSelectorOverlay: focus recovered on keyCode=$keyCode")
-                } catch (_: IllegalStateException) {
-                    AppLog.w(TAG, "AnchorSelectorOverlay: focus requester unattached on focus recovery")
-                }
-            }
-        }
-    }
+    RememberTopOverlayFocusEffect(
+        initialTarget = { firstItemFocusRequester },
+        recoveryTarget = { if (!showCalibratePrompt) firstItemFocusRequester else null },
+    )
 
     // Root key handler to catch Back / B-Button
     val rootKeyModifier =
@@ -287,7 +240,7 @@ fun AnchorSelectorOverlay(
         var anchorHToggle by remember(layoutId) { mutableIntStateOf(0) }
         var anchorVToggle by remember(layoutId) { mutableIntStateOf(0) }
 
-        if (effectiveCrop.width >= MIN_TOUCH_CUTOUT_SIZE && effectiveCrop.height >= MIN_TOUCH_CUTOUT_SIZE) {
+        if (effectiveCrop.width >= MIN_ANCHOR_SIZE && effectiveCrop.height >= MIN_ANCHOR_SIZE) {
             var dragStartX by remember(layoutId) { mutableFloatStateOf(0f) }
             var dragStartY by remember(layoutId) { mutableFloatStateOf(0f) }
             var dragStartW by remember(layoutId) { mutableFloatStateOf(0f) }
@@ -310,7 +263,7 @@ fun AnchorSelectorOverlay(
             val topCenterY = anchorTop - marginPx - handleThicknessPx / 2f
             val topTouchX = (anchorLeft + anchorW / 2f) - touchLengthPx / 2f
             val topTouchY = topCenterY - touchThicknessPx / 2f
-            AnchorResizeHandleView(
+            ResizeHandleView(
                 offset = IntOffset(topTouchX.roundToInt(), topTouchY.roundToInt()),
                 touchWidth = ASO_EDGE_TOUCH_LENGTH,
                 touchHeight = ASO_EDGE_TOUCH_THICKNESS,
@@ -320,7 +273,7 @@ fun AnchorSelectorOverlay(
                 onDragStart = { captureDragStart() },
                 onDrag = { _, totalDy ->
                     val bottom = dragStartY + dragStartH
-                    val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottom - MIN_TOUCH_CUTOUT_SIZE)
+                    val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottom - MIN_ANCHOR_SIZE)
                     updateAnchorCrop(dragStartX, newY, dragStartW, bottom - newY)
                 },
             )
@@ -329,7 +282,7 @@ fun AnchorSelectorOverlay(
             val bottomCenterY = anchorTop + anchorH + marginPx + handleThicknessPx / 2f
             val bottomTouchX = (anchorLeft + anchorW / 2f) - touchLengthPx / 2f
             val bottomTouchY = bottomCenterY - touchThicknessPx / 2f
-            AnchorResizeHandleView(
+            ResizeHandleView(
                 offset = IntOffset(bottomTouchX.roundToInt(), bottomTouchY.roundToInt()),
                 touchWidth = ASO_EDGE_TOUCH_LENGTH,
                 touchHeight = ASO_EDGE_TOUCH_THICKNESS,
@@ -338,7 +291,7 @@ fun AnchorSelectorOverlay(
                 color = colors.accent,
                 onDragStart = { captureDragStart() },
                 onDrag = { _, totalDy ->
-                    val newH = ((dragStartY + dragStartH + totalDy / screenH).coerceIn(dragStartY + MIN_TOUCH_CUTOUT_SIZE, 1f)) - dragStartY
+                    val newH = ((dragStartY + dragStartH + totalDy / screenH).coerceIn(dragStartY + MIN_ANCHOR_SIZE, 1f)) - dragStartY
                     updateAnchorCrop(dragStartX, dragStartY, dragStartW, newH)
                 },
             )
@@ -347,7 +300,7 @@ fun AnchorSelectorOverlay(
             val leftCenterX = anchorLeft - marginPx - handleThicknessPx / 2f
             val leftTouchX = leftCenterX - touchThicknessPx / 2f
             val leftTouchY = (anchorTop + anchorH / 2f) - touchLengthPx / 2f
-            AnchorResizeHandleView(
+            ResizeHandleView(
                 offset = IntOffset(leftTouchX.roundToInt(), leftTouchY.roundToInt()),
                 touchWidth = ASO_EDGE_TOUCH_THICKNESS,
                 touchHeight = ASO_EDGE_TOUCH_LENGTH,
@@ -357,7 +310,7 @@ fun AnchorSelectorOverlay(
                 onDragStart = { captureDragStart() },
                 onDrag = { totalDx, _ ->
                     val right = dragStartX + dragStartW
-                    val newX = (dragStartX + totalDx / screenW).coerceIn(0f, right - MIN_TOUCH_CUTOUT_SIZE)
+                    val newX = (dragStartX + totalDx / screenW).coerceIn(0f, right - MIN_ANCHOR_SIZE)
                     updateAnchorCrop(newX, dragStartY, right - newX, dragStartH)
                 },
             )
@@ -366,7 +319,7 @@ fun AnchorSelectorOverlay(
             val rightCenterX = anchorLeft + anchorW + marginPx + handleThicknessPx / 2f
             val rightTouchX = rightCenterX - touchThicknessPx / 2f
             val rightTouchY = (anchorTop + anchorH / 2f) - touchLengthPx / 2f
-            AnchorResizeHandleView(
+            ResizeHandleView(
                 offset = IntOffset(rightTouchX.roundToInt(), rightTouchY.roundToInt()),
                 touchWidth = ASO_EDGE_TOUCH_THICKNESS,
                 touchHeight = ASO_EDGE_TOUCH_LENGTH,
@@ -375,7 +328,7 @@ fun AnchorSelectorOverlay(
                 color = colors.accent,
                 onDragStart = { captureDragStart() },
                 onDrag = { totalDx, _ ->
-                    val newW = ((dragStartX + dragStartW + totalDx / screenW).coerceIn(dragStartX + MIN_TOUCH_CUTOUT_SIZE, 1f)) - dragStartX
+                    val newW = ((dragStartX + dragStartW + totalDx / screenW).coerceIn(dragStartX + MIN_ANCHOR_SIZE, 1f)) - dragStartX
                     updateAnchorCrop(dragStartX, dragStartY, newW, dragStartH)
                 },
             )
@@ -477,51 +430,5 @@ fun AnchorSelectorOverlay(
                 },
             )
         }
-    }
-}
-
-@Composable
-private fun AnchorResizeHandleView(
-    offset: IntOffset,
-    touchWidth: Dp,
-    touchHeight: Dp,
-    handleWidth: Dp,
-    handleHeight: Dp,
-    color: Color,
-    onDragStart: () -> Unit,
-    onDrag: (Float, Float) -> Unit,
-) {
-    val currentOnDragStart by rememberUpdatedState(onDragStart)
-    val currentOnDrag by rememberUpdatedState(onDrag)
-    Box(
-        modifier =
-            Modifier
-                .offset { offset }
-                .size(width = touchWidth, height = touchHeight)
-                .pointerInput(Unit) {
-                    var accumulatedX = 0f
-                    var accumulatedY = 0f
-                    detectDragGestures(
-                        onDragStart = {
-                            accumulatedX = 0f
-                            accumulatedY = 0f
-                            currentOnDragStart()
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            accumulatedX += dragAmount.x
-                            accumulatedY += dragAmount.y
-                            currentOnDrag(accumulatedX, accumulatedY)
-                        },
-                    )
-                },
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(width = handleWidth, height = handleHeight)
-                    .background(color.copy(alpha = 0.85f), ASO_EDGE_HANDLE_SHAPE),
-        )
     }
 }

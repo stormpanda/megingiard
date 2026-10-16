@@ -56,4 +56,19 @@ class LibraryTabTest {
         assertEquals(1, result.size)
         assertEquals("Super Mario World", result[0].label)
     }
+
+    @Test
+    fun testBuildTabsSortsRomSystemsCaseInsensitively() {
+        val folders =
+            listOf(
+                CustomRomFolder(uriString = "content://snes", systemId = "snes", systemName = "SNES", folderPath = "/roms/snes"),
+                CustomRomFolder(uriString = "content://gb", systemId = "gb", systemName = "Game Boy", folderPath = "/roms/gb"),
+            )
+        val tabs = LibraryTab.buildTabs(folders)
+        assertEquals(4, tabs.size)
+        assertEquals(LibraryTab.GAMES, tabs[0])
+        assertEquals(LibraryTab.APPS, tabs[1])
+        assertEquals("gb", (tabs[2] as LibraryTab.RomSystem).systemId)
+        assertEquals("snes", (tabs[3] as LibraryTab.RomSystem).systemId)
+    }
 }

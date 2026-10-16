@@ -21,11 +21,12 @@ It does not claim DRM, copy protection, network hardening, or resistance against
 | Layer                             | Purpose                                                                                       | Implementation                                                                                                                                                                                                                    | Detailed docs                                                                                                                         |
 | --------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | APK signature pinning             | Detect repackaged APKs signed with an unexpected certificate.                                 | `SignatureGuard.verify()` compares runtime signing cert SHA-256 values with `BuildConfig.EXPECTED_SIGNING_SHA256`. Release builds fail closed when the pin is missing or malformed.                                               | [Architecture](docs/ARCHITECTURE.md#security-architecture), [Requirements](docs/REQUIREMENTS.md#security)                             |
-| Release obfuscation and shrinking | Raise the reverse-engineering cost and reduce shipped surface.                                | Release builds enable R8 minification and resource shrinking; keep rules preserve manifest components and serialization.                                                                                                          | [Architecture](docs/ARCHITECTURE.md#security-architecture), [app/proguard-rules.pro](app/proguard-rules.pro)                          |
+| Release obfuscation and shrinking | Raise the reverse-engineering cost and reduce shipped surface.                                | Release builds enable R8 minification and resource shrinking; keep rules preserve manifest components and serialization.                                                                                                          | [Architecture](docs/ARCHITECTURE.md#security-architecture), [companion/ui/proguard-rules.pro](companion/ui/proguard-rules.pro)          |
 | Native asset SHA-256 pins         | Detect modified helper binaries and mirror DEX assets before use.                             | `:domain:generateNativeBinaryHashes` generates `NativeBinaryHashes.EXPECTED`; `BinaryIntegrity.verify()` checks assets fail-closed.                                                                                               | [Build Native](docs/BUILD_NATIVE.md#native-asset-integrity), [Requirements](docs/REQUIREMENTS.md#security)                            |
 | Bootstrap asset integrity         | Avoid deploying tampered daemon / mirror assets during Privileged Mode setup.                 | `PServerBootstrapper` (Tier-1) and `PrivdBootstrapper` (Tier-2) verify `megingiard_privd_arm64` and `megingiard_mirror.dex` fail-closed via `BinaryIntegrity.verify()` before staging or pushing. | [Privileged Mode](docs/features/privileged-mode/technical-security-protocol.md#security-model), [Build Native](docs/BUILD_NATIVE.md#runtime-verification) |
 | Privd mutual HMAC authentication  | Authenticate both app and daemon before privileged commands are accepted.                     | `CHAL/AUTH/OK/VERIFY/PROOF` over local TCP socket loopback, using HMAC-SHA256 with a per-install 32-byte key encrypted at rest in Android Keystore (AES-256-GCM). The key is never embedded in the APK. See **Per-install key scheme** below. | [Privileged Mode](docs/features/privileged-mode/technical-security-protocol.md#security-model)                                                            |
 | Privd security boundary           | Cryptographically verify that only the provisioned app instance can connect to the daemon.    | Both sides perform mutual challenge-response with the per-install private key. Rejects rogue apps (mismatched key) and spoofed daemons. Files in `/data/local/tmp` are owned by `2000:2000` (`shell:shell`).                        | [Privileged Mode](docs/features/privileged-mode/technical-security-protocol.md#security-model)                                                            |
+| Integration API boundary          | Restrict sensitive settings and prevent client state spoofing across apps.                    | `MegingiardSettingsProvider` restricts `/settings` (`steamgriddb_api_token`) to same-signature callers; `updateClientState` validates that the calling UID owns `client_package`.                                            | [Integration API](docs/features/integration-api/FEATURE.md)                                                                          |
 | Security logging                  | Make integrity and authentication failures visible in normal diagnostic logs.                 | Security failures use `AppLog.w()` / `AppLog.e()` in `SignatureGuard`, `BinaryIntegrity`, and `PrivdClient`.                                                                                                                      | [AGENTS.md](AGENTS.md#84-logging)                                                                                                     |
 | Config export checksums           | Detect accidental or unintended modification of exported user configuration files.            | Export/import embeds and verifies a SHA-256 checksum over canonical serialized content.                                                                                                                                           | [Config Feature](docs/features/config/FEATURE.md)                                                                                     |
 
@@ -45,7 +46,7 @@ The previous scheme embedded the Privd HMAC key in `BuildConfig` at compile time
 
 1. **Key generation** — During Privileged Mode bootstrap the app generates 32 random bytes with `SecureRandom`. This key is unique per install and never appears in the APK.
 2. **Keystore encryption** — The key is encrypted under an AES-256-GCM key that lives in Android Keystore (`megingiard_privd_pair_key_v1`, hardware-backed when the device has a TEE or StrongBox). The ciphertext is stored in `noBackupFilesDir/privd_pair_key.enc`.
-3. **Provisioning** — The app transmits the plaintext key to the daemon via the Tier-1 root deployment script or Tier-2 ADB TLS channel: `megingiard_privd --provision <key_hex> <app_uid>`. The daemon writes it to `/data/local/tmp/megingiard_privd.key` (mode 0600, `shell:shell` ownership). The app UID is stored alongside the key so the daemon can enforce peer identity.
+3. **Provisioning** — The app transmits the plaintext key to the daemon via the Tier-1 root deployment script or Tier-2 ADB TLS channel: `megingiard_privd --provision <key_hex>`. The daemon writes `KEY=<key_hex>` to `/data/local/tmp/megingiard_privd.key` (or `megingiard_privd_debug.key` for debug builds; mode `0600`, `shell:shell` ownership).
 4. **Usage** — On subsequent app starts the app decrypts the key from Keystore storage (`PrivdPairKey.load()`) and loads it into `PrivdClient`. The daemon reads it from the state file at startup. The existing mutual `CHAL/AUTH/OK/VERIFY/PROOF` handshake then uses this per-install key.
 5. **Uninstall invalidation** — Android destroys the Keystore AES key when the app is uninstalled. The ciphertext in `noBackupFilesDir` therefore becomes permanently unreadable after reinstall, forcing the user to re-run the setup wizard. A reinstalled app (potentially from a different source) cannot silently inherit the old daemon's trust relationship.
 
@@ -61,16 +62,22 @@ The previous scheme embedded the Privd HMAC key in `BuildConfig` at compile time
 
 **Security property:** Compromising only the app (without the device's Keystore) or only the daemon binary (without the state file) does not grant access to the other party's secrets.
 
+## Integration API Security
+
+`MegingiardSettingsProvider` exposes IPC endpoints (`content://com.stormpanda.megingiard.provider`):
+- `/settings` queries (`steamgriddb_api_token`) are restricted via `isCallerSignatureTrusted()` to callers with matching signatures (`SIGNATURE_MATCH`), ensuring untrusted third-party apps cannot access sensitive API tokens.
+- `updateClientState` calls validate via `isCallerPackageValid()` that the calling UID owns `client_package`, preventing unauthorized apps from spoofing client state or hijacking profile associations.
+
 ## Verification and Tests
 
 The current automated coverage focuses on pure cryptographic primitives:
 
 - `BinaryIntegrityTest` covers SHA-256 known-answer vectors and sensitivity to byte changes.
 - `HmacUtilTest` covers HMAC-SHA256 RFC 4231 vectors and the constant-time hex MAC comparison used for daemon `PROOF` verification.
-- Agents must run `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` after implementation changes that affect pure `:shared:core` or `:companion:domain` logic.
+- Agents must run `./scripts/verify.sh` or `./scripts/run_unit_tests.sh` after implementation changes.
 - Native C source changes must be followed by the matching build script; see [Build Native](docs/BUILD_NATIVE.md#native-rebuild-policy).
 
-Runtime Android branches such as `SignatureGuard.verify()` and the full `LocalSocket` handshake currently require manual device validation or future Robolectric / instrumentation coverage.
+Runtime Android branches such as `SignatureGuard.verify()` and the full TCP loopback socket handshake currently require manual device validation or future Robolectric / instrumentation coverage.
 
 ## Residual Risks and Future Hardening
 
@@ -84,5 +91,6 @@ Runtime Android branches such as `SignatureGuard.verify()` and the full `LocalSo
 - [Architecture](docs/ARCHITECTURE.md#security-architecture) explains the system-level security layering.
 - [Privileged Mode](docs/features/privileged-mode/technical-security-protocol.md#security-model) documents the daemon trust boundary and mutual HMAC protocol.
 - [Build Native](docs/BUILD_NATIVE.md#native-asset-integrity) documents native rebuilds, hash generation, and runtime verification.
+- [Integration API](docs/features/integration-api/FEATURE.md) documents client state reporting, profile querying, and signature validation.
 - [Config Feature](docs/features/config/FEATURE.md) documents export/import data-integrity checks.
 - [Agent Guidelines](AGENTS.md#3-checklist-for-every-change) define required rebuild and test workflow for agents.

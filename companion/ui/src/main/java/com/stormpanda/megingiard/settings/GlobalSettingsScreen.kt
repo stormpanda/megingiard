@@ -9,7 +9,6 @@ import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -23,14 +22,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.BuildConfig
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
-import com.stormpanda.megingiard.config.buildExportFilename
-import com.stormpanda.megingiard.config.buildProfileExportFilename
 import com.stormpanda.megingiard.log.LogReportManager
-import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
+import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.settings.tabs.AppearanceSettingsTab
 import com.stormpanda.megingiard.settings.tabs.ConfigurationSettingsTab
 import com.stormpanda.megingiard.settings.tabs.CreateBackupSubPage
@@ -57,106 +55,68 @@ import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.launchUrlOnPrimaryDisplay
+import com.stormpanda.megingiard.update.UpdateManager
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val TAG = "GlobalSettingsScreen"
 
-private const val GS_RESTORE_COUNTDOWN_SECONDS = 5
-private const val GS_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
-private const val GS_RESTORE_CONFIRM_TIMEOUT_MS = 8_000L
+private const val GS_RELEASES_FALLBACK_URL = "$GS_OBTAINIUM_REPO_URL/releases"
 
 @Composable
 fun GlobalSettingsScreen(
     onBack: () -> Unit,
     viewModel: GlobalSettingsViewModel = viewModel(),
 ) {
-    val accentColorArgb by viewModel.accentColor.collectAsStateWithLifecycle()
-    val customAccentColorArgb by viewModel.customAccentColor.collectAsStateWithLifecycle()
-    val overlayAtBottom by viewModel.overlayAtBottom.collectAsStateWithLifecycle()
-    val overlayFadeOut by viewModel.overlayFadeOut.collectAsStateWithLifecycle()
-    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
-    val logLevel by viewModel.logLevel.collectAsStateWithLifecycle()
-    val excludeFromRecents by viewModel.excludeFromRecents.collectAsStateWithLifecycle()
-    val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
-    val kbLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
-    val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsStateWithLifecycle()
-    val kbAutoOpenOnFocus by viewModel.kbAutoOpenOnFocus.collectAsStateWithLifecycle()
-    val privdState by viewModel.privdState.collectAsStateWithLifecycle()
-    val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsStateWithLifecycle()
-    val deadzoneRight by viewModel.privdDeadzoneRight.collectAsStateWithLifecycle()
-    val steamGridDbApiToken by viewModel.steamGridDbApiToken.collectAsStateWithLifecycle()
+    val accentColorArgb by SettingsManager.accentColor.collectAsStateWithLifecycle()
+    val customAccentColorArgb by SettingsManager.customAccentColor.collectAsStateWithLifecycle()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
+    val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsStateWithLifecycle()
+    val themeMode by SettingsManager.themeMode.collectAsStateWithLifecycle()
+    val appLanguage by SettingsManager.appLanguage.collectAsStateWithLifecycle()
+    val logLevel by SettingsManager.logLevel.collectAsStateWithLifecycle()
+    val excludeFromRecents by SettingsManager.excludeFromRecents.collectAsStateWithLifecycle()
+    val gamepadSwapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    val kbLayout by KeyboardSettings.kbLayout.collectAsStateWithLifecycle()
+    val kbTouchpadEnabled by KeyboardSettings.kbTouchpadEnabled.collectAsStateWithLifecycle()
+    val kbAutoOpenOnFocus by KeyboardSettings.kbAutoOpenOnFocus.collectAsStateWithLifecycle()
+    val privdState by PrivdManager.state.collectAsStateWithLifecycle()
+    val deadzoneLeft by MacroPadSettings.deadzoneLeft.collectAsStateWithLifecycle()
+    val deadzoneRight by MacroPadSettings.deadzoneRight.collectAsStateWithLifecycle()
+    val steamGridDbApiToken by SettingsManager.steamGridDbApiToken.collectAsStateWithLifecycle()
     val steamGridDbTestStatus by viewModel.steamGridDbTestStatus.collectAsStateWithLifecycle()
-    val internalBackups by viewModel.internalBackups.collectAsStateWithLifecycle()
+    val internalBackups by SettingsManager.internalBackups.collectAsStateWithLifecycle()
 
-    val autoUpdateCheckEnabled by viewModel.autoUpdateCheckEnabled.collectAsStateWithLifecycle()
-    val updateAvailable by viewModel.updateAvailable.collectAsStateWithLifecycle()
-    val latestReleaseInfo by viewModel.latestReleaseInfo.collectAsStateWithLifecycle()
-    val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsStateWithLifecycle()
-    val updateCheckError by viewModel.updateCheckError.collectAsStateWithLifecycle()
+    val autoUpdateCheckEnabled by UpdateManager.autoUpdateCheckEnabled.collectAsStateWithLifecycle()
+    val updateAvailable by UpdateManager.updateAvailable.collectAsStateWithLifecycle()
+    val latestReleaseInfo by UpdateManager.latestReleaseInfo.collectAsStateWithLifecycle()
+    val isCheckingUpdates by UpdateManager.isChecking.collectAsStateWithLifecycle()
+    val updateCheckError by UpdateManager.checkError.collectAsStateWithLifecycle()
     val isRootBridgeAvailable by viewModel.isRootBridgeAvailable.collectAsStateWithLifecycle()
 
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
     val exportResult by ConfigManager.exportResult.collectAsStateWithLifecycle()
-    val logReportSaveResult by LogReportManager.saveResult.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     LaunchedEffect(Unit) {
-        viewModel.checkPrivilegedModeStatus(context)
+        viewModel.checkPrivilegedModeStatus()
     }
     var subPageStack by rememberSaveable { mutableStateOf<List<SettingsSubPage>>(emptyList()) }
     val currentSubPage = subPageStack.lastOrNull()
-    var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
     val pendingInAppParsedImport by ConfigManager.pendingInAppParsedImport.collectAsStateWithLifecycle()
     val configImportError by ConfigManager.inAppImportError.collectAsStateWithLifecycle()
-    val activeImportPreview = showImportPreviewDialog ?: pendingInAppParsedImport
     var lastReviewExport by remember { mutableStateOf<MegingiardExport?>(null) }
-    LaunchedEffect(activeImportPreview) {
-        if (activeImportPreview != null) {
-            lastReviewExport = activeImportPreview
-        }
-    }
-    var pendingUpdateReleaseUrl by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(subPageStack) {
         if (SettingsSubPage.RESTORE_REVIEW !in subPageStack) {
-            showImportPreviewDialog = null
             ConfigManager.clearInAppPendingImport()
         }
-        if (SettingsSubPage.CREATE_BACKUP !in subPageStack) {
-            pendingUpdateReleaseUrl = null
-        }
     }
-    var importError by rememberSaveable { mutableStateOf<String?>(null) }
     val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
-
-    var deleteCountdown by rememberSaveable(selectedCategory, subPageStack) { mutableIntStateOf(-1) }
-    var isDeleteCountingDown by rememberSaveable(selectedCategory, subPageStack) { mutableStateOf(false) }
-
-    LaunchedEffect(isDeleteCountingDown) {
-        if (isDeleteCountingDown) {
-            deleteCountdown = GS_RESTORE_COUNTDOWN_SECONDS
-            while (deleteCountdown > 0) {
-                delay(GS_RESTORE_COUNTDOWN_INTERVAL_MS)
-                deleteCountdown--
-            }
-            isDeleteCountingDown = false
-        }
-    }
-
-    LaunchedEffect(deleteCountdown) {
-        if (deleteCountdown == 0) {
-            delay(GS_RESTORE_CONFIRM_TIMEOUT_MS)
-            if (deleteCountdown == 0) {
-                deleteCountdown = -1
-            }
-        }
-    }
+    var hasTriggeredManualCheck by rememberSaveable { mutableStateOf(false) }
 
     val categoryList = remember { SettingsCategory.entries }
     val activePrimaryModal by AppStateManager.activePrimaryModal.collectAsStateWithLifecycle()
@@ -170,7 +130,9 @@ fun GlobalSettingsScreen(
     }
 
     LaunchedEffect(pendingInAppParsedImport) {
-        if (pendingInAppParsedImport != null) {
+        val parsed = pendingInAppParsedImport
+        if (parsed != null) {
+            lastReviewExport = parsed.export
             selectedCategory = SettingsCategory.CONFIGURATION
             subPageStack = listOf(SettingsSubPage.RESTORE_BACKUP, SettingsSubPage.RESTORE_REVIEW)
         }
@@ -220,7 +182,6 @@ fun GlobalSettingsScreen(
                         val categoryTitle = stringResource(selectedCategory.titleResId)
                         GamepadDeck(
                             title = categoryTitle,
-                            accentColor = effectiveAccent,
                         ) {
                             when (selectedCategory) {
                                 SettingsCategory.GENERAL -> {
@@ -245,10 +206,10 @@ fun GlobalSettingsScreen(
                                             viewModel.privdConnect(context)
                                         },
                                         isRootBridgeAvailable = isRootBridgeAvailable == true,
-                                        onLanguageChange = { viewModel.setAppLanguage(it) },
-                                        onExcludeFromRecentsChange = { viewModel.setExcludeFromRecents(it) },
+                                        onLanguageChange = { SettingsManager.setAppLanguage(it) },
+                                        onExcludeFromRecentsChange = { SettingsManager.setExcludeFromRecents(it) },
                                         onResetTutorials = {
-                                            viewModel.resetAllTutorials()
+                                            SettingsManager.resetAllTutorials()
                                             DialogToastManager.show(
                                                 context.getString(R.string.settings_reset_tutorials_toast),
                                             )
@@ -264,11 +225,11 @@ fun GlobalSettingsScreen(
                                         kbLayout = kbLayout,
                                         kbTouchpadEnabled = kbTouchpadEnabled,
                                         kbAutoOpenOnFocus = kbAutoOpenOnFocus,
-                                        onGamepadSwapFaceButtonsChange = { viewModel.setGamepadSwapFaceButtons(it) },
+                                        onGamepadSwapFaceButtonsChange = { MacroPadSettings.setGamepadSwapFaceButtons(it) },
                                         onOpenDeadzones = { subPageStack = listOf(SettingsSubPage.DEADZONES) },
-                                        onKbLayoutChange = { viewModel.setKbLayout(it) },
-                                        onKbTouchpadEnabledChange = { viewModel.setKbTouchpadEnabled(it) },
-                                        onKbAutoOpenOnFocusChange = { viewModel.setKbAutoOpenOnFocus(it) },
+                                        onKbLayoutChange = { KeyboardSettings.setKbLayout(it) },
+                                        onKbTouchpadEnabledChange = { KeyboardSettings.setKbTouchpadEnabled(it) },
+                                        onKbAutoOpenOnFocusChange = { KeyboardSettings.setKbAutoOpenOnFocus(it) },
                                     )
                                 }
 
@@ -279,39 +240,21 @@ fun GlobalSettingsScreen(
                                         customAccentColorArgb = customAccentColorArgb,
                                         overlayAtBottom = overlayAtBottom,
                                         overlayFadeOut = overlayFadeOut,
-                                        onThemeModeChange = { viewModel.setThemeMode(it) },
-                                        onAccentColorChange = { viewModel.setAccentColor(it) },
+                                        onThemeModeChange = { SettingsManager.setThemeMode(it) },
+                                        onAccentColorChange = { SettingsManager.setAccentColor(it) },
                                         onOpenCustomAccent = { subPageStack = listOf(SettingsSubPage.CUSTOM_ACCENT) },
-                                        onOverlayAtBottomChange = { viewModel.setOverlayAtBottom(it) },
-                                        onOverlayFadeOutChange = { viewModel.setOverlayFadeOut(it) },
+                                        onOverlayAtBottomChange = { SettingsManager.setOverlayAtBottom(it) },
+                                        onOverlayFadeOutChange = { SettingsManager.setOverlayFadeOut(it) },
                                     )
                                 }
 
                                 SettingsCategory.CONFIGURATION -> {
                                     ConfigurationSettingsTab(
-                                        deleteCountdown = deleteCountdown,
                                         onExportBackup = { subPageStack = listOf(SettingsSubPage.CREATE_BACKUP) },
                                         onRestoreBackup = { subPageStack = listOf(SettingsSubPage.RESTORE_BACKUP) },
                                         onShareProfile = { subPageStack = listOf(SettingsSubPage.SHARE_PROFILE) },
                                         onImportProfile = {
                                             ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE)
-                                        },
-                                        onDeleteCountdownClick = {
-                                            when {
-                                                deleteCountdown > 0 -> {}
-
-                                                deleteCountdown == 0 -> {
-                                                    MacroPadState.restoreDefaults()
-                                                    DialogToastManager.show(
-                                                        context.getString(R.string.settings_restore_defaults_toast),
-                                                    )
-                                                    deleteCountdown = -1
-                                                }
-
-                                                else -> {
-                                                    isDeleteCountingDown = true
-                                                }
-                                            }
                                         },
                                     )
                                 }
@@ -324,10 +267,6 @@ fun GlobalSettingsScreen(
                                 }
 
                                 SettingsCategory.UPDATES -> {
-                                    var hasTriggeredManualCheck by rememberSaveable(selectedCategory) {
-                                        mutableStateOf(false)
-                                    }
-
                                     UpdatesSettingsTab(
                                         autoUpdateCheckEnabled = autoUpdateCheckEnabled,
                                         updateAvailable = updateAvailable,
@@ -335,23 +274,23 @@ fun GlobalSettingsScreen(
                                         isCheckingUpdates = isCheckingUpdates,
                                         updateCheckError = updateCheckError,
                                         hasTriggeredManualCheck = hasTriggeredManualCheck,
-                                        onAutoUpdateCheckEnabledChange = { viewModel.setAutoUpdateCheckEnabled(it) },
+                                        onAutoUpdateCheckEnabledChange = { UpdateManager.setAutoUpdateCheckEnabled(it) },
                                         onManualCheckClick = {
                                             if (isCheckingUpdates) return@UpdatesSettingsTab
 
-                                            if (hasTriggeredManualCheck && updateAvailable) {
+                                            if (updateAvailable) {
                                                 subPageStack = listOf(SettingsSubPage.UPDATE_AVAILABLE)
                                             } else {
                                                 hasTriggeredManualCheck = true
-                                                viewModel.checkForUpdatesManually()
+                                                UpdateManager.checkForUpdates(
+                                                    force = true,
+                                                    currentVersion = BuildConfig.VERSION_NAME,
+                                                )
                                             }
                                         },
                                         onOpenObtainium = {
-                                            val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
-                                            try {
-                                                launchUrlOnPrimaryDisplay(context, deepLink)
-                                            } catch (e: Exception) {
-                                                AppLog.w(TAG, "Obtainium deep link failed: ${e.message}, falling back to browser")
+                                            if (!launchUrlOnPrimaryDisplay(context, "obtainium://add/$GS_OBTAINIUM_REPO_URL")) {
+                                                AppLog.w(TAG, "Obtainium deep link failed, falling back to browser")
                                                 launchUrlOnPrimaryDisplay(context, GS_OBTAINIUM_FALLBACK_URL)
                                             }
                                             AppStateManager.closeActiveModal()
@@ -363,8 +302,8 @@ fun GlobalSettingsScreen(
                                 SettingsCategory.DIAGNOSTICS -> {
                                     DiagnosticsSettingsTab(
                                         logLevel = logLevel,
-                                        onLogLevelChange = { viewModel.setLogLevel(it) },
-                                        onSaveLogReport = { viewModel.requestSaveLogReport() },
+                                        onLogLevelChange = { SettingsManager.setLogLevel(it) },
+                                        onSaveLogReport = { LogReportManager.requestSaveReport() },
                                     )
                                 }
                             }
@@ -378,13 +317,12 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_section_input),
                                     stringResource(R.string.privd_deadzone_title),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             DeadzonesSubPage(
                                 deadzoneLeft = deadzoneLeft,
                                 deadzoneRight = deadzoneRight,
-                                onLeftChange = { viewModel.setPrivdDeadzoneLeft(it) },
-                                onRightChange = { viewModel.setPrivdDeadzoneRight(it) },
+                                onLeftChange = { MacroPadSettings.setDeadzoneLeft(it) },
+                                onRightChange = { MacroPadSettings.setDeadzoneRight(it) },
                             )
                         }
                     }
@@ -396,7 +334,6 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_section_scraping),
                                     stringResource(R.string.settings_steamgriddb_token),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             SteamGridDbTokenSubPage(
                                 token = steamGridDbApiToken,
@@ -414,14 +351,13 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_section_appearance),
                                     stringResource(R.string.settings_accent_custom_title),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             CustomAccentSubPage(
                                 initialColor = Color(customAccentColorArgb),
                                 onSaveColor = { newColor ->
                                     val argb = newColor.toArgb()
-                                    viewModel.setCustomAccentColor(argb)
-                                    viewModel.setAccentColor(argb)
+                                    SettingsManager.setCustomAccentColor(argb)
+                                    SettingsManager.setAccentColor(argb)
                                 },
                             )
                         }
@@ -434,13 +370,11 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_section_config),
                                     stringResource(R.string.settings_config_export),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             CreateBackupSubPage(
                                 onExport = { metadata, includeBackgrounds ->
                                     ConfigManager.requestExport(
                                         metadata = metadata,
-                                        filename = buildExportFilename(metadata),
                                         includeBackgrounds = includeBackgrounds,
                                     )
                                 },
@@ -455,14 +389,12 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_section_config),
                                     stringResource(R.string.settings_config_export_profile),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             ShareProfileSubPage(
                                 onExportProfile = { metadata, profile, includeBackgrounds ->
                                     ConfigManager.requestProfileExport(
                                         metadata = metadata,
                                         profile = profile,
-                                        filename = buildProfileExportFilename(metadata, profile.name),
                                         includeBackgrounds = includeBackgrounds,
                                     )
                                 },
@@ -477,7 +409,6 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_section_config),
                                     stringResource(R.string.config_restore_dialog_title),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             RestoreBackupSubPage(
                                 internalBackups = internalBackups,
@@ -486,7 +417,8 @@ fun GlobalSettingsScreen(
                                     ConfigManager.requestImport(ConfigManager.ImportMode.BACKUP_RESTORE)
                                 },
                                 onSelectInternalBackup = { backup ->
-                                    showImportPreviewDialog = backup.export
+                                    ConfigManager.setPendingInAppImportMode(ConfigManager.ImportMode.BACKUP_RESTORE)
+                                    ConfigManager.setInAppParsedImport(backup.export)
                                     subPageStack = subPageStack + SettingsSubPage.RESTORE_REVIEW
                                 },
                             )
@@ -494,7 +426,7 @@ fun GlobalSettingsScreen(
                     }
 
                     SettingsSubPage.RESTORE_REVIEW -> {
-                        val reviewExport = activeImportPreview ?: lastReviewExport
+                        val reviewExport = pendingInAppParsedImport?.export ?: lastReviewExport
                         if (reviewExport != null) {
                             GamepadDeck(
                                 breadcrumbs =
@@ -503,14 +435,12 @@ fun GlobalSettingsScreen(
                                         stringResource(R.string.config_restore_dialog_title),
                                         stringResource(R.string.config_import_review_title),
                                     ),
-                                accentColor = effectiveAccent,
                             ) {
                                 RestoreReviewSubPage(
                                     export = reviewExport,
                                     pendingInAppImportMode = pendingInAppImportMode,
                                     onConfirmImport = { exp, mode ->
-                                        val pendingImages = ConfigManager.getPendingInAppImages()
-                                        showImportPreviewDialog = null
+                                        val pendingImages = pendingInAppParsedImport?.images.orEmpty()
                                         subPageStack = emptyList()
                                         coroutineScope.launch {
                                             runCatching {
@@ -540,9 +470,14 @@ fun GlobalSettingsScreen(
                                                     }
                                                 DialogToastManager.show(context.getString(msgRes))
                                             }.onFailure { e ->
-                                                importError =
+                                                val errorMsg =
                                                     e.message?.takeIf { it.isNotBlank() }
                                                         ?: context.getString(R.string.config_error_unknown)
+                                                DialogToastManager.show(
+                                                    message = errorMsg,
+                                                    icon = Icons.Rounded.ErrorOutline,
+                                                    isError = true,
+                                                )
                                             }
                                         }
                                     },
@@ -553,8 +488,8 @@ fun GlobalSettingsScreen(
 
                     SettingsSubPage.UPDATE_AVAILABLE -> {
                         val releaseUrl =
-                            latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
-                                ?: "https://github.com/stormpanda/megingiard/releases"
+                            latestReleaseInfo?.htmlUrl?.ifBlank { GS_RELEASES_FALLBACK_URL }
+                                ?: GS_RELEASES_FALLBACK_URL
                         val tagName = latestReleaseInfo?.tagName ?: ""
                         GamepadDeck(
                             breadcrumbs =
@@ -562,15 +497,12 @@ fun GlobalSettingsScreen(
                                     stringResource(R.string.settings_jump_updates),
                                     stringResource(R.string.update_dialog_title, tagName),
                                 ),
-                            accentColor = effectiveAccent,
                         ) {
                             UpdateAvailableSubPage(
                                 tagName = tagName,
                                 effectiveAccent = effectiveAccent,
                                 onBackupAndOpen = {
-                                    pendingUpdateReleaseUrl = releaseUrl
-                                    selectedCategory = SettingsCategory.CONFIGURATION
-                                    subPageStack = listOf(SettingsSubPage.CREATE_BACKUP)
+                                    subPageStack = subPageStack + SettingsSubPage.CREATE_BACKUP
                                 },
                                 onOpenDirectly = {
                                     launchUrlOnPrimaryDisplay(context, releaseUrl)
@@ -584,23 +516,20 @@ fun GlobalSettingsScreen(
             }
         },
     )
-    LaunchedEffect(importError, configImportError) {
-        val error = importError ?: configImportError
+    LaunchedEffect(configImportError) {
+        val error = configImportError
         if (error != null) {
             DialogToastManager.show(
                 message = error,
                 icon = Icons.Rounded.ErrorOutline,
                 isError = true,
             )
-            importError = null
             ConfigManager.setInAppImportError(null)
         }
     }
     LaunchedEffect(exportResult) {
         when (val result = exportResult) {
             is ConfigManager.ExportResult.Success -> {
-                val urlToLaunch = pendingUpdateReleaseUrl
-                pendingUpdateReleaseUrl = null
                 val toastMsg =
                     if (result.kind is ConfigManager.ExportKind.ProfileShare) {
                         context.getString(R.string.config_profile_export_success)
@@ -609,8 +538,11 @@ fun GlobalSettingsScreen(
                     }
                 DialogToastManager.show(toastMsg)
                 ConfigManager.clearExportResult()
-                if (urlToLaunch != null) {
-                    launchUrlOnPrimaryDisplay(context, urlToLaunch)
+                if (SettingsSubPage.UPDATE_AVAILABLE in subPageStack) {
+                    val releaseUrl =
+                        latestReleaseInfo?.htmlUrl?.ifBlank { GS_RELEASES_FALLBACK_URL }
+                            ?: GS_RELEASES_FALLBACK_URL
+                    launchUrlOnPrimaryDisplay(context, releaseUrl)
                     AppStateManager.closeActiveModal()
                     onBack()
                 } else if (subPageStack.isNotEmpty()) {
@@ -628,28 +560,6 @@ fun GlobalSettingsScreen(
                     isError = true,
                 )
                 ConfigManager.clearExportResult()
-            }
-
-            null -> {}
-        }
-    }
-    LaunchedEffect(logReportSaveResult) {
-        when (val logResult = logReportSaveResult) {
-            is LogReportManager.SaveResult.Success -> {
-                DialogToastManager.show(context.getString(R.string.log_report_save_success))
-                LogReportManager.clearSaveResult()
-            }
-
-            is LogReportManager.SaveResult.Failure -> {
-                val errorMsg =
-                    logResult.message?.takeIf { it.isNotBlank() }
-                        ?: context.getString(R.string.log_report_save_error)
-                DialogToastManager.show(
-                    message = errorMsg,
-                    icon = Icons.Rounded.ErrorOutline,
-                    isError = true,
-                )
-                LogReportManager.clearSaveResult()
             }
 
             null -> {}

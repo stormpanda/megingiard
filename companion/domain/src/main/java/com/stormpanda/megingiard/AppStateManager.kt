@@ -7,8 +7,6 @@ import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.navigation.NavDestination
-import com.stormpanda.megingiard.navigation.toPrimaryModalConfig
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
@@ -42,6 +40,20 @@ enum class CompanionViewMode {
     AUTO,
     MACROPAD,
     DASHBOARD,
+}
+
+sealed interface CompanionCommand {
+    data object StartMirror : CompanionCommand
+
+    data object StopMirror : CompanionCommand
+
+    data object ShutOff : CompanionCommand
+
+    data class LaunchApp(
+        val packageName: String,
+        val touchX: Float = -1f,
+        val touchY: Float = -1f,
+    ) : CompanionCommand
 }
 
 fun CompanionViewMode.shouldShowIntegrationHome(
@@ -109,22 +121,14 @@ object AppStateManager {
     private val _promptInFlight = MutableStateFlow(false)
     val promptInFlight: StateFlow<Boolean> = _promptInFlight.asStateFlow()
 
-    // ── Mirror control signals ────────────────────────────────────────────────
-    // One-shot fire-and-forget flags: MainActivity resets them after handling.
+    // ── One-shot imperative commands ──────────────────────────────────────────
 
-    /** Set to true by MirrorPlayStop when mirror is not yet capturing; MainActivity starts
-     * ScreenCaptureService and resets. */
-    private val _mirrorStartRequested = MutableStateFlow(false)
-    val mirrorStartRequested: StateFlow<Boolean> = _mirrorStartRequested.asStateFlow()
-
-    /** Set to true by MirrorPlayStop when mirror is currently capturing; MainActivity sends
-     * a STOP intent to ScreenCaptureService and resets. */
-    private val _mirrorStopRequested = MutableStateFlow(false)
-    val mirrorStopRequested: StateFlow<Boolean> = _mirrorStopRequested.asStateFlow()
-
-    /** Set to true when user requests app shut off; MainActivity handles graceful shutdown and resets. */
-    private val _shutOffRequested = MutableStateFlow(false)
-    val shutOffRequested: StateFlow<Boolean> = _shutOffRequested.asStateFlow()
+    private val _commands =
+        MutableSharedFlow<CompanionCommand>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+    val commands: SharedFlow<CompanionCommand> = _commands.asSharedFlow()
 
     private val _showEmptyCutoutsDialog = MutableStateFlow(false)
     val showEmptyCutoutsDialog: StateFlow<Boolean> = _showEmptyCutoutsDialog.asStateFlow()
@@ -133,34 +137,19 @@ object AppStateManager {
         _showEmptyCutoutsDialog.value = show
     }
 
-    data class AppLaunchRequest(
-        val packageName: String,
-        val touchX: Float = -1f,
-        val touchY: Float = -1f,
-    )
-
-    private val _pendingAppLaunchRequest = MutableStateFlow<AppLaunchRequest?>(null)
-    val pendingAppLaunchRequest: StateFlow<AppLaunchRequest?> = _pendingAppLaunchRequest.asStateFlow()
-
     fun requestAppLaunch(
         packageName: String,
         touchX: Float = -1f,
         touchY: Float = -1f,
     ) {
         AppLog.i(TAG, "requestAppLaunch: pkg=$packageName touch=($touchX, $touchY)")
-        _pendingAppLaunchRequest.value = AppLaunchRequest(packageName, touchX, touchY)
-    }
-
-    fun consumeAppLaunchRequest() {
-        AppLog.d(TAG, "consumeAppLaunchRequest")
-        _pendingAppLaunchRequest.value = null
+        _commands.tryEmit(CompanionCommand.LaunchApp(packageName, touchX, touchY))
     }
 
     fun requestMirrorStart() {
         AppLog.i(TAG, "requestMirrorStart")
         val isViewportEditing =
-            _companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT ||
-                _activePrimaryModal.value?.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR
+            _activePrimaryModal.value?.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR
         if (!isViewportEditing && (
                 MacroPadState.activeLayout.value
                     ?.mirrorCutouts
@@ -169,37 +158,66 @@ object AppStateManager {
         ) {
             _showEmptyCutoutsDialog.value = true
         }
-        _mirrorStartRequested.value = true
+        _commands.tryEmit(CompanionCommand.StartMirror)
     }
 
     fun requestMirrorStop() {
         AppLog.i(TAG, "requestMirrorStop")
         _showEmptyCutoutsDialog.value = false
-        _mirrorStopRequested.value = true
-    }
-
-    fun consumeMirrorStartRequest() {
-        AppLog.d(TAG, "consumeMirrorStartRequest")
-        _mirrorStartRequested.value = false
-    }
-
-    fun consumeMirrorStopRequest() {
-        AppLog.d(TAG, "consumeMirrorStopRequest")
-        _mirrorStopRequested.value = false
+        _commands.tryEmit(CompanionCommand.StopMirror)
     }
 
     fun requestShutOff() {
         AppLog.i(TAG, "requestShutOff")
-        _shutOffRequested.value = true
         resetPrivdPromptState()
-    }
-
-    fun consumeShutOffRequest() {
-        AppLog.d(TAG, "consumeShutOffRequest")
-        _shutOffRequested.value = false
+        _commands.tryEmit(CompanionCommand.ShutOff)
     }
 
     // ── Integration Client State ──────────────────────────────────────────────
+
+    data class ExternalClientState(
+        val packageName: String?,
+        val focusedApp: String?,
+        val focusedRomPath: String? = null,
+        val focusedRomIdentifier: String? = null,
+        val hoveredPackage: String? = null,
+        val hoveredLabel: String? = null,
+        val hoveredRomPath: String? = null,
+        val hoveredRomIdentifier: String? = null,
+        val hoveredSystemId: String? = null,
+        val hoveredPrimaryColor: Int? = null,
+        val hoveredSecondaryColor: Int? = null,
+    )
+
+    data class StandaloneFocusState(
+        val focusedApp: String? = null,
+        val focusedRomPath: String? = null,
+        val focusedRomIdentifier: String? = null,
+    )
+
+    data class EffectiveFocusState(
+        val isExternalClientActive: Boolean = false,
+        val externalClientPackage: String? = null,
+        val focusedAppPackageName: String? = null,
+        val focusedRomPath: String? = null,
+        val focusedRomIdentifier: String? = null,
+        val hoveredAppPackageName: String? = null,
+        val hoveredAppLabel: String? = null,
+        val hoveredRomPath: String? = null,
+        val hoveredRomIdentifier: String? = null,
+        val hoveredSystemId: String? = null,
+        val hoveredAppPrimaryColor: Int? = null,
+        val hoveredAppSecondaryColor: Int? = null,
+    )
+
+    private val _externalClientState = MutableStateFlow<ExternalClientState?>(null)
+    val externalClientState: StateFlow<ExternalClientState?> = _externalClientState.asStateFlow()
+
+    private val _standaloneFocusState = MutableStateFlow(StandaloneFocusState())
+    val standaloneFocusState: StateFlow<StandaloneFocusState> = _standaloneFocusState.asStateFlow()
+
+    private val _effectiveFocusState = MutableStateFlow(EffectiveFocusState())
+    val effectiveFocusState: StateFlow<EffectiveFocusState> = _effectiveFocusState.asStateFlow()
 
     private val _isExternalClientActive = MutableStateFlow(false)
     val isExternalClientActive: StateFlow<Boolean> = _isExternalClientActive.asStateFlow()
@@ -237,6 +255,52 @@ object AppStateManager {
     private val _hoveredAppSecondaryColor = MutableStateFlow<Int?>(null)
     val hoveredAppSecondaryColor: StateFlow<Int?> = _hoveredAppSecondaryColor.asStateFlow()
 
+    private fun deriveEffectiveFocusState(
+        client: ExternalClientState?,
+        standalone: StandaloneFocusState,
+    ): EffectiveFocusState =
+        if (client != null) {
+            EffectiveFocusState(
+                isExternalClientActive = true,
+                externalClientPackage = client.packageName,
+                focusedAppPackageName = client.focusedApp,
+                focusedRomPath = client.focusedRomPath,
+                focusedRomIdentifier = client.focusedRomIdentifier,
+                hoveredAppPackageName = client.hoveredPackage,
+                hoveredAppLabel = client.hoveredLabel,
+                hoveredRomPath = client.hoveredRomPath,
+                hoveredRomIdentifier = client.hoveredRomIdentifier,
+                hoveredSystemId = client.hoveredSystemId,
+                hoveredAppPrimaryColor = client.hoveredPrimaryColor,
+                hoveredAppSecondaryColor = client.hoveredSecondaryColor,
+            )
+        } else {
+            EffectiveFocusState(
+                isExternalClientActive = false,
+                externalClientPackage = null,
+                focusedAppPackageName = standalone.focusedApp,
+                focusedRomPath = standalone.focusedRomPath,
+                focusedRomIdentifier = standalone.focusedRomIdentifier,
+            )
+        }
+
+    private fun applyEffectiveFocusState(effective: EffectiveFocusState) {
+        _effectiveFocusState.value = effective
+        _isExternalClientActive.value = effective.isExternalClientActive
+        _externalClientPackage.value = effective.externalClientPackage
+        _focusedAppPackageName.value = effective.focusedAppPackageName
+        _focusedRomPath.value = effective.focusedRomPath
+        _focusedRomIdentifier.value = effective.focusedRomIdentifier
+        _hoveredAppPackageName.value = effective.hoveredAppPackageName
+        _hoveredAppLabel.value = effective.hoveredAppLabel
+        _hoveredRomPath.value = effective.hoveredRomPath
+        _hoveredRomIdentifier.value = effective.hoveredRomIdentifier
+        _hoveredSystemId.value = effective.hoveredSystemId
+        _hoveredAppPrimaryColor.value = effective.hoveredAppPrimaryColor
+        _hoveredAppSecondaryColor.value = effective.hoveredAppSecondaryColor
+        EmulatorDetectionFunnel.setFocusedRomContext(effective.focusedRomPath, effective.focusedRomIdentifier)
+    }
+
     fun setExternalClientState(
         isActive: Boolean,
         packageName: String?,
@@ -255,62 +319,33 @@ object AppStateManager {
             TAG,
             "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp focusedRom=$focusedRomPath focusedId=$focusedRomIdentifier hovered=$hoveredLabel ($hoveredPackage) romPath=$hoveredRomPath romId=$hoveredRomIdentifier systemId=$hoveredSystemId primary=$hoveredPrimaryColor secondary=$hoveredSecondaryColor",
         )
-        if (_isExternalClientActive.value != isActive ||
-            _focusedAppPackageName.value != focusedApp ||
-            _focusedRomPath.value != focusedRomPath ||
-            _focusedRomIdentifier.value != focusedRomIdentifier
-        ) {
-            AppLog.d(
-                TAG,
-                "setExternalClientState focus updated: active=$isActive focusedApp=$focusedApp focusedRom=$focusedRomPath focusedId=$focusedRomIdentifier",
-            )
-        }
-        _isExternalClientActive.value = isActive
-        _externalClientPackage.value = if (isActive) packageName else null
-
-        if (isActive || focusedApp != null) {
-            _focusedAppPackageName.value = focusedApp
-            _focusedRomPath.value = focusedRomPath
-            _focusedRomIdentifier.value = focusedRomIdentifier
-            EmulatorDetectionFunnel.setFocusedRomContext(focusedRomPath, focusedRomIdentifier)
+        if (isActive) {
+            _externalClientState.value =
+                ExternalClientState(
+                    packageName = packageName,
+                    focusedApp = focusedApp,
+                    focusedRomPath = focusedRomPath,
+                    focusedRomIdentifier = focusedRomIdentifier,
+                    hoveredPackage = hoveredPackage,
+                    hoveredLabel = hoveredLabel,
+                    hoveredRomPath = hoveredRomPath,
+                    hoveredRomIdentifier = hoveredRomIdentifier,
+                    hoveredSystemId = hoveredSystemId,
+                    hoveredPrimaryColor = hoveredPrimaryColor,
+                    hoveredSecondaryColor = hoveredSecondaryColor,
+                )
         } else {
-            val foreground = AutoSwitchCoordinator.foregroundApp.value
-            val session = EmulatorDetectionFunnel.activeSession.value ?: EmulatorDetectionFunnel.lastDetectedSession.value
-            if (session != null && session.packageName == foreground) {
-                _focusedAppPackageName.value = session.packageName
-                _focusedRomPath.value = session.romPath ?: session.romIdentifier
-                _focusedRomIdentifier.value = session.romIdentifier ?: session.romPath
-                EmulatorDetectionFunnel.setFocusedRomContext(_focusedRomPath.value, _focusedRomIdentifier.value)
-            } else if (foreground != null && !SystemRoleClassifier.isLauncherOrSystemUi(foreground)) {
-                _focusedAppPackageName.value = foreground
-                _focusedRomPath.value = null
-                _focusedRomIdentifier.value = null
-                EmulatorDetectionFunnel.setFocusedRomContext(null, null)
-            } else {
-                _focusedAppPackageName.value = null
-                _focusedRomPath.value = null
-                _focusedRomIdentifier.value = null
-                EmulatorDetectionFunnel.setFocusedRomContext(null, null)
+            _externalClientState.value = null
+            if (focusedApp != null) {
+                _standaloneFocusState.value =
+                    StandaloneFocusState(
+                        focusedApp = focusedApp,
+                        focusedRomPath = focusedRomPath,
+                        focusedRomIdentifier = focusedRomIdentifier,
+                    )
             }
         }
-
-        if (isActive) {
-            _hoveredAppPackageName.value = hoveredPackage
-            _hoveredAppLabel.value = hoveredLabel
-            _hoveredRomPath.value = hoveredRomPath
-            _hoveredRomIdentifier.value = hoveredRomIdentifier
-            _hoveredSystemId.value = hoveredSystemId
-            _hoveredAppPrimaryColor.value = hoveredPrimaryColor
-            _hoveredAppSecondaryColor.value = hoveredSecondaryColor
-        } else {
-            _hoveredAppPackageName.value = null
-            _hoveredAppLabel.value = null
-            _hoveredRomPath.value = null
-            _hoveredRomIdentifier.value = null
-            _hoveredSystemId.value = null
-            _hoveredAppPrimaryColor.value = null
-            _hoveredAppSecondaryColor.value = null
-        }
+        applyEffectiveFocusState(deriveEffectiveFocusState(_externalClientState.value, _standaloneFocusState.value))
     }
 
     fun setStandaloneForegroundState(
@@ -318,17 +353,12 @@ object AppStateManager {
         focusedRomPath: String? = null,
         focusedRomIdentifier: String? = null,
     ) {
-        if (_isExternalClientActive.value) return
-        if (_focusedAppPackageName.value != focusedApp ||
-            _focusedRomPath.value != focusedRomPath ||
-            _focusedRomIdentifier.value != focusedRomIdentifier
-        ) {
+        val next = StandaloneFocusState(focusedApp, focusedRomPath, focusedRomIdentifier)
+        if (_standaloneFocusState.value != next) {
             AppLog.d(TAG, "setStandaloneForegroundState: focusedApp=$focusedApp focusedRom=$focusedRomPath focusedId=$focusedRomIdentifier")
+            _standaloneFocusState.value = next
         }
-        _focusedAppPackageName.value = focusedApp
-        _focusedRomPath.value = focusedRomPath
-        _focusedRomIdentifier.value = focusedRomIdentifier
-        EmulatorDetectionFunnel.setFocusedRomContext(focusedRomPath, focusedRomIdentifier)
+        applyEffectiveFocusState(deriveEffectiveFocusState(_externalClientState.value, _standaloneFocusState.value))
     }
 
     fun setActivityResumed(resumed: Boolean) {
@@ -354,14 +384,8 @@ object AppStateManager {
     private val _activePrimaryModal = MutableStateFlow<PrimaryModalConfig?>(null)
     val activePrimaryModal: StateFlow<PrimaryModalConfig?> = _activePrimaryModal.asStateFlow()
 
-    private val _currentNavDestination = MutableStateFlow<NavDestination?>(null)
-    val currentNavDestination: StateFlow<NavDestination?> = _currentNavDestination.asStateFlow()
-
     private val _suspendedPrimaryModal = MutableStateFlow<PrimaryModalConfig?>(null)
     val suspendedPrimaryModal: StateFlow<PrimaryModalConfig?> = _suspendedPrimaryModal.asStateFlow()
-
-    val hasSuspendedPrimaryModal: StateFlow<Boolean> =
-        _suspendedPrimaryModal.map { it != null }.stateIn(scope, SharingStarted.Eagerly, false)
 
     private val _isQuickMenuOpen = MutableStateFlow(false)
     val isQuickMenuOpen: StateFlow<Boolean> = _isQuickMenuOpen.asStateFlow()
@@ -379,19 +403,9 @@ object AppStateManager {
     val isGlobalSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.GLOBAL_SETTINGS)
     val isKeyboardSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.KEYBOARD_SETTINGS)
     val isTouchpadSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.TOUCHPAD_SETTINGS)
-    val isBackgroundSettingsActive: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.BACKGROUND_SETTINGS)
+    val isEditorActive: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.MACROPAD_EDITOR)
 
-    val isEditorActive: StateFlow<Boolean> =
-        _activePrimaryModal
-            .map {
-                it?.type == PrimaryModalType.MACROPAD_EDITOR ||
-                    it?.type == PrimaryModalType.MACROPAD_INSPECTOR ||
-                    it?.type == PrimaryModalType.LAYOUT_SETTINGS ||
-                    it?.type == PrimaryModalType.PROFILE_SETTINGS ||
-                    it?.type == PrimaryModalType.MACRO_TIMELINE_EDITOR
-            }.stateIn(scope, SharingStarted.Eagerly, false)
-
-    val isViewportEditActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.VIEWPORT_EDIT)
+    val isViewportEditActive: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.MIRROR_VIEWPORT_EDITOR)
     val isFullscreenKeyboardActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.KEYBOARD)
     val isFullscreenMouseActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.TOUCHPAD)
 
@@ -423,21 +437,6 @@ object AppStateManager {
 
     // ── Modal overlay states ──────────────────────────────────────────────────
 
-    private val _hasAdbCredentials = MutableStateFlow(false)
-    val hasAdbCredentials: StateFlow<Boolean> = _hasAdbCredentials.asStateFlow()
-
-    fun setHasAdbCredentials(has: Boolean) {
-        AppLog.d(TAG, "setHasAdbCredentials($has)")
-        _hasAdbCredentials.value = has
-    }
-
-    private val _wasMirroringStartedByTouchpad = MutableStateFlow(false)
-    val wasMirroringStartedByTouchpad: StateFlow<Boolean> = _wasMirroringStartedByTouchpad.asStateFlow()
-
-    fun setWasMirroringStartedByTouchpad(started: Boolean) {
-        _wasMirroringStartedByTouchpad.value = started
-    }
-
     private val _companionViewMode = MutableStateFlow(CompanionViewMode.AUTO)
     val companionViewMode: StateFlow<CompanionViewMode> = _companionViewMode.asStateFlow()
 
@@ -467,12 +466,15 @@ object AppStateManager {
 
     private val focusContextFlow: Flow<FocusContext> =
         combine(
-            _focusedAppPackageName,
-            _focusedRomPath,
-            _focusedRomIdentifier,
+            _effectiveFocusState,
             EmulatorDetectionFunnel.activeSession,
-        ) { pkg, path, id, session ->
-            FocusContext(pkg, path, id, session)
+        ) { effective, session ->
+            FocusContext(
+                packageName = effective.focusedAppPackageName,
+                romPath = effective.focusedRomPath,
+                romIdentifier = effective.focusedRomIdentifier,
+                activeSession = session,
+            )
         }
 
     val showIntegrationHome: StateFlow<Boolean> =
@@ -520,7 +522,15 @@ object AppStateManager {
 
     fun setPrivdPromptDismissed(dismissed: Boolean) {
         AppLog.d(TAG, "setPrivdPromptDismissed($dismissed)")
-        MacroPadSettings.setPrivdPromptDismissed(dismissed)
+        if (!_isAccessibilityActive.value) {
+            MacroPadSettings.setPrivdPromptDismissed(false)
+            return
+        }
+        if (dismissed) {
+            privdPromptLatched.value = false
+        }
+        val effectiveDismissed = dismissed && PrivdManager.state.value != PrivdState.RUNNING
+        MacroPadSettings.setPrivdPromptDismissed(effectiveDismissed)
     }
 
     private val _isAccessibilityActive = MutableStateFlow(true)
@@ -529,15 +539,34 @@ object AppStateManager {
     fun setAccessibilityActive(active: Boolean) {
         AppLog.d(TAG, "setAccessibilityActive($active)")
         _isAccessibilityActive.value = active
+        if (!active) {
+            privdPromptLatched.value = true
+            MacroPadSettings.setPrivdPromptDismissed(false)
+        }
     }
 
     fun resetPrivdPromptState() {
         AppLog.d(TAG, "resetPrivdPromptState")
-        _isPrivdPromptActive.value = false
+        privdPromptLatched.value = false
+        MacroPadSettings.setPrivdPromptDismissed(false)
     }
 
-    private val _isPrivdPromptActive = MutableStateFlow(false)
-    val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptActive.asStateFlow()
+    private val privdPromptLatched = MutableStateFlow(false)
+
+    val isPrivdPromptActive: StateFlow<Boolean> =
+        combine(
+            PrivdManager.state,
+            MacroPadSettings.privdPromptDismissed,
+            _isAccessibilityActive,
+            privdPromptLatched,
+        ) { state, dismissed, accessibilityActive, latched ->
+            when {
+                !accessibilityActive -> true
+                dismissed -> false
+                state == PrivdState.FAILED -> true
+                else -> latched
+            }
+        }.stateIn(scope, SharingStarted.Eagerly, false)
 
     private val _isPrivdSetupWizardActive = MutableStateFlow(false)
     val isPrivdSetupWizardActive: StateFlow<Boolean> = _isPrivdSetupWizardActive.asStateFlow()
@@ -566,58 +595,33 @@ object AppStateManager {
     }
 
     fun openPrimaryModal(config: PrimaryModalConfig) {
+        val previousType = _activePrimaryModal.value?.type
         AppLog.i(TAG, "openPrimaryModal: type=${config.type} payload=${config.payload}")
         _activePrimaryModal.value = config
-        when (val payload = config.payload) {
-            is PrimaryModalPayload.CropSelector -> {
-                _activeCropCutoutId.value = payload.cutoutId
-            }
-
-            is PrimaryModalPayload.CutoutInspector -> {
-                _selectedCutoutId.value = payload.cutoutId
-            }
-
-            is PrimaryModalPayload.MirrorViewportEditor -> {
-                if (payload.cutoutId != null) {
-                    _selectedCutoutId.value = payload.cutoutId
-                }
-            }
-
-            else -> {}
+        val payload = config.payload
+        if (payload is PrimaryModalPayload.CropSelector) {
+            _activeCropCutoutId.value = payload.cutoutId
         }
         if (config.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR) {
             _showEmptyCutoutsDialog.value = false
             ScreenCaptureManager.setFollowActive(false, persist = true)
             _activeCropCutoutId.value = _selectedCutoutId.value
             _isMirrorEditorBackgroundHidden.value = false
-            _companionSurfaceMode.value = CompanionSurfaceMode.VIEWPORT_EDIT
-            MacroPadState.activeLayout.value?.id?.let { layoutId ->
-                MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+            MacroPadState.activeLayout.value?.let { layout ->
+                MacroPadState.setLayoutMirrorAutoStart(layout.id, true)
             }
             requestMirrorStart()
+        } else if (previousType == PrimaryModalType.MIRROR_VIEWPORT_EDITOR) {
+            _selectedCutoutId.value = null
+            _isMirrorEditorBackgroundHidden.value = false
+            if (payload !is PrimaryModalPayload.CropSelector) {
+                _activeCropCutoutId.value = null
+            }
         }
     }
 
     fun openPrimaryModal(type: PrimaryModalType) {
         openPrimaryModal(PrimaryModalConfig(type))
-    }
-
-    /**
-     * Deep-links directly to any destination across the app.
-     */
-    fun navigateTo(destination: NavDestination) {
-        AppLog.i(TAG, "navigateTo: $destination")
-        _currentNavDestination.value = destination
-        when (destination) {
-            is NavDestination.CutoutLayoutEditor -> {
-                _selectedCutoutId.value = destination.cutoutId
-                setViewportEditActive(true)
-            }
-
-            else -> {
-                openPrimaryModal(destination.toPrimaryModalConfig())
-            }
-        }
     }
 
     /**
@@ -672,12 +676,6 @@ object AppStateManager {
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
         _isMirrorEditorBackgroundHidden.value = false
-        _currentNavDestination.value = null
-        if (currentType == PrimaryModalType.MIRROR_VIEWPORT_EDITOR &&
-            _companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT
-        ) {
-            _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
-        }
     }
 
     fun setActiveCropCutoutId(id: String?) {
@@ -688,7 +686,7 @@ object AppStateManager {
     fun setSelectedCutoutId(id: String?) {
         AppLog.d(TAG, "setSelectedCutoutId($id)")
         _selectedCutoutId.value = id
-        if (_companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT) {
+        if (isViewportEditActive.value) {
             _activeCropCutoutId.value = id
         }
     }
@@ -773,11 +771,9 @@ object AppStateManager {
             _fullscreenMouseSensitivity.value = sensitivity
             _companionSurfaceMode.value = CompanionSurfaceMode.TOUCHPAD
         } else {
+            _fullscreenMouseSensitivity.value = 1.0f
             if (_companionSurfaceMode.value == CompanionSurfaceMode.TOUCHPAD) {
                 _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
-            }
-            if (isTouchpadSettingsOpen.value) {
-                setTouchpadSettingsOpen(false)
             }
         }
     }
@@ -791,22 +787,9 @@ object AppStateManager {
             _selectedCutoutId.value = null
             _activeCropCutoutId.value = null
             _isMirrorEditorBackgroundHidden.value = false
-            if (_companionSurfaceMode.value == CompanionSurfaceMode.VIEWPORT_EDIT) {
-                _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
-            }
             if (_activePrimaryModal.value?.type == PrimaryModalType.MIRROR_VIEWPORT_EDITOR) {
                 closePrimaryModal()
             }
-        }
-    }
-
-    fun setBackgroundSettingsActive(active: Boolean) {
-        AppLog.i(TAG, "setBackgroundSettingsActive($active)")
-        if (active) {
-            setPrivdPromptDismissed(true)
-            openPrimaryModal(PrimaryModalConfig(PrimaryModalType.BACKGROUND_SETTINGS))
-        } else if (_activePrimaryModal.value?.type == PrimaryModalType.BACKGROUND_SETTINGS) {
-            closePrimaryModal()
         }
     }
 
@@ -825,11 +808,9 @@ object AppStateManager {
             TAG,
             "closeActiveModal: surface=${_companionSurfaceMode.value} peek=${MacroPadState.isPeekActive.value} primaryModal=${_activePrimaryModal.value?.type}",
         )
-        _activePrimaryModal.value = null
+        closePrimaryModal()
         _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
-        _activeCropCutoutId.value = null
-        _selectedCutoutId.value = null
-        _currentNavDestination.value = null
+        _fullscreenMouseSensitivity.value = 1.0f
         MacroPadState.resetPeek()
     }
 
@@ -871,8 +852,11 @@ object AppStateManager {
                 if (mode != CompanionSurfaceMode.KEYBOARD && isKeyboardSettingsOpen.value) {
                     setKeyboardSettingsOpen(false)
                 }
-                if (mode != CompanionSurfaceMode.TOUCHPAD && isTouchpadSettingsOpen.value) {
-                    setTouchpadSettingsOpen(false)
+                if (mode != CompanionSurfaceMode.TOUCHPAD) {
+                    _fullscreenMouseSensitivity.value = 1.0f
+                    if (isTouchpadSettingsOpen.value) {
+                        setTouchpadSettingsOpen(false)
+                    }
                 }
             }
         }
@@ -892,31 +876,18 @@ object AppStateManager {
             }
         }
         scope.launch {
-            combine(
-                PrivdManager.state,
-                _hasAdbCredentials,
-                MacroPadSettings.privdPromptDismissed,
-                isBackgroundSettingsActive,
-                _isAccessibilityActive,
-            ) { array ->
-                val state = array[0] as PrivdState
-                val hasCreds = array[1] as Boolean
-                val dismissed = array[2] as Boolean
-                val bgSettingsActive = array[3] as Boolean
-                val accessibilityActive = array[4] as Boolean
-
-                if (state == PrivdState.RUNNING && accessibilityActive && dismissed) {
+            PrivdManager.state.collect { state ->
+                if (state == PrivdState.FAILED &&
+                    !MacroPadSettings.privdPromptDismissed.value
+                ) {
+                    privdPromptLatched.value = true
+                } else if (state == PrivdState.RUNNING &&
+                    _isAccessibilityActive.value &&
+                    MacroPadSettings.privdPromptDismissed.value
+                ) {
                     MacroPadSettings.setPrivdPromptDismissed(false)
                 }
-                if (!accessibilityActive) {
-                    MacroPadSettings.setPrivdPromptDismissed(false)
-                    _isPrivdPromptActive.value = true
-                } else if (dismissed || bgSettingsActive) {
-                    _isPrivdPromptActive.value = false
-                } else if (state == PrivdState.FAILED && hasCreds) {
-                    _isPrivdPromptActive.value = true
-                }
-            }.collect {}
+            }
         }
     }
 }

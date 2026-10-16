@@ -10,13 +10,11 @@
 ### Overview
 
 The Quick Menu Bar and Quick Menu are the primary navigation surface of the app. A slim bar-shaped
-affordance is always visible at the configured screen edge on the secondary (non-default) display, and also
-inside the Presentation window (on the secondary display) when screen mirroring is active with ambient
-mode enabled. Swiping from that edge opens the Quick Menu — a two-card overlay that provides
-profile and layout switching, layout editing, settings access, and full mirror controls including
-the Background Settings shortcut.
+affordance is always visible at the configured screen edge on the secondary (non-default) display, including
+when screen mirroring is active inside `MainAppScreen` via `EmbeddedMirrorView`. Swiping from that edge opens the Quick Menu — a two-card overlay that provides
+profile and layout switching, layout editing, settings access, and full mirror and screenshot controls.
 
-The same swipe gesture closes any open interactive modal overlay (Quick Menu, Background Settings,
+The same swipe gesture closes any open interactive modal overlay (Quick Menu, MacroPad Editor,
 Fullscreen Keyboard, Fullscreen Mouse Overlay, Viewport Edit, Peek/Scroll Peek), making the Quick Menu Bar
 the universal "go back" mechanism throughout the app.
 
@@ -38,7 +36,7 @@ the universal "go back" mechanism throughout the app.
   - **Haptic Feedback:** A light haptic tick is triggered when the drag distance crosses the threshold (`QuickMenuBarLayout.SWIPE_THRESHOLD = 50 dp`).
   - **Release-Based Trigger:** The action is triggered ONLY when the user lifts their finger (release) if the threshold was crossed.
   - **Cancellation:** If the user drags their finger back below the threshold and releases, the gesture is cancelled, and the icon slides back out of the screen.
-  - **Menu Active Exclusions:** The swipe gesture detectors MUST be disabled when any settings menu or editor is open (`isEditorActive`, `isGlobalSettingsOpen`, `isKeyboardSettingsOpen`, `isTouchpadSettingsOpen`, `isBackgroundSettingsActive`, or `isQuickMenuOpen`). They are only active in use mode (with or without active screen mirroring).
+  - **Menu Active Exclusions:** The swipe gesture detectors MUST be disabled when any settings menu or editor is open (`isEditorActive`, `isGlobalSettingsOpen`, `isKeyboardSettingsOpen`, `isTouchpadSettingsOpen`, or `isQuickMenuOpen`). They are only active in use mode (with or without active screen mirroring).
 - Swipe routing dispatches on release as follows:
   - **Any modal is active** (e.g. fullscreen keyboard/mouse overlay) → closes the active modal (`closeActiveModal()`).
   - **Quick Menu is open** → closes the Quick Menu (`closeQuickMenu()`).
@@ -52,14 +50,14 @@ the universal "go back" mechanism throughout the app.
 
 - The bottom card is always shown when the Quick Menu is open.
 - **Profile section:** A horizontally scrollable row of chips, one per profile (`ScrollableSelectionRow` backed by `Row` with `Modifier.horizontalScroll`). Tapping a chip immediately activates that profile. The Quick Menu remains open so the user can make further adjustments. Unselected profile chips render text tinted with the primary accent color (`colors.accent`).
-- **Layout section:** A horizontally scrollable row of chips, one per **enabled** layout in the active profile. Disabled layouts are hidden from this list. Tapping a chip immediately activates that layout. The Quick Menu remains open so the user can make further adjustments. Unselected layout chips render text tinted with the primary accent color (`colors.accent`).
+- **Layout section:** A horizontally scrollable row of chips, one per layout in the active profile (`activeProfile.layouts`). Tapping a chip immediately activates that layout via `LayoutTransitionManager.switchLayout(layoutId)`. The Quick Menu remains open so the user can make further adjustments. Unselected layout chips render text tinted with the primary accent color (`colors.accent`).
 - New profiles and layouts MUST be created inside the `MacroPadEditor` (using the "+ Add" separator actions), not in the Quick Menu.
 
 ### FR-PM4: Action Buttons (Bottom Card)
 
 - **Edit Layout** — sets `AppStateManager.isEditorActive = true` and dismisses the menu,
   opening the full-screen `MacroPadEditor`.
-- **Global Settings** — opens `GlobalSettingsScreen` on the primary display (Display 0) via translucent `PrimaryOverlayActivity`.
+- **Global Settings** — opens `GlobalSettingsScreen` on the primary display (Display 0) via `PrimaryOverlayManager` (with fallback to translucent `PrimaryOverlayActivity` when overlay permissions are unavailable).
 - **Shut Off** — icon button (`ShutOffIconButton`) rendered with an on/off power icon (`Icons.Rounded.PowerSettingsNew`) to the left of the Help icon button. Tapping it opens `ShutOffConfirmDialog`, an in-tree confirmation dialog asking the user to confirm closing the app. Upon confirmation, it triggers `AppStateManager.requestShutOff()`, stopping any active mirror capture service, disconnecting the privileged daemon, and gracefully finishing the app activity task (`finishAndRemoveTask()`).
 - **Switch to Hub / Switch to Game Profile & Auto Switch Toggle** — rendered as a side-by-side action row at the bottom card. The primary manual action button displays "Switch to Hub" (`R.string.quick_menu_show_dashboard`) when MacroPad is visible, and "Switch to Game Profile" (`R.string.quick_menu_show_macropad`) when Companion Hub is visible. Tapping "Switch to Hub" sets `companionViewMode` to `DASHBOARD`, which locks the view mode to Dashboard and disables Auto Mode. Tapping "Switch to Game Profile" or an active profile button checks whether `companionViewMode` is `AUTO` and the selected profile matches display 1's focused package; if so, `companionViewMode` remains `AUTO` while returning to the profile view, fixing desynced view state without turning off Auto Switch. Otherwise, it sets `companionViewMode` to `MACROPAD`. Next to it, an "Auto Switch" (`R.string.quick_menu_auto_mode`) chip is displayed as a sticky toggle with a magic wand icon (`AutoFixHigh`). When Auto Mode is active (`companionViewMode = CompanionViewMode.AUTO`), the chip is illuminated with the primary accent color; tapping it freezes the current view mode and pauses profile auto-matching (keeping the Quick Menu open). When Auto Mode is inactive, tapping the chip re-enables `CompanionViewMode.AUTO`, triggers a single 360° magical shimmer rotation animation, and immediately re-evaluates the foreground app/emulator focus to match profiles and views dynamically. Whenever Auto Switch is turned off by any action other than tapping the Auto Switch chip itself (such as selecting a profile chip, selecting a layout chip, switching to hub, or picking a profile in editor), a Toast notification ("Auto Switch: off" / `R.string.toast_auto_switch_off`) is displayed on the bottom screen.
 - **Help** — icon button (`HelpIconButton`) rendered to the right of the Shut Off button; opens `QuickMenuHelpModal` which provides an in-app guide explaining all controls in the Quick Menu.
@@ -77,21 +75,17 @@ the universal "go back" mechanism throughout the app.
       icon when frozen (to resume/unfreeze), and a Pause icon when capturing/active (to freeze). Tinted
       with `colors.accent` when frozen. Disabled when not capturing or when in Companion Hub.
   - **Take Screenshot Card (Right Card):**
-    - Headline: "TAKE SCREENSHOT" (`R.string.quick_menu_take_screenshot`).
-    - **Top Screenshot** icon button: captures Display 0 (Top Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP)`. Uses Material Symbol `splitscreen_bottom` (inverted per layout orientation convention) with label "Top". Enabled when capturing or Privileged Mode is connected.
+    - Headline: "TAKE SCREENSHOT" (`R.string.quick_menu_take_screenshot`). All three screenshot buttons are unconditionally enabled.
+    - **Top Screenshot** icon button: captures Display 0 (Top Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP)`. Uses Material Symbol `splitscreen_bottom` (inverted per layout orientation convention) with label "Top". Automatically triggers a one-shot capture prompt if neither mirroring nor Privileged Mode is active.
     - **Bottom Screenshot** icon button: captures the secondary display (Bottom Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTTOM)`. Uses Material Symbol `splitscreen_top` with label "Bottom". Auto-dismisses the Quick Menu overlay to capture a clean MacroPad/companion screen.
     - **Both Screenshot** icon button: captures both screens simultaneously via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH)` and composites them into a vertical dual-screen image. Uses Material Symbol `splitscreen` with label "Both".
 - All icon buttons in these cards have compact vertical spacing with clear text labels rendered directly beneath each icon.
 
-### FR-PM6: Injector Suspension While Open
+### FR-PM6: Centralized Injector Lifecycle
 
-- While the Quick Menu is visible, virtual **gamepad and mouse** injectors MUST be stopped.
-- The virtual keyboard injector remains attached while the menu is open to avoid OEM launcher
-  focus-steal behavior on AYN Thor firmware when keyboard availability toggles (`qwerty` ↔ `-keyb`).
-  Toggling keyboard availability could otherwise background the app immediately after opening the menu.
-- Injector stop/restart for Quick Menu and modal transitions is handled by the injector lifecycle
-  watchers (`MacroPadViewModel.watchInjectorLifecycle()` and background equivalent). The Quick Menu
-  Composable does not directly manage injector processes.
+- Input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) are centrally managed by `InjectorLifecycleManager.watch()`, which is started once in `MainActivity.onCreate()`.
+- Standard injectors remain active whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), keeping the virtual keyboard attached while the Quick Menu is open to avoid OEM launcher focus-steal behavior on AYN Thor firmware when keyboard availability toggles (`qwerty` ↔ `-keyb`).
+- `KeyInjector` is paused only when Megingiard is backgrounded or when Android's software IME is required (`AppStateManager.isPrivdSetupWizardActive`). Neither `QuickMenu` nor `MacroPadScreen` directly starts or stops injector processes.
 
 ---
 
@@ -100,7 +94,7 @@ the universal "go back" mechanism throughout the app.
 ### Component Layout
 
 ```
-MainAppScreen (or BackgroundMacroPadOverlay)
+MainAppScreen (MacroPadScreen / CompanionDashboardScreen / EmbeddedMirrorView)
   └── QuickMenuBar
         ├── QuickMenuBarTab  — slim bar affordance at screen edge
         └── QuickMenu        — full-screen overlay when isQuickMenuOpen == true
@@ -116,7 +110,8 @@ MainAppScreen (or BackgroundMacroPadOverlay)
               └── Bottom Column card (inline Column, slides in from bottom)
                      ├── Profile chips row
                      ├── Layout chips row
-                     ├── "Show Dashboard" ActionButton (QuickMenuActionChip, conditional)
+                     ├── Divider
+                     ├── Switch to Hub / Switch to Game Profile + MagicalAutoToggleChip Row
                      ├── Divider
                      ├── "Edit Layout" ActionButton (QuickMenuActionChip)
                      ├── "Global Settings" ActionButton (QuickMenuActionChip)
@@ -158,13 +153,12 @@ precedence to the Quick Menu Bar navigation.
 
 ### State Ownership
 
-| State flag | Owner | Triggered by |
+| State / Event | Owner | Triggered by |
 | --- | --- | --- |
 | `AppStateManager.isQuickMenuOpen` | `AppStateManager` | `handleEdgeSwipe()` / scrim tap |
-| `AppStateManager.shutOffRequested` | `AppStateManager` | Shut Off confirm button in Quick Menu |
+| `AppStateManager.commands` (`CompanionCommand`) | `AppStateManager` | `requestMirrorStart()`, `requestMirrorStop()`, `requestShutOff()`, `requestAppLaunch()` |
 | `AppStateManager.isEditorActive` | `AppStateManager` | "Edit Layout" button |
-| `AppStateManager.isBackgroundSettingsActive` | `AppStateManager` | Cogwheel settings button in layout editor toolbar |
-| `AppStateManager.isViewportEditActive` | `AppStateManager` | "Screen Mirroring" action button in Quick Menu |
+| `AppStateManager.isViewportEditActive` | `AppStateManager` | "Arrange Cutouts" action in `MacroPadEditor` (Mirror tab) |
 | `AppStateManager.activeSwipe` | `AppStateManager` | Gesture drag progress updates and release/cancel resets |
 | `ScreenCaptureManager.isFrozen` | `ScreenCaptureManager` | "Freeze/Unfreeze" button |
 | `ScreenCaptureManager.isTouchProjectionActive` | `ScreenCaptureManager` | Cutout layout settings |
@@ -175,14 +169,14 @@ precedence to the Quick Menu Bar navigation.
 
 `isAnyModalActive` in `AppStateManager` is a derived `StateFlow` that is `true` whenever any of the
 interactive overlays (`activePrimaryModal != null`, `isFullscreenKeyboardActive`, `isFullscreenMouseActive`, `isViewportEditActive`,
-`isBackgroundSettingsActive`, `isGlobalSettingsOpen`, `isKeyboardSettingsOpen`, `isTouchpadSettingsOpen`, or `MacroPadState.isPeekActive`) are active. The edge-swipe
+`isGlobalSettingsOpen`, `isKeyboardSettingsOpen`, `isTouchpadSettingsOpen`, or `MacroPadState.isPeekActive`) are active. The edge-swipe
 handler reads `isAnyModalActive` to decide whether to close the active modal instead of toggling the Quick Menu. `closePrimaryModal()` clears `_activePrimaryModal` while leaving `_companionSurfaceMode` intact, ensuring the secondary display's surface and edge-swipe gesture interactions remain consistent upon dismissing top-screen dialogs.
 
 ### Primary Screen Overlay Gamepad Navigation & Gamepad-First UI Design
 
 Dialogs and configuration overlays presented on the primary display (Display 0) support full physical gamepad navigation and a console-grade TV/handheld UI:
 - **Window Focus Management:** `PrimaryOverlayManager` requests window input focus post-attachment (`view.post { view.requestFocus() }`) so hardware input events route to the overlay rather than background apps.
-- **Analog Stick & Hat Switch Translation:** `PrimaryOverlayInputBridge` processes `MotionEvent` axis streams (`AXIS_X`, `AXIS_Y`, `AXIS_HAT_X`, `AXIS_HAT_Y`) with a $0.5f$ deadzone and $180\text{ ms}$ repeat throttling, synthesizing discrete `KEYCODE_DPAD_*` key events for 2D focus traversal.
+- **Analog Stick & Hat Switch Translation:** `PrimaryOverlayInputBridge` processes `MotionEvent` axis streams (`AXIS_X`, `AXIS_Y`, `AXIS_HAT_X`, `AXIS_HAT_Y`) with a $0.5f$ deadzone and accelerating repeat throttling ($250\text{ ms}$ initial delay, $120\text{ ms} \to 60\text{ ms}$ repeat interval), synthesizing discrete `KEYCODE_DPAD_*` key events for 2D focus traversal.
 - **Button A & Enter Activation:** `Modifier.primaryOverlayFocusable` ensures that physical controller `KEYCODE_BUTTON_A` (96) and `KEYCODE_DPAD_CENTER` trigger item clicks across rows, buttons, and selectable chips.
 - **Bumper Tab Switching:** Pressing `[L1]` (102) or `[R1]` (103) dispatches `BumperDirection.PREV` / `NEXT` events via `PrimaryOverlayInputBridge.bumperEvents`, cycling active tabs and category sidebar filters.
 - **Button B / Back Dismissal:** Pressing `[B]` (97) or `BACK` triggers `onPreviewKeyEvent` / back-press dispatcher to close active dialogs and modals immediately.
@@ -199,7 +193,7 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
   - **Focus Recovery Dispatcher:** If pointer interaction clears focus or switches Compose to `InputMode.Touch`, subsequent gamepad D-Pad, Analog Stick, or Button A inputs that are unhandled are captured by `PrimaryOverlayManager` / `PrimaryOverlayActivity` and forwarded to `PrimaryOverlayInputBridge.sendFocusRecovery()`.
   - **Universal Fallback:** `GamepadTwoPaneScaffold` listens to focus recovery events and requests `InputMode.Keyboard`, instantly restoring focus to the active category or last-focused deck card without dropped inputs.
 - **Two-Pane Console Sidebar Layout (`GlobalSettingsScreen`, `MacroPadEditor`):**
-  - Left pane features a 210 dp category rail with category tiles (General, Input, Appearance, Data, Config, Updates, Diagnostics in Settings; Profiles, Layouts, Canvas, Buttons, Macros in MacroPad Editor).
+  - Left pane features a 180 dp category rail (`SIDEBAR_WIDTH`) with category tiles (General, Input, Appearance, Data, Config, Updates, Diagnostics in Settings; Profiles, Layouts, Canvas, Buttons, Macros in MacroPad Editor).
   - Right pane presents the active category's settings deck using gamepad cards with independent scroll and focus restoration.
 
 ### Source Files
@@ -211,11 +205,13 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
 | [QuickMenuComponents.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuComponents.kt) | ProfileRow, LayoutRow, SectionLabel, and QuickMenuActionChip composables |
 | [QuickMenuDialogs.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuDialogs.kt) | `ShutOffConfirmDialog` modal confirmation dialog for app shutdown |
 | [QuickMenuMirrorCard.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuMirrorCard.kt) | Slide-in MirrorControlCard and MirrorControlIconButton composables |
-| [PrimaryOverlayContainer.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayContainer.kt) | Top-screen bottom-anchored modal sheet container with 3-sided bezel border, slide/fade animation, bumper badges, footer action prompt bar, and auto-focus initialization |
+| [PrimaryOverlayContainer.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayContainer.kt) | Top-screen bottom-anchored modal sheet container with 3-sided bezel border, slide/fade animation, bumper badges, footer action prompt bar, and auto-focus initialization |
+| [PrimaryOverlayHost.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayHost.kt) | Shared mirror freeze state machine, gamepad key/motion routing, and modal Compose host shared by `PrimaryOverlayManager` and `PrimaryOverlayActivity` |
 | [PrimaryOverlayManager.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) | WindowManager overlay coordinator on Display 0; routes gamepad key and motion events |
-| [PrimaryOverlayInputBridge.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayInputBridge.kt) | Gamepad bumper event dispatcher, joystick-to-Dpad motion translator, and `primaryOverlayFocusable` modifier |
-| [GamepadComponents.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadComponents.kt) | Gamepad-First UI component library: `GamepadFocusCard`, `GamepadToggleCard`, `GamepadStepperCard`, `GamepadChoiceCard`, `GamepadActionCard`, `GamepadColorPaletteCard`, `GamepadColorPaletteGrid`, and `PrimaryOverlayFooter` |
+| [PrimaryOverlayInputBridge.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayInputBridge.kt) | Gamepad bumper event dispatcher, joystick-to-Dpad motion translator, and `primaryOverlayFocusable` modifier |
+| [GamepadComponents.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadComponents.kt) | Gamepad-First UI component library: `GamepadFocusCard`, `GamepadToggleCard`, `GamepadStepperCard`, `GamepadChoiceCard`, `GamepadActionCard`, `GamepadColorPaletteCard`, `GamepadColorPaletteGrid`, and `PrimaryOverlayFooter` |
 | [AppStateManager.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | `isQuickMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers; holds active swipe state |
 | [SwipeGestureProcessor.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProcessor.kt) | Edge-swipe detection (`pointerInput`); evaluates threshold, triggers haptics, and coordinates release actions |
-| [SwipeGestureProgress.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/SwipeGestureProgress.kt) | Data model defining the current active swipe type, delta, threshold, and past-threshold flag |
+| [SwipeGestureProgress.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProgress.kt) | Data model defining the current active swipe type, delta, threshold, and past-threshold flag |
+
 

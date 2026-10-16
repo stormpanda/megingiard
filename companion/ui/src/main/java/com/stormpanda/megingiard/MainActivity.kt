@@ -10,7 +10,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.media.MediaScannerConnection
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
@@ -39,6 +38,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
@@ -94,9 +95,9 @@ import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.AppDimens
+import com.stormpanda.megingiard.settings.TouchpadSettings
+import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.LocalAppDimens
 import com.stormpanda.megingiard.ui.LocalFullscreenKeyboardRequester
 import com.stormpanda.megingiard.ui.PrimaryOverlayManager
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
@@ -114,8 +115,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.coroutines.resume
 
@@ -129,7 +128,6 @@ class MainActivity : ComponentActivity() {
     // Settings screens post requests to ConfigManager and these launchers pick them up.
 
     private var pendingExportKind: ConfigManager.ExportKind? = null
-    private var pendingInAppImportMode = ConfigManager.ImportMode.BACKUP_RESTORE
 
     private val createDocumentLauncher =
         registerForActivityResult(
@@ -177,7 +175,7 @@ class MainActivity : ComponentActivity() {
             if (uri == null) {
                 return@registerForActivityResult
             }
-            ConfigManager.setPendingInAppUri(uri, pendingInAppImportMode)
+            ConfigManager.setPendingInAppUri(uri)
         }
 
     private val createLogDocumentLauncher =
@@ -186,14 +184,20 @@ class MainActivity : ComponentActivity() {
         ) { uri ->
             if (uri == null) return@registerForActivityResult
             lifecycleScope.launch {
-                LogReportManager.writeReportToUri(
-                    context = applicationContext,
-                    uri = uri,
-                    appVersion = BuildConfig.VERSION_NAME,
-                    deviceModel = Build.MODEL,
-                    androidVersion = Build.VERSION.RELEASE,
-                    pid = Process.myPid(),
-                )
+                LogReportManager
+                    .writeReportToUri(
+                        context = applicationContext,
+                        uri = uri,
+                        appVersion = BuildConfig.VERSION_NAME,
+                    ).onSuccess {
+                        DialogToastManager.show(getString(R.string.log_report_save_success))
+                    }.onFailure {
+                        DialogToastManager.show(
+                            message = getString(R.string.log_report_save_error),
+                            icon = Icons.Rounded.ErrorOutline,
+                            isError = true,
+                        )
+                    }
             }
         }
 
@@ -223,9 +227,6 @@ class MainActivity : ComponentActivity() {
         val isValid = DisplayDetector.isValidScreen(currentDisplayId)
         AppStateManager.setOnValidScreen(isValid)
         AppStateManager.setActivityResumed(true)
-        if (currentDisplayId != Display.DEFAULT_DISPLAY) {
-            PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
-        }
     }
 
     override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
@@ -237,7 +238,10 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if ((display?.displayId ?: Display.DEFAULT_DISPLAY) != Display.DEFAULT_DISPLAY) {
+        if (event.action == KeyEvent.ACTION_DOWN &&
+            event.repeatCount == 0 &&
+            (display?.displayId ?: Display.DEFAULT_DISPLAY) != Display.DEFAULT_DISPLAY
+        ) {
             PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
         }
         return super.dispatchKeyEvent(event)
@@ -261,17 +265,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         LayoutTransitionManager.registerWindowProvider { window }
 
-        if (display?.displayId != Display.DEFAULT_DISPLAY) {
-            PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
-        }
-
         // Init settings first so the persisted log level is active before anything
         // else runs (including SignatureGuard below). SettingsManager.init() reads
-        // just the log level synchronously from DataStore then continues async.
+        // bootstrap settings (log level, theme, accent, MacroPad profiles) synchronously
+        // from DataStore then continues async.
         SettingsManager.init(this)
 
         // Centralized input injector lifecycle watching (keeps Key, Mouse, Touch active while foregrounded)
-        InjectorLifecycleManager.watch(this)
+        InjectorLifecycleManager.watch()
 
         // Initialize canonical home launcher and system role classifier
         SystemRoleClassifier.init(this)
@@ -346,10 +347,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val hasCreds =
-            File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
-                File(noBackupFilesDir, "privd_adb_cert.bin").exists()
-        AppStateManager.setHasAdbCredentials(hasCreds)
         AppStateManager.setAccessibilityActive(MegingiardAccessibilityService.isEnabled(this))
         AppStateManager.resetPrivdPromptState()
 
@@ -361,14 +358,13 @@ class MainActivity : ComponentActivity() {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 ConfigManager.exportRequest.collect { kind ->
                     pendingExportKind = kind
-                    createDocumentLauncher.launch(ConfigManager.exportFilename.value)
+                    createDocumentLauncher.launch(kind.suggestedFilename)
                 }
             }
         }
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                ConfigManager.importRequest.collect { mode ->
-                    pendingInAppImportMode = mode
+                ConfigManager.importRequest.collect {
                     openDocumentLauncher.launch("*/*")
                 }
             }
@@ -376,12 +372,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 LogReportManager.saveRequest.collect {
-                    val timestamp =
-                        LocalDateTime
-                            .now()
-                            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
-                    val filename = LogReportManager.buildReportFilename(timestamp)
-                    createLogDocumentLauncher.launch(filename)
+                    createLogDocumentLauncher.launch(LogReportManager.buildReportFilename())
                 }
             }
         }
@@ -404,7 +395,7 @@ class MainActivity : ComponentActivity() {
                         triggered = false
                     }
 
-                    (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered && !PrivdManager.isManuallyDisconnected -> {
+                    (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered -> {
                         triggered = true
                         AppLog.i(TAG, "Auto-connecting Privileged Mode")
                         withContext(Dispatchers.IO) { PrivdManager.connect(applicationContext) }
@@ -435,22 +426,11 @@ class MainActivity : ComponentActivity() {
                 am.appTasks.firstOrNull()?.setExcludeFromRecents(exclude)
             }
         }
+        val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
+        AppStateManager.setOnValidScreen(DisplayDetector.isValidScreen(currentDisplayId))
         enableEdgeToEdge()
         setContent {
-            val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
-
-            // Synchronous display evaluation gets correct value on frame 0
-            val context = LocalContext.current
-            val currentDisplayId = context.display?.displayId ?: Display.DEFAULT_DISPLAY
-            val isOnValidScreenLocal = DisplayDetector.isValidScreen(currentDisplayId)
-
-            // Update global state for other components
-            LaunchedEffect(isOnValidScreenLocal) {
-                AppStateManager.setOnValidScreen(isOnValidScreenLocal)
-            }
-
             val isOnValidScreen by AppStateManager.isOnValidScreen.collectAsStateWithLifecycle()
-
             val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
 
             // Reconcile the running mirror session with the active layout's persisted
@@ -466,15 +446,12 @@ class MainActivity : ComponentActivity() {
                     combine(
                         PrivdManager.state,
                         AppStateManager.isPrivdPromptActive,
-                        AppStateManager.hasAdbCredentials,
                         AppStateManager.isPrivdPromptDismissed,
-                    ) { privdState, promptActive, hasCreds, dismissed ->
+                    ) { privdState, promptActive, dismissed ->
                         isPrivdMirrorConnecting(
                             privdState = privdState,
                             promptActive = promptActive,
-                            hasCreds = hasCreds,
                             dismissed = dismissed,
-                            isManuallyDisconnected = PrivdManager.isManuallyDisconnected,
                         )
                     }
                 combine(
@@ -486,8 +463,8 @@ class MainActivity : ComponentActivity() {
                     AppStateManager.isOnValidScreen,
                     OnboardingWizardManager.isWizardActive,
                     AppStateManager.isFullscreenMouseActive,
-                    AppStateManager.isFullscreenKeyboardActive,
-                    AppStateManager.wasMirroringStartedByTouchpad,
+                    TouchpadSettings.touchpadUseMouse,
+                    TouchpadSettings.touchpadMirroringEnabled,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
                     val capturing = values[1] as Boolean
@@ -497,8 +474,8 @@ class MainActivity : ComponentActivity() {
                     val onValidScreen = values[5] as Boolean
                     val wizardActive = values[6] as Boolean
                     val isFullscreenMouseActive = values[7] as Boolean
-                    val isFullscreenKeyboardActive = values[8] as Boolean
-                    val wasMirroringStartedByTouchpad = values[9] as Boolean
+                    val touchpadUseMouse = values[8] as Boolean
+                    val touchpadMirroringEnabled = values[9] as Boolean
 
                     val isAutoSwitchEligible =
                         viewMode == CompanionViewMode.AUTO &&
@@ -514,9 +491,7 @@ class MainActivity : ComponentActivity() {
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                         autoSwitchWantsMirror = isAutoSwitchEligible && hasAnyAnchoredLayout,
                         tutorialsActive = wizardActive,
-                        isFullscreenMouseActive = isFullscreenMouseActive,
-                        isFullscreenKeyboardActive = isFullscreenKeyboardActive,
-                        wasMirroringStartedByTouchpad = wasMirroringStartedByTouchpad,
+                        touchpadWantsMirror = isFullscreenMouseActive && !touchpadUseMouse && touchpadMirroringEnabled,
                     )
                 }.combine(privdMirrorConnectingFlow) { policy, connecting ->
                     policy.copy(privdMirrorConnecting = connecting)
@@ -533,19 +508,8 @@ class MainActivity : ComponentActivity() {
                         }
                         when (action) {
                             MirrorRuntimeAction.START -> {
-                                // Re-read promptInFlight from the live StateFlow before
-                                // acting. The combine() snapshot may have captured a stale
-                                // promptInFlight=false if the manual-start handler set it to
-                                // true in the same scheduler turn — causing a double launch.
-                                if (AppStateManager.promptInFlight.value) {
-                                    AppLog.d(
-                                        TAG,
-                                        "mirror policy: layout=${policy.layoutId} wants ON but prompt already in flight — skipping",
-                                    )
-                                } else {
-                                    AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
-                                    startMirrorService()
-                                }
+                                AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
+                                startMirrorService()
                             }
 
                             MirrorRuntimeAction.STOP -> {
@@ -560,71 +524,53 @@ class MainActivity : ComponentActivity() {
                     }
             }
 
-            // ── Mirror button signals from MacroPad ───────────────────────────────
-            // MirrorPlayStop button sets these flags in AppStateManager; MainActivity
-            // handles them here because sending intents or launching Activities requires
+            // ── One-shot imperative commands from AppStateManager ─────────────────
             LaunchedEffect(Unit) {
-                AppStateManager.mirrorStartRequested.collect { requested ->
-                    if (!requested) return@collect
-                    AppLog.i(TAG, "mirrorStartRequested → triggering capture flow")
-                    AppStateManager.consumeMirrorStartRequest()
-                    val alreadyPrompting = AppStateManager.promptInFlight.value
-                    if (!alreadyPrompting) {
-                        AppStateManager.setPromptInFlight(true)
-                    }
-                    activeLayout?.id?.let { layoutId ->
-                        MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
-                    }
-                    // Manual start bypasses the global auto-start gate — launch directly.
-                    if (isOnValidScreen &&
-                        !ScreenCaptureManager.isCapturing.value &&
-                        !alreadyPrompting
-                    ) {
-                        startMirrorService()
-                    } else if (!alreadyPrompting) {
-                        AppStateManager.setPromptInFlight(false)
-                    }
-                }
-            }
+                AppStateManager.commands.collect { command ->
+                    when (command) {
+                        CompanionCommand.StartMirror -> {
+                            AppLog.i(TAG, "CompanionCommand.StartMirror → triggering capture flow")
+                            activeLayout?.id?.let { layoutId ->
+                                MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
+                            }
+                            // Manual start bypasses the global auto-start gate — launch directly.
+                            if (isOnValidScreen) {
+                                startMirrorService()
+                            }
+                        }
 
-            LaunchedEffect(Unit) {
-                AppStateManager.mirrorStopRequested.collect { requested ->
-                    if (!requested) return@collect
-                    AppLog.i(TAG, "mirrorStopRequested → sending STOP to ScreenCaptureService")
-                    AppStateManager.consumeMirrorStopRequest()
-                    activeLayout?.id?.let { layoutId ->
-                        MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
-                    }
-                    if (ScreenCaptureManager.isCapturing.value) {
-                        stopMirrorService()
-                    }
-                }
-            }
+                        CompanionCommand.StopMirror -> {
+                            AppLog.i(TAG, "CompanionCommand.StopMirror → sending STOP to ScreenCaptureService")
+                            activeLayout?.id?.let { layoutId ->
+                                MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
+                            }
+                            if (ScreenCaptureManager.isCapturing.value) {
+                                stopMirrorService()
+                            }
+                        }
 
-            LaunchedEffect(Unit) {
-                AppStateManager.shutOffRequested.collect { requested ->
-                    if (!requested) return@collect
-                    AppLog.i(TAG, "shutOffRequested → performing graceful shutdown")
-                    AppStateManager.consumeShutOffRequest()
-                    if (ScreenCaptureManager.isCapturing.value) {
-                        stopMirrorService()
-                    }
-                    PrivdClient.disconnect()
-                    finishAndRemoveTask()
-                }
-            }
+                        CompanionCommand.ShutOff -> {
+                            AppLog.i(TAG, "CompanionCommand.ShutOff → performing graceful shutdown")
+                            if (ScreenCaptureManager.isCapturing.value) {
+                                stopMirrorService()
+                            }
+                            PrivdClient.disconnect()
+                            finishAndRemoveTask()
+                        }
 
-            LaunchedEffect(Unit) {
-                AppStateManager.pendingAppLaunchRequest.collect { req ->
-                    if (req == null) return@collect
-                    AppLog.i(TAG, "pendingAppLaunchRequest → launching ${req.packageName} at (${req.touchX}, ${req.touchY})")
-                    AppStateManager.consumeAppLaunchRequest()
-                    AppLauncherManager.launchApp(
-                        context = this@MainActivity,
-                        packageName = req.packageName,
-                        touchX = req.touchX,
-                        touchY = req.touchY,
-                    )
+                        is CompanionCommand.LaunchApp -> {
+                            AppLog.i(
+                                TAG,
+                                "CompanionCommand.LaunchApp → launching ${command.packageName} at (${command.touchX}, ${command.touchY})",
+                            )
+                            AppLauncherManager.launchApp(
+                                context = this@MainActivity,
+                                packageName = command.packageName,
+                                touchX = command.touchX,
+                                touchY = command.touchY,
+                            )
+                        }
+                    }
                 }
             }
 
@@ -723,12 +669,11 @@ class MainActivity : ComponentActivity() {
             val appColors = paletteFor(themeMode, Color(userAccentArgb))
 
             MaterialTheme(
-                colorScheme = colorSchemeFor(appColors, themeMode),
+                colorScheme = colorSchemeFor(appColors),
                 typography = megingiardTypography,
             ) {
                 CompositionLocalProvider(
                     LocalAppColors provides appColors,
-                    LocalAppDimens provides AppDimens(),
                     LocalFullscreenKeyboardRequester provides { active -> AppStateManager.setFullscreenKeyboardActive(active) },
                 ) {
                     Surface(
@@ -745,6 +690,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startMirrorService() {
+        if (AppStateManager.promptInFlight.value || ScreenCaptureManager.isCapturing.value) {
+            AppLog.d(
+                TAG,
+                "startMirrorService: skipping (promptInFlight=${AppStateManager.promptInFlight.value}, isCapturing=${ScreenCaptureManager.isCapturing.value})",
+            )
+            return
+        }
         AppLog.i(TAG, "startMirrorService: starting ScreenCaptureService")
         AppStateManager.setPromptInFlight(true)
         val intent =

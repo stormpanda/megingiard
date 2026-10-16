@@ -5,15 +5,9 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.security.BinaryIntegrity
 import com.stormpanda.megingiard.security.HmacUtil
 import java.io.File
-import android.os.Process as AndroidProcess
 
 private const val TAG = "PServerBootstrapper"
-private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
-private const val MIRROR_DEX_ASSET_NAME = "megingiard_mirror.dex"
 
-private const val PORT_RELEASE_START = 51234
-private const val PORT_DEBUG_START = 51244
-private const val VERIFY_INITIAL_DELAY_MS = 500L
 private const val VERIFY_RETRY_COUNT = 20
 private const val VERIFY_RETRY_DELAY_MS = 300L
 private const val SPAWN_OK_MARKER = "MGRD_SPAWN_OK"
@@ -33,22 +27,6 @@ private const val SPAWN_OK_MARKER = "MGRD_SPAWN_OK"
  * - The daemon still requires the mutual HMAC-SHA256 handshake before accepting any commands.
  */
 object PServerBootstrapper {
-    private fun isDebugPackage(context: Context): Boolean = context.packageName.contains(".debug")
-
-    private fun getDaemonRemotePath(context: Context): String =
-        if (isDebugPackage(context)) "/data/local/tmp/megingiard_privd_debug" else "/data/local/tmp/megingiard_privd"
-
-    private fun getDaemonProcessName(context: Context): String =
-        if (isDebugPackage(context)) "megingiard_privd_debug" else "megingiard_privd"
-
-    private fun getMirrorDexRemotePath(context: Context): String =
-        if (isDebugPackage(context)) "/data/local/tmp/megingiard_mirror_debug.dex" else "/data/local/tmp/megingiard_mirror.dex"
-
-    private fun getStateKeyFilePath(context: Context): String =
-        if (isDebugPackage(context)) "/data/local/tmp/megingiard_privd_debug.key" else "/data/local/tmp/megingiard_privd.key"
-
-    private fun getPortStart(context: Context): Int = if (isDebugPackage(context)) PORT_DEBUG_START else PORT_RELEASE_START
-
     /**
      * Executes the fast-track bootstrap sequence via [PServiceBridge].
      * Blocking — must be called on `Dispatchers.IO`.
@@ -62,14 +40,14 @@ object PServerBootstrapper {
         // 1. Verify and stage daemon binary
         val daemonBytes =
             try {
-                context.assets.open(DAEMON_ASSET_NAME).use { it.readBytes() }
+                context.assets.open(PrivdConstants.DAEMON_ASSET_NAME).use { it.readBytes() }
             } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to read $DAEMON_ASSET_NAME from assets: ${e.message}")
+                AppLog.e(TAG, "Failed to read ${PrivdConstants.DAEMON_ASSET_NAME} from assets: ${e.message}")
                 return false
             }
 
-        if (!BinaryIntegrity.verify(DAEMON_ASSET_NAME, daemonBytes)) {
-            AppLog.e(TAG, "Refusing to stage $DAEMON_ASSET_NAME — integrity verification failed (fail-closed)")
+        if (!BinaryIntegrity.verify(PrivdConstants.DAEMON_ASSET_NAME, daemonBytes)) {
+            AppLog.e(TAG, "Refusing to stage ${PrivdConstants.DAEMON_ASSET_NAME} — integrity verification failed (fail-closed)")
             return false
         }
 
@@ -82,8 +60,8 @@ object PServerBootstrapper {
             // 2. Verify and stage mirror DEX (non-fatal if missing/invalid)
             var hasValidDex = false
             try {
-                val dexBytes = context.assets.open(MIRROR_DEX_ASSET_NAME).use { it.readBytes() }
-                if (BinaryIntegrity.verify(MIRROR_DEX_ASSET_NAME, dexBytes)) {
+                val dexBytes = context.assets.open(PrivdConstants.MIRROR_DEX_ASSET_NAME).use { it.readBytes() }
+                if (BinaryIntegrity.verify(PrivdConstants.MIRROR_DEX_ASSET_NAME, dexBytes)) {
                     stagedDexFile.writeBytes(dexBytes)
                     hasValidDex = true
                 } else {
@@ -101,13 +79,13 @@ object PServerBootstrapper {
                 } ?: return false
 
             val keyHex = HmacUtil.bytesToHex(keyBytes)
-            val appUid = AndroidProcess.myUid()
+            val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
 
-            val remoteBinPath = getDaemonRemotePath(context)
-            val remoteDexPath = getMirrorDexRemotePath(context)
-            val stateFilePath = getStateKeyFilePath(context)
-            val processName = getDaemonProcessName(context)
-            val portStart = getPortStart(context)
+            val remoteBinPath = PrivdConstants.getDaemonRemotePath(isDebug)
+            val remoteDexPath = PrivdConstants.getMirrorDexRemotePath(isDebug)
+            val stateFilePath = PrivdConstants.getStateKeyFilePath(isDebug)
+            val processName = PrivdConstants.getDaemonProcessName(isDebug)
+            val portStart = PrivdConstants.getPortStart(isDebug)
 
             // 4. Construct deployment script
             val script =
@@ -121,7 +99,6 @@ object PServerBootstrapper {
                     processName = processName,
                     portStart = portStart,
                     keyHex = keyHex,
-                    appUid = appUid,
                 )
 
             // 5. Execute script via PServerBridge
@@ -137,7 +114,6 @@ object PServerBootstrapper {
             AppLog.i(TAG, "Per-install key provisioned, verifying daemon loopback socket")
 
             // 7. Verify connection via mutual handshake
-            Thread.sleep(VERIFY_INITIAL_DELAY_MS)
             for (i in 0 until VERIFY_RETRY_COUNT) {
                 if (PrivdManager.verifyConnect()) {
                     AppLog.i(TAG, "PServer fast-track bootstrap succeeded and verified on attempt ${i + 1}")
@@ -164,7 +140,6 @@ object PServerBootstrapper {
         processName: String,
         portStart: Int,
         keyHex: String,
-        appUid: Int,
     ): String =
         """
         kill -9 ${'$'}(pidof $processName 2>/dev/null) 2>/dev/null
@@ -181,7 +156,7 @@ object PServerBootstrapper {
         } else {
             ""
         }}
-        $remoteBinPath --keyfile $stateFilePath --port $portStart --provision $keyHex $appUid
+        $remoteBinPath --keyfile $stateFilePath --port $portStart --provision $keyHex
         PROV_RET=${'$'}?
         if [ ${'$'}PROV_RET -ne 0 ]; then
             echo "PROVISION_FAILED_${'$'}PROV_RET"

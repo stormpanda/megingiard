@@ -20,7 +20,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
@@ -40,11 +39,13 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
+import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 private const val TAG = "MacroStepEditDialog"
 
+private const val MSD_MIN_DURATION_MS = 10L
 private const val MSD_DEFAULT_DURATION_MS = 100L
 private const val MSD_MAX_START_TIME_BUFFER_MS = 5000L
 private const val MSD_MAX_DURATION_MS = 5000L
@@ -94,7 +95,6 @@ internal fun MacroStepEditSubPageContent(
     macroName: String,
     step: MacroStep?,
     stepIndex: Int?,
-    accentColor: Color,
     suggestedStartTimeMs: Long,
     initialShiftMode: ShiftMode,
     onConfirm: (MacroStep, ShiftMode) -> Unit,
@@ -104,6 +104,7 @@ internal fun MacroStepEditSubPageContent(
     onDelete: (() -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
+    val accentColor = colors.accent
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
 
     val initialType =
@@ -123,7 +124,8 @@ internal fun MacroStepEditSubPageContent(
             step != null -> step.startTimeMs.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
             else -> suggestedStartTimeMs.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
         }
-    val initialDurationMs = (step?.durationMs ?: MSD_DEFAULT_DURATION_MS).coerceIn(10L, MSD_MAX_DURATION_MS).toInt()
+    val maxDurationMs = max(MSD_MAX_DURATION_MS, step?.durationMs ?: MSD_DEFAULT_DURATION_MS)
+    val initialDurationMs = (step?.durationMs ?: MSD_DEFAULT_DURATION_MS).coerceIn(MSD_MIN_DURATION_MS, maxDurationMs).toInt()
 
     var stepType by remember { mutableStateOf(initialType) }
     var startMs by remember { mutableIntStateOf(initialStartMs) }
@@ -532,12 +534,12 @@ internal fun MacroStepEditSubPageContent(
         title = stringResource(R.string.macropad_macro_step_duration_ms),
         description = stringResource(R.string.macropad_macro_step_duration_desc),
         value = durMs.toFloat(),
-        valueRange = 10f..MSD_MAX_DURATION_MS.toFloat(),
+        valueRange = MSD_MIN_DURATION_MS.toFloat()..maxDurationMs.toFloat(),
         step = MSD_TIME_SLIDER_STEP,
         fineStep = 1f,
         valueLabel = "$durMs ms",
         icon = Icons.Rounded.Schedule,
-        onValueChange = { durMs = it.roundToInt().coerceIn(10, MSD_MAX_DURATION_MS.toInt()) },
+        onValueChange = { durMs = it.roundToInt().coerceIn(MSD_MIN_DURATION_MS.toInt(), maxDurationMs.toInt()) },
     )
 
     if (step != null) {

@@ -14,7 +14,7 @@ import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
 import kotlin.math.sqrt
 
-private fun dirArrow(
+internal fun dirArrow(
     dirX: Int,
     dirY: Int,
 ): String =

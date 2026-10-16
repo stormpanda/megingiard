@@ -3,15 +3,13 @@ package com.stormpanda.megingiard.session
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 private const val TAG = "EmulatorDetectionFunnel"
 private const val POLLING_DELAY_MS = 1000L
@@ -21,9 +19,16 @@ private const val POLLING_DELAY_MS = 1000L
  * the package to the matching [EmulatorDetector], and exposes the active [ActiveGameSession].
  */
 object EmulatorDetectionFunnel {
+    private data class ForegroundTarget(
+        val packageName: String,
+        val detector: EmulatorDetector,
+        val initialSession: ActiveGameSession?,
+        val sequence: Long,
+    )
+
     private val funnelScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val funnelMutex = Mutex()
-    private var pollingJob: Job? = null
+    private val foregroundTarget = MutableStateFlow<ForegroundTarget?>(null)
+    private var targetSequence = 0L
 
     private val _activeSession = MutableStateFlow<ActiveGameSession?>(null)
     val activeSession: StateFlow<ActiveGameSession?> = _activeSession.asStateFlow()
@@ -36,6 +41,44 @@ object EmulatorDetectionFunnel {
 
     @Volatile
     private var currentFocusedRomIdentifier: String? = null
+
+    init {
+        funnelScope.launch {
+            foregroundTarget.collectLatest { target ->
+                if (target == null) return@collectLatest
+                var lastSession = target.initialSession
+                while (true) {
+                    delay(POLLING_DELAY_MS)
+                    val currentSession =
+                        target.detector.detectActiveSession(
+                            target.packageName,
+                            currentFocusedRomPath,
+                            currentFocusedRomIdentifier,
+                        )
+                    if (foregroundTarget.value != target) return@collectLatest
+                    if (currentSession != null) {
+                        if (currentSession != lastSession) {
+                            AppLog.i(
+                                TAG,
+                                "onPackageForeground polling: detected in-emulator game change to ${currentSession.gameTitle} (${currentSession.systemId})",
+                            )
+                            lastSession = currentSession
+                            _activeSession.value = currentSession
+                            _lastDetectedSession.value = currentSession
+                        }
+                    } else if (lastSession != null) {
+                        AppLog.i(
+                            TAG,
+                            "onPackageForeground polling: detected game closed in ${target.packageName}",
+                        )
+                        lastSession = null
+                        _activeSession.value = null
+                        _lastDetectedSession.value = null
+                    }
+                }
+            }
+        }
+    }
 
     fun setFocusedRomContext(
         path: String?,
@@ -71,77 +114,48 @@ object EmulatorDetectionFunnel {
         packageName: String,
         focusedRomPath: String? = null,
         focusedRomIdentifier: String? = null,
-    ): ActiveGameSession? =
-        funnelMutex.withLock {
-            if (focusedRomPath != null || focusedRomIdentifier != null) {
-                currentFocusedRomPath = focusedRomPath
-                currentFocusedRomIdentifier = focusedRomIdentifier
-            }
-            val detector = packageMap[packageName]
-            if (detector == null) {
-                pollingJob?.cancel()
-                _activeSession.value = null
-                return@withLock null
-            }
-
-            AppLog.i(TAG, "onPackageForeground: routing '$packageName' to ${detector::class.simpleName}")
-            pollingJob?.cancel()
-
-            val effectiveRomPath = focusedRomPath ?: currentFocusedRomPath
-            val effectiveRomId = focusedRomIdentifier ?: currentFocusedRomIdentifier
-            val initialSession = detector.detectActiveSession(packageName, effectiveRomPath, effectiveRomId)
-            val effectiveSession =
-                initialSession ?: run {
-                    val last = _lastDetectedSession.value
-                    if (last != null && last.packageName == packageName) {
-                        AppLog.i(TAG, "onPackageForeground: reusing last detected session for $packageName (${last.gameTitle})")
-                        last
-                    } else {
-                        null
-                    }
-                }
-
-            _activeSession.value = effectiveSession
-            if (effectiveSession != null) {
-                _lastDetectedSession.value = effectiveSession
-            }
-
-            pollingJob =
-                funnelScope.launch {
-                    var lastSession = effectiveSession
-                    while (true) {
-                        delay(POLLING_DELAY_MS)
-                        val currentSession = detector.detectActiveSession(packageName, currentFocusedRomPath, currentFocusedRomIdentifier)
-                        if (currentSession != null) {
-                            if (currentSession != lastSession) {
-                                AppLog.i(
-                                    TAG,
-                                    "onPackageForeground polling: detected in-emulator game change to ${currentSession.gameTitle} (${currentSession.systemId})",
-                                )
-                                lastSession = currentSession
-                                _activeSession.value = currentSession
-                                _lastDetectedSession.value = currentSession
-                            }
-                        } else if (lastSession != null) {
-                            AppLog.i(
-                                TAG,
-                                "onPackageForeground polling: detected game closed in $packageName",
-                            )
-                            lastSession = null
-                            _activeSession.value = null
-                            _lastDetectedSession.value = null
-                        }
-                    }
-                }
-
-            effectiveSession
+    ): ActiveGameSession? {
+        if (focusedRomPath != null || focusedRomIdentifier != null) {
+            currentFocusedRomPath = focusedRomPath
+            currentFocusedRomIdentifier = focusedRomIdentifier
         }
+        val detector = packageMap[packageName]
+        if (detector == null) {
+            foregroundTarget.value = null
+            _activeSession.value = null
+            return null
+        }
+
+        AppLog.i(TAG, "onPackageForeground: routing '$packageName' to ${detector::class.simpleName}")
+        foregroundTarget.value = null
+
+        val effectiveRomPath = focusedRomPath ?: currentFocusedRomPath
+        val effectiveRomId = focusedRomIdentifier ?: currentFocusedRomIdentifier
+        val initialSession = detector.detectActiveSession(packageName, effectiveRomPath, effectiveRomId)
+        val effectiveSession =
+            initialSession ?: run {
+                val last = _lastDetectedSession.value
+                if (last != null && last.packageName == packageName) {
+                    AppLog.i(TAG, "onPackageForeground: reusing last detected session for $packageName (${last.gameTitle})")
+                    last
+                } else {
+                    null
+                }
+            }
+
+        _activeSession.value = effectiveSession
+        if (effectiveSession != null) {
+            _lastDetectedSession.value = effectiveSession
+        }
+        foregroundTarget.value = ForegroundTarget(packageName, detector, effectiveSession, ++targetSequence)
+        return effectiveSession
+    }
 
     /**
      * Resets the active session state.
      */
     fun clearSession() {
-        pollingJob?.cancel()
+        foregroundTarget.value = null
         _activeSession.value = null
         currentFocusedRomPath = null
         currentFocusedRomIdentifier = null
@@ -155,8 +169,10 @@ object EmulatorDetectionFunnel {
     }
 
     fun resetForTesting() {
-        pollingJob?.cancel()
+        foregroundTarget.value = null
         _activeSession.value = null
         _lastDetectedSession.value = null
+        currentFocusedRomPath = null
+        currentFocusedRomIdentifier = null
     }
 }

@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
 
-private const val TAG = "Pcsx2AndroidRecentGamesParser"
+private const val TAG = "Pcsx2RecentGamesParser"
 
 @Serializable
 internal data class Pcsx2AndroidRecentEntry(

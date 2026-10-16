@@ -88,7 +88,7 @@ class MacroExecutorTest {
     @Test
     fun testMacroExecutionCompletesAndClearsRunningId() =
         runBlocking {
-            val macro = testMacro()
+            val macro = testMacro(durationMs = 80L)
             MacroExecutor.execute(macro)
 
             assertTrue(waitUntil(500) { MacroExecutor.isRunning(macro.id) })

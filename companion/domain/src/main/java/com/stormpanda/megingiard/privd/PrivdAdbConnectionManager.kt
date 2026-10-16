@@ -30,6 +30,7 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.spec.PKCS8EncodedKeySpec
 import java.util.Date
+import java.util.UUID
 import javax.net.ssl.SSLContext
 
 private const val TAG = "PrivdAdbCM"
@@ -65,6 +66,23 @@ internal class PrivdAdbConnectionManager private constructor(
     override fun getCertificate(): Certificate = certificate
 
     override fun getDeviceName(): String = deviceName
+
+    @Synchronized
+    fun persistCredentials(context: Context) {
+        val dir = context.applicationContext.noBackupFilesDir
+        val keyFile = File(dir, KEY_FILE)
+        val certFile = File(dir, CERT_FILE)
+        val nameFile = File(dir, NAME_FILE)
+        if (keyFile.exists() && certFile.exists()) return
+        runCatching {
+            keyFile.writeBytes(privateKey.encoded)
+            certFile.writeBytes(certificate.encoded)
+            nameFile.writeText(deviceName)
+            AppLog.i(TAG, "ADB credentials stored under name $deviceName")
+        }.onFailure { e ->
+            AppLog.w(TAG, "Could not persist ADB credentials: $e")
+        }
+    }
 
     companion object {
         @Volatile private var instance: PrivdAdbConnectionManager? = null
@@ -142,17 +160,13 @@ internal class PrivdAdbConnectionManager private constructor(
                     AppLog.w(TAG, "Failed to load credentials, regenerating: $e")
                 }
             }
-            return generateAndStore(keyFile, certFile, nameFile)
+            return generateCredentials()
         }
 
-        private fun generateAndStore(
-            keyFile: File,
-            certFile: File,
-            nameFile: File,
-        ): Pair<Pair<PrivateKey, Certificate>, String> {
+        private fun generateCredentials(): Pair<Pair<PrivateKey, Certificate>, String> {
             flushLibaDBCache()
             val suffix =
-                java.util.UUID
+                UUID
                     .randomUUID()
                     .toString()
                     .substring(0, 4)
@@ -191,14 +205,6 @@ internal class PrivdAdbConnectionManager private constructor(
             val cert = X509CertImpl(info)
             cert.sign(privateKey, algorithmName)
 
-            runCatching {
-                keyFile.writeBytes(privateKey.encoded)
-                certFile.writeBytes(cert.encoded)
-                nameFile.writeText(uniqueName)
-                AppLog.i(TAG, "ADB credentials stored under name $uniqueName")
-            }.onFailure { e ->
-                AppLog.w(TAG, "Could not persist ADB credentials: $e")
-            }
             return (privateKey to cert) to uniqueName
         }
     }

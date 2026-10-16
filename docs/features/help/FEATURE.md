@@ -9,11 +9,11 @@
 
 ### Overview
 
-Every menu in Megingiard displays a help icon (?) to the right of its headline. Tapping the icon opens a nearly-full-height bottom-sheet modal containing scrollable, structured help text that describes the screen's purpose and every interactive control visible on that screen. The goal is to give new users enough context to understand the app without leaving it.
+Secondary-display (Display 4) companion screens in Megingiard (`IntegrationHomeScreen` and `QuickMenu`) display a help icon (?) that opens a nearly-full-height bottom-sheet modal containing scrollable, structured help text describing the screen's purpose and every interactive control visible on that screen. Primary-display (Display 0) controller-navigable menus provide inline card descriptions directly on each settings card. The goal is to give new users enough context to understand the app without leaving it.
 
 ### FR-H1: Help Icon Placement
 
-- Every screen with a headline or top-bar title MUST display a `HelpIconButton` (`Icons.AutoMirrored.Rounded.HelpOutline`) to the right of that title.
+- Secondary-display companion screens with a top-bar or action-bar help trigger MUST display a `HelpIconButton` (`Icons.AutoMirrored.Rounded.HelpOutline`) or equivalent action-row help button.
 - The icon MUST be visible and tappable at all times the screen is visible.
 - Icons MUST carry the content description `R.string.help_open_cd`.
 
@@ -35,8 +35,8 @@ Every menu in Megingiard displays a help icon (?) to the right of its headline. 
 
 ### FR-H4: Localisation
 
-- All help text MUST be defined in `res/values/strings.xml` (English) and `res/values-de/strings.xml` (German).
-- All `help_*` string keys MUST be present in both files.
+- All help text MUST be defined in `res/values/strings.xml` (English), `res/values-de/strings.xml` (German), and `res/values-zh-rTW/strings.xml` (Traditional Chinese).
+- All `help_*` string keys MUST be present in all three locale files.
 - No user-visible text may be hardcoded in Kotlin source files.
 
 ### FR-H5: Non-Interference
@@ -86,7 +86,6 @@ Sheet geometry:
 |---|---|---|
 | `IntegrationHomeScreen.kt` | `CompanionHubHelpModal` | Secondary (Display 4) |
 | `QuickMenu.kt` | `QuickMenuHelpModal` | Secondary (Display 4) |
-| `MirrorEditorTopOverlay.kt` / `CutoutLayoutEditor.kt` | `CutoutLayoutEditorHelpModal` | Primary (Display 0) |
 
 ### State management
 
@@ -94,25 +93,24 @@ Modal visibility is controlled by a local `Boolean` state variable (`showXxxHelp
 
 ### Onboarding Welcome Tour & Wizard
 
-To onboard new users, the app runs a 5-step **Onboarding Welcome Tour Wizard** managed by `OnboardingWizardManager` and hosted inside `OnboardingWizardDialog`:
+To onboard new users, the app runs a 6-step **Onboarding Welcome Tour Wizard** managed by `OnboardingWizardManager` and hosted inside `OnboardingWizardDialog`:
 
 1. **Multi-Step Onboarding Tour:**
-   - **Step 1 (Welcome):** Introduces Megingiard's features and highlights in-app help (`?`) buttons.
-   - **Step 2 (Edge Gestures):** Explains edge swipe gestures with interactive trial drag pills, static edge labels, checkmark completion animations, and a live top/bottom position toggle switch.
+   - **Step 1 (Welcome):** Introduces Megingiard's features and highlights in-app help (`?`) buttons, with an **Exit App** secondary button if the user declines setup.
+   - **Step 2 (Edge Gestures):** Explains edge swipe gestures with interactive trial drag pills, static edge labels, checkmark completion animations, a live top/bottom position toggle switch, and an **Auto-Fade Quick Menu Bars** toggle switch.
    - **Step 3 (Theme):** Allows selecting a visual theme for the app with a live preview.
-   - **Step 4 (Accessibility Service):** Offers launching Android Accessibility Settings on the bottom screen (`Display.DEFAULT_DISPLAY`) to activate the accessibility service with a 1s polling loop and live status indicator dot, plus a secondary **Skip** button.
-   - **Step 5 (Megingiard System Service):** Provides a one-tap automated setup process (via native hardware root bridge or multi-stage Wireless Debugging) for Developer Options, Wireless Debugging, ADB Wireless Pairing, and System Service Connection with live checklist status icons, plus a secondary **Skip** button.
-   - **Step 6 (Finished):** Confirms tour completion with a completion icon, summary text, and an explicit **Finish Tour** button.
+   - **Step 4 (Accessibility Service):** Requires activating the Megingiard Accessibility Service before advancing (`isNextEnabled = isAccessibilityActive`). Offers one-tap activation via the native hardware root bridge (`su 0` when available) or launching Android Accessibility Settings on the primary display (`Display.DEFAULT_DISPLAY`) with a 1s polling loop and live status indicator dot.
+   - **Step 5 (Megingiard System Service):** Provides a one-tap automated setup process (via the native hardware root bridge or multi-stage Wireless Debugging) for Developer Options, USB/Wireless Debugging, ADB Wireless Pairing, and System Service Connection with live checklist status icons.
+   - **Step 6 (Finished):** Confirms tour completion with a completion icon, summary text, and an explicit **Finish** button.
 
 2. **Tour Versioning & Completion Persistence:**
    - `SettingsManager.welcomeTourCompletedVersion` tracks the integer version of the last completed welcome tour (default `0`, current version `CURRENT_WELCOME_TOUR_VERSION = 1`).
    - The welcome tour automatically launches if `welcomeTourCompletedVersion < CURRENT_WELCOME_TOUR_VERSION`, ensuring that new tour versions are presented even if a user completed an earlier version.
-   - **Strict Persistence Rule:** Only explicitly clicking the **Finish Tour** button on the final step (`FinishedStepContent`) persists `setWelcomeTourCompletedVersion(CURRENT_WELCOME_TOUR_VERSION)`. Dismissing or skipping the dialog does not persist completion state.
+   - **Strict Persistence Rule:** Only explicitly clicking the **Finish** button on the final step (`FinishedStepContent`) persists `setWelcomeTourCompletedVersion(CURRENT_WELCOME_TOUR_VERSION)`.
 
 3. **Footer Navigation & Settings Re-run Option:**
-   - Provides `Back` (outlined button), `Skip` (outlined button on Step 4), `Next` (primary button), and `Finish Tour` (primary button) navigation controls.
-   - Users can manually restart the welcome tour anytime via **Global Settings** -> **General** -> **Start Welcome Tour** (first entry in the General settings section).
-   - All tutorial flags can also be reset under **Global Settings** -> **Data** -> **Reset tutorials**.
+   - Provides **Exit App** (outlined button on Step 1), **Back** (outlined button on Steps 2–6), **Next** (primary button on Steps 1–5), and **Finish** (primary button on Step 6) navigation controls.
+   - Users can manually restart the welcome tour anytime via **Global Settings** -> **General** -> **Quick Setup** (or **Reset tutorials** in **Global Settings** -> **General**).
 
 ### String resource conventions
 
@@ -138,12 +136,12 @@ help_close_cd  — content description for the Close button
 | File | Responsibility |
 |---|---|
 | `ui/HelpModal.kt` | Shared `HelpModal`, `HelpIconButton`, `HelpEntry`, `HelpSection`, `HelpIntro` composables |
-| `onboarding/OnboardingWizardManager.kt` | Domain state singleton managing onboarding tour steps and auto-skipping |
-| `ui/onboarding/OnboardingWizardDialog.kt` | Multi-step tour host dialog with `OnboardingStepper` header and step navigation |
+| `onboarding/OnboardingWizardManager.kt` | Domain state singleton managing onboarding tour steps and completion state |
+| `ui/onboarding/OnboardingWizardDialog.kt` | Multi-step tour host dialog with `OnboardingStepper` header, shared wizard scaffold, and step navigation |
 | `ui/WelcomeTutorialDialog.kt` | Step 1 (`WelcomeStepContent`) onboarding content |
-| `ui/QuickMenuTutorialDialog.kt` | Step 2 (`QuickMenuStepContent`) gesture trial onboarding content |
+| `ui/QuickMenuTutorialDialog.kt` | Step 2 (`QuickMenuStepContent`) gesture trial onboarding content and `QuickMenuGestureTrialOverlay` |
 | `ui/QuickMenu.kt` | `QuickMenuHelpModal` content + icon wiring |
-| `mirror/CutoutLayoutEditor.kt` | `CutoutLayoutEditorHelpModal` content + icon wiring |
 | `ui/IntegrationHomeScreen.kt` | `CompanionHubHelpModal` content + icon wiring |
-| `res/values/strings.xml` | English help and onboarding strings (prefix `help_` / `welcome_`) |
-| `res/values-de/strings.xml` | German help and onboarding strings (prefix `help_` / `welcome_`) |
+| `res/values/strings.xml` | English help and onboarding strings (prefix `help_` / `welcome_` / `onboarding_`) |
+| `res/values-de/strings.xml` | German help and onboarding strings (prefix `help_` / `welcome_` / `onboarding_`) |
+| `res/values-zh-rTW/strings.xml` | Traditional Chinese help and onboarding strings (prefix `help_` / `welcome_` / `onboarding_`) |

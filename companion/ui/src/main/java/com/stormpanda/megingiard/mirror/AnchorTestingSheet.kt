@@ -314,9 +314,9 @@ internal fun AnchorTestingSheet(onDone: () -> Unit) {
 
 @Composable
 private fun TestingThresholdSlider() {
-    val matchThreshold by AnchorTestCoordinator.matchThreshold.collectAsStateWithLifecycle()
+    val uiState by AnchorTestCoordinator.uiState.collectAsStateWithLifecycle()
     val matchPct =
-        (matchThreshold * PERCENT_DIVISOR).roundToInt().coerceIn(
+        (uiState.matchThreshold * PERCENT_DIVISOR).roundToInt().coerceIn(
             (MIN_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
             (MAX_LAYOUT_ANCHOR_MATCH_THRESHOLD * PERCENT_DIVISOR).toInt(),
         )
@@ -343,12 +343,12 @@ private fun TestingThresholdSlider() {
 @Composable
 private fun TestingHeaderMatchStats() {
     val colors = LocalAppColors.current
-    val matchRatio by AnchorTestCoordinator.currentMatchRatio.collectAsStateWithLifecycle()
-    val isAnchorActive by AnchorTestCoordinator.isAnchorActive.collectAsStateWithLifecycle()
-    val matchedPoints by AnchorTestCoordinator.matchedPointCount.collectAsStateWithLifecycle()
-    val totalPoints by AnchorTestCoordinator.totalPointCount.collectAsStateWithLifecycle()
+    val uiState by AnchorTestCoordinator.uiState.collectAsStateWithLifecycle()
+    val isAnchorActive = uiState.isAnchorActive
+    val matchedPoints = uiState.matchedPointCount
+    val totalPoints = uiState.totalPointCount
 
-    val matchPct = (matchRatio * 100f).roundToInt().coerceIn(0, 100)
+    val matchPct = (uiState.currentMatchRatio * 100f).roundToInt().coerceIn(0, 100)
     Row(
         modifier =
             Modifier
@@ -389,7 +389,8 @@ private fun TestingHeaderMatchStats() {
 @Composable
 private fun TestingHeaderStatusBadge() {
     val colors = LocalAppColors.current
-    val isAnchorActive by AnchorTestCoordinator.isAnchorActive.collectAsStateWithLifecycle()
+    val uiState by AnchorTestCoordinator.uiState.collectAsStateWithLifecycle()
+    val isAnchorActive = uiState.isAnchorActive
 
     val badgeBg = if (isAnchorActive) colors.accent.copy(alpha = STATUS_ACTIVE_BG_ALPHA) else colors.surfaceVariant
     val badgeBorder = if (isAnchorActive) colors.accent else colors.divider
@@ -438,7 +439,7 @@ private fun ReferencePreviewCard(
 ) {
     val colors = LocalAppColors.current
     val referenceBitmap by AnchorTestCoordinator.referenceBitmap.collectAsStateWithLifecycle()
-    val targetPoints by AnchorTestCoordinator.targetPoints.collectAsStateWithLifecycle()
+    val uiState by AnchorTestCoordinator.uiState.collectAsStateWithLifecycle()
 
     AnchorPreviewCard(
         title = stringResource(R.string.mirror_anchor_test_target_label),
@@ -449,7 +450,7 @@ private fun ReferencePreviewCard(
         drawProbes = { fw, fh, left, top ->
             val outlineRadius = PROBE_OUTLINE_RADIUS.toPx()
             val fillRadius = PROBE_FILL_RADIUS.toPx()
-            for (pt in targetPoints) {
+            for (pt in uiState.targetPoints) {
                 drawProbeDot(
                     u = pt.u,
                     v = pt.v,
@@ -474,19 +475,18 @@ private fun LiveCropPreviewCard(
     modifier: Modifier = Modifier,
 ) {
     val liveCropBitmap by AnchorTestCoordinator.liveCropBitmap.collectAsStateWithLifecycle()
-    val pointMatches by AnchorTestCoordinator.pointMatches.collectAsStateWithLifecycle()
-    val isAnchorActive by AnchorTestCoordinator.isAnchorActive.collectAsStateWithLifecycle()
+    val uiState by AnchorTestCoordinator.uiState.collectAsStateWithLifecycle()
 
     AnchorPreviewCard(
         title = stringResource(R.string.mirror_anchor_test_current_label),
         bitmap = liveCropBitmap,
         bezelBrush = bezelBrush,
-        isHighlightBorder = isAnchorActive,
+        isHighlightBorder = uiState.isAnchorActive,
         showProbes = showProbes,
         drawProbes = { fw, fh, left, top ->
             val outlineRadius = PROBE_OUTLINE_RADIUS.toPx()
             val fillRadius = PROBE_FILL_RADIUS.toPx()
-            for (match in pointMatches) {
+            for (match in uiState.pointMatches) {
                 val color = if (match.isMatch) PROBE_MATCHED_COLOR else PROBE_MISMATCHED_COLOR
                 drawProbeDot(
                     u = match.point.u,

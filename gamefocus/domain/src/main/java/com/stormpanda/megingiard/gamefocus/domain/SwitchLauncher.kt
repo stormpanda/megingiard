@@ -9,7 +9,6 @@ import android.os.StrictMode
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.EMULATOR_ID_YUZU
 import com.stormpanda.megingiard.catalog.RomLauncher
-import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SwitchEmulators
 import java.io.File
 
@@ -37,22 +36,9 @@ class SwitchLauncher : RomLauncher {
 
         val targetUri: Uri =
             when {
-                !romUri.isNullOrBlank() -> {
-                    Uri.parse(romUri)
-                }
-
-                romPath.startsWith("content://") -> {
-                    Uri.parse(romPath)
-                }
-
-                else -> {
-                    val matchedApp = RomManager.romApps.value.firstOrNull { it.romPath == romPath }
-                    if (!matchedApp?.romUri.isNullOrBlank()) {
-                        Uri.parse(matchedApp.romUri)
-                    } else {
-                        Uri.fromFile(File(romPath))
-                    }
-                }
+                !romUri.isNullOrBlank() -> Uri.parse(romUri)
+                romPath.startsWith("content://") -> Uri.parse(romPath)
+                else -> Uri.fromFile(File(romPath))
             }
 
         AppLog.i(TAG, "Launching Switch ROM '$romPath' (URI: '$targetUri') with package '$targetPackage' on display $displayId")

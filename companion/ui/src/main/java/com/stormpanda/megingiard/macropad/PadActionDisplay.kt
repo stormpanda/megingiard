@@ -199,13 +199,7 @@ internal enum class ActionCategory(
     ),
     ;
 
-    fun labelResId(): Int = labelResId
-
-    fun icon(): ImageVector = icon
-
     fun defaultAction(): PadAction = defaultActionProvider()
-
-    fun group(): ActionGroup = group
 }
 
 internal fun PadAction.categoryResId(): Int = toCategory().labelResId

@@ -43,9 +43,11 @@ object ArchitectureRules {
     const val INLINE_FONT_SIZE = "INLINE_FONT_SIZE"
     const val HARDCODED_COLOR = "HARDCODED_COLOR"
     const val UNUSED_TAG = "UNUSED_TAG"
+    const val TAG_TOO_LONG = "TAG_TOO_LONG"
     const val MISSING_TRANSLATION = "MISSING_TRANSLATION"
     const val STALE_TRANSLATION = "STALE_TRANSLATION"
 
+    private const val MAX_TAG_LENGTH = 23
     private const val APP_LOG_FILE = "AppLog.kt"
     private val THEME_DEFINITION_FILES = setOf("AppTheme.kt", "AppColors.kt", "AppPalettes.kt")
 
@@ -64,6 +66,7 @@ object ArchitectureRules {
     private val HARDCODED_COLOR_REGEX = Regex("""\bColor\(\s*0x[0-9A-Fa-f]{6,8}\s*\)""")
     private val TAG_DECL_REGEX = Regex("""private\s+const\s+val\s+TAG\b""")
     private val TAG_WORD_REGEX = Regex("""\bTAG\b""")
+    private val TAG_VALUE_REGEX = Regex("""const\s+val\s+TAG\s*=\s*"([^"]*)"""")
 
     /**
      * Checks one Kotlin/Java source file.
@@ -115,6 +118,15 @@ object ArchitectureRules {
             }
 
             if (!isMain) return@forEachIndexed
+
+            val tagMatch = TAG_VALUE_REGEX.find(line)
+            if (tagMatch != null && tagMatch.groupValues[1].length > MAX_TAG_LENGTH) {
+                add(
+                    TAG_TOO_LONG,
+                    lineNo,
+                    "TAG '${tagMatch.groupValues[1]}' is ${tagMatch.groupValues[1].length} chars; max is $MAX_TAG_LENGTH (§8.4)",
+                )
+            }
 
             if (ENUM_VALUES_REGEX.containsMatchIn(line)) {
                 add(ENUM_VALUES, lineNo, "Use enum.entries instead of values() (§8.1)")

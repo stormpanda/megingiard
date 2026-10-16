@@ -74,7 +74,6 @@ private val POC_BORDER_WIDTH = 1.dp
 private const val POC_SCRIM_ALPHA = 0.55f
 private const val POC_CARD_SURFACE_ALPHA = 0.96f
 private const val POC_HEADER_BG_ALPHA = 0.8f
-private const val POC_SUBTITLE_DOT_ALPHA = 0.5f
 private const val POC_WIDTH_FRACTION = 0.95f
 private const val POC_HEIGHT_FRACTION = 0.95f
 private val POC_HEADER_HEIGHT = 56.dp
@@ -85,8 +84,6 @@ private val POC_CLOSE_ICON_SIZE = 18.dp
 private val POC_SPACER_SMALL = 8.dp
 private val POC_SPACER_MEDIUM = 12.dp
 private const val POC_TITLE_FONT_SIZE_SP = 18
-private const val POC_SUBTITLE_FONT_SIZE_SP = 14
-private const val POC_SUBTITLE_DOT = "•"
 
 private val POC_SHEET_SHAPE =
     RoundedCornerShape(
@@ -111,10 +108,7 @@ fun PrimaryOverlayContainer(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
-    categorySubtitle: String? = null,
     onDismissRequest: (() -> Boolean)? = null,
-    onBumperPrev: (() -> Unit)? = null,
-    onBumperNext: (() -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -150,17 +144,6 @@ fun PrimaryOverlayContainer(
 
     BackHandler(enabled = isVisible) {
         handleDismiss()
-    }
-
-    if (onBumperPrev != null || onBumperNext != null) {
-        LaunchedEffect(Unit) {
-            PrimaryOverlayInputBridge.bumperEvents.collect { dir ->
-                when (dir) {
-                    BumperDirection.PREV -> onBumperPrev?.invoke()
-                    BumperDirection.NEXT -> onBumperNext?.invoke()
-                }
-            }
-        }
     }
 
     AnimatedVisibility(
@@ -233,32 +216,13 @@ fun PrimaryOverlayContainer(
                             Spacer(modifier = Modifier.width(POC_SPACER_MEDIUM))
                         }
 
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = title,
-                                    color = colors.onSurface,
-                                    fontSize = POC_TITLE_FONT_SIZE_SP.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-
-                                if (categorySubtitle != null) {
-                                    Spacer(modifier = Modifier.width(POC_SPACER_SMALL))
-                                    Text(
-                                        text = POC_SUBTITLE_DOT,
-                                        color = colors.onSurfaceSecondary.copy(alpha = POC_SUBTITLE_DOT_ALPHA),
-                                        fontSize = POC_SUBTITLE_FONT_SIZE_SP.sp,
-                                    )
-                                    Spacer(modifier = Modifier.width(POC_SPACER_SMALL))
-                                    Text(
-                                        text = categorySubtitle,
-                                        color = colors.accent,
-                                        fontSize = POC_SUBTITLE_FONT_SIZE_SP.sp,
-                                        fontWeight = FontWeight.Medium,
-                                    )
-                                }
-                            }
-                        }
+                        Text(
+                            text = title,
+                            color = colors.onSurface,
+                            fontSize = POC_TITLE_FONT_SIZE_SP.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f),
+                        )
 
                         // In-Header Toast Notification
                         DialogToastPill(
@@ -317,11 +281,13 @@ fun PrimaryOverlayContainer(
 
 /**
  * Launches an external URL via browser intent targeted to the primary (default) display.
+ *
+ * @return `true` if the intent was launched, or `false` if no activity could handle [url].
  */
 fun launchUrlOnPrimaryDisplay(
     context: Context,
     url: String,
-) {
+): Boolean =
     try {
         val intent =
             Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
@@ -331,7 +297,8 @@ fun launchUrlOnPrimaryDisplay(
         options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
         context.startActivity(intent, options.toBundle())
         AppLog.d(TAG, "Launched URL on primary display: $url")
+        true
     } catch (e: Exception) {
         AppLog.e(TAG, "Failed to launch URL ($url) on primary display: ${e.message}")
+        false
     }
-}

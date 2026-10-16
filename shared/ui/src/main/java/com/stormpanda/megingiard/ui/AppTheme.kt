@@ -1,19 +1,14 @@
 package com.stormpanda.megingiard.ui
 
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.SwitchColors
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.settings.ThemeMode
 
@@ -46,40 +41,18 @@ data class AppColors(
     val controlOverlay: Color = surface.copy(alpha = 0.95f),
     /** Text / icons on the control overlay. */
     val onControlOverlay: Color = onSurface,
-    /** Finger-circle indicator in overlay. */
-    val fingerCircle: Color = onSurface.copy(alpha = 0.45f),
     /** Keyboard key background (normal). */
     val keyBackground: Color = surface,
     /** Keyboard key background when pressed. */
     val keyPressed: Color = surfaceVariant,
-    /** Keyboard modifier key when active / sticky. */
-    val keyModifierActive: Color = surfaceVariant,
     /** Keyboard container background. */
     val keyboardBackground: Color = appBackground,
-    /** Touchpad surface. */
-    val touchpadBackground: Color = appBackground,
-    /** Touchpad indicator dots / borders. */
-    val touchpadIndicator: Color = accent,
-    /** Color-picker dialog background. */
-    val pickerBackground: Color = surface,
-    /** Accent color swatch border. */
-    val accentBorder: Color = accent.copy(alpha = 0.4f),
     /** Always-visible pull-tab quick menu bar colour (already includes the desired alpha). */
     val quickMenuBarIdleColor: Color = Color.White.copy(alpha = 0.4f),
-    /** Active mode indicator dot inside the navigation bar. */
-    val controlIndicatorActive: Color = accent,
     /** Background of the navigation bar (overrides accent for custom-accent themes). */
     val navQuickMenuBody: Color = surface,
-    /** Background of mirror control buttons. */
-    val buttonBody: Color = surface,
     /** Border/outline of the quick menu control overlay container. */
     val controlOverlayBorder: Color = accent.copy(alpha = 0.3f),
-    /** Border/outline of the navigation bar. */
-    val navQuickMenuBorder: Color = accent,
-    /** Border/outline of the mirror control bar. */
-    val mirrorQuickMenuBorder: Color = Color.Transparent,
-    /** Icon tint on mirror control buttons. */
-    val buttonIconTint: Color = accent,
     /** Destructive / error action color (delete buttons, confirm-destructive text). */
     val error: Color = Color(0xFFCF6679),
     /** Content (text/icons) on error-colored surfaces. */
@@ -88,14 +61,10 @@ data class AppColors(
     val actionColorGamepad: Color = Color(0xFFFF9800),
     /** Action-type badge color for system / d-pad macro steps. */
     val actionColorSystem: Color = accent,
-    /** MacroPad button-placement text/icons. */
-    val macroPadOnSurface: Color = onSurface,
-    /** MacroPad button-placement border. */
-    val macroPadAccentBorder: Color = accent.copy(alpha = 0.4f),
     /**
      * Color used for section-header label text (uppercase strip above setting groups,
      * editor section dividers, etc.).  Equals [accent] for themes that support a custom
-     * accent; fixed per-palette for themes like Cyberpunk that use a distinct header tint.
+     * accent; fixed per-palette for themes that use a distinct header tint.
      */
     val sectionHeaderColor: Color = accent,
     /** Thin divider between transparent settings rows drawn on the default screen/dialog background. */
@@ -123,20 +92,11 @@ private val darkPalette =
         divider = Color.White.copy(alpha = 0.08f),
         controlOverlay = Color.Black.copy(alpha = 0.8f),
         keyPressed = Color(0xFF48484A),
-        keyModifierActive = Color(0xFF3A3A3C),
         keyboardBackground = Color(0xFF1D1F26),
-        touchpadBackground = Color.Black,
-        touchpadIndicator = Color.White,
-        accentBorder = Color.White.copy(alpha = 0.3f),
         accent = DEFAULT_DARK_LIGHT_ACCENT,
         onAccent = Color.White,
-        controlIndicatorActive = Color.White,
         navQuickMenuBody = DEFAULT_DARK_LIGHT_ACCENT,
-        buttonBody = DEFAULT_DARK_LIGHT_ACCENT,
-        navQuickMenuBorder = Color.Transparent,
-        buttonIconTint = Color.White,
         actionColorSystem = Color(0xFF2196F3),
-        macroPadAccentBorder = Color.White.copy(alpha = 0.3f),
         settingsSeparator = Color.White.copy(alpha = 0.10f),
     )
 
@@ -150,16 +110,10 @@ private val darkOledPalette =
         onSurface = DARK_OLED_TEXT,
         onSurfaceSecondary = DARK_OLED_TEXT.copy(alpha = 0.6f),
         keyPressed = Color(0xFF323235),
-        keyModifierActive = Color(0xFF242426),
-        accentBorder = DARK_OLED_TEXT.copy(alpha = 0.3f),
         accent = DEFAULT_DARK_LIGHT_ACCENT,
         onAccent = Color.White,
         navQuickMenuBody = DEFAULT_DARK_LIGHT_ACCENT,
-        buttonBody = DEFAULT_DARK_LIGHT_ACCENT,
-        navQuickMenuBorder = Color.Transparent,
-        buttonIconTint = DARK_OLED_TEXT,
         actionColorSystem = Color(0xFF2196F3),
-        macroPadAccentBorder = DARK_OLED_TEXT.copy(alpha = 0.3f),
     )
 
 // ─── Megingiard (Norse Forest) palette ─────────────────────────────────────────
@@ -172,7 +126,6 @@ private val megingiardPalette =
         onSurfaceSecondary = Color(0xFF7BA68C), // Muted emerald sage secondary text
         controlOverlay = Color(0xFF081C12).copy(alpha = 0.95f), // Norse emerald green overlay
         keyPressed = Color(0xFF102B1D), // Key pressed surface
-        keyModifierActive = Color(0xFF143423), // Key modifier active
         accent = Color(0xFFE5B842), // Runic Gold / Amber
         error = Color(0xFFD94336),
     )
@@ -185,7 +138,6 @@ private val mjolnirPalette =
         surfaceVariant = Color(0xFF1F2B36), // Elevated steel surface
         onSurface = Color(0xFFE2EBF2), // Icy white text
         onSurfaceSecondary = Color(0xFF8FA3B5), // Cold steel gray secondary text
-        keyModifierActive = Color(0xFF1F3547),
         accent = Color(0xFF00E5FF), // Electric Lightning Cyan
         onAccent = Color(0xFF101418),
         error = Color(0xFFE53935),
@@ -199,7 +151,6 @@ private val valhallaPalette =
         surfaceVariant = Color(0xFF2B2018), // Elevated mahogany surface
         onSurface = Color(0xFFF4E8D1), // Golden parchment text
         onSurfaceSecondary = Color(0xFFBCAAA4), // Warm twilight secondary text
-        keyModifierActive = Color(0xFF3B291A),
         accent = Color(0xFFFFA726), // Glowing Bronze Amber
         onAccent = Color(0xFF140E0A),
         error = Color(0xFFD84315),
@@ -213,7 +164,6 @@ private val auroraPalette =
         surfaceVariant = Color(0xFF1B1B32), // Elevated violet surface
         onSurface = Color(0xFFE6E6FA), // Starry lavender text
         onSurfaceSecondary = Color(0xFF9FA8DA), // Muted cosmic blue secondary text
-        keyModifierActive = Color(0xFF26264A),
         accent = Color(0xFF00F5D4), // Glowing Aurora Teal
         onAccent = Color(0xFF0A0A14),
         error = Color(0xFFFF5252),
@@ -227,7 +177,6 @@ private val retroPhosphorPalette =
         surfaceVariant = Color(0xFF263022), // Elevated dot-matrix surface
         onSurface = Color(0xFFC0D890), // Phosphor mint text
         onSurfaceSecondary = Color(0xFF708850), // Muted phosphor green secondary text
-        keyModifierActive = Color(0xFF32402C),
         accent = Color(0xFF8BAC0F), // Game Boy Phosphor Mint
         onAccent = Color(0xFF141712),
         error = Color(0xFFE57373),
@@ -241,7 +190,6 @@ private val royalAsgardPalette =
         surfaceVariant = Color(0xFF1C1A16), // Elevated charcoal gold surface
         onSurface = Color(0xFFF7F3E9), // Warm ivory text
         onSurfaceSecondary = Color(0xFFC5BCA8), // Muted champagne secondary text
-        keyModifierActive = Color(0xFF2D2A22),
         accent = Color(0xFFFFD700), // Polished Royal Gold
         onAccent = Color.Black,
         error = Color(0xFFD32F2F),
@@ -287,10 +235,7 @@ fun paletteFor(
         base.copy(
             accent = eff,
             onAccent = effOnAccent,
-            buttonIconTint = effOnAccent,
-            controlIndicatorActive = effOnAccent,
             navQuickMenuBody = eff,
-            buttonBody = eff,
             sectionHeaderColor = eff,
             controlOverlayBorder = eff.copy(alpha = 0.3f),
         )
@@ -305,10 +250,7 @@ fun paletteFor(
 // components (Switch, Slider, OutlinedTextField, AlertDialog, TextButton, …)
 // automatically use the correct theme colors without per-call overrides.
 
-fun colorSchemeFor(
-    colors: AppColors,
-    mode: ThemeMode,
-): ColorScheme =
+fun colorSchemeFor(colors: AppColors): ColorScheme =
     darkColorScheme().copy(
         primary = colors.accent,
         onPrimary = colors.onAccent,
@@ -326,17 +268,6 @@ fun colorSchemeFor(
         onError = colors.onError,
         outline = colors.divider.copy(alpha = 0.4f),
         outlineVariant = colors.divider,
-    )
-
-@Composable
-fun appSwitchColors(colors: AppColors = LocalAppColors.current): SwitchColors =
-    SwitchDefaults.colors(
-        checkedThumbColor = colors.onAccent,
-        checkedTrackColor = colors.accent,
-        checkedBorderColor = colors.accent,
-        uncheckedThumbColor = colors.onSurfaceSecondary,
-        uncheckedTrackColor = colors.surfaceVariant,
-        uncheckedBorderColor = colors.divider,
     )
 
 // ─── Typography ───────────────────────────────────────────────────────────────
@@ -368,40 +299,6 @@ val megingiardTypography =
         labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Normal),
     )
 
-// ─── Dimension tokens ─────────────────────────────────────────────────────────
-//
-// All spacing, corner-radius, elevation, and icon-size values are expressed
-// through these tokens.  Composables reference LocalAppDimens.current.paddingLarge
-// etc. — never hardcode 16.dp inline.
-
-@Immutable
-data class AppDimens(
-    // Padding / spacing
-    val paddingXSmall: Dp = 4.dp,
-    val paddingSmall: Dp = 8.dp,
-    val paddingMedium: Dp = 12.dp,
-    val paddingLarge: Dp = 16.dp,
-    val paddingXLarge: Dp = 20.dp,
-    val paddingXXLarge: Dp = 24.dp,
-    // Corner radii
-    val cornerSmall: Dp = 8.dp,
-    val cornerMedium: Dp = 12.dp,
-    val cornerLarge: Dp = 16.dp,
-    val cornerXLarge: Dp = 20.dp,
-    val cornerFull: Dp = 50.dp,
-    // Elevation / shadow
-    val elevationLow: Dp = 2.dp,
-    val elevationMedium: Dp = 4.dp,
-    val elevationHigh: Dp = 8.dp,
-    // Icon sizes
-    val iconSizeSmall: Dp = 16.dp,
-    val iconSizeMedium: Dp = 20.dp,
-    val iconSizeLarge: Dp = 24.dp,
-    // Divider
-    val dividerThickness: Dp = 1.dp,
-)
-
 // ─── CompositionLocals ────────────────────────────────────────────────────────
 
 val LocalAppColors = compositionLocalOf<AppColors> { darkPalette }
-val LocalAppDimens = compositionLocalOf { AppDimens() }

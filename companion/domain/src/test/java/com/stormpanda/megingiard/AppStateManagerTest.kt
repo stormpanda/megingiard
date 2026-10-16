@@ -7,19 +7,17 @@ import app.cash.turbine.test
 import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
+import com.stormpanda.megingiard.macropad.EditorSection
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.mirror.ScreenCutout
-import com.stormpanda.megingiard.navigation.NavDestination
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.session.ActiveGameSession
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
-import com.stormpanda.megingiard.settings.SettingsCategory
-import com.stormpanda.megingiard.settings.SettingsSubPage
 import com.stormpanda.megingiard.ui.PrimaryModalConfig
 import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryModalType
@@ -65,9 +63,6 @@ class AppStateManagerTest {
             focusedApp = null,
         )
         AppStateManager.setStandaloneForegroundState(null, null)
-        AppStateManager.consumeMirrorStartRequest()
-        AppStateManager.consumeMirrorStopRequest()
-        AppStateManager.consumeShutOffRequest()
         AppStateManager.setViewportEditActive(false)
         AppStateManager.setShowEmptyCutoutsDialog(false)
     }
@@ -83,9 +78,6 @@ class AppStateManagerTest {
             focusedApp = null,
         )
         AppStateManager.setStandaloneForegroundState(null, null)
-        AppStateManager.consumeMirrorStartRequest()
-        AppStateManager.consumeMirrorStopRequest()
-        AppStateManager.consumeShutOffRequest()
         AppStateManager.setViewportEditActive(false)
         AppStateManager.setShowEmptyCutoutsDialog(false)
         Dispatchers.resetMain()
@@ -129,7 +121,7 @@ class AppStateManagerTest {
     }
 
     @Test
-    fun `changing active layout preserves layout editor and background settings modes`() {
+    fun `changing active layout preserves layout editor mode`() {
         val l1Id = UUID.randomUUID().toString()
         val l2Id = UUID.randomUUID().toString()
         val p1Id = UUID.randomUUID().toString()
@@ -141,21 +133,13 @@ class AppStateManagerTest {
         MacroPadState.setActiveLayoutId(l2Id)
         assertTrue(AppStateManager.isEditorActive.value)
         AppStateManager.setEditorActive(false)
-
-        AppStateManager.setBackgroundSettingsActive(true)
-        assertTrue(AppStateManager.isBackgroundSettingsActive.value)
-        MacroPadState.setActiveLayoutId(l1Id)
-        assertTrue(AppStateManager.isBackgroundSettingsActive.value)
-        AppStateManager.setBackgroundSettingsActive(false)
     }
 
     @Test
     fun `reconnect prompt dialog stays active during transitions and auto-resets on success`() =
         runTest {
             // Reset states
-            AppStateManager.setHasAdbCredentials(true)
             AppStateManager.setPrivdPromptDismissed(false)
-            AppStateManager.setBackgroundSettingsActive(false)
             PrivdManager.setStateForTesting(PrivdState.OFF)
 
             // Yield to allow combine collection to initialize
@@ -191,12 +175,6 @@ class AppStateManagerTest {
             PrivdManager.setStateForTesting(PrivdState.FAILED)
             testScheduler.advanceUntilIdle()
             assertTrue(AppStateManager.isPrivdPromptActive.value)
-
-            // 7. Open settings overlay -> prompt should hide and mark dismissed = true
-            AppStateManager.setBackgroundSettingsActive(true)
-            testScheduler.advanceUntilIdle()
-            assertFalse(AppStateManager.isPrivdPromptActive.value)
-            assertTrue(AppStateManager.isPrivdPromptDismissed.value)
         }
 
     @Test
@@ -276,43 +254,29 @@ class AppStateManagerTest {
         }
 
     @Test
-    fun `request flags set and consume resets`() =
+    fun `commands SharedFlow emits StartMirror, StopMirror, ShutOff, and LaunchApp`() =
         runTest {
-            fun assertRequestConsume(
-                isRequested: () -> Boolean,
-                request: () -> Unit,
-                consume: () -> Unit,
-            ) {
-                assertFalse(isRequested())
-                request()
-                assertTrue(isRequested())
-                consume()
-                assertFalse(isRequested())
-            }
+            AppStateManager.commands.test {
+                AppStateManager.requestMirrorStart()
+                assertEquals(CompanionCommand.StartMirror, awaitItem())
 
-            assertRequestConsume(
-                { AppStateManager.shutOffRequested.value },
-                { AppStateManager.requestShutOff() },
-                { AppStateManager.consumeShutOffRequest() },
-            )
-            assertRequestConsume(
-                { AppStateManager.mirrorStartRequested.value },
-                { AppStateManager.requestMirrorStart() },
-                { AppStateManager.consumeMirrorStartRequest() },
-            )
-            assertRequestConsume(
-                { AppStateManager.mirrorStopRequested.value },
-                { AppStateManager.requestMirrorStop() },
-                { AppStateManager.consumeMirrorStopRequest() },
-            )
+                AppStateManager.requestMirrorStop()
+                assertEquals(CompanionCommand.StopMirror, awaitItem())
+
+                AppStateManager.requestShutOff()
+                assertEquals(CompanionCommand.ShutOff, awaitItem())
+
+                AppStateManager.requestAppLaunch("com.test.app", 100f, 200f)
+                assertEquals(CompanionCommand.LaunchApp("com.test.app", 100f, 200f), awaitItem())
+
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
     fun `resetPrivdPromptState clears prompt showing and dismissed flags`() =
         runTest {
-            AppStateManager.setHasAdbCredentials(true)
             AppStateManager.setPrivdPromptDismissed(false)
-            AppStateManager.setBackgroundSettingsActive(false)
             PrivdManager.setStateForTesting(PrivdState.FAILED)
             testScheduler.advanceUntilIdle()
             assertTrue(AppStateManager.isPrivdPromptActive.value)
@@ -342,8 +306,6 @@ class AppStateManagerTest {
         runTest {
             // Reset states
             AppStateManager.resetPrivdPromptState()
-            AppStateManager.setHasAdbCredentials(true)
-            AppStateManager.setBackgroundSettingsActive(false)
             AppStateManager.setAccessibilityActive(true)
             PrivdManager.setStateForTesting(PrivdState.RUNNING)
 
@@ -367,8 +329,6 @@ class AppStateManagerTest {
         runTest {
             // Setup initial running state with accessibility active
             AppStateManager.resetPrivdPromptState()
-            AppStateManager.setHasAdbCredentials(true)
-            AppStateManager.setBackgroundSettingsActive(false)
             AppStateManager.setAccessibilityActive(true)
             PrivdManager.setStateForTesting(PrivdState.RUNNING)
 
@@ -776,7 +736,6 @@ class AppStateManagerTest {
             AppStateManager.setFullscreenKeyboardActive(true)
             AppStateManager.setFullscreenMouseActive(true)
             AppStateManager.setViewportEditActive(true)
-            AppStateManager.setBackgroundSettingsActive(true)
             AppStateManager.setGlobalSettingsOpen(true)
             AppStateManager.setKeyboardSettingsOpen(true)
             AppStateManager.setTouchpadSettingsOpen(true)
@@ -788,7 +747,6 @@ class AppStateManagerTest {
             assertFalse(AppStateManager.isFullscreenKeyboardActive.value)
             assertFalse(AppStateManager.isFullscreenMouseActive.value)
             assertFalse(AppStateManager.isViewportEditActive.value)
-            assertFalse(AppStateManager.isBackgroundSettingsActive.value)
             assertFalse(AppStateManager.isGlobalSettingsOpen.value)
             assertFalse(AppStateManager.isKeyboardSettingsOpen.value)
             assertFalse(AppStateManager.isTouchpadSettingsOpen.value)
@@ -916,18 +874,6 @@ class AppStateManagerTest {
         }
 
     @Test
-    fun `setPromptInFlight updates promptInFlight state flow correctly`() =
-        runTest {
-            assertFalse(AppStateManager.promptInFlight.value)
-
-            AppStateManager.setPromptInFlight(true)
-            assertTrue(AppStateManager.promptInFlight.value)
-
-            AppStateManager.setPromptInFlight(false)
-            assertFalse(AppStateManager.promptInFlight.value)
-        }
-
-    @Test
     fun `openPrimaryModal and closePrimaryModal update activePrimaryModal state flow`() =
         runTest {
             assertEquals(null, AppStateManager.activePrimaryModal.value)
@@ -968,8 +914,8 @@ class AppStateManagerTest {
     @Test
     fun `closeActiveModal resets activePrimaryModal and companion surface`() =
         runTest {
-            AppStateManager.openPrimaryModal(PrimaryModalType.MACROPAD_INSPECTOR)
-            assertEquals(PrimaryModalType.MACROPAD_INSPECTOR, AppStateManager.activePrimaryModal.value?.type)
+            AppStateManager.openPrimaryModal(PrimaryModalType.MACROPAD_EDITOR)
+            assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.activePrimaryModal.value?.type)
             assertTrue(AppStateManager.isEditorActive.value)
 
             AppStateManager.closeActiveModal()
@@ -1089,60 +1035,35 @@ class AppStateManagerTest {
         }
 
     @Test
-    fun `navigateTo updates currentNavDestination and opens corresponding primary modal`() =
-        runTest {
-            AppStateManager.closeActiveModal()
-            assertEquals(null, AppStateManager.currentNavDestination.value)
-
-            val dest =
-                NavDestination.GlobalSettings(
-                    category = SettingsCategory.APPEARANCE,
-                    subPage = SettingsSubPage.CUSTOM_ACCENT,
-                )
-            AppStateManager.navigateTo(dest)
-
-            assertEquals(dest, AppStateManager.currentNavDestination.value)
-            assertEquals(PrimaryModalType.GLOBAL_SETTINGS, AppStateManager.activePrimaryModal.value?.type)
-            val payload = AppStateManager.activePrimaryModal.value?.payload as? PrimaryModalPayload.GlobalSettings
-            assertEquals(SettingsCategory.APPEARANCE, payload?.category)
-            assertEquals(SettingsSubPage.CUSTOM_ACCENT, payload?.subPage)
-
-            AppStateManager.closePrimaryModal()
-            assertEquals(null, AppStateManager.currentNavDestination.value)
-            assertEquals(null, AppStateManager.activePrimaryModal.value)
-        }
-
-    @Test
     fun `suspendCurrentAndDismiss and resumeSuspended save and restore modal state`() =
         runTest {
             AppStateManager.closeActiveModal()
             AppStateManager.clearSuspended()
-            assertFalse(AppStateManager.hasSuspendedPrimaryModal.value)
+            assertEquals(null, AppStateManager.suspendedPrimaryModal.value)
 
             val modalConfig =
                 PrimaryModalConfig(
-                    type = PrimaryModalType.MACRO_TIMELINE_EDITOR,
+                    type = PrimaryModalType.MACROPAD_EDITOR,
                     payload =
-                        PrimaryModalPayload.MacroTimeline(
+                        PrimaryModalPayload.MacroPad(
+                            section = EditorSection.MACROS,
                             macroId = "macro-999",
                             focusStepIndex = 3,
                         ),
                 )
             AppStateManager.openPrimaryModal(modalConfig)
-            assertEquals(PrimaryModalType.MACRO_TIMELINE_EDITOR, AppStateManager.activePrimaryModal.value?.type)
+            assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.activePrimaryModal.value?.type)
 
             // Suspend and dismiss
             AppStateManager.suspendCurrentAndDismiss()
             assertEquals(null, AppStateManager.activePrimaryModal.value)
-            assertTrue(AppStateManager.hasSuspendedPrimaryModal.value)
             assertEquals(modalConfig, AppStateManager.suspendedPrimaryModal.value)
 
             // Resume
             AppStateManager.resumeSuspended()
-            assertFalse(AppStateManager.hasSuspendedPrimaryModal.value)
             assertEquals(null, AppStateManager.suspendedPrimaryModal.value)
-            assertEquals(PrimaryModalType.MACRO_TIMELINE_EDITOR, AppStateManager.activePrimaryModal.value?.type)
-            val restoredPayload = AppStateManager.activePrimaryModal.value?.payload as? PrimaryModalPayload.MacroTimeline
+            assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.activePrimaryModal.value?.type)
+            val restoredPayload = AppStateManager.activePrimaryModal.value?.payload as? PrimaryModalPayload.MacroPad
             assertEquals("macro-999", restoredPayload?.macroId)
             assertEquals(3, restoredPayload?.focusStepIndex)
 
@@ -1157,10 +1078,9 @@ class AppStateManagerTest {
 
             val modalConfig = PrimaryModalConfig(type = PrimaryModalType.KEYBOARD_SETTINGS)
             AppStateManager.suspendCurrentAndDismiss(modalConfig)
-            assertTrue(AppStateManager.hasSuspendedPrimaryModal.value)
+            assertEquals(modalConfig, AppStateManager.suspendedPrimaryModal.value)
 
             AppStateManager.clearSuspended()
-            assertFalse(AppStateManager.hasSuspendedPrimaryModal.value)
             assertEquals(null, AppStateManager.suspendedPrimaryModal.value)
         }
 
@@ -1187,7 +1107,6 @@ class AppStateManagerTest {
 
                 val nextItem = awaitItem()
                 assertEquals(PrimaryModalType.ANCHOR_SELECTOR, nextItem?.type)
-                assertTrue(AppStateManager.hasSuspendedPrimaryModal.value)
                 assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.suspendedPrimaryModal.value?.type)
 
                 AppStateManager.closeActiveModal()
@@ -1203,7 +1122,7 @@ class AppStateManagerTest {
             AppStateManager.setViewportEditActive(true)
             assertTrue(AppStateManager.isViewportEditActive.value)
             assertEquals(PrimaryModalType.MIRROR_VIEWPORT_EDITOR, AppStateManager.activePrimaryModal.value?.type)
-            assertEquals(CompanionSurfaceMode.VIEWPORT_EDIT, AppStateManager.companionSurfaceMode.value)
+            assertEquals(CompanionSurfaceMode.MACROPAD, AppStateManager.companionSurfaceMode.value)
 
             AppStateManager.setViewportEditActive(false)
             assertFalse(AppStateManager.isViewportEditActive.value)
@@ -1265,17 +1184,17 @@ class AppStateManagerTest {
     @Test
     fun `setViewportEditActive requests mirror start and activates layout mirrorAutoStart`() =
         runTest {
-            AppStateManager.consumeMirrorStartRequest()
-            assertFalse(AppStateManager.mirrorStartRequested.value)
-
             val layout = PadLayout(id = "layout_mirror_test", name = "Mirror Layout", mirrorAutoStart = false)
             val profile = PadProfile(id = "profile_mirror_test", name = "Test Profile", layouts = listOf(layout))
             MacroPadState.loadFrom(listOf(profile), profile.id)
             assertFalse(MacroPadState.activeLayout.value?.mirrorAutoStart == true)
 
-            AppStateManager.setViewportEditActive(true)
-            assertTrue(AppStateManager.mirrorStartRequested.value)
-            assertTrue(MacroPadState.activeLayout.value?.mirrorAutoStart == true)
+            AppStateManager.commands.test {
+                AppStateManager.setViewportEditActive(true)
+                assertEquals(CompanionCommand.StartMirror, awaitItem())
+                assertTrue(MacroPadState.activeLayout.value?.mirrorAutoStart == true)
+                cancelAndIgnoreRemainingEvents()
+            }
 
             AppStateManager.setViewportEditActive(false)
         }
@@ -1310,38 +1229,6 @@ class AppStateManagerTest {
             assertTrue(AppStateManager.isMirrorEditorBackgroundHidden.value)
             AppStateManager.closePrimaryModal()
             assertFalse(AppStateManager.isMirrorEditorBackgroundHidden.value)
-        }
-
-    @Test
-    fun `requestAppLaunch and consumeAppLaunchRequest`() =
-        runTest {
-            AppStateManager.requestAppLaunch("com.test.app", 100f, 200f)
-            val req = AppStateManager.pendingAppLaunchRequest.value
-            assertEquals("com.test.app", req?.packageName)
-            assertEquals(100f, req?.touchX)
-            assertEquals(200f, req?.touchY)
-
-            AppStateManager.consumeAppLaunchRequest()
-            assertEquals(null, AppStateManager.pendingAppLaunchRequest.value)
-        }
-
-    @Test
-    fun `requestMirrorStart and requestMirrorStop and requestShutOff`() =
-        runTest {
-            AppStateManager.requestMirrorStart()
-            assertTrue(AppStateManager.mirrorStartRequested.value)
-            AppStateManager.consumeMirrorStartRequest()
-            assertFalse(AppStateManager.mirrorStartRequested.value)
-
-            AppStateManager.requestMirrorStop()
-            assertTrue(AppStateManager.mirrorStopRequested.value)
-            AppStateManager.consumeMirrorStopRequest()
-            assertFalse(AppStateManager.mirrorStopRequested.value)
-
-            AppStateManager.requestShutOff()
-            assertTrue(AppStateManager.shutOffRequested.value)
-            AppStateManager.consumeShutOffRequest()
-            assertFalse(AppStateManager.shutOffRequested.value)
         }
 
     @Test
@@ -1388,21 +1275,6 @@ class AppStateManagerTest {
         }
 
     @Test
-    fun `autoSwitchOffToastEvent emits unit when switching away from AUTO mode`() =
-        runTest {
-            AppStateManager.autoSwitchOffToastEvent.test {
-                AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
-                expectNoEvents()
-
-                // Transitioning from AUTO to MACROPAD triggers the event
-                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD, isAutoSwitchButton = false)
-                assertEquals(Unit, awaitItem())
-
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-    @Test
     fun `requestMirrorStart triggers showEmptyCutoutsDialog when layout has no cutouts and not in viewport edit`() =
         runTest {
             val lId = UUID.randomUUID().toString()
@@ -1413,10 +1285,12 @@ class AppStateManagerTest {
             AppStateManager.setViewportEditActive(false)
             AppStateManager.setShowEmptyCutoutsDialog(false)
 
-            AppStateManager.requestMirrorStart()
-
-            assertTrue(AppStateManager.showEmptyCutoutsDialog.value)
-            assertTrue(AppStateManager.mirrorStartRequested.value)
+            AppStateManager.commands.test {
+                AppStateManager.requestMirrorStart()
+                assertTrue(AppStateManager.showEmptyCutoutsDialog.value)
+                assertEquals(CompanionCommand.StartMirror, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
@@ -1435,10 +1309,12 @@ class AppStateManagerTest {
             AppStateManager.setViewportEditActive(false)
             AppStateManager.setShowEmptyCutoutsDialog(false)
 
-            AppStateManager.requestMirrorStart()
-
-            assertFalse(AppStateManager.showEmptyCutoutsDialog.value)
-            assertTrue(AppStateManager.mirrorStartRequested.value)
+            AppStateManager.commands.test {
+                AppStateManager.requestMirrorStart()
+                assertFalse(AppStateManager.showEmptyCutoutsDialog.value)
+                assertEquals(CompanionCommand.StartMirror, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
@@ -1491,5 +1367,21 @@ class AppStateManagerTest {
 
             assertFalse(AppStateManager.showEmptyCutoutsDialog.value)
             assertTrue(AppStateManager.isViewportEditActive.value)
+        }
+
+    @Test
+    fun `fullscreenMouseSensitivity resets to 1_0f when leaving touchpad mode or closing active modal`() =
+        runTest {
+            AppStateManager.setFullscreenMouseActive(true, sensitivity = 2.5f)
+            assertEquals(2.5f, AppStateManager.fullscreenMouseSensitivity.value)
+
+            AppStateManager.setFullscreenMouseActive(false)
+            assertEquals(1.0f, AppStateManager.fullscreenMouseSensitivity.value)
+
+            AppStateManager.setFullscreenMouseActive(true, sensitivity = 0.4f)
+            assertEquals(0.4f, AppStateManager.fullscreenMouseSensitivity.value)
+
+            AppStateManager.closeActiveModal()
+            assertEquals(1.0f, AppStateManager.fullscreenMouseSensitivity.value)
         }
 }

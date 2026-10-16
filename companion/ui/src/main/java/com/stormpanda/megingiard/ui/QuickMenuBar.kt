@@ -29,13 +29,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.SwipeGestureType
-import com.stormpanda.megingiard.macropad.AmbientPreviewManager
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.delay
@@ -77,23 +77,20 @@ private val PILL_ICON_SIZE = 24.dp
  */
 @Composable
 fun QuickMenuBar(modifier: Modifier = Modifier) {
-    val previewConfig by AmbientPreviewManager.config.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsStateWithLifecycle()
     val isPrivdSetupWizardActive by AppStateManager.isPrivdSetupWizardActive.collectAsStateWithLifecycle()
-    if (previewConfig != null || isViewportEditActive || isWizardActive || isPrivdSetupWizardActive) return
+    if (isViewportEditActive || isWizardActive || isPrivdSetupWizardActive) return
 
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
     val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsStateWithLifecycle()
     val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsStateWithLifecycle()
-    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsStateWithLifecycle()
-    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
 
     val alpha = remember { Animatable(QM_BAR_ALPHA_VISIBLE) }
-    LaunchedEffect(isQuickMenuOpen, isFullscreenKeyboardActive, isFullscreenMouseActive, overlayFadeOut) {
+    LaunchedEffect(isQuickMenuOpen, overlayFadeOut) {
         AppLog.d(TAG, "QuickMenuBar: state changed isQuickMenuOpen=$isQuickMenuOpen")
-        if (overlayFadeOut && !isQuickMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive) {
+        if (overlayFadeOut && !isQuickMenuOpen) {
             alpha.snapTo(QM_BAR_ALPHA_VISIBLE)
             delay(QM_BAR_FADE_OUT_DELAY_MS)
             alpha.animateTo(QM_BAR_ALPHA_FADED, animationSpec = tween(QM_BAR_FADE_OUT_DURATION_MS))
@@ -113,19 +110,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     fun getTargetOffset(type: SwipeGestureType): Dp {
         val currentActive = activeSwipe
         return if (currentActive != null && currentActive.type == type) {
-            with(density) {
-                val delta = currentActive.deltaPx.toDp()
-                val threshold = currentActive.thresholdPx.toDp()
-                val visualDelta = delta * GESTURE_VISUAL_MULTIPLIER
-                val visualThreshold = threshold * GESTURE_VISUAL_MULTIPLIER
-                val visual =
-                    if (visualDelta < visualThreshold) {
-                        visualDelta
-                    } else {
-                        visualThreshold + (visualDelta - visualThreshold) * GESTURE_RESISTANCE_FACTOR
-                    }
-                visual.coerceAtMost(GESTURE_MAX_OFFSET)
-            }
+            computeSwipeVisualOffsetDp(currentActive.deltaPx, currentActive.thresholdPx, density)
         } else {
             0.dp
         }
@@ -160,32 +145,28 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
         )
 
         // Keyboard Bar tab (Left/Start)
-        if (!isFullscreenKeyboardActive) {
-            QuickMenuBarTab(
-                overlayAtBottom = overlayAtBottom,
-                colors = colors,
-                modifier =
-                    Modifier
-                        .align(
-                            if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart,
-                        ).padding(start = QuickMenuBarLayout.TAB_PADDING)
-                        .graphicsLayer(alpha = alpha.value * swipeAlpha),
-            )
-        }
+        QuickMenuBarTab(
+            overlayAtBottom = overlayAtBottom,
+            colors = colors,
+            modifier =
+                Modifier
+                    .align(
+                        if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart,
+                    ).padding(start = QuickMenuBarLayout.TAB_PADDING)
+                    .graphicsLayer(alpha = alpha.value * swipeAlpha),
+        )
 
         // Touchpad Bar tab (Right/End)
-        if (!isFullscreenMouseActive) {
-            QuickMenuBarTab(
-                overlayAtBottom = overlayAtBottom,
-                colors = colors,
-                modifier =
-                    Modifier
-                        .align(
-                            if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd,
-                        ).padding(end = QuickMenuBarLayout.TAB_PADDING)
-                        .graphicsLayer(alpha = alpha.value * swipeAlpha),
-            )
-        }
+        QuickMenuBarTab(
+            overlayAtBottom = overlayAtBottom,
+            colors = colors,
+            modifier =
+                Modifier
+                    .align(
+                        if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd,
+                    ).padding(end = QuickMenuBarLayout.TAB_PADDING)
+                    .graphicsLayer(alpha = alpha.value * swipeAlpha),
+        )
 
         // ─── Sliding gesture pills ───────────────────────────────────────────────
         QuickMenuSlidingPill(
@@ -229,16 +210,36 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     }
 }
 
+internal fun computeSwipeVisualOffsetDp(
+    deltaPx: Float,
+    thresholdPx: Float,
+    density: Density,
+): Dp =
+    with(density) {
+        val delta = deltaPx.toDp()
+        val threshold = thresholdPx.toDp()
+        val visualDelta = delta * GESTURE_VISUAL_MULTIPLIER
+        val visualThreshold = threshold * GESTURE_VISUAL_MULTIPLIER
+        val visual =
+            if (visualDelta < visualThreshold) {
+                visualDelta
+            } else {
+                visualThreshold + (visualDelta - visualThreshold) * GESTURE_RESISTANCE_FACTOR
+            }
+        visual.coerceAtMost(GESTURE_MAX_OFFSET)
+    }
+
 @Composable
-private fun QuickMenuSlidingPill(
+internal fun QuickMenuSlidingPill(
     icon: ImageVector,
     animatedOffsetDp: Dp,
     isPastThreshold: Boolean,
     overlayAtBottom: Boolean,
     colors: AppColors,
     modifier: Modifier = Modifier,
+    alpha: Float = QM_BAR_ALPHA_VISIBLE,
 ) {
-    if (animatedOffsetDp <= 0.dp) return
+    if (animatedOffsetDp <= 0.dp || alpha <= 0f) return
     val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
     val yOffset = if (overlayAtBottom) initialOffscreenOffset - animatedOffsetDp else -initialOffscreenOffset + animatedOffsetDp
 
@@ -248,6 +249,7 @@ private fun QuickMenuSlidingPill(
                 .offset(y = yOffset)
                 .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
                 .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
+                .graphicsLayer(alpha = alpha)
                 .background(color = if (isPastThreshold) colors.accent else colors.controlOverlay, shape = CircleShape)
                 .border(
                     width = PILL_BORDER_WIDTH,

@@ -18,7 +18,6 @@ class PServerBootstrapperTest {
                 processName = "megingiard_privd",
                 portStart = 51234,
                 keyHex = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-                appUid = 10234,
             )
 
         // 1. Process termination
@@ -44,7 +43,7 @@ class PServerBootstrapperTest {
         assertTrue(
             "Must provision HMAC key via daemon flag",
             script.contains(
-                "/data/local/tmp/megingiard_privd --keyfile /data/local/tmp/megingiard_privd.key --port 51234 --provision 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef 10234",
+                "/data/local/tmp/megingiard_privd --keyfile /data/local/tmp/megingiard_privd.key --port 51234 --provision 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
             ),
         )
         assertTrue(
@@ -76,7 +75,6 @@ class PServerBootstrapperTest {
                 processName = "megingiard_privd_debug",
                 portStart = 51244,
                 keyHex = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                appUid = 10567,
             )
 
         // Must not contain DEX copy commands

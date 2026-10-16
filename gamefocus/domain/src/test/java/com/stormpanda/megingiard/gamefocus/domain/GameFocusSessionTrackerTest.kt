@@ -23,7 +23,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowPackageManager
 
-private const val TAG = "GameFocusSessionTrackerTest"
+private const val TAG = "GFSessionTrackerTest"
 private const val PRIMARY_DISPLAY_ID = 0
 private const val TEST_SECONDARY_DISPLAY_ID = 4
 private const val PKG_TOP = "com.example.topgame"
@@ -92,6 +92,7 @@ class GameFocusSessionTrackerTest {
             secondaryDisplayId = TEST_SECONDARY_DISPLAY_ID,
         )
         assertEquals(PKG_TOP, GameFocusSessionTracker.lastTopPackage)
+        assertNull(GameFocusSessionTracker.lastTopApp)
 
         GameFocusSessionTracker.recordWindowChanged(
             displayId = TEST_SECONDARY_DISPLAY_ID,
@@ -99,6 +100,7 @@ class GameFocusSessionTrackerTest {
             secondaryDisplayId = TEST_SECONDARY_DISPLAY_ID,
         )
         assertEquals(PKG_BOTTOM, GameFocusSessionTracker.lastBottomPackage)
+        assertNull(GameFocusSessionTracker.lastBottomApp)
     }
 
     @Test

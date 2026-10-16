@@ -29,13 +29,15 @@ object PpssppDetector : EmulatorDetector {
     override val systemId: String = "psp"
 
     var webSocketPort: Int = DEFAULT_REMOTE_DEBUGGER_PORT
+    private val configuredPackages = mutableSetOf<String>()
 
-    override suspend fun detectActiveSession(packageName: String): ActiveGameSession? =
+    override suspend fun detectActiveSession(
+        packageName: String,
+        focusedRomPath: String?,
+        focusedRomIdentifier: String?,
+    ): ActiveGameSession? =
         withContext(Dispatchers.IO) {
             if (!supportedPackages.contains(packageName)) return@withContext null
-
-            // Auto-configure ppsspp.ini to enable RemoteDebuggerOnStartup & RemoteShareOnStartup if needed
-            ensureRemoteDebuggerEnabled(packageName)
 
             // Native PPSSPP WebSocket Debugger Server (Unprivileged, 100% Standalone)
             val wsSession = PpssppWebSocketClient.queryActiveSession(packageName, port = webSocketPort)
@@ -55,6 +57,11 @@ object PpssppDetector : EmulatorDetector {
                 return@withContext resolvedSession
             }
 
+            // Auto-configure ppsspp.ini once per package if WebSocket debugger is not reachable
+            if (synchronized(configuredPackages) { configuredPackages.add(packageName) }) {
+                ensureRemoteDebuggerEnabled(packageName)
+            }
+
             AppLog.d(TAG, "No active session could be resolved for $packageName")
             return@withContext null
         }
@@ -63,15 +70,11 @@ object PpssppDetector : EmulatorDetector {
         packageName: String,
         activeTitle: String? = null,
     ): String? {
-        val iniPaths = getIniPaths(packageName)
-
-        for (path in iniPaths) {
-            val file = File(path)
-            if (file.exists() && file.canRead()) {
+        for (file in findPpssppIniFiles(packageName)) {
+            if (file.canRead()) {
                 try {
-                    val lines = file.readLines()
                     val fileNameLines =
-                        lines.filter { line ->
+                        file.readLines().filter { line ->
                             val trimmed = line.trim()
                             trimmed.startsWith("FileName") && trimmed.contains("=")
                         }
@@ -84,7 +87,7 @@ object PpssppDetector : EmulatorDetector {
                             if (activeTitle == null || isTitleMatching(fileName, activeTitle)) {
                                 AppLog.i(
                                     TAG,
-                                    "readRecentPathFromIni: resolved matching ROM path from '$path': '$resolvedPath' for active title '$activeTitle'",
+                                    "readRecentPathFromIni: resolved matching ROM path from '${file.path}': '$resolvedPath' for active title '$activeTitle'",
                                 )
                                 return resolvedPath ?: fileName
                             } else {
@@ -96,7 +99,7 @@ object PpssppDetector : EmulatorDetector {
                         }
                     }
                 } catch (e: Exception) {
-                    AppLog.d(TAG, "readRecentPathFromIni: failed to read '$path' - $e")
+                    AppLog.d(TAG, "readRecentPathFromIni: failed to read '${file.path}' - $e")
                 }
             }
         }
@@ -124,11 +127,8 @@ object PpssppDetector : EmulatorDetector {
     }
 
     private fun ensureRemoteDebuggerEnabled(packageName: String) {
-        val iniPaths = getIniPaths(packageName)
-
-        for (path in iniPaths) {
-            val file = File(path)
-            if (file.exists() && file.canWrite()) {
+        for (file in findPpssppIniFiles(packageName)) {
+            if (file.canWrite()) {
                 try {
                     val content = file.readText()
                     var updated = content
@@ -140,24 +140,26 @@ object PpssppDetector : EmulatorDetector {
                     }
                     if (updated != content) {
                         file.writeText(updated)
-                        AppLog.i(TAG, "Auto-configured RemoteDebuggerOnStartup in '$path'")
+                        AppLog.i(TAG, "Auto-configured RemoteDebuggerOnStartup in '${file.path}'")
                     }
                 } catch (e: Exception) {
-                    AppLog.d(TAG, "ensureRemoteDebuggerEnabled: failed to write '$path' - $e")
+                    AppLog.d(TAG, "ensureRemoteDebuggerEnabled: failed to write '${file.path}' - $e")
                 }
             }
         }
     }
 
-    private fun getIniPaths(packageName: String): List<String> {
+    private fun findPpssppIniFiles(packageName: String): List<File> {
         val relativeSubPaths =
             listOf(
                 "PSP/SYSTEM/ppsspp.ini",
                 "ppsspp/PSP/SYSTEM/ppsspp.ini",
                 "Android/data/$packageName/files/PSP/SYSTEM/ppsspp.ini",
             )
-        return SafPathResolver.getStorageVolumeRoots().flatMap { root ->
-            relativeSubPaths.map { subPath -> "$root/$subPath" }
-        }
+        return SafPathResolver
+            .getStorageVolumeRoots()
+            .flatMap { root ->
+                relativeSubPaths.map { subPath -> File("$root/$subPath") }
+            }.filter { it.exists() }
     }
 }

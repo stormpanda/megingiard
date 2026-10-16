@@ -48,9 +48,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.LocalAppDimens
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.WindowOverlayLifecycleOwner
 import com.stormpanda.megingiard.ui.colorSchemeFor
@@ -77,15 +75,14 @@ object FloatingBubbleOverlay {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun show(
-        packageName: String,
         touchX: Float = -1f,
         touchY: Float = -1f,
     ) {
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            showOnMainThread(packageName, touchX, touchY)
+            showOnMainThread(touchX, touchY)
         } else {
             mainHandler.post {
-                showOnMainThread(packageName, touchX, touchY)
+                showOnMainThread(touchX, touchY)
             }
         }
     }
@@ -101,7 +98,6 @@ object FloatingBubbleOverlay {
     }
 
     private fun showOnMainThread(
-        packageName: String,
         touchX: Float = -1f,
         touchY: Float = -1f,
     ) {
@@ -203,12 +199,11 @@ object FloatingBubbleOverlay {
                 val appColors = paletteFor(themeMode, Color(userAccentArgb))
 
                 MaterialTheme(
-                    colorScheme = colorSchemeFor(appColors, themeMode),
+                    colorScheme = colorSchemeFor(appColors),
                     typography = megingiardTypography,
                 ) {
                     CompositionLocalProvider(
                         LocalAppColors provides appColors,
-                        LocalAppDimens provides AppDimens(),
                     ) {
                         FloatingBubbleContent()
                     }

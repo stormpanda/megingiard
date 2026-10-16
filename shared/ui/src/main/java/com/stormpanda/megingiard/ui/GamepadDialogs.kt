@@ -1,12 +1,10 @@
 package com.stormpanda.megingiard.ui
 
-import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,12 +18,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,9 +39,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,10 +49,6 @@ import com.stormpanda.megingiard.shared.ui.R
 import kotlinx.coroutines.delay
 
 private const val TAG = "GamepadDialogs"
-
-private val GD_SEARCH_ICON_SIZE = 20.dp
-private val GD_SEARCH_CLEAR_SIZE = 18.dp
-private val GD_SPACING_8 = 8.dp
 
 private val GCM_DIALOG_MAX_WIDTH = 480.dp
 private val GCM_DIALOG_CORNER_RADIUS = 16.dp
@@ -78,109 +68,6 @@ private val GCM_SPACING_8 = 8.dp
 private val GCM_SPACING_12 = 12.dp
 private val GCM_SPACING_16 = 16.dp
 private const val GCM_FOCUS_DELAY_MS = 50L
-
-/**
- * Gamepad-first search bar with clear button and optional category filter chips.
- */
-@Composable
-fun GamepadSearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    placeholder: String = stringResource(R.string.gamepad_search_placeholder),
-) {
-    GamepadSearchBar<String>(
-        query = query,
-        onQueryChange = onQueryChange,
-        modifier = modifier,
-        placeholder = placeholder,
-        categories = emptyList(),
-        selectedCategory = null,
-        onCategorySelected = null,
-        categoryLabel = { it },
-    )
-}
-
-@Composable
-fun <T> GamepadSearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    placeholder: String = stringResource(R.string.gamepad_search_placeholder),
-    categories: List<T> = emptyList(),
-    selectedCategory: T? = null,
-    onCategorySelected: ((T?) -> Unit)? = null,
-    categoryLabel: (T) -> String = { it.toString() },
-) {
-    val colors = LocalAppColors.current
-
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(GD_SPACING_8),
-    ) {
-        AppTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            placeholder = {
-                Text(text = placeholder, color = colors.onSurfaceSecondary)
-            },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = null,
-                    tint = colors.onSurfaceSecondary,
-                    modifier = Modifier.size(GD_SEARCH_ICON_SIZE),
-                )
-            },
-            trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = {
-                        AppLog.d(TAG, "GamepadSearchBar: query cleared")
-                        onQueryChange("")
-                    }) {
-                        Icon(
-                            imageVector = Icons.Rounded.Close,
-                            contentDescription = stringResource(R.string.gamepad_search_clear),
-                            tint = colors.onSurfaceSecondary,
-                            modifier = Modifier.size(GD_SEARCH_CLEAR_SIZE),
-                        )
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        if (categories.isNotEmpty() && onCategorySelected != null) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(GD_SPACING_8),
-            ) {
-                AppSelectableChip(
-                    text = stringResource(R.string.gamepad_category_all),
-                    selected = selectedCategory == null,
-                    onClick = {
-                        AppLog.d(TAG, "GamepadSearchBar: category selected='All'")
-                        onCategorySelected(null)
-                    },
-                )
-                categories.forEach { category ->
-                    val label = categoryLabel(category)
-                    AppSelectableChip(
-                        text = label,
-                        selected = selectedCategory == category,
-                        onClick = {
-                            AppLog.d(TAG, "GamepadSearchBar: category selected='$label'")
-                            onCategorySelected(category)
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
 
 /**
  * Gamepad-first centered modal dialog for primary screen overlays.

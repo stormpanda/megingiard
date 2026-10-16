@@ -40,6 +40,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -51,11 +54,6 @@ private const val AUTO_TOGGLE_STEP_DELAY_MS = 350L
 private const val AUTO_SETUP_WARMUP_DELAY_MS = 400L
 private const val DEV_MODE_CLICK_COUNT = 7
 private const val POST_PAIRING_STABILIZATION_DELAY_MS = 1500L
-
-private enum class AutoSetupTargetStage {
-    STAGE_B_WIRELESS_DEBUG,
-    STAGE_C_PAIRING,
-}
 
 private enum class AutoToggleStage {
     ACTIVATE_DEV_MODE,
@@ -77,13 +75,18 @@ class MegingiardAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var autoToggleJob: Job? = null
     private var autoToggleStage = AutoToggleStage.TOGGLE_WIRELESS_DEBUG
-    private var autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
         AppLog.i(TAG, "onServiceConnected: Megingiard Accessibility Service is active")
         AppStateManager.setAccessibilityActive(true)
+
+        serviceScope.launch(Dispatchers.IO) {
+            if (PrivdManager.state.value != PrivdState.RUNNING) {
+                PrivdManager.connect(applicationContext)
+            }
+        }
 
         serviceScope.launch {
             AppStateManager.isFullscreenKeyboardActive.collect { isActive ->
@@ -136,23 +139,19 @@ class MegingiardAccessibilityService : AccessibilityService() {
             AccessibilityEvent.TYPE_VIEW_CLICKED,
             -> {
                 val source = event.source ?: return
-                try {
-                    val isEditable = source.isEditable
-                    val isFocused = source.isFocused
-                    if (isEditable && isFocused) {
-                        val stableId = source.uniqueId ?: "${source.windowId}:${source.viewIdResourceName ?: source.className ?: "field"}"
-                        val fieldId = "$eventPackage:$stableId"
-                        val isClicked = event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED
-                        AutoKeyboardFocusCoordinator.onTextFieldFocused(
-                            fieldId = fieldId,
-                            packageName = eventPackage,
-                            isClicked = isClicked,
-                        )
-                    } else if (event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED && !isEditable) {
-                        AutoKeyboardFocusCoordinator.onNonEditableFocused()
-                    }
-                } finally {
-                    // source reference GC
+                val isEditable = source.isEditable
+                val isFocused = source.isFocused
+                if (isEditable && isFocused) {
+                    val stableId = source.uniqueId ?: "${source.windowId}:${source.viewIdResourceName ?: source.className ?: "field"}"
+                    val fieldId = "$eventPackage:$stableId"
+                    val isClicked = event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED
+                    AutoKeyboardFocusCoordinator.onTextFieldFocused(
+                        fieldId = fieldId,
+                        packageName = eventPackage,
+                        isClicked = isClicked,
+                    )
+                } else if (event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED && !isEditable) {
+                    AutoKeyboardFocusCoordinator.onNonEditableFocused()
                 }
             }
 
@@ -163,7 +162,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
     }
 
     private fun handleAutoToggleEvent(event: AccessibilityEvent) {
-        if (!_isAutoSetupActive) {
+        if (!_isAutoSetupActive.value) {
             return
         }
         val packageName = event.packageName?.toString() ?: return
@@ -218,7 +217,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 val context = applicationContext
                 val displayOptions = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
 
-                while (isActive && attempts < AUTO_TOGGLE_MAX_ATTEMPTS && _isAutoSetupActive) {
+                while (isActive && attempts < AUTO_TOGGLE_MAX_ATTEMPTS && _isAutoSetupActive.value) {
                     val rootNode = getRootNodeForDisplay(Display.DEFAULT_DISPLAY)
                     if (rootNode != null) {
                         val clickedAllow = findAndClickAllowDialogButton(rootNode, config.allowButtonKeywords)
@@ -268,7 +267,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 if (isSubScreen) {
                                     if (isWirelessOn) {
                                         val screenText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
-                                        val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText, config)
+                                        val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText)
                                         if (connectPort > 0) {
                                             PrivdBootstrapper.setScreenConnectPort(connectPort)
                                         }
@@ -284,7 +283,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                                 }
                                             if (ok) {
                                                 AppLog.i(TAG, "startAutoToggleLoop: Connection succeeded using stored credentials!")
-                                                _isAutoSetupActive = false
+                                                _isAutoSetupActive.value = false
                                                 withContext(Dispatchers.Main) {
                                                     restoreTopScreenApp(context)
                                                 }
@@ -335,7 +334,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
                             AutoToggleStage.CLICK_PAIR_DIALOG -> {
                                 val screenText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
-                                val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText, config)
+                                val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText)
                                 if (connectPort > 0) {
                                     PrivdBootstrapper.setScreenConnectPort(connectPort)
                                 }
@@ -352,7 +351,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
                             AutoToggleStage.SCAN_PAIRING_CODE_AND_PAIR -> {
                                 val allText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
-                                val scanResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(allText, config)
+                                val scanResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(allText)
                                 if (scanResult.isComplete) {
                                     val portInt = scanResult.port?.toIntOrNull()
                                     val codeStr = scanResult.code
@@ -373,7 +372,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                             autoToggleStage = AutoToggleStage.POST_PAIRING_STABILIZATION
                                         } else {
                                             AppLog.w(TAG, "startAutoToggleLoop: Pairing failed.")
-                                            _isAutoSetupActive = false
+                                            _isAutoSetupActive.value = false
                                             break
                                         }
                                     }
@@ -391,7 +390,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
                                     // Rescan the main Wireless Debugging screen for the connect port
                                     val screenText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
-                                    val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText, config)
+                                    val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText)
                                     if (connectPort > 0) {
                                         AppLog.i(TAG, "startAutoToggleLoop: Scanned connect port after pairing: $connectPort")
                                         PrivdBootstrapper.setScreenConnectPort(connectPort)
@@ -406,7 +405,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                             PrivdManager.connect(context)
                                         }
                                     AppLog.i(TAG, "startAutoToggleLoop: Connection after pairing result: $connected")
-                                    _isAutoSetupActive = false
+                                    _isAutoSetupActive.value = false
                                     if (connected) {
                                         withContext(Dispatchers.Main) {
                                             restoreTopScreenApp(context)
@@ -427,9 +426,9 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     }
                     delay(AUTO_TOGGLE_STEP_DELAY_MS)
                 }
-                if (_isAutoSetupActive) {
+                if (_isAutoSetupActive.value) {
                     AppLog.w(TAG, "startAutoToggleLoop: Timed out in stage $autoToggleStage after $AUTO_TOGGLE_MAX_ATTEMPTS attempts")
-                    _isAutoSetupActive = false
+                    _isAutoSetupActive.value = false
                 }
             }
     }
@@ -625,22 +624,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun isMegingiardInPairedDevices(node: AccessibilityNodeInfo): Boolean {
-        val text = node.text?.toString() ?: ""
-        val contentDesc = node.contentDescription?.toString() ?: ""
-        val combined = "$text $contentDesc".lowercase()
-
-        if (combined.contains("megingiard")) {
-            return true
-        }
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            if (isMegingiardInPairedDevices(child)) return true
-        }
-        return false
-    }
-
     private fun findAndClickPairDialog(
         rootNode: AccessibilityNodeInfo,
         pairKeywords: List<String>,
@@ -826,12 +809,12 @@ class MegingiardAccessibilityService : AccessibilityService() {
     }
 
     companion object {
-        private var instance: MegingiardAccessibilityService? = null
-        private var _isAutoSetupActive = false
-        private var appToRestoreAfterSetup: String? = null
+        @Volatile private var instance: MegingiardAccessibilityService? = null
+        private val _isAutoSetupActive = MutableStateFlow(false)
 
-        val isAutoSetupActive: Boolean
-            get() = _isAutoSetupActive
+        @Volatile private var appToRestoreAfterSetup: String? = null
+
+        val isAutoSetupActive: StateFlow<Boolean> = _isAutoSetupActive.asStateFlow()
 
         /**
          * Returns true if the service instance is active and connected.
@@ -962,7 +945,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 return
             }
 
-            _isAutoSetupActive = true
+            _isAutoSetupActive.value = true
 
             val devModeActive = isDevModeActive(context)
             val usbActive = isUsbDebuggingActive(context)
@@ -985,9 +968,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 "startMultiStageAutoSetup: Connect/bootstrap failed despite saved credentials. Falling back to Stage C (Pairing).",
                             )
                             withContext(Dispatchers.Main) {
-                                inst.autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
                                 inst.autoToggleStage = AutoToggleStage.TOGGLE_WIRELESS_DEBUG
-                                _isAutoSetupActive = true
+                                _isAutoSetupActive.value = true
                                 launchSettingsScreenWarmedUp(
                                     context,
                                     Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS,
@@ -998,7 +980,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 }
                             }
                         } else {
-                            _isAutoSetupActive = false
+                            _isAutoSetupActive.value = false
                             withContext(Dispatchers.Main) {
                                 restoreTopScreenApp(context)
                             }
@@ -1007,16 +989,9 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     return
                 }
                 Toast.makeText(context, R.string.privd_toast_all_set, Toast.LENGTH_LONG).show()
-                _isAutoSetupActive = false
+                _isAutoSetupActive.value = false
                 return
             }
-
-            val targetStage =
-                if (!wirelessActive && paired && devModeActive) {
-                    AutoSetupTargetStage.STAGE_B_WIRELESS_DEBUG
-                } else {
-                    AutoSetupTargetStage.STAGE_C_PAIRING
-                }
 
             val initialStage =
                 when {
@@ -1025,9 +1000,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     else -> AutoToggleStage.TOGGLE_WIRELESS_DEBUG
                 }
 
-            inst.autoSetupTargetStage = targetStage
             inst.autoToggleStage = initialStage
-            _isAutoSetupActive = true
+            _isAutoSetupActive.value = true
 
             val actionToLaunch =
                 if (initialStage == AutoToggleStage.ACTIVATE_DEV_MODE) {

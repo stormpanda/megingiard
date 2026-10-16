@@ -1,6 +1,9 @@
 package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 private const val TAG = "RetroArchLplParser"
 
@@ -11,31 +14,40 @@ private val EXT_NES = setOf("nes", "fds")
 private val EXT_PS1 = setOf("pbp", "chd", "cue")
 private val EXT_GENESIS = setOf("md", "gen", "smd")
 
+@Serializable
+internal data class RetroArchPlaylist(
+    val items: List<RetroArchPlaylistItem> = emptyList(),
+)
+
+@Serializable
+internal data class RetroArchPlaylistItem(
+    val path: String? = null,
+    val label: String? = null,
+    @SerialName("core_path")
+    val corePath: String? = null,
+    @SerialName("core_name")
+    val coreName: String? = null,
+)
+
 /**
  * Pure Kotlin parser for RetroArch `content_history.lpl` and system playlist JSON files.
  */
 object RetroArchLplParser {
+    private val json = Json { ignoreUnknownKeys = true }
+
     fun parseMostRecentSession(
         packageName: String,
         jsonContent: String,
     ): ActiveGameSession? {
         if (jsonContent.isBlank()) return null
         return try {
-            val itemsIndex = jsonContent.indexOf("\"items\"")
-            if (itemsIndex == -1) return null
-            val firstBraceIndex = jsonContent.indexOf('{', itemsIndex)
-            if (firstBraceIndex == -1) return null
-            val closeBraceIndex = jsonContent.indexOf('}', firstBraceIndex)
-            if (closeBraceIndex == -1 || closeBraceIndex <= firstBraceIndex) return null
+            val playlist = json.decodeFromString<RetroArchPlaylist>(jsonContent)
+            val first = playlist.items.firstOrNull() ?: return null
 
-            val firstItemBlock = jsonContent.substring(firstBraceIndex, closeBraceIndex + 1)
-
-            val path = extractJsonField(firstItemBlock, "path")
-            val label = extractJsonField(firstItemBlock, "label")
-            val corePath = extractJsonField(firstItemBlock, "core_path")
-            val coreName = extractJsonField(firstItemBlock, "core_name")
-
-            if (path == null) return null
+            val path = first.path?.takeIf { it.isNotBlank() } ?: return null
+            val label = first.label?.takeIf { it.isNotBlank() }
+            val corePath = first.corePath?.takeIf { it.isNotBlank() }
+            val coreName = first.coreName?.takeIf { it.isNotBlank() }
 
             val gameTitle = deriveGameTitle(label, path) ?: return null
             val systemId = resolveSystemId(path, corePath, coreName)
@@ -54,16 +66,6 @@ object RetroArchLplParser {
             AppLog.w(TAG, "parseMostRecentSession: failed to parse LPL JSON - $e")
             null
         }
-    }
-
-    private fun extractJsonField(
-        json: String,
-        fieldName: String,
-    ): String? {
-        val pattern = Regex(""""$fieldName"\s*:\s*"(.*?)(?<!\\)"""")
-        val match = pattern.find(json) ?: return null
-        val value = match.groupValues[1]
-        return value.replace("\\\"", "\"").replace("\\\\", "\\").takeIf { it.isNotBlank() }
     }
 
     fun deriveGameTitle(

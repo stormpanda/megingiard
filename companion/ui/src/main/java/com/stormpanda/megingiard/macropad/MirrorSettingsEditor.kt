@@ -283,7 +283,6 @@ internal fun CutoutSettingsSubPageContent(
             cardFocusRequester = projectionFocusRequester,
             onConfirm = {
                 onUpdateCutout(cutout.copy(touchProjectionEnabled = true, interactivePanZoom = false), true)
-                ScreenCaptureManager.setLocked(true)
                 restoreFocusTrigger++
             },
         )
@@ -303,9 +302,6 @@ internal fun CutoutSettingsSubPageContent(
                     ),
                     false,
                 )
-                if (isChecked) {
-                    ScreenCaptureManager.setLocked(true)
-                }
             },
         )
     }
@@ -404,8 +400,9 @@ internal fun CutoutAdvancedSettingsSubPageContent(
 ) {
     AppLog.d(TAG, "CutoutAdvancedSettingsSubPageContent: cutout=${cutout.id}")
     val context = LocalContext.current
-    val isCalibrating by VisualAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
-    val lastTunedPercent by VisualAutoTuneCoordinator.lastTunedPercent.collectAsStateWithLifecycle()
+    val autoTuneState by VisualAutoTuneCoordinator.uiState.collectAsStateWithLifecycle()
+    val isCalibrating = autoTuneState.isCalibrating
+    val lastTunedPercent = autoTuneState.lastTunedPercent
     var calibrationRevision by remember { mutableIntStateOf(0) }
 
     if (isCalibrating) {

@@ -16,7 +16,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.io.File
 
-private const val TAG = "GameFocusGalleryManagerTest"
+private const val TAG = "GFGalleryManagerTest"
 private const val TEST_GALLERIES_FILE = "gamefocus_galleries.json"
 
 @RunWith(RobolectricTestRunner::class)

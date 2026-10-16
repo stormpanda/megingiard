@@ -25,15 +25,14 @@ import java.security.SecureRandom
 import java.util.concurrent.LinkedBlockingQueue
 
 private const val TAG = "PrivdClient"
-private const val PORT_RELEASE_START = 51234
-private const val PORT_DEBUG_START = 51244
 
-@Volatile private var portStart = PORT_RELEASE_START
+@Volatile private var port = PrivdConstants.PORT_RELEASE_START
 
-@Volatile private var portEnd = PORT_RELEASE_START + 4
 private const val CONNECT_TIMEOUT_MS = 500
 private const val PING_TIMEOUT_MS = 1_500L
-private const val MIRROR_DIRECT_START_TIMEOUT_MS = 4_000L
+
+// Daemon polls ServiceManager up to 6s for Binder registration; timeout must exceed that.
+private const val MIRROR_DIRECT_START_TIMEOUT_MS = 7_500L
 private const val MIRROR_STOP_TIMEOUT_MS = 3_000L
 private const val SCREENSHOT_TIMEOUT_MS = 4_000L
 private const val READ_FILE_TIMEOUT_MS = 5_000L
@@ -45,12 +44,13 @@ private const val NONCE_HEX_LEN = 32 // 16 nonce bytes → 32 hex chars
 private const val HMAC_HEX_LEN = 64 // SHA-256 digest → 64 hex chars
 
 /**
- * Async LocalSocket transport to the `megingiard_privd` daemon.
+ * Async loopback TCP transport to the `megingiard_privd` daemon.
  *
- * The daemon is bootstrapped via the privileged ADB shell channel (see
- * `PrivdManager`) and binds the abstract Unix socket `@megingiard.privd`.
- * After bootstrap, the app process — running in the unprivileged
- * `untrusted_app` SELinux domain — connects to that socket and pipes
+ * The daemon is bootstrapped via the privileged root bridge or ADB shell channel
+ * (see `PrivdManager`) and listens on `127.0.0.1` (release port `51234`,
+ * debug port `51244`). After bootstrap, the app process — running in
+ * the unprivileged `untrusted_app` SELinux domain — connects over loopback TCP,
+ * completes an HMAC-SHA256 challenge-response handshake, and pipes
  * feature-prefixed ASCII commands.
  *
  * ### Threading model
@@ -75,9 +75,7 @@ object PrivdClient {
 
     internal fun setStateForTesting(newState: PrivdConnectionState?) {
         isConnectedForTest = if (newState == null) null else (newState == PrivdConnectionState.CONNECTED)
-        if (newState != null) {
-            _state.value = newState
-        }
+        _state.value = newState ?: PrivdConnectionState.DISCONNECTED
     }
 
     private val commandMutex = Mutex()
@@ -127,18 +125,13 @@ object PrivdClient {
      * The decryption involves a short (~10 ms) hardware-backed Keystore operation.
      */
     fun setPackageName(name: String) {
-        val isDebug = name.contains(".debug")
-        portStart = if (isDebug) PORT_DEBUG_START else PORT_RELEASE_START
-        portEnd = portStart + 4
-        AppLog.d(TAG, "setPackageName: $name -> port range $portStart..$portEnd")
+        val isDebug = PrivdConstants.isDebugPackageName(name)
+        port = PrivdConstants.getPortStart(isDebug)
+        AppLog.d(TAG, "setPackageName: $name -> port $port")
     }
 
-    internal fun setPortRangeForTesting(
-        start: Int,
-        end: Int = start,
-    ) {
-        portStart = start
-        portEnd = end
+    internal fun setPortForTesting(testPort: Int) {
+        port = testPort
     }
 
     fun loadKey(context: Context) {
@@ -174,29 +167,12 @@ object PrivdClient {
 
     @Volatile private var running = false
 
+    private val stateLock = Any()
+    private val connectLock = Any()
+
     private val queue = LinkedBlockingQueue<String>()
 
-    @Volatile private var pingDeferred: CompletableDeferred<Boolean>? = null
-
-    @Volatile private var mirrorDirectStartDeferred: CompletableDeferred<Boolean>? = null
-
-    @Volatile private var mirrorStopDeferred: CompletableDeferred<Boolean>? = null
-
-    @Volatile private var screenshotDeferred: CompletableDeferred<Boolean>? = null
-
-    @Volatile private var readFileDeferred: CompletableDeferred<String?>? = null
-
-    @Volatile private var isCapturingReadFile = false
-
-    private val readFileDumpBuilder = StringBuilder()
-
-    @Volatile private var listProcessesDeferred: CompletableDeferred<String?>? = null
-
-    @Volatile private var isCapturingProcesses = false
-
-    private val processesDumpBuilder = StringBuilder()
-
-    private val dumpLock = Any()
+    @Volatile private var pendingRpc: PendingRpc? = null
 
     @Volatile internal var isConnectedForTest: Boolean? = null
 
@@ -204,76 +180,84 @@ object PrivdClient {
         get() = isConnectedForTest ?: (running && (socket?.isConnected == true) && (socket?.isClosed == false))
 
     /**
-     * Attempts to connect to the local TCP port range.
+     * Attempts to connect to the canonical local TCP port.
      * Returns `true` on success, `false` if the daemon is not listening.
      */
-    @Synchronized
-    fun connect(): Boolean {
-        isConnectedForTest = null
-        if (isConnected) return true
-        cleanupLocked()
-        _state.value = PrivdConnectionState.CONNECTING
-        val key = hmacKeyBytes
-        if (key == null) {
-            AppLog.w(TAG, "connect(): no per-install key provisioned — run Privileged Mode setup wizard")
-            _state.value = PrivdConnectionState.DISCONNECTED
-            return false
-        }
-        for (port in portStart..portEnd) {
+    fun connect(): Boolean =
+        synchronized(connectLock) {
+            synchronized(stateLock) {
+                isConnectedForTest = null
+                if (isConnected) return true
+                cleanupLocked()
+                _state.value = PrivdConnectionState.CONNECTING
+            }
+            val key = hmacKeyBytes
+            if (key == null) {
+                AppLog.w(TAG, "connect(): no per-install key provisioned — run Privileged Mode setup wizard")
+                synchronized(stateLock) {
+                    _state.value = PrivdConnectionState.DISCONNECTED
+                }
+                return false
+            }
+            val targetPort = port
             try {
-                AppLog.d(TAG, "connect(): trying 127.0.0.1:$port")
+                AppLog.d(TAG, "connect(): trying 127.0.0.1:$targetPort")
                 val s = Socket()
-                s.connect(InetSocketAddress("127.0.0.1", port), CONNECT_TIMEOUT_MS)
+                s.connect(InetSocketAddress("127.0.0.1", targetPort), CONNECT_TIMEOUT_MS)
 
                 val w = BufferedWriter(OutputStreamWriter(s.outputStream))
                 val r = BufferedReader(InputStreamReader(s.inputStream))
 
                 if (performHmacHandshake(s, r, w, key)) {
-                    socket = s
-                    writer = w
-                    reader = r
-                    queue.clear()
-                    running = true
-                    writerThread =
-                        Thread(::writerLoop, WRITER_THREAD_NAME).apply {
-                            isDaemon = true
-                            start()
-                        }
-                    readerThread =
-                        Thread(::readerLoop, READER_THREAD_NAME).apply {
-                            isDaemon = true
-                            start()
-                        }
-                    _state.value = PrivdConnectionState.CONNECTED
-                    AppLog.i(TAG, "connect() succeeded on port $port")
+                    synchronized(stateLock) {
+                        socket = s
+                        writer = w
+                        reader = r
+                        queue.clear()
+                        running = true
+                        writerThread =
+                            Thread(::writerLoop, WRITER_THREAD_NAME).apply {
+                                isDaemon = true
+                                start()
+                            }
+                        readerThread =
+                            Thread(::readerLoop, READER_THREAD_NAME).apply {
+                                isDaemon = true
+                                start()
+                            }
+                        _state.value = PrivdConnectionState.CONNECTED
+                    }
+                    AppLog.i(TAG, "connect() succeeded on port $targetPort")
                     return true
                 } else {
-                    AppLog.w(TAG, "connect(): HMAC handshake failed on port $port")
+                    AppLog.w(TAG, "connect(): HMAC handshake failed on port $targetPort")
                     try {
                         s.close()
                     } catch (_: Exception) {
                     }
                 }
             } catch (e: Exception) {
-                AppLog.d(TAG, "connect(): port $port not available — $e")
+                AppLog.d(TAG, "connect(): port $targetPort not available — $e")
             }
+            AppLog.w(TAG, "connect() failed: daemon not reachable on port $targetPort")
+            synchronized(stateLock) {
+                cleanupLocked()
+                _state.value = PrivdConnectionState.DISCONNECTED
+            }
+            return false
         }
-        AppLog.w(TAG, "connect() failed: daemon not reachable on any port in range $portStart..$portEnd")
-        cleanupLocked()
-        _state.value = PrivdConnectionState.DISCONNECTED
-        return false
-    }
 
     /**
      * Closes the socket. Daemon stays alive (continues to listen for the
      * next client).
      */
-    @Synchronized
     fun disconnect() {
-        if (!running && socket == null) return
-        AppLog.i(TAG, "disconnect()")
-        cleanupLocked()
-        _state.value = PrivdConnectionState.DISCONNECTED
+        synchronized(stateLock) {
+            if (!running && socket == null) return
+            AppLog.i(TAG, "disconnect()")
+            cleanupLocked()
+            _state.value = PrivdConnectionState.DISCONNECTED
+        }
     }
 
     /**
@@ -291,22 +275,53 @@ object PrivdClient {
 
     internal val queueSizeForTest: Int get() = queue.size
 
+    private suspend fun executeBooleanRpc(
+        command: String,
+        timeoutMs: Long,
+        rpc: PendingRpc.SingleLine,
+    ): Boolean =
+        commandMutex.withLock {
+            if (!isConnected) return false
+            pendingRpc = rpc
+            try {
+                send(command)
+                withTimeoutOrNull(timeoutMs) { rpc.deferred.await() } ?: false
+            } finally {
+                pendingRpc = null
+            }
+        }
+
+    private suspend fun executeMultiLineRpc(
+        command: String,
+        timeoutMs: Long,
+        rpc: PendingRpc.MultiLine,
+    ): String? =
+        commandMutex.withLock {
+            if (!isConnected) return null
+            pendingRpc = rpc
+            try {
+                send(command)
+                withTimeoutOrNull(timeoutMs) { rpc.deferred.await() }
+            } finally {
+                pendingRpc = null
+            }
+        }
+
     /**
      * Round-trips a `PING` and waits for `PONG`. Returns `true` on success,
      * `false` on timeout or transport error. Useful as a health-check from
      * the Privileged Mode settings card.
      */
-    suspend fun ping(): Boolean =
-        commandMutex.withLock {
-            if (!isConnected) return false
-            val deferred = CompletableDeferred<Boolean>()
-            pingDeferred = deferred
-            send("PING\n")
-            val ok = withTimeoutOrNull(PING_TIMEOUT_MS) { deferred.await() } ?: false
-            pingDeferred = null
-            AppLog.d(TAG, "ping() → $ok")
-            return ok
-        }
+    suspend fun ping(): Boolean {
+        val ok =
+            executeBooleanRpc(
+                command = "PING\n",
+                timeoutMs = PING_TIMEOUT_MS,
+                rpc = PendingRpc.SingleLine(successPrefix = "PONG"),
+            )
+        AppLog.d(TAG, "ping() → $ok")
+        return ok
+    }
 
     /**
      * Requests the daemon to start the direct-Surface privileged mirror path.
@@ -315,75 +330,87 @@ object PrivdClient {
     suspend fun startDirectMirror(
         width: Int,
         height: Int,
-    ): Boolean =
-        commandMutex.withLock {
-            if (!isConnected) return false
-            val deferred = CompletableDeferred<Boolean>()
-            mirrorDirectStartDeferred = deferred
-            send("MIRROR START_DIRECT $width $height\n")
-            val ok = withTimeoutOrNull(MIRROR_DIRECT_START_TIMEOUT_MS) { deferred.await() } ?: false
-            mirrorDirectStartDeferred = null
-            AppLog.i(TAG, "startDirectMirror($width x $height -> app surface) -> $ok")
-            return ok
-        }
+    ): Boolean {
+        val ok =
+            executeBooleanRpc(
+                command = "MIRROR START_DIRECT $width $height\n",
+                timeoutMs = MIRROR_DIRECT_START_TIMEOUT_MS,
+                rpc =
+                    PendingRpc.SingleLine(
+                        successPrefix = "MIRROR_DIRECT_READY",
+                        errorPrefix = "MIRROR_DIRECT_ERR",
+                        exactSuccessMatch = false,
+                    ),
+            )
+        AppLog.i(TAG, "startDirectMirror($width x $height -> app surface) -> $ok")
+        return ok
+    }
 
     /**
      * Stops the privileged-mirror server child. Returns `true` if the daemon
      * acknowledged with `MIRROR_STOPPED`, `false` on timeout / disconnect.
      */
-    suspend fun stopMirror(): Boolean =
-        commandMutex.withLock {
-            if (!isConnected) return false
-            val deferred = CompletableDeferred<Boolean>()
-            mirrorStopDeferred = deferred
-            send("MIRROR STOP\n")
-            val ok = withTimeoutOrNull(MIRROR_STOP_TIMEOUT_MS) { deferred.await() } ?: false
-            mirrorStopDeferred = null
-            AppLog.i(TAG, "stopMirror() → $ok")
-            return ok
-        }
+    suspend fun stopMirror(): Boolean {
+        val ok =
+            executeBooleanRpc(
+                command = "MIRROR STOP\n",
+                timeoutMs = MIRROR_STOP_TIMEOUT_MS,
+                rpc = PendingRpc.SingleLine(successPrefix = "MIRROR_STOPPED"),
+            )
+        AppLog.i(TAG, "stopMirror() → $ok")
+        return ok
+    }
 
     suspend fun takeScreenshot(
         path: String,
         displayId: Int? = null,
-    ): Boolean =
-        commandMutex.withLock {
-            if (!isConnected) return false
-            val deferred = CompletableDeferred<Boolean>()
-            screenshotDeferred = deferred
-            val cmd = if (displayId != null) "SCREENSHOT $displayId $path\n" else "SCREENSHOT $path\n"
-            send(cmd)
-            val ok = withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) { deferred.await() } ?: false
-            screenshotDeferred = null
-            AppLog.i(TAG, "takeScreenshot($path, displayId=$displayId) -> $ok")
-            return ok
-        }
+    ): Boolean {
+        val cmd = if (displayId != null) "SCREENSHOT $displayId $path\n" else "SCREENSHOT $path\n"
+        val ok =
+            executeBooleanRpc(
+                command = cmd,
+                timeoutMs = SCREENSHOT_TIMEOUT_MS,
+                rpc =
+                    PendingRpc.SingleLine(
+                        successPrefix = "SCREENSHOT_OK",
+                        errorPrefix = "SCREENSHOT_ERR",
+                    ),
+            )
+        AppLog.i(TAG, "takeScreenshot($path, displayId=$displayId) -> $ok")
+        return ok
+    }
 
-    suspend fun readTextFile(path: String): String? =
-        commandMutex.withLock {
-            if (!isConnected) return null
-            val deferred = CompletableDeferred<String?>()
-            readFileDeferred = deferred
-            send("READ_FILE $path\n")
-            val result = withTimeoutOrNull(READ_FILE_TIMEOUT_MS) { deferred.await() }
-            readFileDeferred = null
-            isCapturingReadFile = false
-            AppLog.i(TAG, "readTextFile($path) fetched ${result?.length ?: 0} bytes")
-            return result
-        }
+    suspend fun readTextFile(path: String): String? {
+        val result =
+            executeMultiLineRpc(
+                command = "READ_FILE $path\n",
+                timeoutMs = READ_FILE_TIMEOUT_MS,
+                rpc =
+                    PendingRpc.MultiLine(
+                        beginMarker = "READ_BEGIN",
+                        endMarker = "READ_END",
+                        errorPrefix = "READ_ERR",
+                    ),
+            )
+        AppLog.i(TAG, "readTextFile($path) fetched ${result?.length ?: 0} bytes")
+        return result
+    }
 
-    suspend fun getRunningProcesses(): String? =
-        commandMutex.withLock {
-            if (!isConnected) return null
-            val deferred = CompletableDeferred<String?>()
-            listProcessesDeferred = deferred
-            send("LIST_PROCESSES\n")
-            val result = withTimeoutOrNull(READ_FILE_TIMEOUT_MS) { deferred.await() }
-            listProcessesDeferred = null
-            isCapturingProcesses = false
-            AppLog.i(TAG, "getRunningProcesses() fetched ${result?.length ?: 0} bytes")
-            return result
-        }
+    suspend fun getRunningProcesses(): String? {
+        val result =
+            executeMultiLineRpc(
+                command = "LIST_PROCESSES\n",
+                timeoutMs = READ_FILE_TIMEOUT_MS,
+                rpc =
+                    PendingRpc.MultiLine(
+                        beginMarker = "PROC_BEGIN",
+                        endMarker = "PROC_END",
+                        errorPrefix = "PROC_ERR",
+                    ),
+            )
+        AppLog.i(TAG, "getRunningProcesses() fetched ${result?.length ?: 0} bytes")
+        return result
+    }
 
     fun subscribeTouch() {
         AppLog.d(TAG, "subscribeTouch() -> sending 'SUB TOUCH\\n'")
@@ -401,63 +428,18 @@ object PrivdClient {
 
     private fun writerLoop() {
         while (running) {
-            var line =
+            val line =
                 try {
                     queue.take()
                 } catch (_: InterruptedException) {
                     break
                 }
-            if (line.startsWith("MM ")) {
-                var dx = 0
-                var dy = 0
-                var parsedOk = false
-                try {
-                    val parts = line.trim().split(' ')
-                    if (parts.size == 3) {
-                        dx = parts[1].toInt()
-                        dy = parts[2].toInt()
-                        parsedOk = true
-                    }
-                } catch (_: Exception) {
-                }
-
-                if (parsedOk) {
-                    while (true) {
-                        val next = queue.peek() ?: break
-                        if (!next.startsWith("MM ")) break
-                        queue.poll()
-                        try {
-                            val parts = next.trim().split(' ')
-                            if (parts.size == 3) {
-                                dx += parts[1].toInt()
-                                dy += parts[2].toInt()
-                            }
-                        } catch (_: Exception) {
-                        }
-                    }
-                    line = "MM $dx $dy\n"
-                }
-            } else if (line.startsWith("M ")) {
-                try {
-                    val parts = line.trim().split(' ')
-                    if (parts.size == 4) {
-                        val slot = parts[1].toInt()
-                        while (true) {
-                            val next = queue.peek() ?: break
-                            if (!next.startsWith("M ")) break
-                            val nextParts = next.trim().split(' ')
-                            if (nextParts.size != 4 || nextParts[1].toInt() != slot) break
-                            queue.poll()
-                            line = next
-                        }
-                    }
-                } catch (_: Exception) {
-                }
-            }
             val w = writer ?: break
             try {
                 w.write(line)
-                w.flush()
+                if (queue.isEmpty()) {
+                    w.flush()
+                }
             } catch (e: Exception) {
                 AppLog.w(TAG, "writerLoop failed: $e")
                 markBroken()
@@ -478,76 +460,7 @@ object PrivdClient {
                     AppLog.w(TAG, "readerLoop failed: $e")
                     break
                 }
-            when (line) {
-                "PONG" -> {
-                    pingDeferred?.complete(true)
-                    continue
-                }
-
-                "MIRROR_STOPPED" -> {
-                    mirrorStopDeferred?.complete(true)
-                    continue
-                }
-
-                "SCREENSHOT_OK" -> {
-                    screenshotDeferred?.complete(true)
-                    continue
-                }
-
-                "READ_BEGIN" -> {
-                    isCapturingReadFile = true
-                    synchronized(dumpLock) { readFileDumpBuilder.clear() }
-                    continue
-                }
-
-                "READ_END" -> {
-                    isCapturingReadFile = false
-                    val content = synchronized(dumpLock) { readFileDumpBuilder.toString().also { readFileDumpBuilder.clear() } }
-                    readFileDeferred?.complete(content)
-                    continue
-                }
-
-                "PROC_BEGIN" -> {
-                    isCapturingProcesses = true
-                    synchronized(dumpLock) { processesDumpBuilder.clear() }
-                    continue
-                }
-
-                "PROC_END" -> {
-                    isCapturingProcesses = false
-                    val content = synchronized(dumpLock) { processesDumpBuilder.toString().also { processesDumpBuilder.clear() } }
-                    listProcessesDeferred?.complete(content)
-                    continue
-                }
-            }
-            if (line.startsWith("MIRROR_DIRECT_READY")) {
-                mirrorDirectStartDeferred?.complete(true)
-                continue
-            }
-            if (line.startsWith("MIRROR_DIRECT_ERR")) {
-                mirrorDirectStartDeferred?.complete(false)
-                continue
-            }
-            if (line.startsWith("SCREENSHOT_ERR")) {
-                screenshotDeferred?.complete(false)
-                continue
-            }
-            if (line.startsWith("READ_ERR")) {
-                isCapturingReadFile = false
-                readFileDeferred?.complete(null)
-                continue
-            }
-            if (line.startsWith("PROC_ERR")) {
-                isCapturingProcesses = false
-                listProcessesDeferred?.complete(null)
-                continue
-            }
-            if (isCapturingReadFile) {
-                synchronized(dumpLock) { readFileDumpBuilder.append(line).append('\n') }
-                continue
-            }
-            if (isCapturingProcesses) {
-                synchronized(dumpLock) { processesDumpBuilder.append(line).append('\n') }
+            if (pendingRpc?.onLine(line) == true) {
                 continue
             }
             if (line.startsWith("EVT ")) {
@@ -579,40 +492,29 @@ object PrivdClient {
     }
 
     private fun markBroken() {
-        if (!running) return
-        running = false
-        _state.value = PrivdConnectionState.DISCONNECTED
-        // Schedule full cleanup on a daemon thread so the socket fd is released
-        // and the writer thread is unblocked. We can't call disconnect() directly
-        // here because the caller (writer / reader thread) may be called while
-        // the main thread is inside another @Synchronized function, causing a
-        // deadlock. Scheduling on a new thread avoids that race.
-        Thread { disconnect() }.also { it.isDaemon = true }.start()
+        val shouldNotify =
+            synchronized(stateLock) {
+                if (!running) {
+                    false
+                } else {
+                    cleanupLocked()
+                    _state.value = PrivdConnectionState.DISCONNECTED
+                    true
+                }
+            }
+        if (shouldNotify) {
+            AppLog.w(TAG, "markBroken: connection lost, cleaned up socket")
+            PrivdManager.onClientDisconnected()
+        }
     }
 
-    /** Must be invoked from a synchronized block. */
+    /** Must be invoked while holding [stateLock]. */
     private fun cleanupLocked() {
         isConnectedForTest = null
         running = false
         queue.clear()
-        pingDeferred?.complete(false)
-        pingDeferred = null
-        mirrorDirectStartDeferred?.complete(false)
-        mirrorDirectStartDeferred = null
-        mirrorStopDeferred?.complete(false)
-        mirrorStopDeferred = null
-        screenshotDeferred?.complete(false)
-        screenshotDeferred = null
-        readFileDeferred?.complete(null)
-        readFileDeferred = null
-        isCapturingReadFile = false
-        listProcessesDeferred?.complete(null)
-        listProcessesDeferred = null
-        isCapturingProcesses = false
-        synchronized(dumpLock) {
-            readFileDumpBuilder.clear()
-            processesDumpBuilder.clear()
-        }
+        pendingRpc?.cancel()
+        pendingRpc = null
         writerThread?.interrupt()
         readerThread?.interrupt()
         writerThread = null
@@ -744,6 +646,78 @@ object PrivdClient {
         } catch (e: Exception) {
             AppLog.w(TAG, "handshake: exception — $e")
             false
+        }
+    }
+}
+
+internal sealed class PendingRpc {
+    abstract fun onLine(line: String): Boolean
+
+    abstract fun cancel()
+
+    class SingleLine(
+        private val successPrefix: String,
+        private val errorPrefix: String? = null,
+        private val exactSuccessMatch: Boolean = true,
+    ) : PendingRpc() {
+        val deferred = CompletableDeferred<Boolean>()
+
+        override fun onLine(line: String): Boolean {
+            val matchedSuccess =
+                if (exactSuccessMatch) line == successPrefix else line.startsWith(successPrefix)
+            if (matchedSuccess) {
+                deferred.complete(true)
+                return true
+            }
+            if (errorPrefix != null && line.startsWith(errorPrefix)) {
+                deferred.complete(false)
+                return true
+            }
+            return false
+        }
+
+        override fun cancel() {
+            deferred.complete(false)
+        }
+    }
+
+    class MultiLine(
+        private val beginMarker: String,
+        private val endMarker: String,
+        private val errorPrefix: String,
+    ) : PendingRpc() {
+        val deferred = CompletableDeferred<String?>()
+        private var capturing = false
+        private val buffer = StringBuilder()
+
+        override fun onLine(line: String): Boolean {
+            if (line == beginMarker) {
+                capturing = true
+                buffer.clear()
+                return true
+            }
+            if (line == endMarker) {
+                capturing = false
+                deferred.complete(buffer.toString())
+                buffer.clear()
+                return true
+            }
+            if (line.startsWith(errorPrefix)) {
+                capturing = false
+                buffer.clear()
+                deferred.complete(null)
+                return true
+            }
+            if (capturing) {
+                buffer.append(line).append('\n')
+                return true
+            }
+            return false
+        }
+
+        override fun cancel() {
+            capturing = false
+            deferred.complete(null)
         }
     }
 }

@@ -20,7 +20,9 @@ import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,6 +41,7 @@ import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.ui.BumperDirection
+import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCardRow
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
@@ -50,20 +53,45 @@ import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private const val CF_RESTORE_COUNTDOWN_SECONDS = 5
+private const val CF_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
+private const val CF_RESTORE_CONFIRM_TIMEOUT_MS = 8_000L
+private val CF_REVIEW_CARD_SPACING = 8.dp
+private val CF_REVIEW_DETAILS_START_PADDING = 48.dp
+private val CF_REVIEW_DETAILS_VERTICAL_PADDING = 4.dp
+
 @Composable
 fun ConfigurationSettingsTab(
-    deleteCountdown: Int,
     onExportBackup: () -> Unit,
     onRestoreBackup: () -> Unit,
     onShareProfile: () -> Unit,
     onImportProfile: () -> Unit,
-    onDeleteCountdownClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+    var deleteCountdown by rememberSaveable { mutableIntStateOf(-1) }
+    var isCountingDown by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(isCountingDown) {
+        if (isCountingDown) {
+            deleteCountdown = CF_RESTORE_COUNTDOWN_SECONDS
+            while (deleteCountdown > 0) {
+                delay(CF_RESTORE_COUNTDOWN_INTERVAL_MS)
+                deleteCountdown--
+            }
+            isCountingDown = false
+            delay(CF_RESTORE_CONFIRM_TIMEOUT_MS)
+            if (deleteCountdown == 0) {
+                deleteCountdown = -1
+            }
+        }
+    }
+
     GamepadActionCard(
         title = stringResource(R.string.settings_config_export),
         description = stringResource(R.string.help_settings_export_desc),
@@ -124,7 +152,23 @@ fun ConfigurationSettingsTab(
         },
         isDestructive = true,
         icon = Icons.Rounded.Delete,
-        onClick = onDeleteCountdownClick,
+        onClick = {
+            when {
+                deleteCountdown > 0 -> {}
+
+                deleteCountdown == 0 -> {
+                    MacroPadState.restoreDefaults()
+                    DialogToastManager.show(
+                        context.getString(R.string.settings_restore_defaults_toast),
+                    )
+                    deleteCountdown = -1
+                }
+
+                else -> {
+                    isCountingDown = true
+                }
+            }
+        },
     )
 }
 
@@ -322,11 +366,7 @@ fun RestoreReviewSubPage(
     val profilesCount = export.profiles.size
     val layoutsCount = export.profiles.sumOf { it.layouts.size }
     val macrosCount = export.profiles.sumOf { it.macros.size }
-    val imageCount =
-        ConfigManager.getPendingInAppImageCount().takeIf { it > 0 }
-            ?: export.profiles.sumOf { p ->
-                p.layouts.count { !it.backgroundImagePath.isNullOrEmpty() || !it.maskImagePath.isNullOrEmpty() }
-            }
+    val imageCount = ConfigManager.getPendingInAppImageCount()
 
     val includedSections =
         listOf(
@@ -338,13 +378,21 @@ fun RestoreReviewSubPage(
         ).filter { it.first in export.settings }.map { stringResource(it.second) }
 
     val summarySubtitle =
-        buildString {
-            append(
-                "$profilesCount ${if (profilesCount == 1) "profile" else "profiles"} • $layoutsCount ${if (layoutsCount == 1) "layout" else "layouts"} • $macrosCount ${if (macrosCount == 1) "macro" else "macros"}",
+        if (imageCount > 0) {
+            stringResource(
+                R.string.config_restore_option_internal_sub_with_backgrounds,
+                profilesCount,
+                layoutsCount,
+                macrosCount,
+                imageCount,
             )
-            if (imageCount > 0) {
-                append(" • $imageCount background${if (imageCount == 1) "" else "s"}")
-            }
+        } else {
+            stringResource(
+                R.string.config_restore_option_internal_sub,
+                profilesCount,
+                layoutsCount,
+                macrosCount,
+            )
         }
 
     GamepadFocusCard(
@@ -353,7 +401,7 @@ fun RestoreReviewSubPage(
     ) { isFocused ->
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(CF_REVIEW_CARD_SPACING),
         ) {
             GamepadCardRow(
                 title =
@@ -379,8 +427,12 @@ fun RestoreReviewSubPage(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(start = 48.dp, top = 4.dp, bottom = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                            .padding(
+                                start = CF_REVIEW_DETAILS_START_PADDING,
+                                top = CF_REVIEW_DETAILS_VERTICAL_PADDING,
+                                bottom = CF_REVIEW_DETAILS_VERTICAL_PADDING,
+                            ),
+                    verticalArrangement = Arrangement.spacedBy(CF_REVIEW_DETAILS_VERTICAL_PADDING),
                 ) {
                     if (!descText.isNullOrBlank()) {
                         Text(

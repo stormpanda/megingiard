@@ -18,9 +18,8 @@ class PrivdPairScreenTextScannerTest {
         port: String?,
         isComplete: Boolean,
         connectPort: Int = 0,
-        langConfig: AutoSetupLanguageConfig = AutoSetupLanguageConfig.ENGLISH,
     ) {
-        val result = PrivdPairScreenTextScanner.parsePairingInfoFromText(text, langConfig)
+        val result = PrivdPairScreenTextScanner.parsePairingInfoFromText(text)
         assertEquals(code, result.code)
         assertEquals(port, result.port)
         assertEquals(isComplete, result.isComplete)
@@ -47,7 +46,7 @@ class PrivdPairScreenTextScannerTest {
     @Test
     fun parsePairingInfoFromText_extractsCodeAndPortFromGermanSampleText() {
         val sample = "22:15\nDebugging über WLAN\nGerät über einen Kopplungscode koppeln\nWLAN-Kopplungscode\n849201\nIP-Adresse & Port\n192.168.178.50:41209\nABBRECHEN"
-        assertPairing(sample, "849201", "41209", true, langConfig = AutoSetupLanguageConfig.GERMAN)
+        assertPairing(sample, "849201", "41209", true)
     }
 
     @Test

@@ -10,12 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -23,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.ui.AppPalettes
 import kotlin.math.sqrt
 
-private const val PBF_DISABLED_ALPHA = 0.38f
 private val PBF_BACKING_COLOR = AppPalettes.padButtonBacking
 private val PBF_BORDER_WIDTH = 1.dp
 
@@ -33,7 +28,6 @@ internal fun PadButtonFace(
     height: Dp,
     shape: Shape,
     isIconOnly: Boolean,
-    isDeviceDisabled: Boolean,
     borderColor: Color,
     bgColor: Color,
     modifier: Modifier = Modifier,
@@ -57,14 +51,6 @@ internal fun PadButtonFace(
             )
         }
 
-    val disabledPaint =
-        remember {
-            Paint().apply {
-                colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
-                alpha = PBF_DISABLED_ALPHA
-            }
-        }
-
     Box(
         contentAlignment = Alignment.Center,
         modifier =
@@ -76,17 +62,9 @@ internal fun PadButtonFace(
                         drawContent()
                     } else {
                         val effectiveBackingColor = PBF_BACKING_COLOR.copy(alpha = PBF_BACKING_COLOR.alpha * bgColor.alpha)
-                        if (isDeviceDisabled) {
-                            drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), disabledPaint)
-                            drawRect(color = effectiveBackingColor)
-                            drawRect(brush = bgBrush)
-                            drawContent()
-                            drawContext.canvas.restore()
-                        } else {
-                            drawRect(color = effectiveBackingColor)
-                            drawRect(brush = bgBrush)
-                            drawContent()
-                        }
+                        drawRect(color = effectiveBackingColor)
+                        drawRect(brush = bgBrush)
+                        drawContent()
                     }
                 }.then(
                     if (isIconOnly) {

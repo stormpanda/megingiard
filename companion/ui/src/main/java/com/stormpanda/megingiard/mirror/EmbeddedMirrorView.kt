@@ -46,11 +46,7 @@ fun EmbeddedMirrorView(
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsStateWithLifecycle()
     val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsStateWithLifecycle()
     val cutouts by ScreenCaptureManager.cutouts.collectAsStateWithLifecycle()
-    val edgeBlendWidthDp by ScreenCaptureManager.edgeBlendWidthDp.collectAsStateWithLifecycle()
     val maxFps by ScreenCaptureManager.maxFps.collectAsStateWithLifecycle()
-    val scale by ScreenCaptureManager.scale.collectAsStateWithLifecycle()
-    val offsetX by ScreenCaptureManager.offsetX.collectAsStateWithLifecycle()
-    val offsetY by ScreenCaptureManager.offsetY.collectAsStateWithLifecycle()
     val srcWidth by ScreenCaptureManager.captureSourceWidth.collectAsStateWithLifecycle()
     val srcHeight by ScreenCaptureManager.captureSourceHeight.collectAsStateWithLifecycle()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
@@ -113,7 +109,7 @@ fun EmbeddedMirrorView(
         remember {
             object {
                 var container: MultiCutoutContainer? = null
-                var textureView: ThrottledTextureView? = null
+                var textureView: TextureView? = null
                 var masterSurface: Surface? = null
                 var currentRoutedSurface: Surface? = null
                 var gpuMotionSmoother: GpuMotionSmoother? = null
@@ -238,7 +234,7 @@ fun EmbeddedMirrorView(
             containerHolder.container = mcc
 
             val tv =
-                ThrottledTextureView(ctx).apply {
+                TextureView(ctx).apply {
                     layoutParams =
                         FrameLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -276,7 +272,7 @@ fun EmbeddedMirrorView(
                         st.setDefaultBufferSize(currentSrcW, currentSrcH)
                         val surface = Surface(st)
                         containerHolder.masterSurface = surface
-                        MirrorFrameSampler.registerTextureView(tv, surface)
+                        MirrorFrameSampler.registerTextureView(tv)
                         try {
                             val fps = ScreenCaptureManager.maxFps.value
                             AppLog.i(TAG, "Setting initial surface frame rate to $fps FPS")
@@ -331,9 +327,6 @@ fun EmbeddedMirrorView(
             mcc.isFrozen = isFrozen
             mcc.isViewportEditActive = isViewportEditActive
             mcc.frozenBitmap = frozenBitmap
-            mcc.viewportScale = if (overrideCutouts != null) 1f else scale
-            mcc.viewportOffsetX = if (overrideCutouts != null) 0f else offsetX
-            mcc.viewportOffsetY = if (overrideCutouts != null) 0f else offsetY
             mcc.bgBitmap = bgBitmap
             mcc.bgImageScale = if (effectiveShowLayoutBackground) layout?.bgImageScale ?: 1f else 1f
             mcc.bgImageOffsetX = if (effectiveShowLayoutBackground) layout?.bgImageOffsetX ?: 0f else 0f
@@ -351,16 +344,12 @@ fun EmbeddedMirrorView(
                 if (effectiveShowLayoutBackground) layout?.maskScaleMode ?: BackgroundScaleMode.FILL else BackgroundScaleMode.FILL
             mcc.ambientDim = if (overrideCutouts == null) layout?.ambientDim ?: 0f else 0f
 
-            val tv = containerHolder.textureView
-            if (tv != null) {
-                tv.maxFps = maxFps
-                containerHolder.masterSurface?.let { surface ->
-                    if (surface.isValid) {
-                        try {
-                            surface.setFrameRate(maxFps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
-                        } catch (e: Exception) {
-                            AppLog.e(TAG, "Error updating surface frame rate", e)
-                        }
+            containerHolder.masterSurface?.let { surface ->
+                if (surface.isValid) {
+                    try {
+                        surface.setFrameRate(maxFps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Error updating surface frame rate", e)
                     }
                 }
             }

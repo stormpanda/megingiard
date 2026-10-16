@@ -8,7 +8,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
@@ -21,10 +20,8 @@ private const val TAG = "CopyDialogs"
 
 @Composable
 internal fun CopyLayoutSubPageContent(
-    title: String,
     profiles: List<PadProfile>,
     excludeProfileId: String?,
-    accentColor: Color,
     onSelect: (String) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -56,10 +53,8 @@ internal fun CopyLayoutSubPageContent(
 
 @Composable
 internal fun CopyButtonSubPageContent(
-    title: String,
     profiles: List<PadProfile>,
     excludeLayoutId: String?,
-    accentColor: Color,
     onSelect: (targetProfileId: String, targetLayoutId: String) -> Unit,
 ) {
     val colors = LocalAppColors.current

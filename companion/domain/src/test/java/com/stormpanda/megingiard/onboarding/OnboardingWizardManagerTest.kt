@@ -19,6 +19,12 @@ class OnboardingWizardManagerTest {
     fun `orderedStepIds contains all onboarding enum values`() {
         assertEquals(OnboardingStepId.entries.size, OnboardingWizardManager.orderedStepIds.size)
         assertTrue(OnboardingWizardManager.orderedStepIds.containsAll(OnboardingStepId.entries))
+        assertEquals(OnboardingStepId.entries.size, OnboardingWizardManager.steps.value.size)
+        assertTrue(
+            OnboardingWizardManager.steps.value
+                .first()
+                .isCurrent,
+        )
     }
 
     @Test
@@ -42,17 +48,13 @@ class OnboardingWizardManagerTest {
     }
 
     @Test
-    fun `finishWizard and skipWizard set isWizardActive to false`() {
+    fun `finishWizard sets isWizardActive to false`() {
         OnboardingWizardManager.startWizard(force = true)
         assertTrue(OnboardingWizardManager.isWizardActive.value)
 
         OnboardingWizardManager.finishWizard()
         assertFalse(OnboardingWizardManager.isWizardActive.value)
         assertEquals(SettingsManager.CURRENT_WELCOME_TOUR_VERSION, SettingsManager.welcomeTourCompletedVersion.value)
-
-        OnboardingWizardManager.startWizard(force = true)
-        OnboardingWizardManager.skipWizard()
-        assertFalse(OnboardingWizardManager.isWizardActive.value)
     }
 
     @Test

@@ -111,5 +111,6 @@ class ScreenCutoutTest {
         assertFalse(legacyParsed.flipHorizontal)
         assertFalse(legacyParsed.flipVertical)
         assertEquals(CutoutFlipMode.NONE, legacyParsed.flipMode)
+        assertEquals(AspectRatioMode.BOTTOM, legacyParsed.aspectRatioMode)
     }
 }

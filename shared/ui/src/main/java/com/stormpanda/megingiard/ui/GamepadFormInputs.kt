@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -56,8 +57,19 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.shared.ui.R
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
+
+private val GC_STEPPER_BTN_SIZE = 32.dp
+private val GC_SLIDER_HEIGHT = 24.dp
+private val GC_SLIDER_TRACK_HEIGHT = 8.dp
+private val GC_TEXT_SIZE_CAPSULE = 13.sp
+private val GC_CAPSULE_TEXT_WIDTH = 140.dp
+private const val GC_SLIDER_TRACK_BORDER_ALPHA = 0.25f
+private const val GC_DEFAULT_SLIDER_STEP = 0.05f
+private val GC_CORNER_4 = 4.dp
+private val GC_CORNER_4_SHAPE = RoundedCornerShape(GC_CORNER_4)
 
 @Composable
 fun CapsuleArrowButton(
@@ -160,15 +172,11 @@ fun GamepadTextFieldCard(
     placeholder: String? = null,
     icon: ImageVector? = null,
     isError: Boolean = false,
-    singleLine: Boolean = true,
     enabled: Boolean = true,
-    onLeftKey: (() -> Unit)? = null,
     itemKey: Any? = title,
-    onFullscreenKeyboardActive: ((Boolean) -> Unit)? = null,
 ) {
-    val colors = LocalAppColors.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val keyboardRequester = onFullscreenKeyboardActive ?: LocalFullscreenKeyboardRequester.current
+    val keyboardRequester = LocalFullscreenKeyboardRequester.current
     var isEditing by remember { mutableStateOf(false) }
     var hasBeenEditing by remember { mutableStateOf(false) }
     var draftValue by remember {
@@ -206,7 +214,6 @@ fun GamepadTextFieldCard(
             }
         } else if (hasBeenEditing) {
             keyboardController?.hide()
-            keyboardRequester?.invoke(false)
             try {
                 cardFocusRequester.requestFocus()
             } catch (_: IllegalStateException) {
@@ -215,9 +222,51 @@ fun GamepadTextFieldCard(
         }
     }
 
-    BackHandler(enabled = isEditing) {
+    val commitAndExitEditing: () -> Unit = {
         onValueChange(draftValue.text.trim())
         isEditing = false
+    }
+
+    val handleEditingKeyEvent: (ComposeKeyEvent) -> Boolean = { keyEvent ->
+        if (!isEditing) {
+            false
+        } else {
+            val isCommitOrExitKey =
+                when (keyEvent.nativeKeyEvent.keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_B,
+                    KeyEvent.KEYCODE_BACK,
+                    KeyEvent.KEYCODE_ESCAPE,
+                    KeyEvent.KEYCODE_BUTTON_A,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER,
+                    -> true
+
+                    else -> false
+                }
+            when {
+                !isCommitOrExitKey -> {
+                    false
+                }
+
+                keyEvent.type == KeyEventType.KeyDown -> {
+                    commitAndExitEditing()
+                    true
+                }
+
+                keyEvent.type == KeyEventType.KeyUp -> {
+                    true
+                }
+
+                else -> {
+                    false
+                }
+            }
+        }
+    }
+
+    BackHandler(enabled = isEditing) {
+        commitAndExitEditing()
     }
 
     GamepadFocusCard(
@@ -227,8 +276,7 @@ fun GamepadTextFieldCard(
                     draftValue = TextFieldValue(text = value, selection = TextRange(0, value.length))
                     isEditing = true
                 } else {
-                    onValueChange(draftValue.text.trim())
-                    isEditing = false
+                    commitAndExitEditing()
                 }
             }
         },
@@ -237,58 +285,7 @@ fun GamepadTextFieldCard(
         enabled = enabled,
         modifier = modifier,
         isAdjusting = isEditing,
-        onLeftKey = onLeftKey,
-        onCustomKeyEvent = { keyEvent ->
-            if (!isEditing) return@GamepadFocusCard false
-            val keyCode = keyEvent.nativeKeyEvent.keyCode
-            if (keyEvent.type == KeyEventType.KeyDown) {
-                when (keyCode) {
-                    KeyEvent.KEYCODE_BUTTON_B,
-                    KeyEvent.KEYCODE_BACK,
-                    KeyEvent.KEYCODE_ESCAPE,
-                    KeyEvent.KEYCODE_BUTTON_A,
-                    KeyEvent.KEYCODE_DPAD_CENTER,
-                    -> {
-                        onValueChange(draftValue.text.trim())
-                        isEditing = false
-                        true
-                    }
-
-                    KeyEvent.KEYCODE_ENTER,
-                    KeyEvent.KEYCODE_NUMPAD_ENTER,
-                    -> {
-                        if (singleLine) {
-                            onValueChange(draftValue.text.trim())
-                            isEditing = false
-                            true
-                        } else {
-                            false
-                        }
-                    }
-
-                    else -> {
-                        false
-                    }
-                }
-            } else if (keyEvent.type == KeyEventType.KeyUp) {
-                when (keyCode) {
-                    KeyEvent.KEYCODE_BUTTON_B,
-                    KeyEvent.KEYCODE_BACK,
-                    KeyEvent.KEYCODE_ESCAPE,
-                    KeyEvent.KEYCODE_BUTTON_A,
-                    KeyEvent.KEYCODE_DPAD_CENTER,
-                    -> true
-
-                    KeyEvent.KEYCODE_ENTER,
-                    KeyEvent.KEYCODE_NUMPAD_ENTER,
-                    -> singleLine
-
-                    else -> false
-                }
-            } else {
-                false
-            }
-        },
+        onCustomKeyEvent = handleEditingKeyEvent,
     ) { isFocused ->
         Box(
             modifier =
@@ -360,11 +357,7 @@ fun GamepadTextFieldCard(
                             GamepadPill(
                                 text = stringResource(R.string.gamepad_action_save),
                                 isAccent = true,
-                                modifier =
-                                    Modifier.clickable {
-                                        onValueChange(draftValue.text.trim())
-                                        isEditing = false
-                                    },
+                                modifier = Modifier.clickable(onClick = commitAndExitEditing),
                             )
                         }
                     }
@@ -379,71 +372,18 @@ fun GamepadTextFieldCard(
                         },
                         placeholder = placeholder?.let { { Text(it) } },
                         isError = isError,
-                        singleLine = singleLine,
+                        singleLine = true,
                         enabled = enabled,
                         readOnly = false,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions =
-                            KeyboardActions(onDone = {
-                                onValueChange(draftValue.text.trim())
-                                isEditing = false
-                            }),
+                        keyboardActions = KeyboardActions(onDone = { commitAndExitEditing() }),
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .focusProperties {
                                     canFocus = true
                                 }.focusRequester(textFieldFocusRequester)
-                                .onPreviewKeyEvent { keyEvent ->
-                                    val keyCode = keyEvent.nativeKeyEvent.keyCode
-                                    if (keyEvent.type == KeyEventType.KeyDown) {
-                                        when (keyCode) {
-                                            KeyEvent.KEYCODE_ENTER,
-                                            KeyEvent.KEYCODE_NUMPAD_ENTER,
-                                            -> {
-                                                if (singleLine) {
-                                                    onValueChange(draftValue.text.trim())
-                                                    isEditing = false
-                                                    true
-                                                } else {
-                                                    false
-                                                }
-                                            }
-
-                                            KeyEvent.KEYCODE_ESCAPE,
-                                            KeyEvent.KEYCODE_BUTTON_B,
-                                            KeyEvent.KEYCODE_BACK,
-                                            KeyEvent.KEYCODE_BUTTON_A,
-                                            KeyEvent.KEYCODE_DPAD_CENTER,
-                                            -> {
-                                                onValueChange(draftValue.text.trim())
-                                                isEditing = false
-                                                true
-                                            }
-
-                                            else -> {
-                                                false
-                                            }
-                                        }
-                                    } else if (keyEvent.type == KeyEventType.KeyUp) {
-                                        when (keyCode) {
-                                            KeyEvent.KEYCODE_ENTER,
-                                            KeyEvent.KEYCODE_NUMPAD_ENTER,
-                                            -> singleLine
-
-                                            KeyEvent.KEYCODE_ESCAPE,
-                                            KeyEvent.KEYCODE_BUTTON_B,
-                                            KeyEvent.KEYCODE_BACK,
-                                            KeyEvent.KEYCODE_BUTTON_A,
-                                            KeyEvent.KEYCODE_DPAD_CENTER,
-                                            -> true
-
-                                            else -> false
-                                        }
-                                    } else {
-                                        false
-                                    }
-                                },
+                                .onPreviewKeyEvent(handleEditingKeyEvent),
                     )
                 }
             }

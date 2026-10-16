@@ -98,7 +98,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import com.stormpanda.megingiard.shared.ui.R as SharedUiR
 
-private const val TAG = "GameFocusEditGameOverlay"
+private const val TAG = "GFEditGameOverlay"
 private const val GF_TRANSITION_DURATION_MS = 150
 private const val GF_POSTER_ASPECT_RATIO = 2f / 3f
 private const val GF_CARD_SELECTED_BG_ALPHA = 0.25f
@@ -192,7 +192,6 @@ fun GameFocusEditGameOverlay(
                         EditGameCategory.GAME_INFO -> {
                             GameInfoDeckContent(
                                 appInfo = liveAppInfo,
-                                accentColor = appColors.accent,
                                 onDismiss = onDismiss,
                             )
                         }
@@ -216,7 +215,6 @@ fun GameFocusEditGameOverlay(
                         EditGameCategory.COLLECTIONS -> {
                             CollectionsMembershipDeckContent(
                                 appInfo = liveAppInfo,
-                                accentColor = appColors.accent,
                                 onOpenManageGalleries = onOpenManageGalleries,
                             )
                         }
@@ -231,17 +229,14 @@ fun GameFocusEditGameOverlay(
 @Composable
 private fun GameInfoDeckContent(
     appInfo: InstalledAppInfo,
-    accentColor: Color,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val defaultTitle = appInfo.defaultLabel
-    // Label currently persisted in the catalog; tracked locally because [appInfo] is a snapshot.
-    var savedTitle by remember(appInfo.packageName) { mutableStateOf(appInfo.label) }
     var editedTitle by remember(appInfo.packageName) { mutableStateOf(appInfo.label) }
     val normalizedTitle = editedTitle.trim()
-    val isChanged = normalizedTitle.isNotEmpty() && normalizedTitle != savedTitle
-    val canResetToDefault = defaultTitle != null && (savedTitle != defaultTitle || editedTitle != defaultTitle)
+    val isChanged = normalizedTitle.isNotEmpty() && normalizedTitle != appInfo.label
+    val canResetToDefault = defaultTitle != null && (appInfo.label != defaultTitle || editedTitle != defaultTitle)
 
     val promptState =
         rememberSaveExitPromptState(
@@ -259,9 +254,7 @@ private fun GameInfoDeckContent(
             onDiscard = onDismiss,
         )
 
-    GamepadDeck(
-        accentColor = accentColor,
-    ) {
+    GamepadDeck {
         GamepadTextFieldCard(
             title = stringResource(R.string.gamefocus_field_display_name_title),
             description = stringResource(R.string.gamefocus_field_display_name_desc),
@@ -281,7 +274,6 @@ private fun GameInfoDeckContent(
                 enabled = canResetToDefault,
                 onClick = {
                     val restored = InstalledAppsManager.resetAppLabel(context, appInfo.packageName) ?: defaultTitle
-                    savedTitle = restored
                     editedTitle = restored
                     AppLog.i(TAG, "Display name reset to default for ${appInfo.packageName}")
                 },
@@ -318,9 +310,9 @@ private fun ScrapingDeckContent(
         appInfo = appInfo,
         apiKey = apiKey,
         accentColor = accentColor,
-        initialAppliedImageId = if (appInfo.coverPath != null) appInfo.coverImageId else null,
-        initialAppliedImageType = null,
-        initialIsDefault = appInfo.coverOptedOut,
+        appliedImageId = if (appInfo.coverPath != null) appInfo.coverImageId else null,
+        appliedImageType = null,
+        isDefault = appInfo.coverOptedOut,
         initialArtworkType = GF_GRIDS_IMAGE_TYPE,
         thumbWidth = GF_POSTER_HEIGHT * GF_POSTER_ASPECT_RATIO,
         thumbHeight = GF_POSTER_HEIGHT,
@@ -390,9 +382,9 @@ private fun LibraryIconDeckContent(
         appInfo = appInfo,
         apiKey = apiKey,
         accentColor = accentColor,
-        initialAppliedImageId = if (appInfo.libraryIconPath != null) appInfo.libraryIconImageId else null,
-        initialAppliedImageType = if (appInfo.libraryIconPath != null) appInfo.libraryIconType else null,
-        initialIsDefault = appInfo.libraryIconOptedOut,
+        appliedImageId = if (appInfo.libraryIconPath != null) appInfo.libraryIconImageId else null,
+        appliedImageType = if (appInfo.libraryIconPath != null) appInfo.libraryIconType else null,
+        isDefault = appInfo.libraryIconOptedOut,
         initialArtworkType = appInfo.libraryIconType ?: LibraryIconRef.TYPE_ICONS,
         thumbWidth = GF_ICON_THUMB_SIZE,
         thumbHeight = GF_ICON_THUMB_SIZE,
@@ -472,9 +464,9 @@ private fun SteamGridDbArtworkDeck(
     appInfo: InstalledAppInfo,
     apiKey: String,
     accentColor: Color,
-    initialAppliedImageId: Int?,
-    initialAppliedImageType: String?,
-    initialIsDefault: Boolean,
+    appliedImageId: Int?,
+    appliedImageType: String?,
+    isDefault: Boolean,
     initialArtworkType: String,
     thumbWidth: Dp,
     thumbHeight: Dp,
@@ -494,9 +486,6 @@ private fun SteamGridDbArtworkDeck(
     val thumbWidthPx = with(density) { thumbWidth.roundToPx() }
     val thumbHeightPx = with(density) { thumbHeight.roundToPx() }
 
-    var isDefault by remember(appInfo.packageName, initialIsDefault) { mutableStateOf(initialIsDefault) }
-    var appliedImageId by remember(appInfo.packageName, initialAppliedImageId) { mutableStateOf(initialAppliedImageId) }
-    var appliedImageType by remember(appInfo.packageName, initialAppliedImageType) { mutableStateOf(initialAppliedImageType) }
     var selectedArtworkType by remember(appInfo.packageName, initialArtworkType) { mutableStateOf(initialArtworkType) }
 
     var searchQuery by remember(appInfo.packageName) {
@@ -523,8 +512,6 @@ private fun SteamGridDbArtworkDeck(
         scope.launch {
             // revertToDefault* persists the opt-out itself; no separate onSetOptOut(true) needed.
             onRevertToDefault()
-            appliedImageId = null
-            appliedImageType = null
         }
     }
 
@@ -547,11 +534,7 @@ private fun SteamGridDbArtworkDeck(
                             scrapeErrorRes = steamGridDbErrorMessageRes(bytesResult.exceptionOrNull())
                         } else {
                             val saved = onSaveArtworkBytes(image, bytes, selectedArtworkType)
-                            if (saved) {
-                                appliedImageId = image.id
-                                appliedImageType = selectedArtworkType
-                                isDefault = false
-                            } else {
+                            if (!saved) {
                                 scrapeErrorRes = R.string.steamgriddb_error_save_failed
                             }
                         }
@@ -609,10 +592,9 @@ private fun SteamGridDbArtworkDeck(
             }
     }
 
-    GamepadDeck(accentColor = accentColor) {
+    GamepadDeck {
         // ── 1. Toggle Card ───────────────────────────────────────────
         renderToggleCard(isDefault, isDownloading) { checked ->
-            isDefault = checked
             if (checked) {
                 onRevert()
             } else {
@@ -862,7 +844,6 @@ private fun SteamGridDbImageThumbnail(
 @Composable
 private fun CollectionsMembershipDeckContent(
     appInfo: InstalledAppInfo,
-    accentColor: Color,
     onOpenManageGalleries: (() -> Unit)?,
 ) {
     val context = LocalContext.current
@@ -881,9 +862,7 @@ private fun CollectionsMembershipDeckContent(
             galleryConfig.collections.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
         }
 
-    GamepadDeck(
-        accentColor = accentColor,
-    ) {
+    GamepadDeck {
         if (sortedCollections.isEmpty()) {
             GamepadInfoBox(
                 text = stringResource(R.string.gamefocus_edit_collections_empty_info),

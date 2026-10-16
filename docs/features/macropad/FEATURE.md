@@ -28,7 +28,7 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 
 - The MacroPad MUST support **multiple named profiles** that can be created, renamed, and deleted at any time in the editor. Deletion of the active profile is accessible from both the top-level **Profiles Deck** and the **Edit Profile** sub-menu via a two-step confirmation card (`GamepadTwoStepConfirmCard`). Attempting to delete the last remaining profile is rejected and displays a toast informing the user that the last profile cannot be deleted (`macropad_profile_cannot_delete_last_toast`).
 - Exactly **one profile is active** at a time; the active profile is displayed in use mode. Changing the active profile takes effect immediately.
-  Each profile stores its own layout list, macro list, and device flags (see FR-P4, FR-P7, FR-P8).
+  Each profile stores its own layout list and macro list (see FR-P7, FR-P8).
 - Profiles MUST persist across app restarts via **DataStore** (serialised as JSON using `kotlinx.serialization`).
 - On a clean install or whenever no profiles exist in the DataStore yet, a single default profile named `"Default"` with a default layout named `"Default"` MUST be created automatically on bootup and persisted.
 
@@ -37,14 +37,14 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 - Each profile can contain an **arbitrary number of buttons** placed anywhere on the pad canvas.
 - Button positions are stored as **normalised coordinates** [0.0, 1.0] relative to the pad dimensions, so the layout scales correctly at any pad size.
 - Each button has a user-defined **label**, a **shape** (circle, square, or icon only), a **size weight** (1.0 = default unit size), and an **action** (see FR-P3).
-- **Adding Buttons (`ChooseButtonType`)**: When the user taps "Add Button" from the Canvas or Buttons decks, a dedicated **Button Type** sub-menu opens first (`MacroPadSubPage.ChooseButtonType`) where they select the functional type (Keyboard, Gamepad, Mouse, Macro, Layout, Mirror, Other).
+- **Adding Buttons (`ChooseButtonType`)**: When the user taps "Add Button" from the Quick Actions or Buttons decks, a dedicated **Button Type** sub-menu opens first (`MacroPadSubPage.ChooseButtonType`) where they select the functional type (Keyboard, Gamepad, Mouse, Macro, Layout, Mirror, Other).
   - Upon selecting a type, the button editor (`EditButtonSubPageContent`) opens with the button type pre-selected, skipping redundant group pickers inside the button config screen.
   - When configuring the button action, only sub-category choices (if multiple exist for that type, e.g. Mouse Button vs Scroll Wheel vs Trackpoint) and detailed input parameters are displayed.
 - Buttons MUST be repositioned by **drag** inside the editor canvas.
 - The editor provides a **grid snap overlay** that can be toggled on and off at any time during layout editing. Two grid modes are available:
   - **Rectangular** — vertical and horizontal lines spaced at 30 dp (half the 60 dp button unit), forming a uniform grid. Crossing points are the snap targets.
   - **Radial** — concentric circles (centred on the canvas) spaced at 30 dp, with **evenly distributed snap points** along each circle. The number of snap points per circle scales with its circumference (roughly one point per 60 dp of arc length) and is always a **multiple of 4** (minimum 4). Circles alternate phase: odd-indexed circles (1st, 3rd, …) have 4 anchor points at the **diagonals** (45°, 135°, 225°, 315°); even-indexed circles have anchors at the **cardinal** directions (0°, 90°, 180°, 270°). Additional equidistant points fill the gaps between the 4 anchors. A dedicated snap point sits at the exact centre of the canvas. No horizontal or vertical lines are shown.
-- The grid mode cycles **Off → Rectangular → Radial → Off** via a single "Change Grid" toggle button located in the second row of the editor toolbar, above the canvas preview.
+- The grid mode is selected (**Off / Square / Radial**) via the **Snap Grid** choice card (`GamepadChoiceCard`) in the **Layouts** deck and the **Position & Size Buttons** (`MacroPadSubPage.EditButtonPositions`) sub-page.
 - When a grid is active, dragged buttons **magnetically snap** to the nearest grid intersection point. When the grid is off, buttons position freely.
 - Grid mode is **local editor state** — it is not persisted and resets to Off each time the editor opens.
 - **Smart Alignment Guides & Snapping (PowerPoint-style)**:
@@ -68,7 +68,7 @@ Each button supports one of the following actions:
 | `BackgroundPeek` | App-level peek toggle | _(none)_ |
 
 - `KeyboardKey` actions use `KeyInjector` from the keyboard package, which routes directly to `PrivdClient`. Each `KeyboardKey` action MAY carry up to **2 optional modifier keycodes** (`modifiers: List<Int>`, default empty). On button-down, modifiers are pressed in order before the base key; on button-up, the base key is released first, then modifiers in reverse order. Available modifiers: Ctrl L/R, Shift L/R, Alt, AltGr, Meta/Win, Fn (Linux keycode 464). `KeyInjector` transmits keycodes in the range **1–464** (including Fn) to `megingiard_privd`.
-- `GamepadButton` actions use `GamepadInjector`, which delegates directly to `PrivdGamepadInjector` to merge events into the connected physical controller's evdev node (`g_gamepad_fd`) via `megingiard_privd`. Gamepad buttons require Megingiard System Service. Each `GamepadButton` action MAY carry up to **3 optional extra button codes** (`extraBtnCodes: List<Int>`, default empty). On button-down, the primary button is pressed first, then extras in order; on button-up, extras are released in reverse order, then the primary button.
+- `GamepadButton` actions use `GamepadInjector`, which merges events directly into the connected physical controller's evdev node (`g_gamepad_fd`) via `megingiard_privd` (`PrivdClient`). Gamepad buttons require Megingiard System Service. Each `GamepadButton` action MAY carry up to **3 optional extra button codes** (`extraBtnCodes: List<Int>`, default empty). On button-down, the primary button is pressed first, then extras in order; on button-up, extras are released in reverse order, then the primary button.
 - **Visual Action Pickers (`VisualKeyboardPicker`, `VisualGamepadPicker`, `VisualMousePicker`, `ActionGridSubPages`)**:
   - In the button editor, selecting the primary action card opens a dedicated visual sub-page picker:
     - **Visual Keyboard Picker**: Displays a full, interactive virtual keyboard layout (F-keys, number row, QWERTY rows, bottom control row, navigation cluster) with 2D D-pad spatial navigation and (A) key selection.
@@ -79,21 +79,13 @@ Each button supports one of the following actions:
     - **Layout Action Picker**: Displays all 3 layout actions (Next Layout, Previous Layout, Profile Switcher) in a 2-column card grid.
     - **App Quick-Switch**: Extracted into a dedicated top-level `ActionGroup.APP_LAUNCHER` button type. In the button editor, the app selection card (`AppLauncherPicker`) is displayed directly without redundant action sub-menu selectors to quickly switch between Megingiard and another app.
   - Modifiers (Mod 1, Mod 2 for keyboard), combo buttons (Extra 1, Extra 2, Extra 3 for gamepad), and specific app target (for App Quick-Switch) remain configurable on the `EditButton` page below the primary action card. For `GamepadButton`, selecting any extra input card (Extra 1, Extra 2, Extra 3) opens the same `VisualGamepadPicker` sub-page as the primary button action, enabling visual selection, automatic deduplication, toggle-to-deselect, and an in-deck Clear action.
-- Standard input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) run continuously whenever Megingiard is in the foreground (`isActivityResumed && !isPrivdSetupWizardActive`), avoiding per-layout startup delays and false-positive disabled states. Gamepad buttons and macros require Megingiard System Service; if the system service is offline, they render with hatched disabled styling in the canvas and editor.
+- Standard input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) run continuously whenever Megingiard is in the foreground (`isActivityResumed && !isPrivdSetupWizardActive`), avoiding per-layout startup delays. Gamepad buttons and macros route via Megingiard System Service.
 
-- The action picker in the editor always shows all action type categories regardless of which devices are currently enabled — the flags are derived from the buttons, not the other way around.
+- The action picker in the editor always shows all action type categories.
 
-### FR-P4: Per-Profile Device Flags
+### FR-P4: Injector Lifecycle
 
-- Each profile has four independent boolean flags: `enableKeyboard`, `enableGamepad`, `enableMouse`, `enableTouch` (all default **`false`** — new profiles start with all injectors off).
-- These flags are **not user-configurable** directly. They are automatically recomputed whenever the button list changes (add / edit / delete) by inspecting the action types of all buttons. The exact derivation rules are:
-  - If the profile contains any button with a `Macro` action, all four flags are force-enabled (`true`).
-  - Otherwise, each flag is set to `true` if any button matches the following actions:
-    - `enableKeyboard = true` if any button has a `KeyboardKey` action.
-    - `enableGamepad = true` if any button has a `GamepadButton` action.
-    - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, or `TrackpointMove` (with `PHYSICAL_MOUSE` tracking mode) action. (Note: `MirrorTouchProjection` is explicitly excluded from this derivation because the screen mirror presentation manages its own touch injector lifecycle).
-    - `enableTouch = true` if any button has a `TrackpointMove` (with `VIRTUAL_TOUCH` tracking mode) action.
-- Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which maintains active `KeyInjector`, `MouseInjector`, and `TouchInjector` instances whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during active software keyboard input in the Privileged Mode setup wizard. Gamepad buttons and macros route strictly via Megingiard System Service merge into the physical controller.
+- Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which maintains active `KeyInjector`, `MouseInjector`, and `TouchInjector` instances whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed && !AppStateManager.isPrivdSetupWizardActive`), stopping them when backgrounded (`onStop`) or during active software keyboard input in the Privileged Mode setup wizard. Gamepad buttons and macros route strictly via Megingiard System Service merge into the physical controller.
 
 ### FR-P5: Trackpoint Button
 
@@ -110,7 +102,6 @@ Each button supports one of the following actions:
 - The MacroPad MUST support **simultaneous presses** of multiple buttons via multi-touch.
 - Each finger is independently tracked by `PointerId`; down and up events are matched per pointer so no button is accidentally stuck in the pressed state.
 - The gesture detector scope incorporates a `try-finally` block that invokes `engine.releaseAll()` to ensure both visual highlighted states and virtual input injections are cleanly released if a gesture is cancelled by system interruptions (such as status bar pull-down, system back gestures, or the Quick Menu overlay taking focus).
-- Attempting to press a button whose required injector type is disabled MUST show a temporary inline feedback message in the MacroPad surface.
 
 ### FR-P6: No Special Permissions Required
 

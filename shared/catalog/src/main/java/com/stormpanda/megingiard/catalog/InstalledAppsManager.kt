@@ -15,13 +15,12 @@ import android.view.Display
 import androidx.annotation.VisibleForTesting
 import androidx.core.util.AtomicFile
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.ipc.IpcSettingsParser
-import com.stormpanda.megingiard.ipc.MegingiardIpcContract
-import com.stormpanda.megingiard.ipc.observeContentProvider
 import com.stormpanda.megingiard.media.SteamGridDbClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,21 +30,18 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
 
 private const val TAG = "InstalledAppsManager"
 private const val FILE_FAVORITES = "gamefocus_favorites.txt"
 private const val FILE_HIDDEN = "gamefocus_hidden.txt"
 private const val FILE_LAST_USED = "gamefocus_last_used.txt"
-private const val FILE_SCRAPED_APPS = "gamefocus_scraped_apps.txt"
 private const val FILE_ARTWORK_OPTOUTS = "gamefocus_artwork_optouts.json"
 private const val FILE_SCRAPE_ATTEMPTS = "gamefocus_scrape_attempts.json"
 private const val FILE_APP_NAMES = "gamefocus_app_names.json"
@@ -72,13 +68,22 @@ object InstalledAppsManager {
     private val persistSupervisor = SupervisorJob()
     private val persistScope = CoroutineScope(Dispatchers.IO + persistSupervisor)
 
-    /** Serializes AtomicFile writes; each write snapshots the latest in-memory state while holding the lock. */
+    /** Guards all in-memory metadata maps, sets, and load-once state. */
+    private val stateLock = Any()
+
+    /** Serializes AtomicFile writes; each write snapshots the latest in-memory state while holding [stateLock]. */
     private val persistLock = Any()
+
+    /** Load-once guard (AGENTS.md §7.6): later reloads must never overwrite unsaved in-memory changes. */
+    @Volatile
+    private var isMetadataLoaded = false
 
     /** Custom display names keyed by package name (Android apps and `rom.*` pseudo packages). */
     private val customAppNames = mutableMapOf<String, String>()
     private val coverImageIds = mutableMapOf<String, Int>()
     private val libraryIconRefs = mutableMapOf<String, LibraryIconRef>()
+    private var artworkOptOuts = ArtworkOptOuts()
+    private var scrapeAttempts = ScrapeAttempts()
 
     private val installedAndroidAppsFlow = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val installedApps: StateFlow<List<InstalledAppInfo>> =
@@ -89,22 +94,16 @@ object InstalledAppsManager {
             (androidApps + romApps).sortedBy { it.label.lowercase() }
         }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
-    private val artworkOptOutsLock = Any()
-    private var artworkOptOuts = ArtworkOptOuts()
+    /** Conflated channel so concurrent scrape triggers coalesce into at most one follow-up pass. */
+    private val scrapeRequests = Channel<Context>(Channel.CONFLATED)
 
-    /** Opt-outs are loaded from disk once; later reloads would overwrite unsaved in-memory user choices. */
-    @Volatile
-    private var isArtworkOptOutsLoaded = false
-
-    private val scrapeAttemptsLock = Any()
-    private var scrapeAttempts = ScrapeAttempts()
-
-    @Volatile
-    private var isScrapeAttemptsLoaded = false
-
-    /** Single-flight guard for scraping passes; [isRerunRequested] schedules a follow-up pass. */
-    private val scrapeMutex = Mutex()
-    private val isRerunRequested = AtomicBoolean(false)
+    init {
+        scope.launch {
+            for (context in scrapeRequests) {
+                executeScrapingPass(context)
+            }
+        }
+    }
 
     private val _favorites = MutableStateFlow<Set<String>>(emptySet())
     val favorites: StateFlow<Set<String>> = _favorites.asStateFlow()
@@ -115,98 +114,118 @@ object InstalledAppsManager {
     private val _lastUsed = MutableStateFlow<List<String>>(emptyList())
     val lastUsed: StateFlow<List<String>> = _lastUsed.asStateFlow()
 
+    private var loadAppsJob: Job? = null
+
     internal fun resetForTesting() {
+        loadAppsJob?.cancel()
+        loadAppsJob = null
         installedAndroidAppsFlow.value = emptyList()
-        _favorites.value = emptySet()
-        _hiddenApps.value = emptySet()
-        _lastUsed.value = emptyList()
-        synchronized(artworkOptOutsLock) {
+        synchronized(stateLock) {
+            _favorites.value = emptySet()
+            _hiddenApps.value = emptySet()
+            _lastUsed.value = emptyList()
             artworkOptOuts = ArtworkOptOuts()
-            isArtworkOptOutsLoaded = false
-        }
-        synchronized(scrapeAttemptsLock) {
             scrapeAttempts = ScrapeAttempts()
-            isScrapeAttemptsLoaded = false
-        }
-        synchronized(customAppNames) {
             customAppNames.clear()
-            isCustomAppNamesLoaded = false
-        }
-        synchronized(coverImageIds) {
             coverImageIds.clear()
-            isCoverImageIdsLoaded = false
-        }
-        synchronized(libraryIconRefs) {
             libraryIconRefs.clear()
-            isLibraryIconRefsLoaded = false
+            isMetadataLoaded = false
         }
-        isSettingsObserverRegistered = false
+        latestSteamGridDbApiKey = ""
     }
 
-    /** Load-once guards (AGENTS.md §7.6): later reloads must never overwrite unsaved in-memory changes. */
-    @Volatile
-    private var isCustomAppNamesLoaded = false
+    private fun readAtomicText(
+        context: Context,
+        filename: String,
+    ): String? {
+        val file = File(context.filesDir, filename)
+        if (!file.exists()) return null
+        return try {
+            AtomicFile(file).readFully().toString(Charsets.UTF_8)
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to load $filename: ${e.message}")
+            null
+        }
+    }
 
-    @Volatile
-    private var isCoverImageIdsLoaded = false
-
-    @Volatile
-    private var isLibraryIconRefsLoaded = false
-
-    private fun loadCustomAppNames(context: Context) {
-        synchronized(customAppNames) {
-            if (isCustomAppNamesLoaded) return
-            isCustomAppNamesLoaded = true
-            val file = File(context.filesDir, FILE_APP_NAMES)
-            if (!file.exists()) return
-            try {
-                val text = AtomicFile(file).readFully().toString(Charsets.UTF_8)
-                val map = Json.decodeFromString<Map<String, String>>(text)
-                customAppNames.putAll(map)
-                AppLog.d(TAG, "Loaded ${map.size} custom app names from disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load $FILE_APP_NAMES: ${e.message}")
+    private fun persistAtomicText(
+        context: Context,
+        filename: String,
+        snapshotProvider: () -> String,
+    ) {
+        persistScope.launch {
+            synchronized(persistLock) {
+                val text = synchronized(stateLock) { snapshotProvider() }
+                val file = File(context.filesDir, filename)
+                val atomicFile = AtomicFile(file)
+                var fos: FileOutputStream? = null
+                try {
+                    fos = atomicFile.startWrite()
+                    fos.write(text.toByteArray(Charsets.UTF_8))
+                    atomicFile.finishWrite(fos)
+                    AppLog.d(TAG, "Saved $filename to disk")
+                } catch (e: Exception) {
+                    if (fos != null) atomicFile.failWrite(fos)
+                    AppLog.w(TAG, "Failed to save $filename: ${e.message}")
+                }
             }
         }
     }
 
-    private fun loadCoverImageIds(context: Context) {
-        synchronized(coverImageIds) {
-            if (isCoverImageIdsLoaded) return
-            isCoverImageIdsLoaded = true
-            val file = File(context.filesDir, FILE_COVER_IMAGE_IDS)
-            if (!file.exists()) return
-            try {
-                val text = AtomicFile(file).readFully().toString(Charsets.UTF_8)
-                val map = Json.decodeFromString<Map<String, Int>>(text)
-                coverImageIds.putAll(map)
-                AppLog.d(TAG, "Loaded ${map.size} cover image IDs from disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load $FILE_COVER_IMAGE_IDS: ${e.message}")
+    private fun loadStringList(
+        context: Context,
+        filename: String,
+        limit: Int = Int.MAX_VALUE,
+    ): List<String> =
+        readAtomicText(context, filename)
+            ?.lineSequence()
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.take(limit)
+            ?.toList()
+            ?: emptyList()
+
+    private fun ensureMetadataLoaded(context: Context) {
+        synchronized(stateLock) {
+            if (isMetadataLoaded) return
+            isMetadataLoaded = true
+            readAtomicText(context, FILE_APP_NAMES)?.let { text ->
+                runCatching { Json.decodeFromString<Map<String, String>>(text) }
+                    .onSuccess { customAppNames.putAll(it) }
+                    .onFailure { AppLog.w(TAG, "Failed to decode $FILE_APP_NAMES: ${it.message}") }
             }
+            readAtomicText(context, FILE_COVER_IMAGE_IDS)?.let { text ->
+                runCatching { Json.decodeFromString<Map<String, Int>>(text) }
+                    .onSuccess { coverImageIds.putAll(it) }
+                    .onFailure { AppLog.w(TAG, "Failed to decode $FILE_COVER_IMAGE_IDS: ${it.message}") }
+            }
+            readAtomicText(context, FILE_LIBRARY_ICON_IDS)?.let { text ->
+                runCatching { LibraryIconRef.parseMap(text) }
+                    .onSuccess { libraryIconRefs.putAll(it) }
+                    .onFailure { AppLog.w(TAG, "Failed to decode $FILE_LIBRARY_ICON_IDS: ${it.message}") }
+            }
+            readAtomicText(context, FILE_ARTWORK_OPTOUTS)?.let { text ->
+                runCatching { Json.decodeFromString<ArtworkOptOuts>(text) }
+                    .onSuccess { artworkOptOuts = it }
+                    .onFailure { AppLog.w(TAG, "Failed to decode $FILE_ARTWORK_OPTOUTS: ${it.message}") }
+            }
+            readAtomicText(context, FILE_SCRAPE_ATTEMPTS)?.let { text ->
+                runCatching { Json.decodeFromString<ScrapeAttempts>(text) }
+                    .onSuccess { scrapeAttempts = it }
+                    .onFailure { AppLog.w(TAG, "Failed to decode $FILE_SCRAPE_ATTEMPTS: ${it.message}") }
+            }
+            _favorites.value = loadStringList(context, FILE_FAVORITES).toSet()
+            _hiddenApps.value = loadStringList(context, FILE_HIDDEN).toSet()
+            _lastUsed.value = loadStringList(context, FILE_LAST_USED, MAX_RECENT_APPS)
+            AppLog.d(
+                TAG,
+                "Loaded persisted metadata (names=${customAppNames.size}, covers=${coverImageIds.size}, " +
+                    "icons=${libraryIconRefs.size}, favorites=${_favorites.value.size}, hidden=${_hiddenApps.value.size})",
+            )
         }
     }
 
-    private fun saveCoverImageIds(context: Context) {
-        synchronized(persistLock) {
-            val content = synchronized(coverImageIds) { coverImageIds.toMap() }
-            val file = File(context.filesDir, FILE_COVER_IMAGE_IDS)
-            val atomicFile = AtomicFile(file)
-            var fos: FileOutputStream? = null
-            try {
-                val text = Json.encodeToString(content)
-                fos = atomicFile.startWrite()
-                fos.write(text.toByteArray(Charsets.UTF_8))
-                atomicFile.finishWrite(fos)
-                AppLog.d(TAG, "Saved cover image IDs to disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to save $FILE_COVER_IMAGE_IDS: ${e.message}")
-                if (fos != null) atomicFile.failWrite(fos)
-            }
-        }
-    }
-
-    fun getCoverImageId(packageName: String): Int? = synchronized(coverImageIds) { coverImageIds[packageName] }
+    fun getCoverImageId(packageName: String): Int? = synchronized(stateLock) { coverImageIds[packageName] }
 
     /** Updates the tracked SteamGridDB image ID in memory and persists it asynchronously. */
     fun setCoverImageId(
@@ -214,92 +233,37 @@ object InstalledAppsManager {
         packageName: String,
         imageId: Int?,
     ) {
-        loadCoverImageIds(context)
-        synchronized(coverImageIds) {
+        ensureMetadataLoaded(context)
+        synchronized(stateLock) {
             if (imageId != null) {
                 coverImageIds[packageName] = imageId
             } else {
                 coverImageIds.remove(packageName)
             }
         }
-        persistScope.launch { saveCoverImageIds(context) }
+        persistAtomicText(context, FILE_COVER_IMAGE_IDS) { Json.encodeToString(coverImageIds.toMap()) }
     }
 
-    private fun loadLibraryIconIds(context: Context) {
-        synchronized(libraryIconRefs) {
-            if (isLibraryIconRefsLoaded) return
-            isLibraryIconRefsLoaded = true
-            val file = File(context.filesDir, FILE_LIBRARY_ICON_IDS)
-            if (!file.exists()) return
-            try {
-                val text = AtomicFile(file).readFully().toString(Charsets.UTF_8)
-                val map = LibraryIconRef.parseMap(text)
-                libraryIconRefs.putAll(map)
-                AppLog.d(TAG, "Loaded ${map.size} library icon refs from disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to load $FILE_LIBRARY_ICON_IDS: ${e.message}")
-            }
-        }
-    }
-
-    private fun saveLibraryIconIds(context: Context) {
-        synchronized(persistLock) {
-            val content = synchronized(libraryIconRefs) { libraryIconRefs.toMap() }
-            val file = File(context.filesDir, FILE_LIBRARY_ICON_IDS)
-            val atomicFile = AtomicFile(file)
-            var fos: FileOutputStream? = null
-            try {
-                val text = LibraryIconRef.serializeMap(content)
-                fos = atomicFile.startWrite()
-                fos.write(text.toByteArray(Charsets.UTF_8))
-                atomicFile.finishWrite(fos)
-                AppLog.d(TAG, "Saved library icon refs to disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to save $FILE_LIBRARY_ICON_IDS: ${e.message}")
-                if (fos != null) atomicFile.failWrite(fos)
-            }
-        }
-    }
-
-    fun getLibraryIconRef(packageName: String): LibraryIconRef? = synchronized(libraryIconRefs) { libraryIconRefs[packageName] }
+    fun getLibraryIconRef(packageName: String): LibraryIconRef? = synchronized(stateLock) { libraryIconRefs[packageName] }
 
     fun setLibraryIconRef(
         context: Context,
         packageName: String,
         ref: LibraryIconRef?,
     ) {
-        loadLibraryIconIds(context)
-        synchronized(libraryIconRefs) {
+        ensureMetadataLoaded(context)
+        synchronized(stateLock) {
             if (ref != null) {
                 libraryIconRefs[packageName] = ref
             } else {
                 libraryIconRefs.remove(packageName)
             }
         }
-        persistScope.launch { saveLibraryIconIds(context) }
+        persistAtomicText(context, FILE_LIBRARY_ICON_IDS) { LibraryIconRef.serializeMap(libraryIconRefs.toMap()) }
     }
 
     /** Returns the user-defined display name for [packageName], or null if none is set. */
-    internal fun getCustomLabel(packageName: String): String? = synchronized(customAppNames) { customAppNames[packageName] }
-
-    private fun saveCustomAppNames(context: Context) {
-        synchronized(persistLock) {
-            val content = synchronized(customAppNames) { customAppNames.toMap() }
-            val file = File(context.filesDir, FILE_APP_NAMES)
-            val atomicFile = AtomicFile(file)
-            var fos: FileOutputStream? = null
-            try {
-                val text = Json.encodeToString(content)
-                fos = atomicFile.startWrite()
-                fos.write(text.toByteArray(Charsets.UTF_8))
-                atomicFile.finishWrite(fos)
-                AppLog.d(TAG, "Saved custom app names to disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to save $FILE_APP_NAMES: ${e.message}")
-                if (fos != null) atomicFile.failWrite(fos)
-            }
-        }
-    }
+    internal fun getCustomLabel(packageName: String): String? = synchronized(stateLock) { customAppNames[packageName] }
 
     @VisibleForTesting
     internal suspend fun awaitPendingWritesForTesting() {
@@ -308,11 +272,7 @@ object InstalledAppsManager {
 
     @VisibleForTesting
     internal fun reloadPersistedMetadataForTesting(context: Context) {
-        loadCustomAppNames(context)
-        loadCoverImageIds(context)
-        loadLibraryIconIds(context)
-        loadArtworkOptOuts(context)
-        loadScrapeAttempts(context)
+        ensureMetadataLoaded(context)
     }
 
     @VisibleForTesting
@@ -323,63 +283,6 @@ object InstalledAppsManager {
     @VisibleForTesting
     internal fun installedAndroidAppsForTesting(): List<InstalledAppInfo> = installedAndroidAppsFlow.value
 
-    private fun loadStringList(
-        context: Context,
-        filename: String,
-        limit: Int = Int.MAX_VALUE,
-    ): List<String> {
-        val file = File(context.filesDir, filename)
-        if (!file.exists()) return emptyList()
-        val atomicFile = AtomicFile(file)
-        return try {
-            val text = atomicFile.readFully().toString(Charsets.UTF_8)
-            text
-                .lineSequence()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .take(limit)
-                .toList()
-        } catch (e: Exception) {
-            AppLog.w(TAG, "Failed to load $filename: ${e.message}")
-            emptyList()
-        }
-    }
-
-    private fun loadStringSet(
-        context: Context,
-        filename: String,
-    ): Set<String> = loadStringList(context, filename).toSet()
-
-    private fun persistLines(
-        context: Context,
-        filename: String,
-        lines: Iterable<String>,
-    ) {
-        val snapshot = lines.toList()
-        persistScope.launch {
-            synchronized(persistLock) {
-                val file = File(context.filesDir, filename)
-                val atomicFile = AtomicFile(file)
-                var fos: FileOutputStream? = null
-                try {
-                    fos = atomicFile.startWrite()
-                    val writer = fos.bufferedWriter(Charsets.UTF_8)
-                    for (line in snapshot) {
-                        writer.write(line)
-                        writer.newLine()
-                    }
-                    writer.flush()
-                    atomicFile.finishWrite(fos)
-                } catch (e: Exception) {
-                    if (fos != null) {
-                        atomicFile.failWrite(fos)
-                    }
-                    AppLog.e(TAG, "Failed to persist $filename: ${e.message}", e)
-                }
-            }
-        }
-    }
-
     private fun toggleInSet(
         context: Context,
         filename: String,
@@ -387,17 +290,15 @@ object InstalledAppsManager {
         item: String,
         label: String,
     ) {
-        val current = stateFlow.value.toMutableSet()
-        val added = !current.remove(item)
-        if (added) current.add(item)
-        AppLog.i(TAG, "${if (added) "Added" else "Removed"} $item ${if (added) "to" else "from"} $label")
-        stateFlow.value = current
-        persistLines(context, filename, current)
-    }
-
-    private fun loadFavorites(context: Context) {
-        _favorites.value = loadStringSet(context, FILE_FAVORITES)
-        AppLog.d(TAG, "Loaded ${_favorites.value.size} favorite apps from disk")
+        ensureMetadataLoaded(context)
+        synchronized(stateLock) {
+            val current = stateFlow.value.toMutableSet()
+            val added = !current.remove(item)
+            if (added) current.add(item)
+            AppLog.i(TAG, "${if (added) "Added" else "Removed"} $item ${if (added) "to" else "from"} $label")
+            stateFlow.value = current.toSet()
+        }
+        persistAtomicText(context, filename) { stateFlow.value.joinToString(separator = "\n", postfix = "\n") }
     }
 
     fun toggleFavorite(
@@ -407,11 +308,6 @@ object InstalledAppsManager {
         toggleInSet(context, FILE_FAVORITES, _favorites, packageName, "favorites")
     }
 
-    private fun loadHidden(context: Context) {
-        _hiddenApps.value = loadStringSet(context, FILE_HIDDEN)
-        AppLog.d(TAG, "Loaded ${_hiddenApps.value.size} hidden apps from disk")
-    }
-
     fun toggleHidden(
         context: Context,
         packageName: String,
@@ -419,99 +315,37 @@ object InstalledAppsManager {
         toggleInSet(context, FILE_HIDDEN, _hiddenApps, packageName, "hidden apps")
     }
 
-    private fun loadLastUsed(context: Context) {
-        _lastUsed.value = loadStringList(context, FILE_LAST_USED, MAX_RECENT_APPS)
-        AppLog.d(TAG, "Loaded ${_lastUsed.value.size} last used apps from disk")
-    }
-
     fun recordAppLaunch(
         context: Context,
         packageName: String,
     ) {
-        val list = _lastUsed.value.toMutableList()
-        list.remove(packageName)
-        list.add(0, packageName)
-        val trimmed = list.take(MAX_RECENT_APPS)
-        _lastUsed.value = trimmed
-        persistLines(context, FILE_LAST_USED, trimmed)
+        ensureMetadataLoaded(context)
+        val trimmed =
+            synchronized(stateLock) {
+                val list = _lastUsed.value.toMutableList()
+                list.remove(packageName)
+                list.add(0, packageName)
+                val updated = list.take(MAX_RECENT_APPS)
+                _lastUsed.value = updated
+                updated
+            }
+        persistAtomicText(context, FILE_LAST_USED) { _lastUsed.value.joinToString(separator = "\n", postfix = "\n") }
         AppLog.i(TAG, "Recorded launch for $packageName (recent count=${trimmed.size})")
     }
-
-    private fun loadScrapeAttempts(context: Context): ScrapeAttempts =
-        synchronized(scrapeAttemptsLock) {
-            if (!isScrapeAttemptsLoaded) {
-                val attemptsFile = File(context.filesDir, FILE_SCRAPE_ATTEMPTS)
-                if (attemptsFile.exists()) {
-                    val atomicFile = AtomicFile(attemptsFile)
-                    try {
-                        val text = atomicFile.readFully().toString(Charsets.UTF_8)
-                        scrapeAttempts = Json.decodeFromString<ScrapeAttempts>(text)
-                        AppLog.d(
-                            TAG,
-                            "Loaded scrape attempts from disk (covers=${scrapeAttempts.cover.size}, logos=${scrapeAttempts.logo.size}, icons=${scrapeAttempts.libraryIcon.size})",
-                        )
-                    } catch (e: Exception) {
-                        AppLog.w(TAG, "Failed to load $FILE_SCRAPE_ATTEMPTS: ${e.message}")
-                    }
-                } else {
-                    val legacyFile = File(context.filesDir, FILE_SCRAPED_APPS)
-                    if (legacyFile.exists()) {
-                        scrapeAttempts = ScrapeAttempts.fromLegacy(loadStringSet(context, FILE_SCRAPED_APPS))
-                        persistScope.launch {
-                            if (!saveScrapeAttempts(context)) {
-                                AppLog.w(TAG, "Keeping legacy $FILE_SCRAPED_APPS because migrated attempts could not be saved")
-                                return@launch
-                            }
-                            try {
-                                if (legacyFile.delete()) {
-                                    AppLog.d(TAG, "Deleted legacy $FILE_SCRAPED_APPS after migration")
-                                }
-                            } catch (e: Exception) {
-                                AppLog.w(TAG, "Failed to delete legacy $FILE_SCRAPED_APPS: ${e.message}")
-                            }
-                        }
-                    }
-                }
-                isScrapeAttemptsLoaded = true
-            }
-            scrapeAttempts
-        }
-
-    /** @return true if the current in-memory attempts were written to disk. */
-    private fun saveScrapeAttempts(context: Context): Boolean =
-        synchronized(persistLock) {
-            val content = synchronized(scrapeAttemptsLock) { scrapeAttempts }
-            val file = File(context.filesDir, FILE_SCRAPE_ATTEMPTS)
-            val atomicFile = AtomicFile(file)
-            var fos: FileOutputStream? = null
-            try {
-                val text = Json.encodeToString(content)
-                fos = atomicFile.startWrite()
-                fos.write(text.toByteArray(Charsets.UTF_8))
-                atomicFile.finishWrite(fos)
-                AppLog.d(TAG, "Saved scrape attempts to disk")
-                true
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to save $FILE_SCRAPE_ATTEMPTS: ${e.message}")
-                if (fos != null) atomicFile.failWrite(fos)
-                false
-            }
-        }
 
     fun wasAttempted(
         packageName: String,
         kind: ArtworkKind,
-    ): Boolean = synchronized(scrapeAttemptsLock) { scrapeAttempts.wasAttempted(kind, packageName) }
+    ): Boolean = synchronized(stateLock) { scrapeAttempts.wasAttempted(kind, packageName) }
 
     fun recordScrapeAttempt(
         context: Context,
         packageName: String,
         kind: ArtworkKind,
     ) {
-        // Ensure disk state is loaded first so a later lazy load cannot overwrite this record.
-        loadScrapeAttempts(context)
+        ensureMetadataLoaded(context)
         val modified =
-            synchronized(scrapeAttemptsLock) {
+            synchronized(stateLock) {
                 val updated = scrapeAttempts.withAttempt(kind, packageName)
                 val changed = updated !== scrapeAttempts
                 scrapeAttempts = updated
@@ -519,56 +353,15 @@ object InstalledAppsManager {
             }
         if (modified) {
             AppLog.d(TAG, "Recorded $kind scrape attempt for $packageName")
-            persistScope.launch { saveScrapeAttempts(context) }
-        }
-    }
-
-    private fun loadArtworkOptOuts(context: Context): ArtworkOptOuts =
-        synchronized(artworkOptOutsLock) {
-            if (!isArtworkOptOutsLoaded) {
-                val file = File(context.filesDir, FILE_ARTWORK_OPTOUTS)
-                if (file.exists()) {
-                    val atomicFile = AtomicFile(file)
-                    try {
-                        val text = atomicFile.readFully().toString(Charsets.UTF_8)
-                        artworkOptOuts = Json.decodeFromString<ArtworkOptOuts>(text)
-                        AppLog.d(
-                            TAG,
-                            "Loaded artwork opt-outs (covers=${artworkOptOuts.cover.size}, icons=${artworkOptOuts.libraryIcon.size})",
-                        )
-                    } catch (e: Exception) {
-                        AppLog.w(TAG, "Failed to load $FILE_ARTWORK_OPTOUTS: ${e.message}")
-                    }
-                }
-                isArtworkOptOutsLoaded = true
-            }
-            artworkOptOuts
-        }
-
-    private fun saveArtworkOptOuts(context: Context) {
-        synchronized(persistLock) {
-            val content = synchronized(artworkOptOutsLock) { artworkOptOuts }
-            val file = File(context.filesDir, FILE_ARTWORK_OPTOUTS)
-            val atomicFile = AtomicFile(file)
-            var fos: FileOutputStream? = null
-            try {
-                val text = Json.encodeToString(content)
-                fos = atomicFile.startWrite()
-                fos.write(text.toByteArray(Charsets.UTF_8))
-                atomicFile.finishWrite(fos)
-                AppLog.d(TAG, "Saved artwork opt-outs to disk")
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to save $FILE_ARTWORK_OPTOUTS: ${e.message}")
-                if (fos != null) atomicFile.failWrite(fos)
-            }
+            persistAtomicText(context, FILE_SCRAPE_ATTEMPTS) { Json.encodeToString(scrapeAttempts) }
         }
     }
 
     fun isCoverOptedOut(packageName: String): Boolean =
-        synchronized(artworkOptOutsLock) { artworkOptOuts.isOptedOut(ArtworkKind.COVER, packageName) }
+        synchronized(stateLock) { artworkOptOuts.isOptedOut(ArtworkKind.COVER, packageName) }
 
     fun isLibraryIconOptedOut(packageName: String): Boolean =
-        synchronized(artworkOptOutsLock) { artworkOptOuts.isOptedOut(ArtworkKind.LIBRARY_ICON, packageName) }
+        synchronized(stateLock) { artworkOptOuts.isOptedOut(ArtworkKind.LIBRARY_ICON, packageName) }
 
     fun setCoverOptedOut(
         context: Context,
@@ -576,7 +369,7 @@ object InstalledAppsManager {
         optedOut: Boolean,
     ) {
         setArtworkOptOut(context, ArtworkKind.COVER, packageName, optedOut)
-        updateCoverOptOut(packageName, optedOut)
+        refreshAppMetadata(context, packageName)
     }
 
     fun setLibraryIconOptedOut(
@@ -585,7 +378,7 @@ object InstalledAppsManager {
         optedOut: Boolean,
     ) {
         setArtworkOptOut(context, ArtworkKind.LIBRARY_ICON, packageName, optedOut)
-        updateLibraryIconOptOut(packageName, optedOut)
+        refreshAppMetadata(context, packageName)
     }
 
     private fun setArtworkOptOut(
@@ -594,46 +387,68 @@ object InstalledAppsManager {
         packageName: String,
         optedOut: Boolean,
     ) {
-        // Ensure disk state is loaded first so a later lazy load cannot overwrite this choice.
-        loadArtworkOptOuts(context)
-        synchronized(artworkOptOutsLock) {
+        ensureMetadataLoaded(context)
+        synchronized(stateLock) {
             artworkOptOuts = artworkOptOuts.withOptOut(kind, packageName, optedOut)
         }
         AppLog.i(TAG, "Set $kind opt-out for $packageName to $optedOut")
-        persistScope.launch { saveArtworkOptOuts(context) }
+        persistAtomicText(context, FILE_ARTWORK_OPTOUTS) { Json.encodeToString(artworkOptOuts) }
     }
 
-    fun updateCoverOptOut(
-        packageName: String,
-        optedOut: Boolean,
-    ) {
-        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomCoverOptOut(packageName, optedOut)
-            return
-        }
-        installedAndroidAppsFlow.update { it.withUpdatedCoverOptOut(packageName, optedOut) }
+    /**
+     * Populates a raw [InstalledAppInfo] with current in-memory metadata (custom label, cover ID,
+     * library icon reference, artwork opt-outs) and disk-cached artwork timestamps/paths.
+     */
+    internal fun enrichAppInfo(
+        rawApp: InstalledAppInfo,
+        context: Context,
+    ): InstalledAppInfo {
+        val packageName = rawApp.packageName
+        val defaultLabel = rawApp.defaultLabel ?: rawApp.label
+        val label = getCustomLabel(packageName) ?: defaultLabel
+
+        val cachedCoverFile = coverFileFor(context, packageName)
+        val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0L
+        val coverImageId = if (hasCover) getCoverImageId(packageName) else null
+
+        val cachedLibraryIconFile = libraryIconFileFor(context, packageName)
+        val hasLibraryIcon = cachedLibraryIconFile.exists() && cachedLibraryIconFile.length() > 0L
+        val libraryIconRef = if (hasLibraryIcon) getLibraryIconRef(packageName) else null
+
+        val cachedLogoFile = logoFileFor(context, packageName)
+        val hasLogo = cachedLogoFile.exists() && cachedLogoFile.length() > 0L
+
+        return rawApp.copy(
+            label = label,
+            defaultLabel = defaultLabel,
+            coverPath = if (hasCover) cachedCoverFile.absolutePath else null,
+            coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L,
+            coverImageId = coverImageId,
+            libraryIconPath = if (hasLibraryIcon) cachedLibraryIconFile.absolutePath else null,
+            libraryIconImageId = libraryIconRef?.id,
+            libraryIconType = libraryIconRef?.type,
+            libraryIconLastModified = if (hasLibraryIcon) cachedLibraryIconFile.lastModified() else 0L,
+            coverOptedOut = isCoverOptedOut(packageName),
+            libraryIconOptedOut = isLibraryIconOptedOut(packageName),
+            logoLastModified = if (hasLogo) cachedLogoFile.lastModified() else 0L,
+        )
     }
 
-    fun updateLibraryIconOptOut(
+    /**
+     * Re-applies [enrichAppInfo] to the in-memory catalog entry for [packageName] (Android app or ROM).
+     */
+    internal fun refreshAppMetadata(
+        context: Context,
         packageName: String,
-        optedOut: Boolean,
     ) {
         if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomLibraryIconOptOut(packageName, optedOut)
-            return
+            RomManager.updateRomApp(packageName) { enrichAppInfo(it, context) }
+        } else {
+            installedAndroidAppsFlow.update { apps ->
+                apps.map { if (it.packageName == packageName) enrichAppInfo(it, context) else it }
+            }
         }
-        installedAndroidAppsFlow.update { it.withUpdatedLibraryIconOptOut(packageName, optedOut) }
-    }
-
-    fun updateAppLogo(
-        packageName: String,
-        lastModified: Long,
-    ) {
-        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomLogo(packageName, lastModified)
-            return
-        }
-        installedAndroidAppsFlow.update { it.withUpdatedLogo(packageName, lastModified) }
+        AppLog.d(TAG, "Refreshed in-memory metadata for $packageName")
     }
 
     /** Location of the cached logo image for ROM [packageName]. */
@@ -654,144 +469,86 @@ object InstalledAppsManager {
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
         SwitchEmulators.invalidateCache()
-        scope.launch {
-            loadArtworkOptOuts(context)
-            loadScrapeAttempts(context)
+        loadAppsJob?.cancel()
+        loadAppsJob =
+            scope.launch {
+                // Metadata must be loaded before the ROM scan, which reads custom names, cover IDs, and icon refs.
+                ensureMetadataLoaded(context)
 
-            // Custom names, cover IDs, and library icon IDs must be loaded before the ROM scan, which reads them.
-            loadCustomAppNames(context)
-            loadCoverImageIds(context)
-            loadLibraryIconIds(context)
+                RomManager.loadRomFolders(context)
+                // Scraping is triggered once below, after the Android app list is published.
+                RomManager.reloadRomAppsSuspend(context, triggerScrape = false)
 
-            RomManager.loadRomFolders(context)
-            // Scraping is triggered once below, after the Android app list is published.
-            RomManager.reloadRomAppsSuspend(context, triggerScrape = false)
+                SystemRoleClassifier.refreshLaunchers(context)
 
-            SystemRoleClassifier.refreshLaunchers(context)
+                val packageManager = context.packageManager
+                val mainIntent =
+                    Intent(Intent.ACTION_MAIN, null).apply {
+                        addCategory(Intent.CATEGORY_LAUNCHER)
+                    }
 
-            loadFavorites(context)
-            loadHidden(context)
-            loadLastUsed(context)
+                val gameIntent =
+                    Intent(Intent.ACTION_MAIN, null).apply {
+                        addCategory(INTENT_CATEGORY_GAME)
+                    }
+                val appGamesIntent =
+                    Intent(Intent.ACTION_MAIN, null).apply {
+                        addCategory(INTENT_CATEGORY_APP_GAMES)
+                    }
 
-            val packageManager = context.packageManager
-            val mainIntent =
-                Intent(Intent.ACTION_MAIN, null).apply {
-                    addCategory(Intent.CATEGORY_LAUNCHER)
-                }
-
-            val gameIntent =
-                Intent(Intent.ACTION_MAIN, null).apply {
-                    addCategory(INTENT_CATEGORY_GAME)
-                }
-            val appGamesIntent =
-                Intent(Intent.ACTION_MAIN, null).apply {
-                    addCategory(INTENT_CATEGORY_APP_GAMES)
-                }
-
-            val resolveInfoList: List<ResolveInfo> =
-                packageManager.queryIntentActivities(
-                    mainIntent,
-                    PackageManager.ResolveInfoFlags.of(0L),
-                )
-
-            val gameResolveList: List<ResolveInfo> =
-                packageManager.queryIntentActivities(
-                    gameIntent,
-                    PackageManager.ResolveInfoFlags.of(0L),
-                ) +
+                val resolveInfoList: List<ResolveInfo> =
                     packageManager.queryIntentActivities(
-                        appGamesIntent,
+                        mainIntent,
                         PackageManager.ResolveInfoFlags.of(0L),
                     )
-            val gamePackagesFromIntent = gameResolveList.map { it.activityInfo.packageName }.toSet()
 
-            val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }
-
-            val apps =
-                resolveInfoList
-                    .filter { resolveInfo ->
-                        resolveInfo.activityInfo.packageName != context.packageName
-                    }.map { resolveInfo ->
-                        val packageName = resolveInfo.activityInfo.packageName
-                        val appInfo = resolveInfo.activityInfo.applicationInfo
-                        val rawLabel =
-                            appInfo
-                                .loadLabel(packageManager)
-                                .toString()
-                        val defaultLabel = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
-                        val label = synchronized(customAppNames) { customAppNames[packageName] } ?: defaultLabel
-                        val activityName = resolveInfo.activityInfo.name
-                        val isGame = isPackageAGame(appInfo, gamePackagesFromIntent)
-
-                        val cachedCoverFile = File(coversDir, "$packageName$COVER_FILE_EXTENSION")
-                        val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
-                        val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
-                        val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
-                        val coverImageId = if (hasCover) getCoverImageId(packageName) else null
-
-                        val cachedLibraryIconFile = libraryIconFileFor(context, packageName)
-                        val hasLibraryIcon = cachedLibraryIconFile.exists() && cachedLibraryIconFile.length() > 0
-                        val libraryIconPath = if (hasLibraryIcon) cachedLibraryIconFile.absolutePath else null
-                        val libraryIconLastModified = if (hasLibraryIcon) cachedLibraryIconFile.lastModified() else 0L
-                        val libraryIconRef = if (hasLibraryIcon) getLibraryIconRef(packageName) else null
-
-                        InstalledAppInfo(
-                            packageName = packageName,
-                            activityName = activityName,
-                            label = label,
-                            coverPath = coverPath,
-                            isGame = isGame,
-                            coverLastModified = coverLastModified,
-                            coverImageId = coverImageId,
-                            defaultLabel = defaultLabel,
-                            libraryIconPath = libraryIconPath,
-                            libraryIconImageId = libraryIconRef?.id,
-                            libraryIconType = libraryIconRef?.type,
-                            libraryIconLastModified = libraryIconLastModified,
-                            coverOptedOut = isCoverOptedOut(packageName),
-                            libraryIconOptedOut = isLibraryIconOptedOut(packageName),
-                            logoLastModified = 0L,
+                val gameResolveList: List<ResolveInfo> =
+                    packageManager.queryIntentActivities(
+                        gameIntent,
+                        PackageManager.ResolveInfoFlags.of(0L),
+                    ) +
+                        packageManager.queryIntentActivities(
+                            appGamesIntent,
+                            PackageManager.ResolveInfoFlags.of(0L),
                         )
-                    }.sortedBy { it.label.lowercase() }
+                val gamePackagesFromIntent = gameResolveList.map { it.activityInfo.packageName }.toSet()
 
-            installedAndroidAppsFlow.value = apps
-            val gameCount = apps.count { it.isGame }
-            AppLog.d(TAG, "Loaded ${apps.size} installed apps ($gameCount games, ${apps.size - gameCount} apps) for launcher browser")
+                File(context.cacheDir, DIR_COVERS).mkdirs()
 
-            // Trigger background SteamGridDB cover scraping if API key is configured
-            triggerSteamGridDbScraping(context)
-        }
-    }
+                val apps =
+                    resolveInfoList
+                        .filter { resolveInfo ->
+                            resolveInfo.activityInfo.packageName != context.packageName
+                        }.map { resolveInfo ->
+                            val packageName = resolveInfo.activityInfo.packageName
+                            val appInfo = resolveInfo.activityInfo.applicationInfo
+                            val rawLabel =
+                                appInfo
+                                    .loadLabel(packageManager)
+                                    .toString()
+                            val defaultLabel = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
+                            val activityName = resolveInfo.activityInfo.name
+                            val isGame = isPackageAGame(appInfo, gamePackagesFromIntent)
 
-    fun updateAppCover(
-        packageName: String,
-        coverPath: String?,
-        coverImageId: Int? = null,
-    ) {
-        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomCover(packageName, coverPath, coverImageId)
-            return
-        }
-        installedAndroidAppsFlow.update { it.withUpdatedCover(packageName, coverPath, coverImageId) }
-        AppLog.i(TAG, "Updated in-memory cover path for $packageName to $coverPath (imageId: $coverImageId)")
-    }
+                            enrichAppInfo(
+                                InstalledAppInfo(
+                                    packageName = packageName,
+                                    activityName = activityName,
+                                    label = defaultLabel,
+                                    isGame = isGame,
+                                    defaultLabel = defaultLabel,
+                                ),
+                                context,
+                            )
+                        }.sortedBy { it.label.lowercase() }
 
-    fun updateAppLibraryIcon(
-        packageName: String,
-        iconPath: String?,
-        imageId: Int? = null,
-        type: String? = null,
-        lastModified: Long = System.currentTimeMillis(),
-    ) {
-        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomLibraryIcon(packageName, iconPath, imageId, type, lastModified)
-            return
-        }
-        installedAndroidAppsFlow.update { it.withUpdatedLibraryIcon(packageName, iconPath, imageId, type, lastModified) }
-        AppLog.i(
-            TAG,
-            "Updated in-memory library icon path for $packageName to $iconPath (imageId: $imageId, type: $type, lastModified: $lastModified)",
-        )
+                installedAndroidAppsFlow.value = apps
+                val gameCount = apps.count { it.isGame }
+                AppLog.d(TAG, "Loaded ${apps.size} installed apps ($gameCount games, ${apps.size - gameCount} apps) for launcher browser")
+
+                // Trigger background SteamGridDB cover scraping if API key is configured
+                triggerSteamGridDbScraping(context)
+            }
     }
 
     /**
@@ -803,12 +560,12 @@ object InstalledAppsManager {
         packageName: String,
         newLabel: String,
     ) {
-        loadCustomAppNames(context)
-        synchronized(customAppNames) {
+        ensureMetadataLoaded(context)
+        synchronized(stateLock) {
             customAppNames[packageName] = newLabel
         }
-        persistScope.launch { saveCustomAppNames(context) }
-        applyLabelInMemory(packageName, newLabel)
+        persistAtomicText(context, FILE_APP_NAMES) { Json.encodeToString(customAppNames.toMap()) }
+        refreshAppMetadata(context, packageName)
         AppLog.i(TAG, "Updated custom label for $packageName to '$newLabel'")
     }
 
@@ -821,10 +578,10 @@ object InstalledAppsManager {
         context: Context,
         packageName: String,
     ): String? {
-        loadCustomAppNames(context)
-        val removed = synchronized(customAppNames) { customAppNames.remove(packageName) != null }
+        ensureMetadataLoaded(context)
+        val removed = synchronized(stateLock) { customAppNames.remove(packageName) != null }
         if (removed) {
-            persistScope.launch { saveCustomAppNames(context) }
+            persistAtomicText(context, FILE_APP_NAMES) { Json.encodeToString(customAppNames.toMap()) }
         }
         val source = if (packageName.startsWith(ROM_PACKAGE_PREFIX)) RomManager.romApps.value else installedAndroidAppsFlow.value
         val defaultLabel = source.find { it.packageName == packageName }?.defaultLabel
@@ -832,20 +589,9 @@ object InstalledAppsManager {
             AppLog.w(TAG, "resetAppLabel: no default label known for $packageName")
             return null
         }
-        applyLabelInMemory(packageName, defaultLabel)
+        refreshAppMetadata(context, packageName)
         AppLog.i(TAG, "Reset label for $packageName to default '$defaultLabel' (customRemoved=$removed)")
         return defaultLabel
-    }
-
-    private fun applyLabelInMemory(
-        packageName: String,
-        newLabel: String,
-    ) {
-        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomLabelInMemory(packageName, newLabel)
-        } else {
-            installedAndroidAppsFlow.update { it.withUpdatedLabel(packageName, newLabel) }
-        }
     }
 
     /** Location of the cached cover image for [packageName]. */
@@ -893,10 +639,10 @@ object InstalledAppsManager {
             val file = coverFileFor(context, packageName)
             if (!writeImageAtomically(file, bytes)) return@withContext null
             onCoverWritten()
-            setCoverOptedOut(context, packageName, false)
+            setArtworkOptOut(context, ArtworkKind.COVER, packageName, false)
             recordScrapeAttempt(context, packageName, ArtworkKind.COVER)
             setCoverImageId(context, packageName, imageId)
-            updateAppCover(packageName, file.absolutePath, imageId)
+            refreshAppMetadata(context, packageName)
             AppLog.i(TAG, "Applied custom cover for $packageName (imageId=$imageId)")
             file.absolutePath
         }
@@ -917,10 +663,10 @@ object InstalledAppsManager {
             AppLog.w(TAG, "Failed to delete cover ${file.absolutePath}")
         }
         onCoverRemoved()
-        setCoverOptedOut(context, packageName, true)
+        setArtworkOptOut(context, ArtworkKind.COVER, packageName, true)
         recordScrapeAttempt(context, packageName, ArtworkKind.COVER)
         setCoverImageId(context, packageName, null)
-        updateAppCover(packageName, null, null)
+        refreshAppMetadata(context, packageName)
         AppLog.i(TAG, "Reverted $packageName to default icon")
     }
 
@@ -1021,12 +767,11 @@ object InstalledAppsManager {
                 return@withContext null
             }
             if (!writeImageAtomically(file, downsampledBytes)) return@withContext null
-            val lastModified = file.lastModified()
             onIconWritten()
-            setLibraryIconOptedOut(context, packageName, false)
+            setArtworkOptOut(context, ArtworkKind.LIBRARY_ICON, packageName, false)
             recordScrapeAttempt(context, packageName, ArtworkKind.LIBRARY_ICON)
             setLibraryIconRef(context, packageName, LibraryIconRef(id = imageId, type = type))
-            updateAppLibraryIcon(packageName, file.absolutePath, imageId, type, lastModified)
+            refreshAppMetadata(context, packageName)
             AppLog.i(TAG, "Applied custom library icon for $packageName (imageId=$imageId, type=$type)")
             file.absolutePath
         }
@@ -1045,69 +790,31 @@ object InstalledAppsManager {
             AppLog.w(TAG, "Failed to delete library icon ${file.absolutePath}")
         }
         onIconRemoved()
-        setLibraryIconOptedOut(context, packageName, true)
+        setArtworkOptOut(context, ArtworkKind.LIBRARY_ICON, packageName, true)
         recordScrapeAttempt(context, packageName, ArtworkKind.LIBRARY_ICON)
         setLibraryIconRef(context, packageName, null)
-        updateAppLibraryIcon(packageName, null, null, null, 0L)
+        refreshAppMetadata(context, packageName)
         AppLog.i(TAG, "Reverted $packageName to default library icon")
     }
 
-    private var isSettingsObserverRegistered = false
+    @Volatile
+    private var latestSteamGridDbApiKey: String = ""
 
-    private fun registerSettingsObserverIfNeeded(context: Context) {
-        if (isSettingsObserverRegistered) return
-        isSettingsObserverRegistered = true
-        MegingiardIpcContract.init(context)
-        scope.launch {
-            observeContentProvider(
-                context,
-                MegingiardIpcContract.SETTINGS_URI,
-                IpcSettingsParser::parse,
-            ).collect { config ->
-                if (config.steamGridDbApiToken.isNotBlank()) {
-                    AppLog.i(TAG, "SteamGridDB API key updated via IPC ContentObserver -> triggering cover scraping")
-                    triggerSteamGridDbScraping(context)
-                }
-            }
+    fun triggerSteamGridDbScraping(
+        context: Context,
+        apiKey: String = latestSteamGridDbApiKey,
+    ) {
+        if (apiKey.isNotBlank()) {
+            latestSteamGridDbApiKey = apiKey
         }
-    }
-
-    fun triggerSteamGridDbScraping(context: Context) {
-        registerSettingsObserverIfNeeded(context)
-        MegingiardIpcContract.init(context)
-        scope.launch { runScrapingPasses(context) }
-    }
-
-    /**
-     * Runs scraping passes single-flight. A request arriving while a pass is active only sets
-     * [isRerunRequested]; the active owner re-checks the flag after unlocking, so no request is lost.
-     */
-    private suspend fun runScrapingPasses(context: Context) {
-        while (true) {
-            if (!scrapeMutex.tryLock()) {
-                AppLog.d(TAG, "Scraping pass already in progress; scheduling follow-up pass")
-                isRerunRequested.set(true)
-                return
-            }
-            try {
-                do {
-                    isRerunRequested.set(false)
-                    executeScrapingPass(context)
-                } while (isRerunRequested.get())
-            } finally {
-                scrapeMutex.unlock()
-            }
-            // A request may have arrived between the last flag check and unlock.
-            if (!isRerunRequested.get()) return
-            AppLog.d(TAG, "Follow-up scraping pass requested during unlock; restarting")
-        }
+        scrapeRequests.trySend(context.applicationContext ?: context)
     }
 
     private suspend fun executeScrapingPass(context: Context) {
         // Read the token per pass so follow-up passes pick up token changes.
-        val apiKey = IpcSettingsParser.parse(context.contentResolver).steamGridDbApiToken
+        val apiKey = latestSteamGridDbApiKey
         if (apiKey.isBlank()) {
-            AppLog.d(TAG, "SteamGridDB API key is blank locally and via IPC, skipping artwork scraping")
+            AppLog.d(TAG, "SteamGridDB API key is blank, skipping artwork scraping")
             return
         }
 
@@ -1115,8 +822,7 @@ object InstalledAppsManager {
         val logosDir = File(context.cacheDir, DIR_LOGOS).apply { mkdirs() }
         val libraryIconsDir = File(context.cacheDir, DIR_LIBRARY_ICONS).apply { mkdirs() }
 
-        loadArtworkOptOuts(context)
-        loadScrapeAttempts(context)
+        ensureMetadataLoaded(context)
 
         val currentApps = installedApps.value
         val appsToScrape =
@@ -1193,7 +899,7 @@ object InstalledAppsManager {
                     runScrapeStep(context, app, ArtworkKind.COVER) { scrapeCover(context, plan, gameId, apiKey) }
                 }
                 if (plan.scrapeLogo) {
-                    runScrapeStep(context, app, ArtworkKind.LOGO) { scrapeLogo(plan, gameId, apiKey) }
+                    runScrapeStep(context, app, ArtworkKind.LOGO) { scrapeLogo(context, plan, gameId, apiKey) }
                 }
                 if (plan.scrapeLibraryIcon) {
                     runScrapeStep(context, app, ArtworkKind.LIBRARY_ICON) { scrapeLibraryIcon(context, plan, gameId, apiKey) }
@@ -1257,13 +963,14 @@ object InstalledAppsManager {
             }
         if (!writeImageAtomically(plan.coverFile, bytes)) return false
         setCoverImageId(context, app.packageName, firstImage.id)
-        updateAppCover(app.packageName, plan.coverFile.absolutePath, firstImage.id)
+        refreshAppMetadata(context, app.packageName)
         AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label} (imageId=${firstImage.id})")
         return true
     }
 
     /** @return true when the ROM logo step completed (saved, or no logo available). */
     private suspend fun scrapeLogo(
+        context: Context,
         plan: AppScrapePlan,
         gameId: Int,
         apiKey: String,
@@ -1287,7 +994,7 @@ object InstalledAppsManager {
                 return false
             }
         if (!writeImageAtomically(plan.logoFile, logoBytes)) return false
-        updateAppLogo(app.packageName, plan.logoFile.lastModified())
+        refreshAppMetadata(context, app.packageName)
         AppLog.i(TAG, "Successfully scraped SteamGridDB logo for ROM: ${app.label}")
         return true
     }
@@ -1323,9 +1030,8 @@ object InstalledAppsManager {
             return true
         }
         if (!writeImageAtomically(plan.libraryIconFile, downsampledBytes)) return false
-        val lastModified = plan.libraryIconFile.lastModified()
         setLibraryIconRef(context, app.packageName, LibraryIconRef(id = firstIcon.id, type = IMAGE_TYPE_ICONS))
-        updateAppLibraryIcon(app.packageName, plan.libraryIconFile.absolutePath, firstIcon.id, IMAGE_TYPE_ICONS, lastModified)
+        refreshAppMetadata(context, app.packageName)
         AppLog.i(TAG, "Successfully scraped SteamGridDB library icon for ${app.label} (imageId=${firstIcon.id})")
         return true
     }

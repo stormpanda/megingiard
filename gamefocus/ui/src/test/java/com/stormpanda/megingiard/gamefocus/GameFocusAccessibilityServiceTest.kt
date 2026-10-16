@@ -20,7 +20,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowPackageManager
 
-private const val TAG = "GameFocusAccessibilityServiceTest"
+private const val TAG = "GFA11yServiceTest"
 private const val VALID_GAME_PACKAGE = "com.miHoYo.GenshinImpact"
 private const val VALID_LAUNCHER_PACKAGE = "com.android.launcher3"
 

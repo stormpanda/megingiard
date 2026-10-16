@@ -25,11 +25,24 @@ internal object MacroPadNavState {
     private val _macroTimelineFocusStepIndex = MutableStateFlow<Int?>(null)
     val macroTimelineFocusStepIndex: StateFlow<Int?> = _macroTimelineFocusStepIndex.asStateFlow()
 
-    private val _appearanceDraft = MutableStateFlow<PadLayout?>(null)
-    val appearanceDraft: StateFlow<PadLayout?> = _appearanceDraft.asStateFlow()
-
     private val _savedFocusKeysByDepth = MutableStateFlow<Map<Int, Any>>(emptyMap())
     val savedFocusKeysByDepth: StateFlow<Map<Int, Any>> = _savedFocusKeysByDepth.asStateFlow()
+
+    private val _buttonDraft = MutableStateFlow<PadButton?>(null)
+    val buttonDraft: StateFlow<PadButton?> = _buttonDraft.asStateFlow()
+
+    private val _macroDraft = MutableStateFlow<Macro?>(null)
+    val macroDraft: StateFlow<Macro?> = _macroDraft.asStateFlow()
+
+    fun setButtonDraft(draft: PadButton?) {
+        AppLog.d(TAG, "setButtonDraft: id=${draft?.id}")
+        _buttonDraft.value = draft
+    }
+
+    fun setMacroDraft(draft: Macro?) {
+        AppLog.d(TAG, "setMacroDraft: id=${draft?.id}")
+        _macroDraft.value = draft
+    }
 
     fun selectSection(section: EditorSection) {
         AppLog.d(TAG, "selectSection: section=$section current=${_selectedSection.value}")
@@ -37,6 +50,8 @@ internal object MacroPadNavState {
             _selectedSection.value = section
             _subPageStack.value = emptyList()
             _savedFocusKeysByDepth.value = emptyMap()
+            _buttonDraft.value = null
+            _macroDraft.value = null
         }
     }
 
@@ -63,10 +78,6 @@ internal object MacroPadNavState {
         _macroTimelineFocusStepIndex.value = index
     }
 
-    fun setAppearanceDraft(layout: PadLayout?) {
-        _appearanceDraft.value = layout
-    }
-
     fun recordFocusedKey(
         depth: Int,
         key: Any,
@@ -90,8 +101,9 @@ internal object MacroPadNavState {
         _selectedSection.value = EditorSection.QUICK_ACTIONS
         _subPageStack.value = emptyList()
         _macroTimelineFocusStepIndex.value = null
-        _appearanceDraft.value = null
         _savedFocusKeysByDepth.value = emptyMap()
+        _buttonDraft.value = null
+        _macroDraft.value = null
     }
 
     /**
@@ -100,7 +112,6 @@ internal object MacroPadNavState {
     fun applyPrimaryModalPayload(
         payload: PrimaryModalPayload?,
         onSetActiveProfileId: (String) -> Unit = { MacroPadState.setActiveProfileId(it) },
-        onSetSelectedButtonId: (String?) -> Unit = { MacroPadState.setSelectedButtonId(it) },
     ) {
         if (payload == null) return
         AppLog.i(TAG, "applyPrimaryModalPayload: payload=${payload::class.simpleName}")
@@ -137,11 +148,6 @@ internal object MacroPadNavState {
                 _macroTimelineFocusStepIndex.value = payload.focusStepIndex
             }
 
-            is PrimaryModalPayload.LayoutSettings -> {
-                _selectedSection.value = EditorSection.LAYOUTS
-                _subPageStack.value = listOf(MacroPadSubPage.EditLayout(payload.layoutId))
-            }
-
             is PrimaryModalPayload.ProfileSettings -> {
                 _selectedSection.value = EditorSection.PROFILES
                 val profId = payload.profileId
@@ -157,26 +163,6 @@ internal object MacroPadNavState {
                     onSetActiveProfileId(profId)
                     _subPageStack.value = listOf(MacroPadSubPage.EditProfile(profId))
                 }
-            }
-
-            is PrimaryModalPayload.MacroTimeline -> {
-                _selectedSection.value = EditorSection.MACROS
-                val macId = payload.macroId
-                if (macId != null) {
-                    _subPageStack.value = listOf(MacroPadSubPage.MacroTimeline(macId))
-                }
-                _macroTimelineFocusStepIndex.value = payload.focusStepIndex
-            }
-
-            is PrimaryModalPayload.ButtonInspector -> {
-                _selectedSection.value = EditorSection.BUTTONS
-                onSetSelectedButtonId(payload.buttonId)
-                _subPageStack.value = listOf(MacroPadSubPage.EditButtonPositions)
-            }
-
-            is PrimaryModalPayload.CutoutInspector -> {
-                _selectedSection.value = EditorSection.MIRROR
-                _subPageStack.value = listOf(MacroPadSubPage.CutoutSettings(payload.cutoutId))
             }
 
             else -> {}

@@ -5,7 +5,7 @@ import com.stormpanda.megingiard.media.SteamGridDbException
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-private const val TAG = "GameFocusEditGameSupportTest"
+private const val TAG = "GFEditGameSupportTest"
 
 class GameFocusEditGameSupportTest {
     @Test

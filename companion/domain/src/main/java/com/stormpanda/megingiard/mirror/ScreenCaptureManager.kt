@@ -21,36 +21,33 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 private const val TAG = "ScreenCaptureManager"
+private const val DEFAULT_MAX_FPS = 60
+private const val FOLLOW_LERP_FACTOR = 0.15f
+private const val FOLLOW_EPSILON = 0.001f
+private const val FOLLOW_FRAME_DELAY_MS = 16L
 
 object ScreenCaptureManager {
     const val SCREENSHOT_SUBDIR = "Pictures/Megingiard"
 
+    private val derivedStateScope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+
     private val _isCapturing = MutableStateFlow(false)
     val isCapturing: StateFlow<Boolean> = _isCapturing.asStateFlow()
 
-    private val _scale = MutableStateFlow(1f)
-    val scale: StateFlow<Float> = _scale.asStateFlow()
+    val cutouts: StateFlow<List<ScreenCutout>> =
+        MacroPadState.activeLayout
+            .map { it?.mirrorCutouts.orEmpty() }
+            .stateIn(derivedStateScope, SharingStarted.Eagerly, emptyList())
 
-    private val _offsetX = MutableStateFlow(0f)
-    val offsetX: StateFlow<Float> = _offsetX.asStateFlow()
+    val edgeBlendWidthDp: StateFlow<Float> =
+        MacroPadState.activeLayout
+            .map { it?.mirrorEdgeBlendWidth ?: 0f }
+            .stateIn(derivedStateScope, SharingStarted.Eagerly, 0f)
 
-    private val _offsetY = MutableStateFlow(0f)
-    val offsetY: StateFlow<Float> = _offsetY.asStateFlow()
-
-    private val _surfaceWidth = MutableStateFlow(0f)
-    val surfaceWidth: StateFlow<Float> = _surfaceWidth.asStateFlow()
-
-    private val _surfaceHeight = MutableStateFlow(0f)
-    val surfaceHeight: StateFlow<Float> = _surfaceHeight.asStateFlow()
-
-    private val _cutouts = MutableStateFlow<List<ScreenCutout>>(emptyList())
-    val cutouts: StateFlow<List<ScreenCutout>> = _cutouts.asStateFlow()
-
-    private val _edgeBlendWidthDp = MutableStateFlow(0f)
-    val edgeBlendWidthDp: StateFlow<Float> = _edgeBlendWidthDp.asStateFlow()
-
-    private val _maxFps = MutableStateFlow(60)
-    val maxFps: StateFlow<Int> = _maxFps.asStateFlow()
+    val maxFps: StateFlow<Int> =
+        MacroPadState.activeLayout
+            .map { it?.mirrorMaxFps ?: DEFAULT_MAX_FPS }
+            .stateIn(derivedStateScope, SharingStarted.Eagerly, DEFAULT_MAX_FPS)
 
     private val _isFrozen = MutableStateFlow(false)
     val isFrozen: StateFlow<Boolean> = _isFrozen.asStateFlow()
@@ -67,14 +64,10 @@ object ScreenCaptureManager {
     private val _screenshotPreview = MutableStateFlow<Bitmap?>(null)
     val screenshotPreview: StateFlow<Bitmap?> = _screenshotPreview.asStateFlow()
 
-    private val _isLocked = MutableStateFlow(false)
-    val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
-
     private val _isFollowActive = MutableStateFlow(false)
     val isFollowActive: StateFlow<Boolean> = _isFollowActive.asStateFlow()
 
     private var activeLayoutJob: Job? = null
-    private var activeCutoutsJob: Job? = null
 
     internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
         set(value) {
@@ -86,9 +79,9 @@ object ScreenCaptureManager {
         }
 
     val isTouchProjectionActive: StateFlow<Boolean> =
-        _cutouts
+        cutouts
             .map { list -> list.any { it.touchProjectionEnabled } }
-            .stateIn(scope, SharingStarted.Eagerly, false)
+            .stateIn(derivedStateScope, SharingStarted.Eagerly, false)
 
     init {
         restartCollectors()
@@ -96,31 +89,28 @@ object ScreenCaptureManager {
 
     private fun restartCollectors() {
         activeLayoutJob?.cancel()
-        activeCutoutsJob?.cancel()
 
         activeLayoutJob =
             scope.launch {
+                var previousLayoutId: String? = null
                 MacroPadState.activeLayout.collect { layout ->
                     if (layout != null) {
-                        _edgeBlendWidthDp.value = layout.mirrorEdgeBlendWidth
-                        _maxFps.value = layout.mirrorMaxFps
-                        _cutouts.value = layout.mirrorCutouts
+                        val oldLayoutId = previousLayoutId
+                        previousLayoutId = layout.id
+                        if (oldLayoutId != null && oldLayoutId != layout.id && _isCapturing.value) {
+                            setFollowActive(layout.mirrorFollowActive)
+                        }
                     } else {
-                        _edgeBlendWidthDp.value = 0f
-                        _maxFps.value = 60
-                        _cutouts.value = emptyList()
+                        previousLayoutId = null
                     }
                 }
             }
+    }
 
-        activeCutoutsJob =
-            scope.launch {
-                _cutouts.collect { list ->
-                    if (list.any { it.touchProjectionEnabled }) {
-                        _isLocked.value = true
-                    }
-                }
-            }
+    fun restoreFromLayout() {
+        val layout = MacroPadState.activeLayout.value ?: return
+        AppLog.d(TAG, "restoreFromLayout layoutId=${layout.id} follow=${layout.mirrorFollowActive}")
+        setFollowActive(layout.mirrorFollowActive)
     }
 
     private var targetFollowX = 0f
@@ -152,26 +142,6 @@ object ScreenCaptureManager {
         }
     }
 
-    fun setScale(scale: Float) {
-        _scale.value = scale
-    }
-
-    fun setOffsetX(x: Float) {
-        _offsetX.value = x
-    }
-
-    fun setOffsetY(y: Float) {
-        _offsetY.value = y
-    }
-
-    fun setSurfaceSize(
-        width: Float,
-        height: Float,
-    ) {
-        _surfaceWidth.value = width
-        _surfaceHeight.value = height
-    }
-
     fun setFrozen(frozen: Boolean) {
         AppLog.d(TAG, "setFrozen($frozen)")
         _isFrozen.value = frozen
@@ -181,12 +151,8 @@ object ScreenCaptureManager {
         AppLog.d(TAG, "setFrozenBitmap(${if (bitmap != null) "${bitmap.width}x${bitmap.height}" else "null"})")
         val old = _frozenBitmap.value
         _frozenBitmap.value = bitmap
-        if (old != null && old != bitmap) {
-            synchronized(old) {
-                if (!old.isRecycled) {
-                    old.recycle()
-                }
-            }
+        if (old != null && old != bitmap && !old.isRecycled) {
+            old.recycle()
         }
     }
 
@@ -209,48 +175,29 @@ object ScreenCaptureManager {
     }
 
     fun showScreenshotPreview(bitmap: Bitmap) {
-        AppLog.d(TAG, "showScreenshotPreview")
-        _screenshotPreview.value?.recycle()
+        val old = _screenshotPreview.value
         _screenshotPreview.value = bitmap
+        if (old != null && old !== bitmap && !old.isRecycled) {
+            old.recycle()
+        }
+        AppLog.d(TAG, "Showing screenshot preview (${bitmap.width}x${bitmap.height})")
     }
 
     fun clearScreenshotPreview() {
-        AppLog.d(TAG, "clearScreenshotPreview")
-        _screenshotPreview.value?.recycle()
+        val old = _screenshotPreview.value
         _screenshotPreview.value = null
+        if (old != null && !old.isRecycled) {
+            old.recycle()
+        }
+        AppLog.d(TAG, "Cleared screenshot preview")
     }
 
-    fun setLocked(locked: Boolean) {
-        AppLog.d(TAG, "setLocked($locked)")
-        _isLocked.value = locked
-    }
-
-    /**
-     * Activates or deactivates touch projection.
-     * Enabling projection automatically enables lock (zoom/pan while forwarding is
-     * unusable). Disabling projection does not automatically release the lock —
-     * the user can unlock independently.
-     */
     fun setTouchProjectionActive(active: Boolean) {
-        AppLog.i(TAG, "setTouchProjectionActive($active)${if (active) " → auto-enabling lock" else ""}")
+        AppLog.i(TAG, "setTouchProjectionActive($active)")
         val layout = MacroPadState.activeLayout.value
         if (layout != null) {
             val updated = layout.mirrorCutouts.map { it.copy(touchProjectionEnabled = active) }
             MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
-        }
-        if (active) _isLocked.value = true
-    }
-
-    /**
-     * Toggles the lock state. If touch projection is currently active, toggling
-     * off also deactivates touch projection (since lock is required for it).
-     */
-    fun toggleLocked() {
-        val newLocked = !_isLocked.value
-        AppLog.d(TAG, "toggleLocked → $newLocked${if (!newLocked && isTouchProjectionActive.value) " (deactivating projection)" else ""}")
-        _isLocked.value = newLocked
-        if (!newLocked) {
-            setTouchProjectionActive(false)
         }
     }
 
@@ -264,28 +211,18 @@ object ScreenCaptureManager {
     ) {
         AppLog.i(TAG, "setFollowActive(active=$active, persist=$persist)")
         _isFollowActive.value = active
-        if (persist) {
-            val layout = MacroPadState.activeLayout.value
-            if (layout != null) {
-                MacroPadState.setLayoutMirrorFollowActive(layout.id, active)
-            }
-        }
         val layout = MacroPadState.activeLayout.value
+        if (persist && layout != null) {
+            MacroPadState.setLayoutMirrorFollowActive(layout.id, active)
+        }
+        followAnimationJob?.cancel()
+        followAnimationJob = null
+        followAnimationCutoutId = null
+        layout?.mirrorCutouts?.filter { it.followTouch }?.forEach { cutout ->
+            InteractiveCutoutController.removeOverrideCrop(cutout.id)
+        }
         if (active) {
-            followAnimationJob?.cancel()
-            followAnimationJob = null
-            followAnimationCutoutId = null
-            if (layout != null) {
-                _cutouts.value = layout.mirrorCutouts
-            }
             AppStateManager.setViewportEditActive(false)
-        } else {
-            followAnimationJob?.cancel()
-            followAnimationJob = null
-            followAnimationCutoutId = null
-            if (layout != null) {
-                _cutouts.value = layout.mirrorCutouts
-            }
         }
     }
 
@@ -308,24 +245,26 @@ object ScreenCaptureManager {
         nx: Float,
         ny: Float,
     ) {
-        val targetCutout = _cutouts.value.find { it.followTouch } ?: return
+        val targetCutout = cutouts.value.find { it.followTouch } ?: return
         InteractiveCutoutController.onFollowTouchReceived(targetCutout.id)
         val targetSrcX = (nx - targetCutout.srcWidth / 2f).coerceIn(0f, (1f - targetCutout.srcWidth).coerceAtLeast(0f))
         val targetSrcY = (ny - targetCutout.srcHeight / 2f).coerceIn(0f, (1f - targetCutout.srcHeight).coerceAtLeast(0f))
 
-        val smoothing = targetCutout.motionSmoothing
-        if (!smoothing) {
+        if (!targetCutout.motionSmoothing) {
             followAnimationJob?.cancel()
             followAnimationJob = null
             followAnimationCutoutId = null
-            if (targetCutout.srcX != targetSrcX || targetCutout.srcY != targetSrcY) {
-                val currentList = _cutouts.value
-                val index = currentList.indexOfFirst { it.id == targetCutout.id }
-                if (index != -1) {
-                    val newList = ArrayList(currentList)
-                    newList[index] = targetCutout.copy(srcX = targetSrcX, srcY = targetSrcY)
-                    _cutouts.value = newList
-                }
+            val currentCrop = InteractiveCutoutController.getEffectiveCrop(targetCutout)
+            if (currentCrop.srcX != targetSrcX || currentCrop.srcY != targetSrcY) {
+                InteractiveCutoutController.updateOverrideCrop(
+                    targetCutout.id,
+                    NormalizedCrop(
+                        srcX = targetSrcX,
+                        srcY = targetSrcY,
+                        srcWidth = targetCutout.srcWidth,
+                        srcHeight = targetCutout.srcHeight,
+                    ),
+                )
             }
         } else {
             targetFollowX = targetSrcX
@@ -340,46 +279,52 @@ object ScreenCaptureManager {
         followAnimationCutoutId = cutoutId
         followAnimationJob =
             scope.launch {
-                val lerpFactor = 0.15f
-                val epsilon = 0.001f
-
                 while (isActive) {
                     val currTargetX = targetFollowX
                     val currTargetY = targetFollowY
 
-                    val list = _cutouts.value
-                    val index = list.indexOfFirst { it.id == cutoutId }
-                    if (index == -1) break
-                    val curCutout = list[index]
-                    val curX = curCutout.srcX
-                    val curY = curCutout.srcY
+                    val curCutout = cutouts.value.find { it.id == cutoutId } ?: break
+                    val curCrop = InteractiveCutoutController.getEffectiveCrop(curCutout)
+                    val curX = curCrop.srcX
+                    val curY = curCrop.srcY
 
                     val dx = currTargetX - curX
                     val dy = currTargetY - curY
 
-                    if (abs(dx) < epsilon && abs(dy) < epsilon) {
+                    if (abs(dx) < FOLLOW_EPSILON && abs(dy) < FOLLOW_EPSILON) {
                         if (curX != currTargetX || curY != currTargetY) {
-                            val newList = ArrayList(list)
-                            newList[index] = curCutout.copy(srcX = currTargetX, srcY = currTargetY)
-                            _cutouts.value = newList
+                            InteractiveCutoutController.updateOverrideCrop(
+                                cutoutId,
+                                NormalizedCrop(
+                                    srcX = currTargetX,
+                                    srcY = currTargetY,
+                                    srcWidth = curCutout.srcWidth,
+                                    srcHeight = curCutout.srcHeight,
+                                ),
+                            )
                         }
                         break
                     } else {
-                        val nextX = curX + dx * lerpFactor
-                        val nextY = curY + dy * lerpFactor
-                        val newList = ArrayList(list)
-                        newList[index] = curCutout.copy(srcX = nextX, srcY = nextY)
-                        _cutouts.value = newList
+                        val nextX = curX + dx * FOLLOW_LERP_FACTOR
+                        val nextY = curY + dy * FOLLOW_LERP_FACTOR
+                        InteractiveCutoutController.updateOverrideCrop(
+                            cutoutId,
+                            NormalizedCrop(
+                                srcX = nextX,
+                                srcY = nextY,
+                                srcWidth = curCutout.srcWidth,
+                                srcHeight = curCutout.srcHeight,
+                            ),
+                        )
                     }
-                    delay(16)
+                    delay(FOLLOW_FRAME_DELAY_MS)
                 }
             }
     }
 
-    /** Resets all transient mirror session state (lock, projection, freeze, follow, interactive cutouts). */
+    /** Resets all transient mirror session state (freeze, follow, interactive cutouts). */
     fun resetMirrorSessionState() {
         AppLog.i(TAG, "resetMirrorSessionState")
-        _isLocked.value = false
         _isFrozen.value = false
         setFrozenBitmap(null)
         clearScreenshotPreview()

@@ -5,9 +5,8 @@ import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
@@ -16,52 +15,45 @@ import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
 
 private const val TAG = "VisualMousePicker"
 
-internal data class MouseActionItem(
-    val action: PadAction,
-    val titleRes: Int,
-    val descRes: Int,
-    val icon: ImageVector,
-)
-
 private val MOUSE_ACTION_ITEMS =
     listOf(
-        MouseActionItem(
+        ActionGridItem(
             PadAction.MouseButton(MouseButton.LEFT),
             R.string.macropad_mouse_btn_left,
             R.string.macropad_mouse_btn_left_desc,
             Icons.Rounded.Mouse,
         ),
-        MouseActionItem(
+        ActionGridItem(
             PadAction.MouseButton(MouseButton.RIGHT),
             R.string.macropad_mouse_btn_right,
             R.string.macropad_mouse_btn_right_desc,
             Icons.Rounded.Mouse,
         ),
-        MouseActionItem(
+        ActionGridItem(
             PadAction.MouseButton(MouseButton.MIDDLE),
             R.string.macropad_mouse_btn_middle,
             R.string.macropad_mouse_btn_middle_desc,
             Icons.Rounded.Mouse,
         ),
-        MouseActionItem(
+        ActionGridItem(
             PadAction.MouseButton(MouseButton.MOUSE4),
             R.string.macropad_mouse_btn_back,
             R.string.macropad_mouse_btn_back_desc,
             Icons.Rounded.Mouse,
         ),
-        MouseActionItem(
+        ActionGridItem(
             PadAction.MouseButton(MouseButton.MOUSE5),
             R.string.macropad_mouse_btn_forward,
             R.string.macropad_mouse_btn_forward_desc,
             Icons.Rounded.Mouse,
         ),
-        MouseActionItem(
+        ActionGridItem(
             PadAction.ScrollWheel,
             R.string.macropad_action_scroll_wheel,
             R.string.macropad_mouse_btn_scroll_desc,
             Icons.Rounded.SwapVert,
         ),
-        MouseActionItem(
+        ActionGridItem(
             PadAction.TrackpointMove(),
             R.string.macropad_action_trackpoint,
             R.string.macropad_mouse_btn_trackpoint_desc,
@@ -72,11 +64,12 @@ private val MOUSE_ACTION_ITEMS =
 @Composable
 internal fun VisualMousePicker(
     currentAction: PadAction,
-    accentColor: Color,
     onSelectAction: (action: PadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppLog.d(TAG, "VisualMousePicker: currentAction=$currentAction")
+    LaunchedEffect(currentAction) {
+        AppLog.d(TAG, "VisualMousePicker: currentAction=$currentAction")
+    }
 
     GamepadTwoColumnGrid(
         items = MOUSE_ACTION_ITEMS,

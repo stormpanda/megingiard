@@ -63,7 +63,6 @@ internal fun SwordsButtonPreview(
         height = size,
         shape = CircleShape,
         isIconOnly = isIconOnly,
-        isDeviceDisabled = false,
         borderColor = borderColor,
         bgColor = bgColor,
         modifier = modifier,

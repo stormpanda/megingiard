@@ -24,8 +24,18 @@ object SemVerComparator {
     ): Boolean {
         if (currentVersion.isBlank() || latestTag.isBlank()) return false
 
-        val cleanCurrentRaw = currentVersion.trim().removePrefix("v").removePrefix("V")
-        val cleanLatestRaw = latestTag.trim().removePrefix("v").removePrefix("V")
+        val cleanCurrentRaw =
+            currentVersion
+                .trim()
+                .removePrefix("v")
+                .removePrefix("V")
+                .substringBefore("+")
+        val cleanLatestRaw =
+            latestTag
+                .trim()
+                .removePrefix("v")
+                .removePrefix("V")
+                .substringBefore("+")
 
         val isCurrentPreRelease = "-" in cleanCurrentRaw
         val currentCoreVersion = cleanCurrentRaw.substringBefore("-")
@@ -47,8 +57,8 @@ object SemVerComparator {
         return isCurrentPreRelease && "-" !in cleanLatestRaw
     }
 
-    private fun parseVersionComponents(versionString: String): List<Int> =
-        versionString
+    private fun parseVersionComponents(coreVersion: String): List<Int> =
+        coreVersion
             .split(".")
-            .mapNotNull { it.filter { char -> char.isDigit() }.toIntOrNull() }
+            .map { segment -> segment.takeWhile { it.isDigit() }.toIntOrNull() ?: 0 }
 }

@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.catalog
 
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -44,16 +43,5 @@ class ArtworkScrapeStateTest {
         assertFalse(attempts.wasAttempted(ArtworkKind.LIBRARY_ICON, PKG))
 
         assertSame(attempts, attempts.withAttempt(ArtworkKind.LOGO, PKG))
-    }
-
-    @Test
-    fun testScrapeAttempts_fromLegacyMarksAllKinds() {
-        val legacy = setOf("a", "b")
-        val attempts = ScrapeAttempts.fromLegacy(legacy)
-        ArtworkKind.entries.forEach { kind ->
-            assertTrue(attempts.wasAttempted(kind, "a"))
-            assertTrue(attempts.wasAttempted(kind, "b"))
-        }
-        assertEquals(legacy, attempts.libraryIcon)
     }
 }

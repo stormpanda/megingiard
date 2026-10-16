@@ -9,5 +9,4 @@ enum class CompanionSurfaceMode {
     MACROPAD,
     KEYBOARD,
     TOUCHPAD,
-    VIEWPORT_EDIT,
 }

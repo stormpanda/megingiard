@@ -1,16 +1,18 @@
 package com.stormpanda.megingiard
 
 import com.stormpanda.megingiard.macropad.GamepadKeycodes
+import com.stormpanda.megingiard.macropad.GamepadRecordingState
 import com.stormpanda.megingiard.macropad.JoystickStick
 import com.stormpanda.megingiard.macropad.MacroStep
 import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
 import com.stormpanda.megingiard.privd.BootstrapStage
 import com.stormpanda.megingiard.privd.EvdevEvent
+import com.stormpanda.megingiard.privd.PendingRpc
 import com.stormpanda.megingiard.privd.PrivdAdbConnectionManager
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
+import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.privd.PrivdError
-import com.stormpanda.megingiard.privd.PrivdFeature
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +22,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -27,6 +30,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import javax.net.ssl.SSLContext
 
@@ -85,23 +89,16 @@ class PrivdSubsystemTest {
     }
 
     @Test
-    fun `PrivdFeature enum lists known features`() {
-        assertEquals(listOf("GAMEPAD_MERGE", "GAMEPAD_RECORDING", "MIRROR"), PrivdFeature.entries.map { it.name })
-    }
-
-    @Test
     fun `PrivdError enum covers all bootstrap failure modes`() {
         val expected =
             listOf(
                 "DAEMON_UNREACHABLE",
                 "PAIRING_FAILED",
-                "ADB_DISCOVERY_FAILED",
                 "ADB_CONNECT_FAILED",
                 "BOOTSTRAP_PUSH_FAILED",
                 "BOOTSTRAP_SPAWN_FAILED",
                 "BOOTSTRAP_PROVISION_FAILED",
                 "ADB_PAIRING_REQUIRED",
-                "VERSION_MISMATCH",
             )
         assertEquals(expected, PrivdError.entries.map { it.name })
     }
@@ -248,27 +245,93 @@ class PrivdSubsystemTest {
     }
 
     @Test
-    fun `PrivdManager state transitions and disconnect`() {
-        PrivdManager.setStateForTesting(PrivdState.OFF)
+    fun `PrivdManager state transitions`() {
+        PrivdClient.setStateForTesting(null)
+        PrivdManager.setStateForTesting(null)
         assertEquals(PrivdState.OFF, PrivdManager.state.value)
+
+        PrivdClient.setStateForTesting(PrivdConnectionState.CONNECTING)
+        assertEquals(PrivdState.CONNECTING, PrivdManager.state.value)
 
         PrivdManager.reportBootstrapStart()
         assertEquals(PrivdState.BOOTSTRAPPING, PrivdManager.state.value)
         assertNull(PrivdManager.lastError.value)
 
-        PrivdManager.reportBootstrapFailure(PrivdError.DAEMON_UNREACHABLE)
+        PrivdClient.setStateForTesting(PrivdConnectionState.CONNECTED)
+        assertEquals(PrivdState.RUNNING, PrivdManager.state.value)
+
+        PrivdManager.onClientDisconnected()
+        PrivdClient.setStateForTesting(PrivdConnectionState.DISCONNECTED)
         assertEquals(PrivdState.FAILED, PrivdManager.state.value)
         assertEquals(PrivdError.DAEMON_UNREACHABLE, PrivdManager.lastError.value)
 
-        PrivdManager.disconnect()
+        PrivdManager.reportBootstrapFailure(PrivdError.PAIRING_FAILED)
+        assertEquals(PrivdState.FAILED, PrivdManager.state.value)
+        assertEquals(PrivdError.PAIRING_FAILED, PrivdManager.lastError.value)
+
+        PrivdClient.setStateForTesting(null)
+        PrivdManager.setStateForTesting(PrivdState.OFF)
         assertEquals(PrivdState.OFF, PrivdManager.state.value)
-        assertNull(PrivdManager.lastError.value)
-        assertTrue(PrivdManager.isManuallyDisconnected)
     }
 
     @Test
     fun `PhysicalGamepadRecordingManager cancelRecording resets state to Idle`() {
         PhysicalGamepadRecordingManager.cancelRecording()
-        assertEquals(com.stormpanda.megingiard.macropad.GamepadRecordingState.Idle, PhysicalGamepadRecordingManager.state.value)
+        assertEquals(GamepadRecordingState.Idle, PhysicalGamepadRecordingManager.state.value)
+    }
+
+    @Test
+    fun `ADB credentials are generated in memory and only persisted on explicit persistCredentials call`() {
+        val context = RuntimeEnvironment.getApplication()
+        PrivdAdbConnectionManager.clearCredentials(context)
+        assertFalse(PrivdAdbConnectionManager.hasCredentials(context))
+
+        val mgr = PrivdAdbConnectionManager.getInstance(context)
+        assertFalse(PrivdAdbConnectionManager.hasCredentials(context))
+
+        mgr.persistCredentials(context)
+        assertTrue(PrivdAdbConnectionManager.hasCredentials(context))
+
+        PrivdAdbConnectionManager.clearCredentials(context)
+        assertFalse(PrivdAdbConnectionManager.hasCredentials(context))
+    }
+
+    @Test
+    fun `PendingRpc SingleLine and MultiLine frame responses and handle errors`() {
+        val pingRpc = PendingRpc.SingleLine(successPrefix = "PONG")
+        assertFalse(pingRpc.onLine("EVT 1 304 1"))
+        assertTrue(pingRpc.onLine("PONG"))
+        assertTrue(pingRpc.deferred.isCompleted)
+
+        val mirrorRpc =
+            PendingRpc.SingleLine(
+                successPrefix = "MIRROR_DIRECT_READY",
+                errorPrefix = "MIRROR_DIRECT_ERR",
+                exactSuccessMatch = false,
+            )
+        assertTrue(mirrorRpc.onLine("MIRROR_DIRECT_ERR spawn failed"))
+        assertTrue(mirrorRpc.deferred.isCompleted)
+
+        val multiRpc =
+            PendingRpc.MultiLine(
+                beginMarker = "READ_BEGIN",
+                endMarker = "READ_END",
+                errorPrefix = "READ_ERR",
+            )
+        assertFalse(multiRpc.onLine("EVT 1 304 0"))
+        assertTrue(multiRpc.onLine("READ_BEGIN"))
+        assertTrue(multiRpc.onLine("line 1"))
+        assertTrue(multiRpc.onLine("line 2"))
+        assertTrue(multiRpc.onLine("READ_END"))
+        assertEquals("line 1\nline 2\n", multiRpc.deferred.getCompleted())
+
+        val errorMultiRpc =
+            PendingRpc.MultiLine(
+                beginMarker = "PROC_BEGIN",
+                endMarker = "PROC_END",
+                errorPrefix = "PROC_ERR",
+            )
+        assertTrue(errorMultiRpc.onLine("PROC_ERR permission denied"))
+        assertNull(errorMultiRpc.deferred.getCompleted())
     }
 }

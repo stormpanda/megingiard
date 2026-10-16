@@ -6,7 +6,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.io.File
 import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
@@ -248,16 +247,6 @@ object SteamGridDbClient {
         AppLog.d(TAG, "downloadImageBytes: url=$imageUrl")
         return executeHttpRequest(imageUrl)
     }
-
-    suspend fun downloadImageToTempFile(
-        imageUrl: String,
-        cacheDir: File,
-    ): Result<File> =
-        downloadImageBytes(imageUrl).mapCatching { bytes ->
-            val tempFile = File(cacheDir, "steamgriddb_temp_${System.currentTimeMillis()}.png")
-            tempFile.writeBytes(bytes)
-            tempFile
-        }
 
     private suspend fun fetchString(
         urlString: String,

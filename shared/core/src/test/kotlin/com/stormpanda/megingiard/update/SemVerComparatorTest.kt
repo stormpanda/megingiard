@@ -45,4 +45,11 @@ class SemVerComparatorTest {
         assertFalse(SemVerComparator.isUpdateAvailable("0.8.0", ""))
         assertFalse(SemVerComparator.isUpdateAvailable("  ", "  "))
     }
+
+    @Test
+    fun `semver with build metadata comparison`() {
+        assertTrue(SemVerComparator.isUpdateAvailable("0.10.0+build.1", "0.10.1+build.2"))
+        assertFalse(SemVerComparator.isUpdateAvailable("0.10.1+20260414", "0.10.1"))
+        assertFalse(SemVerComparator.isUpdateAvailable("0.10.1+2026-04-14", "0.10.1"))
+    }
 }

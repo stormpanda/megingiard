@@ -12,12 +12,7 @@ enum class PrimaryModalType {
     GLOBAL_SETTINGS,
     KEYBOARD_SETTINGS,
     TOUCHPAD_SETTINGS,
-    BACKGROUND_SETTINGS,
     MACROPAD_EDITOR,
-    MACROPAD_INSPECTOR,
-    LAYOUT_SETTINGS,
-    PROFILE_SETTINGS,
-    MACRO_TIMELINE_EDITOR,
     CROP_SELECTOR,
     ANCHOR_SELECTOR,
     MIRROR_VIEWPORT_EDITOR,
@@ -28,22 +23,6 @@ enum class PrimaryModalType {
  * Optional contextual data passed when opening a primary screen modal.
  */
 sealed interface PrimaryModalPayload {
-    data class MirrorViewportEditor(
-        val cutoutId: String? = null,
-    ) : PrimaryModalPayload
-    data class ButtonInspector(
-        val buttonId: String,
-    ) : PrimaryModalPayload
-
-    data class CutoutInspector(
-        val cutoutId: String,
-    ) : PrimaryModalPayload
-
-    data class MacroTimeline(
-        val macroId: String? = null,
-        val focusStepIndex: Int? = null,
-    ) : PrimaryModalPayload
-
     data class CropSelector(
         val cutoutId: String,
     ) : PrimaryModalPayload
@@ -67,10 +46,6 @@ sealed interface PrimaryModalPayload {
         val newProfile: Boolean = false,
         val presetProfileName: String? = null,
         val profileAssociation: ProfileAssociation? = null,
-    ) : PrimaryModalPayload
-
-    data class LayoutSettings(
-        val layoutId: String,
     ) : PrimaryModalPayload
 
     data class ProfileSettings(

@@ -3,8 +3,8 @@ package com.stormpanda.megingiard.ui.onboarding
 import android.app.Activity
 import android.app.ActivityOptions
 import android.app.LocaleManager
+import android.content.Context
 import android.content.Intent
-import android.os.SystemClock
 import android.provider.Settings
 import android.view.Display
 import androidx.activity.compose.BackHandler
@@ -28,6 +28,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -112,6 +113,7 @@ import com.stormpanda.megingiard.ui.QuickMenuGestureTrialOverlay
 import com.stormpanda.megingiard.ui.QuickMenuStepContent
 import com.stormpanda.megingiard.ui.WelcomeStepContent
 import com.stormpanda.megingiard.ui.rememberBezelBrush
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -129,6 +131,7 @@ private val OW_DIALOG_SHADOW_ELEVATION = 12.dp
 private val OW_DIALOG_PADDING_HORIZONTAL = 20.dp
 private val OW_DIALOG_PADDING_TOP = 20.dp
 private val OW_DIALOG_PADDING_BOTTOM = 16.dp
+private val OW_DIALOG_HORIZONTAL_MARGIN = 16.dp
 
 private val OW_STEPPER_DOT_SIZE = 24.dp
 
@@ -144,6 +147,186 @@ private val OW_BUTTON_ICON_SIZE = 18.dp
 private val OW_BUTTON_SPACED_BY = 8.dp
 private const val OW_WARNING_ALPHA_BG = 0.12f
 private const val OW_WARNING_ALPHA_BORDER = 0.5f
+private const val OW_STATUS_POLL_DELAY_MS = 1000L
+
+internal fun resolveSystemLocale(context: Context): Locale {
+    val lm = context.getSystemService(LocaleManager::class.java)
+    val locales = lm?.systemLocales
+    return if (locales != null && !locales.isEmpty) locales.get(0) else Locale.getDefault()
+}
+
+internal fun launchSystemAccessibilitySettings(context: Context) {
+    try {
+        val intent =
+            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                )
+            }
+        val options = ActivityOptions.makeBasic()
+        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+        context.startActivity(intent, options.toBundle())
+    } catch (e: Exception) {
+        AppLog.e(TAG, "Failed to open accessibility settings: ${e.message}")
+    }
+}
+
+internal class RootBridgeActionsState(
+    private val context: Context,
+    private val coroutineScope: CoroutineScope,
+) {
+    var isActivatingAccessibility by mutableStateOf(false)
+        private set
+    var isActivatingPrivd by mutableStateOf(false)
+        private set
+
+    fun activateAccessibility() {
+        if (isActivatingAccessibility) return
+        isActivatingAccessibility = true
+        coroutineScope.launch(Dispatchers.IO) {
+            val success = PServiceBridge.enableAccessibility(context)
+            val active = MegingiardAccessibilityService.isEnabled(context)
+            withContext(Dispatchers.Main) {
+                AppStateManager.setAccessibilityActive(active || success)
+                isActivatingAccessibility = false
+            }
+        }
+    }
+
+    fun activatePrivd() {
+        if (isActivatingPrivd) return
+        isActivatingPrivd = true
+        coroutineScope.launch(Dispatchers.IO) {
+            PrivdManager.connect(context)
+            withContext(Dispatchers.Main) {
+                isActivatingPrivd = false
+            }
+        }
+    }
+}
+
+@Composable
+internal fun rememberRootBridgeActions(): RootBridgeActionsState {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    return remember(context, coroutineScope) {
+        RootBridgeActionsState(context, coroutineScope)
+    }
+}
+
+@Composable
+internal fun OnboardingWizardCardScaffold(
+    steps: List<OnboardingStepState>,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val colors = LocalAppColors.current
+    Column(
+        modifier =
+            modifier
+                .widthIn(max = OW_DIALOG_MAX_WIDTH)
+                .padding(horizontal = OW_DIALOG_HORIZONTAL_MARGIN)
+                .animateContentSize(
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    alignment = Alignment.Center,
+                ).shadow(OW_DIALOG_SHADOW_ELEVATION, OW_DIALOG_SHAPE)
+                .clip(OW_DIALOG_SHAPE)
+                .background(colors.surface)
+                .border(
+                    OW_DIALOG_BORDER_WIDTH,
+                    brush = rememberBezelBrush(),
+                    shape = OW_DIALOG_SHAPE,
+                ).padding(
+                    start = OW_DIALOG_PADDING_HORIZONTAL,
+                    end = OW_DIALOG_PADDING_HORIZONTAL,
+                    top = OW_DIALOG_PADDING_TOP,
+                    bottom = OW_DIALOG_PADDING_BOTTOM,
+                ).clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}, // absorb clicks
+                ),
+    ) {
+        OnboardingStepper(steps = steps)
+        Spacer(modifier = Modifier.height(OW_DIALOG_HORIZONTAL_MARGIN))
+        content()
+    }
+}
+
+internal class SystemSetupStatus(
+    initialAccessibilityActive: Boolean,
+    initialWifiActive: Boolean,
+    initialDevModeActive: Boolean,
+    initialUsbActive: Boolean,
+    initialWirelessActive: Boolean,
+    initialDevicePaired: Boolean,
+    initialAutoSetupActive: Boolean,
+) {
+    var isAccessibilityActive by mutableStateOf(initialAccessibilityActive)
+    var isWifiActive by mutableStateOf(initialWifiActive)
+    var isDevModeActive by mutableStateOf(initialDevModeActive)
+    var isUsbActive by mutableStateOf(initialUsbActive)
+    var isWirelessActive by mutableStateOf(initialWirelessActive)
+    var isDevicePaired by mutableStateOf(initialDevicePaired)
+    var isAutoSetupActive by mutableStateOf(initialAutoSetupActive)
+
+    fun refresh(context: Context) {
+        isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
+        isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
+        isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
+        isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
+        isDevicePaired = PrivdBootstrapper.hasCredentials(context)
+    }
+}
+
+@Composable
+internal fun rememberSystemSetupStatus(currentStepId: OnboardingStepId): SystemSetupStatus {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val isAccessibilityActive by AppStateManager.isAccessibilityActive.collectAsStateWithLifecycle()
+    val isAutoSetupActive by MegingiardAccessibilityService.isAutoSetupActive.collectAsStateWithLifecycle()
+    val status =
+        remember(context) {
+            SystemSetupStatus(
+                initialAccessibilityActive = isAccessibilityActive,
+                initialWifiActive = MegingiardAccessibilityService.isWifiActive(context),
+                initialDevModeActive = MegingiardAccessibilityService.isDevModeActive(context),
+                initialUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context),
+                initialWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context),
+                initialDevicePaired = PrivdBootstrapper.hasCredentials(context),
+                initialAutoSetupActive = isAutoSetupActive,
+            )
+        }
+    status.isAccessibilityActive = isAccessibilityActive
+    status.isAutoSetupActive = isAutoSetupActive
+
+    DisposableEffect(context, lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    status.refresh(context)
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(currentStepId) {
+        if (currentStepId == OnboardingStepId.PRIVILEGED) {
+            AppLog.d(TAG, "Starting 1s continuous polling loop for prerequisite status ($currentStepId)")
+            while (isActive) {
+                status.refresh(context)
+                delay(OW_STATUS_POLL_DELAY_MS)
+            }
+        }
+    }
+
+    return status
+}
 
 /**
  * Root host dialog for the multi-step onboarding wizard.
@@ -155,7 +338,6 @@ fun OnboardingWizardDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    val colors = LocalAppColors.current
     val steps by OnboardingWizardManager.steps.collectAsStateWithLifecycle()
     val activeStepIndex by OnboardingWizardManager.activeStepIndex.collectAsStateWithLifecycle()
 
@@ -165,133 +347,18 @@ fun OnboardingWizardDialog(
     val isFirstStep = activeStepIndex == 0
 
     val isQuickMenuStep = currentStepState.id == OnboardingStepId.QUICK_MENU
-
-    var isAccessibilityActive by remember {
-        mutableStateOf(MegingiardAccessibilityService.isEnabled(context))
-    }
-    val isAccessibilityStep = currentStepState.id == OnboardingStepId.ACCESSIBILITY
-
-    val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
+    val setupStatus = rememberSystemSetupStatus(currentStepState.id)
+    val rootBridgeActions = rememberRootBridgeActions()
     val privdState by PrivdManager.state.collectAsStateWithLifecycle()
-    var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
-    var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
-    var isUsbActive by remember { mutableStateOf(MegingiardAccessibilityService.isUsbDebuggingActive(context)) }
-    var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }
-    var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
-    var isAutoSetupActive by remember { mutableStateOf(MegingiardAccessibilityService.isAutoSetupActive) }
 
     val isRootBridgeAvailable = remember { PrivdManager.isRootBridgeAvailable }
-    var isActivatingAccessibility by remember { mutableStateOf(false) }
-    var isActivatingPrivd by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(lifecycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
-                    isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
-                    isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
-                    isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
-                    isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
-                    isDevicePaired = PrivdBootstrapper.hasCredentials(context)
-                    isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
-                }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+    val isLanguageSupported =
+        remember(context) {
+            AutoSetupLanguageConfig.fromLocaleOrNull(resolveSystemLocale(context)) != null
         }
-    }
-
-    LaunchedEffect(isAccessibilityStep) {
-        if (isAccessibilityStep) {
-            AppLog.d(TAG, "Starting 1s continuous polling loop for accessibility status in onboarding")
-            while (isActive) {
-                val active = MegingiardAccessibilityService.isEnabled(context)
-                if (active != isAccessibilityActive) {
-                    isAccessibilityActive = active
-                    AppLog.i(TAG, "Accessibility service status change detected in onboarding: active=$active")
-                }
-                delay(1000L)
-            }
-        }
-    }
-
-    LaunchedEffect(isPrivilegedStep) {
-        if (isPrivilegedStep) {
-            AppLog.d(TAG, "Starting 1s continuous polling loop for Privileged Mode status & Wi-Fi in onboarding")
-            while (isActive) {
-                isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
-                isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
-                isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
-                isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
-                isDevicePaired = PrivdBootstrapper.hasCredentials(context)
-                isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
-                delay(1000L)
-            }
-        }
-    }
 
     val startAutoSetup = {
         MegingiardAccessibilityService.startMultiStageAutoSetup(context)
-        isAutoSetupActive = true
-    }
-
-    val launchAccessibilitySettings = {
-        try {
-            val intent =
-                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP,
-                    )
-                }
-            val options = ActivityOptions.makeBasic()
-            options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-            context.startActivity(intent, options.toBundle())
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to open accessibility settings from onboarding: ${e.message}")
-        }
-    }
-
-    val activateAccessibilityViaRoot = {
-        if (!isActivatingAccessibility) {
-            isActivatingAccessibility = true
-            coroutineScope.launch(Dispatchers.IO) {
-                val startTime = SystemClock.uptimeMillis()
-                val success = PServiceBridge.enableAccessibility(context)
-                val elapsed = SystemClock.uptimeMillis() - startTime
-                if (elapsed < 1000L) {
-                    delay(1000L - elapsed)
-                }
-                val active = MegingiardAccessibilityService.isEnabled(context)
-                withContext(Dispatchers.Main) {
-                    isAccessibilityActive = active || success
-                    isActivatingAccessibility = false
-                }
-            }
-        }
-    }
-
-    val activatePrivdViaRoot = {
-        if (!isActivatingPrivd) {
-            isActivatingPrivd = true
-            coroutineScope.launch(Dispatchers.IO) {
-                val startTime = SystemClock.uptimeMillis()
-                PrivdManager.connect(context)
-                val elapsed = SystemClock.uptimeMillis() - startTime
-                if (elapsed < 1000L) {
-                    delay(1000L - elapsed)
-                }
-                withContext(Dispatchers.Main) {
-                    isActivatingPrivd = false
-                }
-            }
-        }
     }
 
     BackHandler(enabled = true) {
@@ -303,40 +370,7 @@ fun OnboardingWizardDialog(
     }
 
     val wizardCardContent: @Composable () -> Unit = {
-        Column(
-            modifier =
-                Modifier
-                    .widthIn(max = OW_DIALOG_MAX_WIDTH)
-                    .padding(horizontal = 16.dp)
-                    .animateContentSize(
-                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                        alignment = Alignment.Center,
-                    ).shadow(OW_DIALOG_SHADOW_ELEVATION, OW_DIALOG_SHAPE)
-                    .clip(OW_DIALOG_SHAPE)
-                    .background(colors.surface)
-                    .border(
-                        OW_DIALOG_BORDER_WIDTH,
-                        brush = rememberBezelBrush(),
-                        shape = OW_DIALOG_SHAPE,
-                    ).padding(
-                        start = OW_DIALOG_PADDING_HORIZONTAL,
-                        end = OW_DIALOG_PADDING_HORIZONTAL,
-                        top = OW_DIALOG_PADDING_TOP,
-                        bottom = OW_DIALOG_PADDING_BOTTOM,
-                    ).clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}, // absorb clicks
-                    ),
-        ) {
-            // Header Stepper Indicator
-            OnboardingStepper(
-                steps = steps,
-                activeStepIndex = activeStepIndex,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
+        OnboardingWizardCardScaffold(steps = steps) {
             // Step Content Host
             Box(
                 modifier =
@@ -362,125 +396,194 @@ fun OnboardingWizardDialog(
                             ThemeStepContent()
                         }
 
-                        OnboardingStepId.ACCESSIBILITY -> {
-                            AccessibilityStepContent(
-                                isAccessibilityActive = isAccessibilityActive,
-                                onLaunchAccessibilitySettings = launchAccessibilitySettings,
-                                isRootBridgeAvailable = isRootBridgeAvailable,
-                                onActivateViaRootBridge = activateAccessibilityViaRoot,
-                                isActivating = isActivatingAccessibility,
-                            )
-                        }
-
-                        OnboardingStepId.PRIVILEGED -> {
-                            PrivilegedStepContent(
-                                isWifiActive = isWifiActive,
-                                isAccessibilityActive = isAccessibilityActive,
-                                isDevModeActive = isDevModeActive,
-                                isWirelessActive = isWirelessActive,
-                                isUsbActive = isUsbActive,
-                                isDevicePaired = isDevicePaired,
+                        OnboardingStepId.ACCESSIBILITY,
+                        OnboardingStepId.PRIVILEGED,
+                        OnboardingStepId.FINISHED,
+                        -> {
+                            SystemSetupStepContent(
+                                stepId = stepId,
+                                setupStatus = setupStatus,
+                                rootBridgeActions = rootBridgeActions,
                                 privdState = privdState,
-                                onStartAutoSetup = startAutoSetup,
-                                isAutoSetupActive = isAutoSetupActive,
                                 isRootBridgeAvailable = isRootBridgeAvailable,
-                                onActivateViaRootBridge = activatePrivdViaRoot,
-                                isActivatingRootBridge = isActivatingPrivd,
+                                onStartAutoSetup = startAutoSetup,
+                                isReconnectPrompt = false,
                             )
                         }
-
-                        OnboardingStepId.FINISHED -> {
-                            FinishedStepContent()
-                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(OW_DIALOG_HORIZONTAL_MARGIN))
 
-            // Footer Navigation Controls
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (!isFirstStep) {
-                    OutlinedButton(
-                        onClick = { OnboardingWizardManager.prevStep() },
-                    ) {
-                        Text(
-                            text = stringResource(R.string.onboarding_btn_back),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
+            val isNextEnabled =
+                when (currentStepState.id) {
+                    OnboardingStepId.ACCESSIBILITY -> {
+                        setupStatus.isAccessibilityActive
                     }
-                } else {
-                    OutlinedButton(
-                        onClick = { (context as? Activity)?.finishAndRemoveTask() },
-                    ) {
-                        Text(
-                            text = stringResource(R.string.btn_exit_app),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
+
+                    OnboardingStepId.PRIVILEGED -> {
+                        privdState == PrivdState.RUNNING || (!isRootBridgeAvailable && !isLanguageSupported)
+                    }
+
+                    else -> {
+                        true
                     }
                 }
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    val isNextEnabled =
-                        when (currentStepState.id) {
-                            OnboardingStepId.ACCESSIBILITY -> {
-                                isAccessibilityActive
-                            }
-
-                            OnboardingStepId.PRIVILEGED -> {
-                                if (isRootBridgeAvailable) {
-                                    privdState == PrivdState.RUNNING
-                                } else {
-                                    isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired &&
-                                        privdState == PrivdState.RUNNING
-                                }
-                            }
-
-                            else -> {
-                                true
-                            }
-                        }
-
-                    Button(
-                        enabled = isNextEnabled,
-                        onClick = {
-                            if (isLastStep) {
-                                OnboardingWizardManager.finishWizard()
-                                onDismiss()
-                            } else {
-                                OnboardingWizardManager.nextStep()
-                            }
-                        },
-                    ) {
-                        Text(
-                            text =
-                                if (isLastStep) {
-                                    stringResource(R.string.onboarding_btn_finish)
-                                } else {
-                                    stringResource(R.string.onboarding_btn_next)
-                                },
-                            style = MaterialTheme.typography.labelLarge,
-                        )
+            OnboardingWizardFooter(
+                isLastStep = isLastStep,
+                isNextEnabled = isNextEnabled,
+                finishLabelResId = R.string.onboarding_btn_finish,
+                onBack = if (!isFirstStep) OnboardingWizardManager::prevStep else null,
+                onNextOrFinish = {
+                    if (isLastStep) {
+                        onDismiss()
+                    } else {
+                        OnboardingWizardManager.nextStep()
                     }
-                }
-            }
+                },
+            )
         }
     }
 
     QuickMenuGestureTrialOverlay(
         overlayAtBottom = overlayAtBottom,
-        onDismiss = {},
-        showScrim = true,
         enabled = isQuickMenuStep,
         content = wizardCardContent,
     )
+}
+
+@Composable
+internal fun SystemSetupStepContent(
+    stepId: OnboardingStepId,
+    setupStatus: SystemSetupStatus,
+    rootBridgeActions: RootBridgeActionsState,
+    privdState: PrivdState,
+    isRootBridgeAvailable: Boolean,
+    onStartAutoSetup: () -> Unit,
+    isReconnectPrompt: Boolean,
+) {
+    val context = LocalContext.current
+    when (stepId) {
+        OnboardingStepId.ACCESSIBILITY -> {
+            AccessibilityStepContent(
+                isAccessibilityActive = setupStatus.isAccessibilityActive,
+                onLaunchAccessibilitySettings = { launchSystemAccessibilitySettings(context) },
+                isRootBridgeAvailable = isRootBridgeAvailable,
+                onActivateViaRootBridge = rootBridgeActions::activateAccessibility,
+                isActivating = rootBridgeActions.isActivatingAccessibility,
+            )
+        }
+
+        OnboardingStepId.PRIVILEGED -> {
+            PrivilegedStepContent(
+                isWifiActive = setupStatus.isWifiActive,
+                isAccessibilityActive = setupStatus.isAccessibilityActive,
+                isDevModeActive = setupStatus.isDevModeActive,
+                isWirelessActive = setupStatus.isWirelessActive,
+                isUsbActive = setupStatus.isUsbActive,
+                isDevicePaired = setupStatus.isDevicePaired,
+                privdState = privdState,
+                onStartAutoSetup = onStartAutoSetup,
+                isAutoSetupActive = setupStatus.isAutoSetupActive,
+                isRootBridgeAvailable = isRootBridgeAvailable,
+                onActivateViaRootBridge = rootBridgeActions::activatePrivd,
+                isActivatingRootBridge = rootBridgeActions.isActivatingPrivd,
+                titleText =
+                    stringResource(
+                        when {
+                            isRootBridgeAvailable -> R.string.onboarding_privd_root_bridge_title
+                            isReconnectPrompt -> R.string.privd_reconnect_title
+                            else -> R.string.onboarding_privd_title
+                        },
+                    ),
+                descText =
+                    stringResource(
+                        when {
+                            isRootBridgeAvailable -> R.string.onboarding_privd_root_bridge_desc
+                            isReconnectPrompt -> R.string.privd_reconnect_desc
+                            else -> R.string.onboarding_privd_desc
+                        },
+                    ),
+                buttonText =
+                    stringResource(
+                        when {
+                            isRootBridgeAvailable -> R.string.onboarding_privd_activate_btn
+                            isReconnectPrompt -> R.string.privd_reconnect_auto_button
+                            else -> R.string.onboarding_privd_auto_setup
+                        },
+                    ),
+            )
+        }
+
+        OnboardingStepId.FINISHED -> {
+            if (isReconnectPrompt) {
+                FinishedStepContent(
+                    titleText = stringResource(R.string.privd_reconnect_all_set),
+                    descText = null,
+                )
+            } else {
+                FinishedStepContent()
+            }
+        }
+
+        else -> {}
+    }
+}
+
+@Composable
+internal fun OnboardingWizardFooter(
+    isLastStep: Boolean,
+    isNextEnabled: Boolean,
+    finishLabelResId: Int,
+    onBack: (() -> Unit)?,
+    onNextOrFinish: () -> Unit,
+) {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (onBack != null) {
+            OutlinedButton(onClick = onBack) {
+                Text(
+                    text = stringResource(R.string.onboarding_btn_back),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        } else {
+            OutlinedButton(
+                onClick = { (context as? Activity)?.finishAndRemoveTask() },
+            ) {
+                Text(
+                    text = stringResource(R.string.btn_exit_app),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(OW_BUTTON_SPACED_BY),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Button(
+                enabled = isNextEnabled,
+                onClick = onNextOrFinish,
+            ) {
+                Text(
+                    text =
+                        if (isLastStep) {
+                            stringResource(finishLabelResId)
+                        } else {
+                            stringResource(R.string.onboarding_btn_next)
+                        },
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -832,16 +935,7 @@ fun PrivilegedStepContent(
         }
         return
     }
-    val systemLocale =
-        remember {
-            val lm = context.getSystemService(LocaleManager::class.java)
-            val locales = lm?.systemLocales
-            if (locales != null && !locales.isEmpty) {
-                locales.get(0)
-            } else {
-                Locale.getDefault()
-            }
-        }
+    val systemLocale = remember(context) { resolveSystemLocale(context) }
 
     val isLanguageSupported =
         remember(systemLocale) {
@@ -1101,10 +1195,10 @@ private fun OnboardingWarningBanner(
 @Composable
 fun OnboardingStepper(
     steps: List<OnboardingStepState>,
-    activeStepIndex: Int,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
+    val activeStepIndex = steps.indexOfFirst { it.isCurrent }.coerceAtLeast(0)
 
     val animatedStepProgress by animateFloatAsState(
         targetValue = activeStepIndex.toFloat(),
@@ -1119,7 +1213,7 @@ fun OnboardingStepper(
     ) {
         steps.forEachIndexed { index, step ->
             val isCompleted = step.isCompleted
-            val isCurrent = index == activeStepIndex
+            val isCurrent = step.isCurrent
 
             val targetBgColor =
                 when {

@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.mirror
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.graphics.SurfaceTexture
-import android.view.Surface
 import android.view.TextureView
 import android.widget.FrameLayout
 import androidx.test.core.app.ApplicationProvider
@@ -184,25 +183,6 @@ class MirrorFrameSamplerTest {
 
             assertNull(cropped)
             ScreenCaptureManager.setFrozenBitmap(null)
-        }
-
-    @Test
-    fun testRegisterAndUnregisterWithSurface() =
-        runTest {
-            val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-            val tv = TextureView(context)
-            val st = SurfaceTexture(1)
-            val surface = Surface(st)
-
-            MirrorFrameSampler.registerTextureView(tv, surface)
-            // No frozen bitmap, surface is registered
-            MirrorFrameSampler.unregisterTextureView(tv)
-            // After unregister, captureCrop should return null
-            val result = MirrorFrameSampler.captureCrop(Rect(0, 0, 50, 50))
-            assertNull(result)
-
-            surface.release()
-            st.release()
         }
 
     @Test

@@ -5,8 +5,6 @@ import androidx.compose.ui.unit.dp
 
 internal val KB_KEY_PADDING_H = 2.dp
 internal val KB_KEY_PADDING_V = 2.dp
-internal const val KB_TRACKPOINT_OVERLAY_ALPHA = 0.82f
-internal const val KB_TRACKPOINT_FADE_MS = 200
 
 internal val KB_TOOLBAR_HEIGHT = 44.dp
 internal val KB_BOTTOM_BAR_HEIGHT = 50.dp

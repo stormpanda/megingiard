@@ -32,8 +32,7 @@ class TouchRecordingSheetTest {
                 mode = TouchRecordingMode.TAP,
                 recordedGestureCount = 0,
                 startElapsedRealtime = 1000L,
-                liveNormX = 0.5f,
-                liveNormY = 0.5f,
+                activePointers = listOf(TouchPointerState(slot = 0, normX = 0.5f, normY = 0.5f)),
             )
 
         composeTestRule.setContent {
@@ -64,8 +63,7 @@ class TouchRecordingSheetTest {
                 recordedGestureCount = 2,
                 totalRecordedSampleCount = 48,
                 startElapsedRealtime = 1000L,
-                liveNormX = 0.25f,
-                liveNormY = 0.75f,
+                activePointers = listOf(TouchPointerState(slot = 0, normX = 0.25f, normY = 0.75f)),
             )
 
         composeTestRule.setContent {

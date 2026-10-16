@@ -30,7 +30,6 @@ class MirrorCutoutDomainTest {
         id: String = "test-layout",
         name: String = "Test Layout",
         mirrorCutouts: List<ScreenCutout> = emptyList(),
-        mirrorMultiMode: Boolean = false,
         mirrorSavedScale: Float = 1f,
         mirrorSavedOffsetX: Float = 0f,
         mirrorSavedOffsetY: Float = 0f,
@@ -40,7 +39,6 @@ class MirrorCutoutDomainTest {
                 id = id,
                 name = name,
                 mirrorCutouts = mirrorCutouts,
-                mirrorMultiMode = mirrorMultiMode,
                 mirrorSavedScale = mirrorSavedScale,
                 mirrorSavedOffsetX = mirrorSavedOffsetX,
                 mirrorSavedOffsetY = mirrorSavedOffsetY,
@@ -95,32 +93,11 @@ class MirrorCutoutDomainTest {
         val activeLayout = MacroPadState.activeLayout.value
         assertNotNull(activeLayout)
         assertEquals(0, activeLayout!!.mirrorCutouts.size)
-        assertTrue(activeLayout.mirrorConfigured)
-    }
-
-    @Test
-    fun `setSurfaceSize does not migrate legacy viewport settings to cutouts list`() {
-        loadLayout(
-            id = "test-layout-legacy",
-            mirrorSavedScale = 5f,
-            mirrorSavedOffsetX = 960f,
-            mirrorSavedOffsetY = 540f,
-        )
-
-        ScreenCaptureManager.setSurfaceSize(1920f, 1080f)
-
-        val activeLayout = MacroPadState.activeLayout.value
-        assertNotNull(activeLayout)
-        assertEquals(0, activeLayout!!.mirrorCutouts.size)
-        assertEquals(5f, activeLayout.mirrorSavedScale, 0.001f)
-        assertEquals(960f, activeLayout.mirrorSavedOffsetX, 0.001f)
-        assertEquals(540f, activeLayout.mirrorSavedOffsetY, 0.001f)
     }
 
     @Test
     fun `TouchProjectionController onPress handles coordinates mapping correctly`() {
         loadLayout("test-layout-proj", mirrorCutouts = listOf(sampleCutout()))
-        ScreenCaptureManager.setSurfaceSize(1000f, 1000f)
 
         val controller = TouchProjectionController(edgeZonePx = 20f, overlayAtBottom = false)
 
@@ -139,31 +116,12 @@ class MirrorCutoutDomainTest {
     }
 
     @Test
-    fun `toggling multi-mode and saving viewport does not override other mode configs`() {
-        loadLayout(
-            id = "test-layout-toggle",
-            mirrorMultiMode = false,
-            mirrorSavedScale = 2f,
-            mirrorCutouts = listOf(sampleCutout("c1")),
-        )
-
-        MacroPadState.saveMirrorViewport("test-layout-toggle", scale = 3f, offsetX = 10f, offsetY = 10f)
-
-        val activeLayout = MacroPadState.activeLayout.value
-        assertNotNull(activeLayout)
-        assertEquals(3f, activeLayout!!.mirrorSavedScale, 0.001f)
-        assertEquals(1, activeLayout.mirrorCutouts.size)
-        assertEquals("c1", activeLayout.mirrorCutouts.first().id)
-    }
-
-    @Test
     fun `restoreFromLayout on layout with empty cutouts preserves empty cutouts`() {
         loadLayout("test-layout-empty-cutouts")
 
         ScreenCaptureManager.setCaptureSourceSize(1920, 1080)
-        ScreenCaptureManager.setSurfaceSize(1000f, 1000f)
 
-        MirrorViewportController.restoreFromLayout()
+        ScreenCaptureManager.restoreFromLayout()
 
         val activeLayout = MacroPadState.activeLayout.value
         assertNotNull(activeLayout)
@@ -174,7 +132,6 @@ class MirrorCutoutDomainTest {
     @Test
     fun `TouchProjectionController multi touch allocates distinct slots`() {
         loadLayout("test-layout-proj", mirrorCutouts = listOf(sampleCutout()))
-        ScreenCaptureManager.setSurfaceSize(1000f, 1000f)
 
         val controller = TouchProjectionController(edgeZonePx = 20f, overlayAtBottom = false)
 

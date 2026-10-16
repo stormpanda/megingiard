@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.math.floorMod
 import kotlin.math.abs
+import kotlin.math.floor
 
 private const val TAG = "VerticalRollingCarousel"
 private const val CAROUSEL_ROLL_ANGLE_DEG = 35f
@@ -166,13 +167,13 @@ fun <T> VerticalRollingCarousel(
             val halfVisible = visibleItemsCount / 2
             val integerOffsetState =
                 remember {
-                    derivedStateOf { kotlin.math.floor(animatedOffset).toInt() }
+                    derivedStateOf { floor(animatedOffset).toInt() }
                 }
             val integerOffset = integerOffsetState.value
 
             val fractionalOffsetState =
                 remember {
-                    derivedStateOf { animatedOffset - kotlin.math.floor(animatedOffset) }
+                    derivedStateOf { animatedOffset - floor(animatedOffset) }
                 }
 
             for (s in -halfVisible - 1..halfVisible + 1) {

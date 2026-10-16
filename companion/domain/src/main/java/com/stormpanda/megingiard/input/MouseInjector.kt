@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.input
 
-import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.MouseButton
 import com.stormpanda.megingiard.privd.PrivdClient
@@ -11,26 +10,26 @@ private const val TAG = "MouseInjector"
  * Public facade for mouse injection (clicks + relative pointer movement) via Megingiard System Service.
  */
 object MouseInjector {
-    @Volatile
-    private var active: Boolean = false
-
-    fun start(context: Context? = null) {
-        active = true
-        AppLog.i(TAG, "start()")
-    }
+    private val heldButtons = mutableSetOf<Char>()
 
     fun stop() {
         AppLog.i(TAG, "stop()")
-        active = false
+        val toRelease =
+            synchronized(heldButtons) {
+                val copy = heldButtons.toList()
+                heldButtons.clear()
+                copy
+            }
+        toRelease.forEach { code -> PrivdClient.send("MB $code U\n") }
     }
 
-    val isRunning: Boolean get() = active && PrivdClient.isConnected
-
     fun buttonDown(code: Char) {
+        synchronized(heldButtons) { heldButtons.add(code) }
         PrivdClient.send("MB $code D\n")
     }
 
     fun buttonUp(code: Char) {
+        synchronized(heldButtons) { heldButtons.remove(code) }
         PrivdClient.send("MB $code U\n")
     }
 

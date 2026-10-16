@@ -17,12 +17,13 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
-import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -34,12 +35,18 @@ private const val DIRECT_MIRROR_RETRY_DELAY_MS = 200L
 const val ACTION_START_PRIVD = "START_PRIVD"
 const val ACTION_STOP = "STOP"
 
+private data class DirectMirrorSyncState(
+    val surface: Surface?,
+    val isFrozen: Boolean,
+    val isCapturing: Boolean,
+    val privdState: PrivdConnectionState,
+)
+
 class ScreenCaptureService : Service() {
     private var directPrivdActiveSurface: Surface? = null
-    private var directPrivdSession: DirectPrivdMirrorSession? = null
+    private var isDirectMirrorRunning = false
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
-    private var directPrivdStartGeneration = 0L
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -60,33 +67,39 @@ class ScreenCaptureService : Service() {
         }
 
         scope.launch {
-            PrivdClient.state.collect { state ->
-                if (state == PrivdConnectionState.CONNECTED) {
-                    AppLog.i(TAG, "Privd reconnected while mirror active -> updating direct server surfaces")
-                    directPrivdSession?.release()
-                    directPrivdSession = null
-                    updateDirectServerSurfaces()
-                }
-            }
-        }
-
-        scope.launch {
+            var wasConnected = PrivdClient.state.value == PrivdConnectionState.CONNECTED
             combine(
                 MasterSurfaceRegistry.masterSurface,
                 ScreenCaptureManager.isFrozen,
                 ScreenCaptureManager.isCapturing,
-            ) { surface, isFrozen, isCapturing ->
-                Triple(surface, isFrozen, isCapturing)
-            }.distinctUntilChanged().collect { (surface, isFrozen, isCapturing) ->
-                if (!isCapturing) return@collect
+                PrivdClient.state,
+            ) { surface, isFrozen, isCapturing, privdState ->
+                DirectMirrorSyncState(
+                    surface = surface,
+                    isFrozen = isFrozen,
+                    isCapturing = isCapturing,
+                    privdState = privdState,
+                )
+            }.distinctUntilChanged().collectLatest { state ->
+                val isConnected = state.privdState == PrivdConnectionState.CONNECTED
+                val reconnected = isConnected && !wasConnected
+                wasConnected = isConnected
 
-                if (surface != null && !isFrozen) {
-                    updateDirectServerSurfaces()
+                if (!state.isCapturing) return@collectLatest
+
+                if (reconnected && isDirectMirrorRunning) {
+                    AppLog.i(TAG, "Privd reconnected while mirror active -> updating direct server surfaces")
+                    directPrivdActiveSurface = null
+                    stopDirectMirror()
+                }
+
+                val surface = state.surface
+                if (surface != null && surface.isValid && !state.isFrozen) {
+                    syncDirectServerSurface(surface)
                 } else {
                     directPrivdActiveSurface = null
                     DirectMirrorSurfaceBridge.clearDirectSurfaces()
-                    directPrivdSession?.release()
-                    directPrivdSession = null
+                    stopDirectMirror()
                 }
             }
         }
@@ -123,11 +136,12 @@ class ScreenCaptureService : Service() {
     }
 
     private fun startPrivdPath(): Int {
+        startForegroundNotificationConnectedDevice()
         if (ScreenCaptureManager.isCapturing.value) {
-            AppLog.w(TAG, "startPrivdPath: already capturing — ignoring duplicate start")
+            AppLog.d(TAG, "Direct Privd capture already running, ignoring duplicate start")
             return START_NOT_STICKY
         }
-        startForegroundNotificationConnectedDevice()
+        AppLog.i(TAG, "Starting Direct Privd mirror capture")
 
         val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
         val secondaryDisplay =
@@ -142,6 +156,12 @@ class ScreenCaptureService : Service() {
         }
 
         val primaryDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+        if (primaryDisplay == null) {
+            AppLog.e(TAG, "Primary display not found, aborting Direct Privd capture")
+            AppStateManager.setPromptInFlight(false)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         val windowContext = createWindowContext(primaryDisplay, WindowManager.LayoutParams.TYPE_APPLICATION, null)
         val windowMetrics = windowContext.getSystemService(WindowManager::class.java).maximumWindowMetrics
         val bounds = windowMetrics.bounds
@@ -152,109 +172,81 @@ class ScreenCaptureService : Service() {
         capturedSrcHeight = srcHeight
         ScreenCaptureManager.setCaptureSourceSize(srcWidth, srcHeight)
 
-        MirrorViewportController.startPersistence(scope)
-        scope.launch {
-            MirrorSettings.restoreMirrorSessionState()
-            MirrorViewportController.restoreFromLayout()
-            AppLog.i(TAG, "privd session state restored → setCapturing(true)")
-            ScreenCaptureManager.setCapturing(true)
-            AppStateManager.setPromptInFlight(false)
-        }
+        ScreenCaptureManager.restoreFromLayout()
+        AppLog.i(TAG, "privd session state restored → setCapturing(true)")
+        ScreenCaptureManager.setCapturing(true)
+        AppStateManager.setPromptInFlight(false)
         return START_NOT_STICKY
     }
 
-    private fun updateDirectServerSurfaces() {
-        directPrivdStartGeneration += 1L
-        val startGeneration = directPrivdStartGeneration
-        scope.launch {
-            if (startGeneration != directPrivdStartGeneration) return@launch
-            val surface = MasterSurfaceRegistry.masterSurface.value
-            if (surface == null || !surface.isValid) {
+    private suspend fun stopDirectMirror() {
+        if (!isDirectMirrorRunning) return
+        isDirectMirrorRunning = false
+        runCatching { PrivdClient.stopMirror() }
+    }
+
+    private suspend fun syncDirectServerSurface(surface: Surface) {
+        if (directPrivdActiveSurface == surface && isDirectMirrorRunning) {
+            return
+        }
+
+        if (!isDirectMirrorRunning) {
+            val directStarted = PrivdClient.startDirectMirror(capturedSrcWidth, capturedSrcHeight)
+            if (!directStarted) {
                 directPrivdActiveSurface = null
-                DirectMirrorSurfaceBridge.clearDirectSurfaces()
-                directPrivdSession?.release()
-                directPrivdSession = null
-                return@launch
+                AppLog.w(TAG, "syncDirectServerSurface: direct privileged mirror session start failed")
+                return
             }
+            isDirectMirrorRunning = true
+        }
 
-            if (directPrivdActiveSurface == surface) {
-                return@launch
+        for (attempt in 1..DIRECT_MIRROR_MAX_RETRIES) {
+            if (DirectMirrorSurfaceBridge.sendToDirectServer(surface, capturedSrcWidth, capturedSrcHeight)) {
+                directPrivdActiveSurface = surface
+                AppLog.i(
+                    TAG,
+                    "direct privileged mirror session updated with master surface (attempt $attempt/$DIRECT_MIRROR_MAX_RETRIES)",
+                )
+                return
             }
-
-            var directSession = directPrivdSession
-            if (directSession == null) {
-                directSession = DirectPrivdMirrorSession(capturedSrcWidth, capturedSrcHeight)
-                directPrivdSession = directSession
-                val directStarted = directSession.start()
-                if (startGeneration != directPrivdStartGeneration || directPrivdSession !== directSession) {
-                    directSession.release()
-                    return@launch
-                }
-                if (!directStarted) {
-                    directSession.release()
-                    directPrivdSession = null
-                    directPrivdActiveSurface = null
-                    AppLog.w(TAG, "updateDirectServerSurfaces: direct privileged mirror session start failed")
-                    return@launch
-                }
-            }
-
-            if (startGeneration == directPrivdStartGeneration) {
-                var success = false
-                for (attempt in 1..DIRECT_MIRROR_MAX_RETRIES) {
-                    if (startGeneration != directPrivdStartGeneration) return@launch
-                    if (DirectMirrorSurfaceBridge.sendToDirectServer(surface, capturedSrcWidth, capturedSrcHeight)) {
-                        directPrivdActiveSurface = surface
-                        AppLog.i(
-                            TAG,
-                            "direct privileged mirror session updated with master surface (attempt $attempt/$DIRECT_MIRROR_MAX_RETRIES)",
-                        )
-                        success = true
-                        break
-                    }
-                    if (attempt < DIRECT_MIRROR_MAX_RETRIES) {
-                        AppLog.w(
-                            TAG,
-                            "direct privileged mirror send attempt $attempt failed — retrying in ${DIRECT_MIRROR_RETRY_DELAY_MS}ms",
-                        )
-                        delay(DIRECT_MIRROR_RETRY_DELAY_MS)
-                    }
-                }
-
-                if (!success && startGeneration == directPrivdStartGeneration) {
-                    AppLog.w(TAG, "direct privileged mirror send failed — attempting session recreation")
-                    directSession.release()
-                    directPrivdSession = null
-                    directPrivdActiveSurface = null
-
-                    val freshSession = DirectPrivdMirrorSession(capturedSrcWidth, capturedSrcHeight)
-                    directPrivdSession = freshSession
-                    val restarted = freshSession.start()
-                    if (restarted && startGeneration == directPrivdStartGeneration) {
-                        if (DirectMirrorSurfaceBridge.sendToDirectServer(surface, capturedSrcWidth, capturedSrcHeight)) {
-                            directPrivdActiveSurface = surface
-                            AppLog.i(TAG, "direct privileged mirror recovered after session recreation")
-                            return@launch
-                        }
-                    }
-                    freshSession.release()
-                    directPrivdSession = null
-                    directPrivdActiveSurface = null
-                    AppLog.e(TAG, "direct privileged mirror send failed after retry and recovery")
-                }
+            if (attempt < DIRECT_MIRROR_MAX_RETRIES) {
+                AppLog.w(
+                    TAG,
+                    "direct privileged mirror send attempt $attempt failed — retrying in ${DIRECT_MIRROR_RETRY_DELAY_MS}ms",
+                )
+                delay(DIRECT_MIRROR_RETRY_DELAY_MS)
             }
         }
+
+        AppLog.w(TAG, "direct privileged mirror send failed — attempting session recreation")
+        stopDirectMirror()
+        directPrivdActiveSurface = null
+
+        if (PrivdClient.startDirectMirror(capturedSrcWidth, capturedSrcHeight)) {
+            isDirectMirrorRunning = true
+            if (DirectMirrorSurfaceBridge.sendToDirectServer(surface, capturedSrcWidth, capturedSrcHeight)) {
+                directPrivdActiveSurface = surface
+                AppLog.i(TAG, "direct privileged mirror recovered after session recreation")
+                return
+            }
+            stopDirectMirror()
+        }
+        AppLog.e(TAG, "direct privileged mirror send failed after retry and recovery")
     }
 
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: cleanup sequence")
+        if (isDirectMirrorRunning) {
+            isDirectMirrorRunning = false
+            scope.launch(NonCancellable) {
+                runCatching { PrivdClient.stopMirror() }
+            }
+        }
         scope.cancel()
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
         AppStateManager.setPromptInFlight(false)
         directPrivdActiveSurface = null
         DirectMirrorSurfaceBridge.clearDirectSurfaces()
-        directPrivdSession?.release()
-        directPrivdSession = null
     }
 }

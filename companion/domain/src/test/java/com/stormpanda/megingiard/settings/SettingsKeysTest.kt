@@ -65,5 +65,13 @@ class SettingsKeysTest {
             allDeclaredKeys.size,
             categorizedKeys.size,
         )
+
+        // 4. Verify every key in SECTION_MAP belongs to an import type-dispatch set, and no excluded keys leak in
+        val typedKeys = BOOLEAN_KEYS + INT_KEYS + FLOAT_KEYS + STRING_KEYS
+        assertEquals(
+            "Import type-dispatch sets must match SECTION_MAP exported keys 1:1",
+            exportedKeys,
+            typedKeys,
+        )
     }
 }

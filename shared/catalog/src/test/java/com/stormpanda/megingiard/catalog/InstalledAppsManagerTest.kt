@@ -37,6 +37,7 @@ class InstalledAppsManagerTest {
 
     @Test
     fun testInstalledAppInfoDataModel() {
+        val context: Context = RuntimeEnvironment.getApplication()
         val app =
             InstalledAppInfo(
                 packageName = "com.example.game",
@@ -54,37 +55,40 @@ class InstalledAppsManagerTest {
         val gameApp = app.copy(isGame = true)
         assertEquals(true, gameApp.isGame)
 
-        val updated = app.withCover("/tmp/new_cover.png", 42, 12345L)
-        assertEquals("/tmp/new_cover.png", updated.coverPath)
-        assertEquals(42, updated.coverImageId)
-        assertEquals(12345L, updated.coverLastModified)
+        val coverFile = InstalledAppsManager.coverFileFor(context, "com.example.game")
+        coverFile.parentFile?.mkdirs()
+        coverFile.writeBytes(byteArrayOf(1, 2, 3))
+        InstalledAppsManager.setCoverImageId(context, "com.example.game", 42)
 
-        val list = listOf(app, InstalledAppInfo(packageName = "com.other.app", activityName = "", label = "Other"))
-        val updatedList = list.withUpdatedCover("com.example.game", "/tmp/updated.png", 99)
-        assertEquals("/tmp/updated.png", updatedList[0].coverPath)
-        assertEquals(99, updatedList[0].coverImageId)
-        assertNull(updatedList[1].coverPath)
-        assertNull(updatedList[1].coverImageId)
+        val iconFile = InstalledAppsManager.libraryIconFileFor(context, "com.example.game")
+        iconFile.parentFile?.mkdirs()
+        iconFile.writeBytes(byteArrayOf(4, 5, 6))
+        InstalledAppsManager.setLibraryIconRef(context, "com.example.game", LibraryIconRef(777, "icons"))
 
-        val withIcon = app.withLibraryIcon("/tmp/icon.png", 777, "icons", 54321L)
-        assertEquals("/tmp/icon.png", withIcon.libraryIconPath)
-        assertEquals(777, withIcon.libraryIconImageId)
-        assertEquals("icons", withIcon.libraryIconType)
-        assertEquals(54321L, withIcon.libraryIconLastModified)
+        val enriched = InstalledAppsManager.enrichAppInfo(app, context)
+        assertEquals(coverFile.absolutePath, enriched.coverPath)
+        assertEquals(42, enriched.coverImageId)
+        assertEquals(coverFile.lastModified(), enriched.coverLastModified)
+        assertEquals(iconFile.absolutePath, enriched.libraryIconPath)
+        assertEquals(777, enriched.libraryIconImageId)
+        assertEquals("icons", enriched.libraryIconType)
+        assertEquals(iconFile.lastModified(), enriched.libraryIconLastModified)
 
-        val updatedIconList = list.withUpdatedLibraryIcon("com.example.game", "/tmp/new_icon.png", 888, "logos")
-        assertEquals("/tmp/new_icon.png", updatedIconList[0].libraryIconPath)
-        assertEquals(888, updatedIconList[0].libraryIconImageId)
-        assertEquals("logos", updatedIconList[0].libraryIconType)
-        assertNull(updatedIconList[1].libraryIconPath)
+        coverFile.delete()
+        iconFile.delete()
     }
 
     @Test
-    fun testWithUpdatedCover_withoutImageIdClearsStaleId() {
+    fun testEnrichAppInfo_withoutImageIdClearsStaleId() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val coverFile = InstalledAppsManager.coverFileFor(context, PKG_GAME)
+        coverFile.parentFile?.mkdirs()
+        coverFile.writeBytes(byteArrayOf(1))
         val app = InstalledAppInfo(packageName = PKG_GAME, activityName = "", label = "Game", coverPath = "/a.png", coverImageId = 7)
-        val updated = listOf(app).withUpdatedCover(PKG_GAME, "/b.png")
-        assertEquals("/b.png", updated[0].coverPath)
-        assertNull(updated[0].coverImageId)
+        val updated = InstalledAppsManager.enrichAppInfo(app, context)
+        assertEquals(coverFile.absolutePath, updated.coverPath)
+        assertNull(updated.coverImageId)
+        coverFile.delete()
     }
 
     @Test
@@ -92,15 +96,12 @@ class InstalledAppsManagerTest {
         val app = InstalledAppInfo(packageName = PKG_GAME, activityName = "", label = "Default", defaultLabel = "Default")
         assertFalse(app.hasCustomLabel)
 
-        val renamed = app.withLabel("Custom")
+        val renamed = app.copy(label = "Custom")
         assertEquals("Custom", renamed.label)
         assertTrue(renamed.hasCustomLabel)
 
         val other = InstalledAppInfo(packageName = "com.other", activityName = "", label = "Other")
-        val list = listOf(app, other).withUpdatedLabel(PKG_GAME, "Renamed")
-        assertEquals("Renamed", list[0].label)
-        assertEquals("Other", list[1].label)
-        assertFalse("No defaultLabel means no custom-label state", list[1].hasCustomLabel)
+        assertFalse("No defaultLabel means no custom-label state", other.hasCustomLabel)
     }
 
     @Test
@@ -188,12 +189,18 @@ class InstalledAppsManagerTest {
 
     @Test
     fun testUpdateAppCover() {
+        val context: Context = RuntimeEnvironment.getApplication()
         InstalledAppsManager.setInstalledAndroidAppsForTesting(listOf(seedApp()))
-        InstalledAppsManager.updateAppCover(PKG_GAME, "/path/to/cover.png", 101)
+        val coverFile = InstalledAppsManager.coverFileFor(context, PKG_GAME)
+        coverFile.parentFile?.mkdirs()
+        coverFile.writeBytes(byteArrayOf(1, 2, 3))
+        InstalledAppsManager.setCoverImageId(context, PKG_GAME, 101)
+        InstalledAppsManager.refreshAppMetadata(context, PKG_GAME)
 
         val app = InstalledAppsManager.installedAndroidAppsForTesting().single()
-        assertEquals("/path/to/cover.png", app.coverPath)
+        assertEquals(coverFile.absolutePath, app.coverPath)
         assertEquals(101, app.coverImageId)
+        coverFile.delete()
     }
 
     @Test
@@ -353,7 +360,7 @@ class InstalledAppsManagerTest {
         InstalledAppsManager.openAppInfo(context, "com.test.app", displayId = 0)
         InstalledAppsManager.uninstallApp(context, "com.test.app")
         InstalledAppsManager.uninstallApp(context, "com.test.app", displayId = 4)
-        InstalledAppsManager.updateAppCover("rom.snes.smw", "/storage/cover.png")
+        InstalledAppsManager.refreshAppMetadata(context, "rom.snes.smw")
     }
 
     @Test
@@ -489,17 +496,8 @@ class InstalledAppsManagerTest {
     }
 
     @Test
-    fun testScrapeAttempts_legacyMigrationAndPerKind() {
+    fun testScrapeAttempts_perKind() {
         val context: Context = RuntimeEnvironment.getApplication()
-        val legacyFile = File(context.filesDir, "gamefocus_scraped_apps.txt")
-        legacyFile.writeText("com.legacy.app\n")
-
-        InstalledAppsManager.reloadPersistedMetadataForTesting(context)
-        runBlocking { InstalledAppsManager.awaitPendingWritesForTesting() }
-
-        assertTrue(InstalledAppsManager.wasAttempted("com.legacy.app", ArtworkKind.COVER))
-        assertTrue(InstalledAppsManager.wasAttempted("com.legacy.app", ArtworkKind.LOGO))
-        assertTrue(InstalledAppsManager.wasAttempted("com.legacy.app", ArtworkKind.LIBRARY_ICON))
 
         assertFalse(InstalledAppsManager.wasAttempted("com.new.app", ArtworkKind.COVER))
         InstalledAppsManager.recordScrapeAttempt(context, "com.new.app", ArtworkKind.COVER)
@@ -510,12 +508,17 @@ class InstalledAppsManagerTest {
 
     @Test
     fun testUpdateAppLogo_updatesState() {
+        val context: Context = RuntimeEnvironment.getApplication()
         val app = seedApp()
         InstalledAppsManager.setInstalledAndroidAppsForTesting(listOf(app))
-        InstalledAppsManager.updateAppLogo(PKG_GAME, 123456L)
+        val logoFile = InstalledAppsManager.logoFileFor(context, PKG_GAME)
+        logoFile.parentFile?.mkdirs()
+        logoFile.writeBytes(byteArrayOf(1, 2, 3))
+        InstalledAppsManager.refreshAppMetadata(context, PKG_GAME)
 
         val updated = InstalledAppsManager.installedAndroidAppsForTesting().single()
-        assertEquals(123456L, updated.logoLastModified)
+        assertEquals(logoFile.lastModified(), updated.logoLastModified)
+        logoFile.delete()
     }
 
     private fun seedApp() =

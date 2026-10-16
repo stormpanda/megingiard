@@ -80,6 +80,10 @@ private const val TRS_RADAR_ASPECT_RATIO = 16f / 9f
 private const val TRS_RADAR_CROSSHAIR_ALPHA = 0.25f
 private const val TRS_RADAR_BG_ALPHA = 0.12f
 private const val TRS_CONTAINER_MAX_WIDTH_DP = 560
+private const val TRS_PULSE_SCALE_MIN = 0.8f
+private const val TRS_PULSE_SCALE_MAX = 1.35f
+private const val TRS_PULSE_DURATION_MS = 600
+private const val TRS_TRAIL_HEAD_ALPHA = 0.85f
 
 private val TRS_CONTAINER_RADIUS = 20.dp
 private val TRS_BUTTON_RADIUS = 12.dp
@@ -469,17 +473,26 @@ private fun TouchScreenRadar(
     val dividerColor = colors.divider
     val surfaceVariant = colors.surfaceVariant
 
-    val pulseTransition = rememberInfiniteTransition(label = "radarTouchPulse")
-    val livePulseScale by pulseTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 1.35f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "touchRadarLiveScale",
-    )
+    val hasActiveTouch = !recording?.activePointers.isNullOrEmpty() || recording?.isTouchDown == true
+    val pulseTransition =
+        if (hasActiveTouch) {
+            rememberInfiniteTransition(label = "radarTouchPulse")
+        } else {
+            null
+        }
+    val livePulseScaleState =
+        pulseTransition?.animateFloat(
+            initialValue = TRS_PULSE_SCALE_MIN,
+            targetValue = TRS_PULSE_SCALE_MAX,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(durationMillis = TRS_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+            label = "touchRadarLiveScale",
+        )
+
+    val trailPath = remember { Path() }
 
     Box(
         modifier =
@@ -491,6 +504,7 @@ private fun TouchScreenRadar(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
             val height = size.height
+            val livePulseScale = livePulseScaleState?.value ?: 1.0f
 
             // Center crosshair grid
             val midX = width / 2f
@@ -512,7 +526,7 @@ private fun TouchScreenRadar(
             if (activePointers.isNotEmpty()) {
                 for (pointer in activePointers) {
                     val color = pointerColor(pointer.slot, accentColor)
-                    drawNormalizedTrail(pointer.trail, width, height, color, trailStrokeWidthPx)
+                    drawNormalizedTrail(trailPath, pointer.trail, width, height, color, trailStrokeWidthPx)
                     drawPointerDot(
                         center = Offset(pointer.normX * width, pointer.normY * height),
                         color = color,
@@ -521,7 +535,7 @@ private fun TouchScreenRadar(
                     )
                 }
             } else {
-                drawNormalizedTrail(recording?.activeTrailPoints ?: emptyList(), width, height, accentColor, trailStrokeWidthPx)
+                drawNormalizedTrail(trailPath, recording?.activeTrailPoints ?: emptyList(), width, height, accentColor, trailStrokeWidthPx)
                 val liveX = recording?.liveNormX
                 val liveY = recording?.liveNormY
                 if (liveX != null && liveY != null) {
@@ -538,20 +552,21 @@ private fun TouchScreenRadar(
 }
 
 private fun DrawScope.drawNormalizedTrail(
+    trailPath: Path,
     trail: List<Pair<Float, Float>>,
     width: Float,
     height: Float,
     color: Color,
     strokeWidthPx: Float,
 ) {
+    trailPath.rewind()
     if (trail.size < 2) return
-    val path = Path()
     trail.forEachIndexed { index, (nx, ny) ->
         val px = nx * width
         val py = ny * height
-        if (index == 0) path.moveTo(px, py) else path.lineTo(px, py)
+        if (index == 0) trailPath.moveTo(px, py) else trailPath.lineTo(px, py)
     }
-    drawPath(path = path, color = color.copy(alpha = 0.85f), style = Stroke(width = strokeWidthPx))
+    drawPath(path = trailPath, color = color.copy(alpha = TRS_TRAIL_HEAD_ALPHA), style = Stroke(width = strokeWidthPx))
 }
 
 private fun DrawScope.drawPointerDot(

@@ -9,30 +9,34 @@ private const val TAG = "SwitchEmulators"
 data class SwitchEmulatorOption(
     val packageName: String,
     val displayName: String,
+    val logBrand: String = "yuzu",
 )
 
 object SwitchEmulators {
     val SUPPORTED_EMULATOR_OPTIONS: List<SwitchEmulatorOption> =
         listOf(
-            SwitchEmulatorOption("dev.eden.eden_emulator.dualscreen", "Eden DS"),
-            SwitchEmulatorOption("dev.eden.eden_emulator.dualscreen.debug", "Eden DS (Debug)"),
-            SwitchEmulatorOption("dev.eden.eden_emulator.dualscreen.nightly", "Eden DS Nightly"),
-            SwitchEmulatorOption("dev.eden.eden_emulator.dualscreen.nightly.debug", "Eden DS Nightly (Debug)"),
-            SwitchEmulatorOption("dev.eden.eden_emulator", "Eden Emulator"),
-            SwitchEmulatorOption("dev.eden.eden_emulator.debug", "Eden Emulator (Debug)"),
-            SwitchEmulatorOption("dev.eden.eden_emulator.nightly", "Eden Nightly"),
-            SwitchEmulatorOption("dev.eden.eden_emulator.nightly.debug", "Eden Nightly (Debug)"),
-            SwitchEmulatorOption("dev.legacy.eden_emulator", "Eden Legacy"),
-            SwitchEmulatorOption("dev.legacy.eden_emulator.debug", "Eden Legacy (Debug)"),
-            SwitchEmulatorOption("dev.legacy.eden_emulator.nightly", "Eden Legacy Nightly"),
-            SwitchEmulatorOption("dev.legacy.eden_emulator.nightly.debug", "Eden Legacy Nightly (Debug)"),
-            SwitchEmulatorOption("org.citron.citron_emu", "Citron Emulator"),
-            SwitchEmulatorOption("org.citron.citron_emu.debug", "Citron Emulator (Debug)"),
-            SwitchEmulatorOption("org.sudachi.sudachi_emu", "Sudachi Emulator"),
-            SwitchEmulatorOption("com.suyu.suyu", "Suyu Emulator"),
-            SwitchEmulatorOption("org.yuzu.yuzu_emu", "Yuzu Emulator"),
-            SwitchEmulatorOption("org.yuzu.yuzu_emu.ea", "Yuzu Early Access"),
+            SwitchEmulatorOption("dev.eden.eden_emulator.dualscreen", "Eden DS", "eden"),
+            SwitchEmulatorOption("dev.eden.eden_emulator.dualscreen.debug", "Eden DS (Debug)", "eden"),
+            SwitchEmulatorOption("dev.eden.eden_emulator.dualscreen.nightly", "Eden DS Nightly", "eden"),
+            SwitchEmulatorOption("dev.eden.eden_emulator.dualscreen.nightly.debug", "Eden DS Nightly (Debug)", "eden"),
+            SwitchEmulatorOption("dev.eden.eden_emulator", "Eden Emulator", "eden"),
+            SwitchEmulatorOption("dev.eden.eden_emulator.debug", "Eden Emulator (Debug)", "eden"),
+            SwitchEmulatorOption("dev.eden.eden_emulator.nightly", "Eden Nightly", "eden"),
+            SwitchEmulatorOption("dev.eden.eden_emulator.nightly.debug", "Eden Nightly (Debug)", "eden"),
+            SwitchEmulatorOption("dev.legacy.eden_emulator", "Eden Legacy", "eden"),
+            SwitchEmulatorOption("dev.legacy.eden_emulator.debug", "Eden Legacy (Debug)", "eden"),
+            SwitchEmulatorOption("dev.legacy.eden_emulator.nightly", "Eden Legacy Nightly", "eden"),
+            SwitchEmulatorOption("dev.legacy.eden_emulator.nightly.debug", "Eden Legacy Nightly (Debug)", "eden"),
+            SwitchEmulatorOption("org.citron.citron_emu", "Citron Emulator", "citron"),
+            SwitchEmulatorOption("org.citron.citron_emu.debug", "Citron Emulator (Debug)", "citron"),
+            SwitchEmulatorOption("org.sudachi.sudachi_emu", "Sudachi Emulator", "sudachi"),
+            SwitchEmulatorOption("com.suyu.suyu", "Suyu Emulator", "suyu"),
+            SwitchEmulatorOption("org.yuzu.yuzu_emu", "Yuzu Emulator", "yuzu"),
+            SwitchEmulatorOption("org.yuzu.yuzu_emu.ea", "Yuzu Early Access", "yuzu"),
         )
+
+    fun getLogBrand(packageName: String): String =
+        SUPPORTED_EMULATOR_OPTIONS.firstOrNull { it.packageName == packageName }?.logBrand ?: "yuzu"
 
     @Volatile
     private var cachedInstalled: List<SwitchEmulatorOption>? = null

@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.Process
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -203,5 +204,23 @@ class MegingiardSettingsProviderTest {
         assertNull(provider.insert(uri, null))
         assertEquals(0, provider.update(uri, null, null, null))
         assertEquals(0, provider.delete(uri, null, null))
+    }
+
+    @Test
+    fun `isCallerSignatureTrusted returns true for own uid`() {
+        val provider = MegingiardSettingsProvider()
+        val context = RuntimeEnvironment.getApplication()
+        assertTrue(provider.isCallerSignatureTrusted(context, Process.myUid()))
+    }
+
+    @Test
+    fun `isCallerPackageValid validates client package against calling uid`() {
+        val provider = MegingiardSettingsProvider()
+        val context = RuntimeEnvironment.getApplication()
+        assertTrue(provider.isCallerPackageValid(context, "com.stormpanda.megingiard", Process.myUid()))
+        assertTrue(provider.isCallerPackageValid(context, null, Process.myUid()))
+        assertFalse(provider.isCallerPackageValid(context, null, Process.myUid() + 9999))
+        assertFalse(provider.isCallerPackageValid(context, "", Process.myUid() + 9999))
+        assertFalse(provider.isCallerPackageValid(context, "com.invalid.client", Process.myUid() + 9999))
     }
 }

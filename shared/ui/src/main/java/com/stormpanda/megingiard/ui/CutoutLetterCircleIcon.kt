@@ -1,41 +1,26 @@
 package com.stormpanda.megingiard.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.stormpanda.megingiard.AppLog
 
-private const val TAG = "CutoutLetterCircleIcon"
 private const val ICON_DEFAULT_SIZE_DP = 18
 
 /**
@@ -129,113 +114,5 @@ fun CutoutSymbolCircleIcon(
             filled = true,
             modifier = modifier,
         )
-    }
-}
-
-/**
- * Reusable subdued TextButton containing a CutoutLetterCircleIcon + label text.
- */
-@Composable
-fun CutoutLetterButton(
-    letter: String,
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    iconSize: Dp = ICON_DEFAULT_SIZE_DP.dp,
-    tint: Color = LocalAppColors.current.onSurfaceSecondary,
-    cutoutColor: Color = LocalAppColors.current.appBackground,
-    enabled: Boolean = true,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val handleOnClick =
-        remember(letter, text, onClick) {
-            {
-                AppLog.d(TAG, "CutoutLetterButton clicked: letter='$letter', label='$text'")
-                onClick()
-            }
-        }
-
-    TextButton(
-        onClick = handleOnClick,
-        enabled = enabled,
-        interactionSource = interactionSource,
-        modifier = modifier.focusProperties { canFocus = false },
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            CutoutLetterCircleIcon(
-                letter = letter,
-                size = iconSize,
-                tint = tint,
-                cutoutColor = cutoutColor,
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = text,
-                style =
-                    MaterialTheme.typography.labelMedium.copy(
-                        color = tint,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-            )
-        }
-    }
-}
-
-/**
- * Reusable subdued TextButton containing a CutoutSymbolCircleIcon + label text.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CutoutSymbolButton(
-    symbolName: String,
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = ButtonDefaults.TextButtonContentPadding,
-    iconSize: Dp = ICON_DEFAULT_SIZE_DP.dp,
-    tint: Color = LocalAppColors.current.onSurfaceSecondary,
-    cutoutColor: Color = LocalAppColors.current.appBackground,
-    enabled: Boolean = true,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val handleOnClick =
-        remember(symbolName, text, onClick) {
-            {
-                AppLog.d(TAG, "CutoutSymbolButton clicked: symbol='$symbolName', label='$text'")
-                onClick()
-            }
-        }
-
-    CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
-        Surface(
-            onClick = handleOnClick,
-            enabled = enabled,
-            shape = CircleShape,
-            color = Color.Transparent,
-            contentColor = tint,
-            interactionSource = interactionSource,
-            modifier = modifier.focusProperties { canFocus = false },
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(contentPadding),
-            ) {
-                CutoutSymbolCircleIcon(
-                    symbolName = symbolName,
-                    size = iconSize,
-                    tint = tint,
-                    cutoutColor = cutoutColor,
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = text,
-                    style =
-                        MaterialTheme.typography.labelMedium.copy(
-                            color = tint,
-                            fontWeight = FontWeight.SemiBold,
-                        ),
-                )
-            }
-        }
     }
 }

@@ -40,12 +40,18 @@ sealed interface TouchRecordingState {
         val totalRecordedSampleCount: Int = 0,
         val startElapsedRealtime: Long = 0L,
         val activePointers: List<TouchPointerState> = emptyList(),
-        val liveNormX: Float? = activePointers.firstOrNull()?.normX,
-        val liveNormY: Float? = activePointers.firstOrNull()?.normY,
-        val isTouchDown: Boolean = activePointers.isNotEmpty(),
-        val activePointersCount: Int = activePointers.size,
-        val activeTrailPoints: List<Pair<Float, Float>> = activePointers.flatMap { it.trail },
-    ) : TouchRecordingState
+    ) : TouchRecordingState {
+        val liveNormX: Float?
+            get() = activePointers.firstOrNull()?.normX
+        val liveNormY: Float?
+            get() = activePointers.firstOrNull()?.normY
+        val isTouchDown: Boolean
+            get() = activePointers.isNotEmpty()
+        val activePointersCount: Int
+            get() = activePointers.size
+        val activeTrailPoints: List<Pair<Float, Float>>
+            get() = activePointers.flatMap { it.trail }
+    }
 
     data class Done(
         val steps: List<MacroStep>,
@@ -66,6 +72,8 @@ sealed interface TouchRecordingState {
  * 5. On finish or cancel, [TouchScreenObserver] stops and the top-screen editor is resumed.
  */
 object TouchRecordingManager {
+    private val recordingLock = Any()
+
     private val _recordingRequested = MutableStateFlow(false)
 
     /** `true` while the recording sheet is shown on Display 4. */
@@ -110,38 +118,41 @@ object TouchRecordingManager {
      * Signals that the recording session should begin with the specified mode.
      * Clears any stale recorded inputs first, initializes the session epoch, and starts [TouchScreenObserver].
      */
-    fun requestRecording(mode: TouchRecordingMode) {
-        val now = SystemClock.elapsedRealtime()
-        AppLog.i(TAG, "requestRecording mode=$mode startElapsedRealtime=$now")
-        sessionStartEpochMs = now
-        gestureSegmentStartEpochMs = 0L
-        gestureSegmentStartOffsetMs = 0L
-        isGestureSegmentRecording = false
-        activePointers.clear()
-        currentGestureSamples.clear()
-        _recordedTap.value = null
-        recordedGestureSteps.clear()
-        _state.value =
-            TouchRecordingState.Recording(
-                mode = mode,
-                recordedGestureCount = 0,
-                totalRecordedSampleCount = 0,
-                startElapsedRealtime = now,
-            )
-        _recordingRequested.value = true
+    fun requestRecording(mode: TouchRecordingMode) =
+        synchronized(recordingLock) {
+            val now = SystemClock.elapsedRealtime()
+            AppLog.i(TAG, "requestRecording mode=$mode startElapsedRealtime=$now")
+            sessionStartEpochMs = now
+            gestureSegmentStartEpochMs = 0L
+            gestureSegmentStartOffsetMs = 0L
+            isGestureSegmentRecording = false
+            activePointers.clear()
+            currentGestureSamples.clear()
+            _recordedTap.value = null
+            recordedGestureSteps.clear()
+            _state.value =
+                TouchRecordingState.Recording(
+                    mode = mode,
+                    recordedGestureCount = 0,
+                    totalRecordedSampleCount = 0,
+                    startElapsedRealtime = now,
+                )
+            _recordingRequested.value = true
 
-        TouchScreenObserver.onTouchEvent = { slot, action, normX, normY ->
-            handleObservedTouch(slot, action, normX, normY)
+            TouchScreenObserver.start(
+                clientToken = CLIENT_TOKEN,
+                onTouchEvent = { slot, action, normX, normY ->
+                    handleObservedTouch(slot, action, normX, normY)
+                },
+            )
         }
-        TouchScreenObserver.start(CLIENT_TOKEN)
-    }
 
     private fun handleObservedTouch(
         slot: Int,
         action: TouchAction,
         normX: Float,
         normY: Float,
-    ) {
+    ) = synchronized(recordingLock) {
         val current = _state.value as? TouchRecordingState.Recording ?: return
         val now = SystemClock.elapsedRealtime()
 
@@ -233,20 +244,11 @@ object TouchRecordingManager {
     /**
      * Updates live touch pointer states for the secondary companion monitor radar.
      */
-    fun updateLivePointers(pointers: List<TouchPointerState>) {
-        val current = _state.value as? TouchRecordingState.Recording ?: return
-        val primary = pointers.firstOrNull()
-        val allTrail = pointers.flatMap { it.trail }
-        _state.value =
-            current.copy(
-                activePointers = pointers,
-                liveNormX = primary?.normX,
-                liveNormY = primary?.normY,
-                isTouchDown = pointers.isNotEmpty(),
-                activePointersCount = pointers.size,
-                activeTrailPoints = allTrail,
-            )
-    }
+    fun updateLivePointers(pointers: List<TouchPointerState>) =
+        synchronized(recordingLock) {
+            val current = _state.value as? TouchRecordingState.Recording ?: return
+            _state.value = current.copy(activePointers = pointers)
+        }
 
     /**
      * Updates live touch pointer states for testing or explicit updates.
@@ -255,25 +257,17 @@ object TouchRecordingManager {
         normX: Float?,
         normY: Float?,
         isDown: Boolean,
-        activePointersCount: Int,
+        activePointersCount: Int = if (isDown && normX != null && normY != null) 1 else 0,
         activeTrailPoints: List<Pair<Float, Float>>,
-    ) {
+    ) = synchronized(recordingLock) {
         val current = _state.value as? TouchRecordingState.Recording ?: return
         val pointers =
-            if (normX != null && normY != null && isDown) {
+            if (normX != null && normY != null && isDown && activePointersCount > 0) {
                 listOf(TouchPointerState(slot = 0, normX = normX, normY = normY, trail = activeTrailPoints))
             } else {
                 emptyList()
             }
-        _state.value =
-            current.copy(
-                activePointers = pointers,
-                liveNormX = normX,
-                liveNormY = normY,
-                isTouchDown = isDown,
-                activePointersCount = activePointersCount,
-                activeTrailPoints = activeTrailPoints,
-            )
+        _state.value = current.copy(activePointers = pointers)
     }
 
     /**
@@ -283,7 +277,7 @@ object TouchRecordingManager {
     fun onTapRecorded(
         normX: Float,
         normY: Float,
-    ) {
+    ) = synchronized(recordingLock) {
         AppLog.i(TAG, "onTapRecorded normX=$normX normY=$normY")
         TouchScreenObserver.stop(CLIENT_TOKEN)
         val step =
@@ -306,7 +300,7 @@ object TouchRecordingManager {
     fun recordGestureCompleted(
         samples: List<TouchSample>,
         startOffsetMs: Long,
-    ) {
+    ) = synchronized(recordingLock) {
         val currentState = _state.value as? TouchRecordingState.Recording
         if (currentState == null) {
             AppLog.w(TAG, "recordGestureCompleted called while not recording — ignored")
@@ -317,76 +311,101 @@ object TouchRecordingManager {
             return
         }
         if (samples.isEmpty()) return
-        val completedSamples = completeTouchPathSamples(samples)
-        val durationMs = completedSamples.maxOfOrNull { it.offsetMs } ?: 0L
-        recordedGestureSteps +=
-            MacroStep.TouchPath(
-                startTimeMs = startOffsetMs,
-                durationMs = durationMs,
-                samples = completedSamples,
-            )
+        flushGestureToMacroStep(
+            samples = samples,
+            gestureStartTimeMs = startOffsetMs,
+        )
         val totalSamples = recordedGestureSteps.sumOf { it.samples.size }
         AppLog.i(
             TAG,
-            "recordGestureCompleted samples=${samples.size} completedSamples=${completedSamples.size} startOffsetMs=$startOffsetMs totalSteps=${recordedGestureSteps.size}",
+            "recordGestureCompleted samples=${samples.size} startOffsetMs=$startOffsetMs totalSteps=${recordedGestureSteps.size}",
         )
         _state.value =
             currentState.copy(
                 recordedGestureCount = recordedGestureSteps.size,
                 totalRecordedSampleCount = totalSamples,
                 activePointers = emptyList(),
-                isTouchDown = false,
-                activePointersCount = 0,
-                activeTrailPoints = emptyList(),
-                liveNormX = null,
-                liveNormY = null,
             )
     }
 
-    fun finishRecording() {
-        if (_state.value !is TouchRecordingState.Recording) {
-            AppLog.w(TAG, "finishRecording called while not recording — ignored")
-            return
-        }
-        TouchScreenObserver.stop(CLIENT_TOKEN)
-        AppLog.i(TAG, "finishRecording steps=${recordedGestureSteps.size}")
-        val sorted = recordedGestureSteps.sortedBy { it.startTimeMs }
-        val trimmed = trimLeadingIdle(sorted)
-        _state.value = TouchRecordingState.Done(trimmed)
-        recordedGestureSteps.clear()
-        activePointers.clear()
-        _recordingRequested.value = false
+    private fun flushGestureToMacroStep(
+        samples: List<TouchSample>,
+        gestureStartTimeMs: Long,
+    ) {
+        val completedSamples = completeTouchPathSamples(samples)
+        val durationMs = completedSamples.maxOfOrNull { it.offsetMs } ?: 0L
+        recordedGestureSteps +=
+            MacroStep.TouchPath(
+                startTimeMs = gestureStartTimeMs,
+                durationMs = durationMs,
+                samples = completedSamples,
+            )
+        AppLog.i(
+            TAG,
+            "flushGestureToMacroStep samples=${samples.size} completedSamples=${completedSamples.size} gestureStartTimeMs=$gestureStartTimeMs",
+        )
     }
+
+    fun finishRecording() =
+        synchronized(recordingLock) {
+            if (_state.value !is TouchRecordingState.Recording) {
+                AppLog.w(TAG, "finishRecording called while not recording — ignored")
+                return
+            }
+            if (currentGestureSamples.isNotEmpty()) {
+                flushGestureToMacroStep(
+                    samples = currentGestureSamples.toList(),
+                    gestureStartTimeMs = gestureSegmentStartOffsetMs,
+                )
+                currentGestureSamples.clear()
+            }
+            isGestureSegmentRecording = false
+            TouchScreenObserver.stop(CLIENT_TOKEN)
+            AppLog.i(TAG, "finishRecording steps=${recordedGestureSteps.size}")
+            val sorted = recordedGestureSteps.sortedBy { it.startTimeMs }
+            val trimmed = trimLeadingIdle(sorted)
+            _state.value = TouchRecordingState.Done(trimmed)
+            recordedGestureSteps.clear()
+            activePointers.clear()
+            _recordingRequested.value = false
+        }
 
     /**
      * Cancels an in-progress recording. Clears both the request and any partial result.
      */
-    fun cancelRecording() {
-        AppLog.i(TAG, "cancelRecording")
-        TouchScreenObserver.stop(CLIENT_TOKEN)
-        _recordingRequested.value = false
-        _recordedTap.value = null
-        recordedGestureSteps.clear()
-        activePointers.clear()
-        _state.value = TouchRecordingState.Idle
-    }
+    fun cancelRecording() =
+        synchronized(recordingLock) {
+            AppLog.i(TAG, "cancelRecording")
+            TouchScreenObserver.stop(CLIENT_TOKEN)
+            _recordingRequested.value = false
+            _recordedTap.value = null
+            isGestureSegmentRecording = false
+            recordedGestureSteps.clear()
+            activePointers.clear()
+            currentGestureSamples.clear()
+            _state.value = TouchRecordingState.Idle
+        }
 
     /**
      * Called by the timeline editor after it has appended the [MacroStep.TouchTap].
      * Resets [recordedTap] to `null` so the `LaunchedEffect` does not re-trigger.
      */
-    fun consumeRecordedTap() {
-        AppLog.d(TAG, "consumeRecordedTap")
-        _recordedTap.value = null
-    }
+    fun consumeRecordedTap() =
+        synchronized(recordingLock) {
+            AppLog.d(TAG, "consumeRecordedTap")
+            _recordedTap.value = null
+        }
 
-    fun resetState() {
-        AppLog.d(TAG, "resetState")
-        TouchScreenObserver.stop(CLIENT_TOKEN)
-        recordedGestureSteps.clear()
-        activePointers.clear()
-        _state.value = TouchRecordingState.Idle
-    }
+    fun resetState() =
+        synchronized(recordingLock) {
+            AppLog.d(TAG, "resetState")
+            TouchScreenObserver.stop(CLIENT_TOKEN)
+            isGestureSegmentRecording = false
+            recordedGestureSteps.clear()
+            activePointers.clear()
+            currentGestureSamples.clear()
+            _state.value = TouchRecordingState.Idle
+        }
 
     private fun trimLeadingIdle(steps: List<MacroStep.TouchPath>): List<MacroStep.TouchPath> {
         if (steps.isEmpty()) return steps

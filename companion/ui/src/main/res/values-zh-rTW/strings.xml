@@ -447,7 +447,6 @@ Open Settings to create a layout.</string>
     <string name="layout_settings_visual_anchor_blur_desc">當參考錨點遺失時套用毛玻璃模糊。</string>
     <string name="layout_settings_visual_anchor_remove_title">刪除錨點校準</string>
     <string name="layout_settings_visual_anchor_remove_desc">移除已校準的參考簽章並停用視覺錨點</string>
-    <string name="help_layout_settings_auto_switch_desc">為此版面設定視覺錨點與自動切換。監控主螢幕上的參考區域，當此版面的預期內容未顯示時凍結或模糊切角，或切換版面。</string>
 
     <string name="settings_profile_automation_header">自動化</string>
     <string name="settings_profile_auto_layout_switching_title">自動配置切換</string>
@@ -638,6 +637,7 @@ Open Settings to create a layout.</string>
     <string name="config_restore_option_external">外部檔案</string>
     <string name="config_restore_option_external_sub">從儲存空間選擇 .mgrd 檔案</string>
     <string name="config_restore_option_internal_sub">%1$d 個設定檔 • %2$d 個配置 • %3$d 個巨集</string>
+    <string name="config_restore_option_internal_sub_with_backgrounds">%1$d 個設定檔 • %2$d 個配置 • %3$d 個巨集 • %4$d 個背景</string>
     <string name="config_restore_automatic_backups">自動備份</string>
     <string name="config_import_review_title">檢閱並套用</string>
     <string name="config_import_archive_title">Megingiard 備份封存</string>
@@ -809,24 +809,6 @@ Open Settings to create a layout.</string>
     <string name="help_ambient_dim_desc" formatted="false">透過覆蓋一層黑色遮罩來降低投影畫面的亮度。0% 表示不調暗；90% 幾乎為全黑。</string>
     <string name="help_ambient_blend_desc">使投影畫面的邊緣向內淡出，讓投影內容與背景平滑過渡而非生硬切斷。較高的值會產生更強的暈影效果。</string>
 
-    <!-- Mirror editor (Cutout Layout Editor) help -->
-    <string name="help_mirror_editor_title">投影編輯器 — 說明</string>
-    <string name="help_mirror_editor_intro">投影編輯器讓您在投影過程中，於下螢幕上新增、定位、調整大小與設定視窗區塊。輕觸螢幕上的區塊即可選取，然後使用下方的工具列按鈕進行操作。</string>
-    <string name="help_mirror_editor_section_selected">所選區塊</string>
-    <string name="help_mirror_editor_aspect_desc">為所選區塊循環切換三種長寬比模式。「自由」— 無限制，可獨立調整大小。「上螢幕」— 鎖定長寬比以匹配上螢幕的裁切。「下螢幕」— 鎖定長寬比以匹配下螢幕的區塊。</string>
-    <string name="help_mirror_editor_shape_label">形狀</string>
-    <string name="help_mirror_editor_shape_desc">在矩形與圓形之間切換所選區塊的形狀。適用於遊戲小地圖或圓形儀表，圓形裁切外觀更佳。</string>
-    <string name="help_mirror_editor_rotation_label">旋轉</string>
-    <string name="help_mirror_editor_rotation_desc">以 90° 為單位旋轉所選區塊（0°、90°、180°、270°）。在橫向與直向之間旋轉時，邊界框會自動調整並避免與其他區塊重疊。</string>
-    <string name="help_mirror_editor_flip_label">翻轉</string>
-    <string name="help_mirror_editor_flip_desc">循環切換所選區塊的鏡像翻轉模式：無、水平、垂直或兩者。</string>
-    <string name="help_mirror_editor_adjust_label">調整座標</string>
-    <string name="help_mirror_editor_adjust_desc" formatted="false">進入微調模式。使用方向鍵逐像素移動區塊。按住 R2 同時按方向鍵可調整區塊大小（繞中心點對稱放大或縮小，最小可縮至螢幕的 1%）。低於 5% 時將隱藏觸控控制點以保持畫面清晰。</string>
-    <string name="help_mirror_editor_hide_bg_desc">在編輯時暫時隱藏下螢幕上的配置背景圖片，以便更容易看清並調整區塊邊界。這不會變更您已儲存的配置設定。</string>
-    <string name="help_mirror_editor_section_finish">完成</string>
-    <string name="help_mirror_editor_done_desc">儲存本次的所有變更並關閉編輯器。更新後的區塊配置會立即生效。</string>
-    <string name="help_mirror_editor_cancel_desc">捨棄開啟編輯器後的所有變更，並將配置還原為先前的狀態。不會儲存任何修改。</string>
-
     <!-- Global Settings card descriptions -->
     <string name="help_settings_overlay_position_desc">如果您的手握姿勢自然落在裝置底部附近，建議開啟此項，使快速選單更容易滑開而無需移動大拇指。</string>
     <string name="help_settings_language_desc">更改所有應用程式選單、覆蓋層與說明教學的語言。目前提供英文、德文與繁體中文。</string>
@@ -847,10 +829,9 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_intro">快速選單讓您快速存取設定檔、配置與最常用的動作 — 且無需離開目前的遊戲。輕觸螢幕邊緣的快速選單列即可開啟；輕觸背景遮罩即可關閉。</string>
     <string name="help_quickmenu_section_mirror">投影控制 (頂端卡片)</string>
     <string name="help_quickmenu_start_label">開始 / 停止投影</string>
-    <string name="help_quickmenu_start_desc">開始或停止螢幕投影擷取。投影進行時，頂端卡片會展開以顯示更多控制項。</string>
+    <string name="help_quickmenu_start_desc">開始或停止螢幕投影擷取。</string>
     <string name="help_quickmenu_freeze_label">凍結 / 解除凍結</string>
     <string name="help_quickmenu_freeze_desc">凍結投影影像，使其顯示靜態畫面而非即時畫面。適合在您需要仔細閱讀遊戲畫面時暫停。</string>
-    <string name="help_quickmenu_viewport_desc">在下螢幕開啟區塊配置編輯器，讓您在投影覆蓋層中調整大小、移動或新增透明區塊視窗。</string>
     <string name="help_quickmenu_screenshot_top_label">上螢幕截圖</string>
     <string name="help_quickmenu_screenshot_top_desc">截取上螢幕畫面。若未在投影中，則需要 Megingiard 系統服務已連線。</string>
     <string name="help_quickmenu_screenshot_bottom_label">下螢幕截圖</string>
@@ -877,7 +858,8 @@ Open Settings to create a layout.</string>
     <string name="help_companion_hub_sec_hero">目前遊戲與控制設定檔</string>
     <string name="help_companion_hub_hero_show_desc">在下螢幕全螢幕開啟目前進行中遊戲的 MacroPad 觸控版面。</string>
     <string name="help_companion_hub_hero_edit_desc">開啟設定檔與版面編輯器，以自訂按鈕位置、樣式及巨集設定。</string>
-    <string name="help_companion_hub_hero_link_desc">將自訂 MacroPad 控制設定檔連結至目前執行或選取的遊戲，或為其建立專屬設定檔。</string>
+    <string name="help_companion_hub_hero_create_desc">為目前執行或選取的遊戲建立並預先連結一個全新的專屬 MacroPad 控制設定檔。</string>
+    <string name="help_companion_hub_hero_link_desc">將既有的自訂 MacroPad 控制設定檔連結至目前執行或選取的遊戲。</string>
     <string name="help_companion_hub_sec_tools">下螢幕工具</string>
     <string name="help_companion_hub_macropad_desc">快速捷徑，用於開啟目前使用中的 MacroPad 觸控控制介面。</string>
     <string name="help_companion_hub_settings_desc">存取全域應用程式設定，包括主題色彩、系統服務狀態、輸入死區與設定檔備份。</string>
@@ -889,7 +871,6 @@ Open Settings to create a layout.</string>
     <string name="welcome_desc">Megingiard 是 AYN Thor 雙螢幕掌機的助手應用程式。它讓您能配置自訂 MacroPad 設定檔、虛擬鍵盤對應、虛擬觸控板以及螢幕間的投影。</string>
     <string name="welcome_help_title">如何獲取幫助</string>
     <string name="welcome_help_intro">尋找各個螢幕右上角的說明圖示 (?)，以查看該功能的詳細指南與最佳實踐。</string>
-    <string name="welcome_btn_got_it">了解</string>
     <string name="settings_reset_tutorials">重設教學</string>
     <string name="settings_reset_tutorials_desc">重設所有教學提示視窗，以便下次造訪時再次顯示</string>
     <string name="settings_reset_tutorials_toast">教學現在將再次顯示</string>
@@ -934,7 +915,6 @@ Open Settings to create a layout.</string>
     <string name="onboarding_finished_desc">您已完成歡迎導覽。隨時可從 全域設定 → 一般 重新執行此導覽。</string>
     <string name="onboarding_btn_next">下一步</string>
     <string name="onboarding_btn_back">上一步</string>
-    <string name="onboarding_btn_skip">略過</string>
     <string name="onboarding_btn_finish">好，開始動手吧！</string>
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">開啟選單</string>
@@ -1063,7 +1043,6 @@ Open Settings to create a layout.</string>
     <string name="integration_home_relink_dialog_cancel">取消</string>
     <string name="integration_home_new_profile">新增設定檔</string>
     <string name="integration_home_default_layout">預設</string>
-    <string name="integration_home_show_macropad">顯示</string>
     <string name="integration_home_hero_idle_title">Megingiard Companion Hub</string>
     <string name="integration_home_hero_idle_subtitle">請在上螢幕選擇遊戲，或在下方啟動下螢幕工具。</string>
     <string name="integration_home_launch_controls">顯示</string>

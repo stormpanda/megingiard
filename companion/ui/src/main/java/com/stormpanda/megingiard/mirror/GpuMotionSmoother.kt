@@ -281,6 +281,15 @@ class GpuMotionSmoother(
                 throw RuntimeException("eglMakeCurrent failed with error $error")
             }
 
+            val oesTex = IntArray(1)
+            GLES20.glGenTextures(1, oesTex, 0)
+            oesTextureId = oesTex[0]
+            GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, oesTextureId)
+            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
+            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+
             setupShaders()
             setupTexturesAndFbos()
 
@@ -325,6 +334,12 @@ class GpuMotionSmoother(
                 GLES20.glAttachShader(it, drawFragShader)
                 GLES20.glLinkProgram(it)
             }
+
+        GLES20.glDeleteShader(vertShader)
+        GLES20.glDeleteShader(blendFragShader)
+        GLES20.glDeleteShader(passthroughFragShader)
+        GLES20.glDeleteShader(quadVertShader)
+        GLES20.glDeleteShader(drawFragShader)
     }
 
     private fun setupTexturesAndFbos(targetCount: Int = fboCount) {
@@ -549,7 +564,10 @@ class GpuMotionSmoother(
                 if (blendProgram != 0) GLES20.glDeleteProgram(blendProgram)
                 if (drawProgram != 0) GLES20.glDeleteProgram(drawProgram)
                 if (passthroughProgram != 0) GLES20.glDeleteProgram(passthroughProgram)
-                if (oesTextureId != 0) GLES20.glDeleteTextures(1, intArrayOf(oesTextureId), 0)
+                if (oesTextureId != 0) {
+                    GLES20.glDeleteTextures(1, intArrayOf(oesTextureId), 0)
+                    oesTextureId = 0
+                }
                 if (fboTextureIds.isNotEmpty() && fboTextureIds[0] != 0) {
                     GLES20.glDeleteTextures(fboTextureIds.size, fboTextureIds, 0)
                     GLES20.glDeleteFramebuffers(fboFramebuffers.size, fboFramebuffers, 0)

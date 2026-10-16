@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.keyboard
 
-import android.os.Vibrator
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -17,39 +16,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.input.MouseInjector
-import com.stormpanda.megingiard.macropad.HapticStrength
-import com.stormpanda.megingiard.macropad.triggerHaptic
-import com.stormpanda.megingiard.settings.TouchpadSettings
-import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
+import com.stormpanda.megingiard.touchpad.rememberGlobalTouchpadProcessor
+import com.stormpanda.megingiard.touchpad.touchpadSurfaceInput
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
@@ -59,35 +42,12 @@ private const val TAG = "KeyboardScreen"
 @Composable
 fun KeyboardScreen(modifier: Modifier = Modifier) {
     val viewModel: KeyboardViewModel = viewModel()
-    val context = LocalContext.current
     val density = LocalDensity.current
     val kbLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
-    val kbRepeatEnabled by viewModel.kbRepeatEnabled.collectAsStateWithLifecycle()
-    val kbTrackpointEnabled by viewModel.kbTrackpointEnabled.collectAsStateWithLifecycle()
-    val kbFullscreen by viewModel.kbFullscreen.collectAsStateWithLifecycle()
-    val kbMouseBtnPos by viewModel.kbMouseBtnPos.collectAsStateWithLifecycle()
     val isQuickMenuOpen by viewModel.isQuickMenuOpen.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
-    val accentColor = colors.accent
-    val controller = viewModel.controller
 
     val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsStateWithLifecycle()
-    val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsStateWithLifecycle()
-    val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsStateWithLifecycle()
-    val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsStateWithLifecycle()
-    val tapDrag by TouchpadSettings.touchpadTapDrag.collectAsStateWithLifecycle()
-    val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsStateWithLifecycle()
-    val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsStateWithLifecycle()
-    val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsStateWithLifecycle()
-    val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsStateWithLifecycle()
-    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsStateWithLifecycle()
-    val vibrator = remember { context.getSystemService(Vibrator::class.java) }
-
-    val currentOnHapticFeedback by rememberUpdatedState {
-        if (touchpadHapticsEnabled && vibrator != null) {
-            triggerHaptic(vibrator, HapticStrength.LIGHT)
-        }
-    }
 
     // Sub-mode and layout tracking
     val keyboardMode by viewModel.keyboardMode.collectAsStateWithLifecycle()
@@ -111,16 +71,10 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val lshiftState by KeyboardState.stateFor("lshift").collectAsStateWithLifecycle()
     val rshiftState by KeyboardState.stateFor("rshift").collectAsStateWithLifecycle()
     val capsState by KeyboardState.stateFor("caps").collectAsStateWithLifecycle()
-    val altGrState by KeyboardState.stateFor("ralt").collectAsStateWithLifecycle()
+    val altGrState by KeyboardState.stateFor("altgr").collectAsStateWithLifecycle()
     val isShiftActive = lshiftState != ModifierState.INACTIVE || rshiftState != ModifierState.INACTIVE
     val isCapsActive = capsState != ModifierState.INACTIVE
     val isAltGrActive = altGrState != ModifierState.INACTIVE
-
-    // Start injectors via ViewModel
-    LaunchedEffect(Unit) {
-        AppLog.d(TAG, "KeyboardScreen composed: starting injectors")
-        viewModel.startInjectors(context)
-    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -143,18 +97,13 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
             KeyboardLayoutState(keyboardMode, grid)
         }
 
-    val coroutineScope = rememberCoroutineScope()
-    val pressedKeys by controller.pressedKeys.collectAsStateWithLifecycle()
-    val trackpointVisible by controller.trackpointVisible.collectAsStateWithLifecycle()
-
     val gestureProcessor = viewModel.gestureProcessor
+    val pressedKeys by gestureProcessor.pressedKeys.collectAsStateWithLifecycle()
+
     val densityVal = density.density
     LaunchedEffect(densityVal) {
         gestureProcessor.density = densityVal
     }
-
-    val activePopupState by gestureProcessor.activePopupState.collectAsStateWithLifecycle()
-    var boxCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
 
     Column(
         modifier = modifier.fillMaxSize(),
@@ -167,36 +116,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
             label = "Touchpad Switch",
         ) { enabled ->
             if (enabled) {
-                val tapToClickState = rememberUpdatedState(tapToClick)
-                val twoFingerTapState = rememberUpdatedState(twoFingerTap)
-                val threeFingerTapState = rememberUpdatedState(threeFingerTap)
-                val tapDragState = rememberUpdatedState(tapDrag)
-                val twoFingerScrollState = rememberUpdatedState(twoFingerScroll)
-
-                val globalSensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsStateWithLifecycle()
-                val kbFinalSensitivity = touchpadSensitivity * globalSensitivity
-
-                val processor =
-                    remember {
-                        TouchpadGestureProcessor(
-                            useMouse = { true },
-                            scope = coroutineScope,
-                            sensitivity = { kbFinalSensitivity },
-                            twoFingerScrollEnabled = { twoFingerScrollState.value },
-                            naturalScrollEnabled = { touchpadNaturalScroll },
-                            scrollSpeed = { touchpadScrollSpeed },
-                            tapToClick = { tapToClickState.value },
-                            twoFingerTap = { twoFingerTapState.value },
-                            threeFingerTap = { threeFingerTapState.value },
-                            tapDrag = { tapDragState.value },
-                            onHapticFeedback = { currentOnHapticFeedback() },
-                        )
-                    }
-
-                var touchpadCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                val pointersInsideTouchpad = remember { HashSet<Long>() }
-                var hasActivePointers by remember { mutableStateOf(false) }
-
+                val processor = rememberGlobalTouchpadProcessor(forceMouseMode = true)
                 val insetBezelBrush = rememberBezelBrush()
 
                 Box(
@@ -216,79 +136,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                                     width = KB_TOUCHPAD_BORDER_WIDTH,
                                     brush = insetBezelBrush,
                                     shape = KB_TOUCHPAD_SHAPE,
-                                ).onGloballyPositioned { touchpadCoords = it }
-                                .pointerInput(processor) {
-                                    try {
-                                        awaitPointerEventScope {
-                                            while (true) {
-                                                val event = awaitPointerEvent(PointerEventPass.Main)
-                                                val coords = touchpadCoords ?: continue
-                                                val sw = coords.size.width.toFloat()
-                                                val sh = coords.size.height.toFloat()
-                                                for (change in event.changes) {
-                                                    val id = change.id.value
-                                                    val localPos = change.position
-                                                    val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
-
-                                                    if (change.isConsumed) continue
-
-                                                    val clampedX = localPos.x.coerceIn(0f, sw)
-                                                    val clampedY = localPos.y.coerceIn(0f, sh)
-
-                                                    when (event.type) {
-                                                        PointerEventType.Press -> {
-                                                            if (!change.previousPressed && isInside) {
-                                                                pointersInsideTouchpad.add(id)
-                                                                processor.onPress(
-                                                                    pointerId = id,
-                                                                    x = clampedX,
-                                                                    y = clampedY,
-                                                                    surfaceW = sw,
-                                                                    surfaceH = sh,
-                                                                    overlayOpen = false,
-                                                                )
-                                                            }
-                                                        }
-
-                                                        PointerEventType.Move -> {
-                                                            if (pointersInsideTouchpad.contains(id)) {
-                                                                val delta = change.positionChange()
-                                                                processor.onMove(
-                                                                    pointerId = id,
-                                                                    x = clampedX,
-                                                                    y = clampedY,
-                                                                    deltaX = delta.x,
-                                                                    deltaY = delta.y,
-                                                                    surfaceW = sw,
-                                                                    surfaceH = sh,
-                                                                )
-                                                            }
-                                                        }
-
-                                                        PointerEventType.Release -> {
-                                                            if (!change.pressed && pointersInsideTouchpad.contains(id)) {
-                                                                pointersInsideTouchpad.remove(id)
-                                                                processor.onRelease(
-                                                                    pointerId = id,
-                                                                    x = clampedX,
-                                                                    y = clampedY,
-                                                                    surfaceW = sw,
-                                                                    surfaceH = sh,
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                    change.consume()
-                                                }
-                                                hasActivePointers = pointersInsideTouchpad.isNotEmpty()
-                                            }
-                                        }
-                                    } finally {
-                                        pointersInsideTouchpad.clear()
-                                        hasActivePointers = false
-                                        processor.onCancel()
-                                    }
-                                },
+                                ).touchpadSurfaceInput(processor, useMouse = true),
                         contentAlignment = Alignment.Center,
                     ) {
                     }
@@ -323,71 +171,31 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                     ) {
                         KeyboardTopToolbar(
                             activeState = activeState,
-                            accentColor = accentColor,
                         )
 
                         KeyboardMacroQuickRow(
                             visible = isMacroRowVisible && activeState.mode != KeyboardMode.FULL,
-                            accentColor = accentColor,
                         )
 
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .onGloballyPositioned { boxCoords = it },
-                        ) {
-                            KeyboardLayoutGrid(
-                                activeState = activeState,
-                                gestureProcessor = gestureProcessor,
-                                controller = controller,
-                                pressedKeys = pressedKeys,
-                                accentColor = accentColor,
-                                isShiftActive = isShiftActive,
-                                isCapsActive = isCapsActive,
-                                isAltGrActive = isAltGrActive,
-                                isQuickMenuOpen = isQuickMenuOpen,
-                                kbRepeatEnabled = kbRepeatEnabled,
-                                kbLayout = kbLayout,
-                                onCloseQuickMenu = { viewModel.closeQuickMenu() },
-                                onModeChange = { nextMode ->
-                                    viewModel.setKeyboardMode(nextMode)
-                                    KeyboardState.reset()
-                                },
-                                onCycleKbLayout = {
-                                    viewModel.cycleKbLayout()
-                                    KeyboardState.reset()
-                                },
-                            )
-
-                            TrackpointOverlay(
-                                trackpointVisible = trackpointVisible,
-                                kbMouseBtnPos = kbMouseBtnPos,
-                                accentColor = accentColor,
-                                modifier = Modifier.align(Alignment.Center),
-                            )
-
-                            val popup = activePopupState
-                            if (popup != null) {
-                                CharPopupOverlay(
-                                    popup = popup,
-                                    boxWidthPx = boxCoords?.size?.width ?: 1240,
-                                    density = density,
-                                    accentColor = accentColor,
-                                )
-                            }
-                        }
+                        KeyboardLayoutGrid(
+                            activeState = activeState,
+                            gestureProcessor = gestureProcessor,
+                            pressedKeys = pressedKeys,
+                            isShiftActive = isShiftActive,
+                            isCapsActive = isCapsActive,
+                            isAltGrActive = isAltGrActive,
+                            isQuickMenuOpen = isQuickMenuOpen,
+                            onCloseQuickMenu = { viewModel.closeQuickMenu() },
+                            onModeChange = { nextMode -> viewModel.setKeyboardMode(nextMode) },
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
             }
 
             KeyboardBottomToolbar(
                 keyboardMode = keyboardMode,
-                onModeToggle = { nextMode ->
-                    viewModel.setKeyboardMode(nextMode)
-                    KeyboardState.reset()
-                },
+                onModeToggle = { nextMode -> viewModel.setKeyboardMode(nextMode) },
                 onCollapseClick = { AppStateManager.setFullscreenKeyboardActive(false) },
                 onSettingsClick = { AppStateManager.setKeyboardSettingsOpen(true) },
             )

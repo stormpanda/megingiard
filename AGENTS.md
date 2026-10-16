@@ -34,8 +34,8 @@
 | `docs/ARCHITECTURE.md` | Architecture overview & key design decisions |
 | `docs/BUILD_NATIVE.md` | Native C binaries: build & protocol specs |
 | `docs/GAMEPAD_NAVIGATION.md` | Gamepad focus traversal, isolation & recovery |
-| `docs/MANUAL_VERIFICATION.md` | Manual regression tests, PR sanity checklists |
-| `docs/REQUIREMENTS.md` | Requirements & non-functional requirements |
+| `docs/MANUAL_VERIFICATION.md` | Manual regression tests & PR sanity checklists |
+| `docs/REQUIREMENTS.md` | Functional & non-functional requirements |
 | `docs/features/FEATURE_TEMPLATE.md` | Template for new feature docs |
 | `docs/features/config/FEATURE.md` | Config Export/Import (`.mgrd` backup, profile sharing) |
 | `docs/features/gamefocus/FEATURE.md` | Game Focus launcher variant — split, see its doc map |
@@ -47,7 +47,7 @@
 | `docs/features/mirror/FEATURE.md` | Screen Mirror — split, see its doc map |
 | `docs/features/privileged-mode/FEATURE.md` | Privileged Mode (daemon, bootstrap, feature flags) — split |
 | `docs/features/quickmenu/FEATURE.md` | Quick Menu Bar & Quick Menu |
-| `docs/features/theming/FEATURE.md` | Design System (AppColors, Typography, AppDimens) |
+| `docs/features/theming/FEATURE.md` | Design System (AppColors, Typography, Gamepad UI) |
 | `docs/features/touchpad/FEATURE.md` | Virtual Touchpad |
 | `docs/features/updates/FEATURE.md` | Update Check & Release Launcher |
 

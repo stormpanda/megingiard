@@ -424,7 +424,6 @@ data class BackgroundTouchpadConfig(
  *
  * @param id                          Stable unique identifier (UUID string).
  * @param name                        User-visible layout name.
- * @param enabled                     Whether this layout participates in next/previous navigation.
  * @param buttons                     All buttons placed on this layout.
  * @param ambientDim                  Dim overlay alpha [0.0, 0.9] when screen mirror is active.
 
@@ -529,7 +528,6 @@ data class LayoutVisualAnchor(
 data class PadLayout(
     val id: String,
     val name: String,
-    val enabled: Boolean = true,
     val buttons: List<PadButton> = emptyList(),
     val ambientDim: Float = 0f,
     val mirrorSavedScale: Float = 1f,
@@ -539,8 +537,6 @@ data class PadLayout(
     val mirrorFollowActive: Boolean = false,
     val mirrorSmoothing: Boolean = true,
     val mirrorCutouts: List<ScreenCutout> = emptyList(),
-    val mirrorConfigured: Boolean = false,
-    val mirrorMultiMode: Boolean = false,
     val mirrorEdgeBlendWidth: Float = 0f,
     val mirrorMaxFps: Int = 60,
     val mirrorSmoothingStrength: Int = 85,
@@ -583,6 +579,85 @@ fun PadLayout.isEmpty(): Boolean =
         mirrorCutouts.isEmpty() &&
         !backgroundTouchpad.enabled
 
+private const val MP_LEGACY_BG_ALPHA_MIGRATION = 0xB3 // 70% opacity in hex (matching previous default resting level)
+
+private fun migrateButtonBgColorOption(option: ColorOption?): ColorOption? {
+    if (option is ColorOption.Custom) {
+        val alpha = (option.argb ushr 24) and 0xFF
+        // If alpha is full opacity (0xFF / 1.0f) from pre-opacity versions,
+        // migrate it to the documented previous resting default 0.70f (0xB3).
+        if (alpha == 0xFF) {
+            val migratedArgb = (MP_LEGACY_BG_ALPHA_MIGRATION shl 24) or (option.argb and 0x00FFFFFF)
+            return ColorOption.Custom(migratedArgb)
+        }
+    }
+    return option
+}
+
+/**
+ * Normalizes legacy layout properties on load:
+ * - Resets deprecated `buttonColorNoMirror` / `buttonColorMirror` to neutral Unified Appearance colors.
+ * - Migrates `useBackgroundImageAsMask` into `mask*` properties.
+ * - Migrates legacy full-opacity custom `buttonBgColor` (0xFF alpha) on the layout and buttons to 70% opacity (0xB3).
+ * - Backfills [LEGACY_HARDCODED_MATCH_THRESHOLD] on calibrated visual anchors without an explicit threshold.
+ */
+fun PadLayout.normalizedOnLoad(): PadLayout {
+    var current = this
+    @Suppress("DEPRECATION")
+    if (current.buttonColorNoMirror != null || current.buttonColorMirror != null) {
+        current =
+            current.copy(
+                buttonTextColor = ColorOption.Neutral,
+                buttonBorderColor = ColorOption.Neutral,
+                buttonBgColor = ColorOption.Neutral,
+                buttonColorNoMirror = null,
+                buttonColorMirror = null,
+            )
+    }
+    @Suppress("DEPRECATION")
+    if (current.useBackgroundImageAsMask) {
+        current =
+            current.copy(
+                maskImagePath = current.backgroundImagePath,
+                maskImageScale = current.bgImageScale,
+                maskImageOffsetX = current.bgImageOffsetX,
+                maskImageOffsetY = current.bgImageOffsetY,
+                maskImageDim = current.backgroundImageDim,
+                maskScaleMode = current.bgScaleMode,
+                backgroundImagePath = null,
+                bgImageScale = 1f,
+                bgImageOffsetX = 0f,
+                bgImageOffsetY = 0f,
+                backgroundImageDim = 0f,
+                bgScaleMode = BackgroundScaleMode.FILL,
+                useBackgroundImageAsMask = false,
+            )
+    }
+    val migratedBg = migrateButtonBgColorOption(current.buttonBgColor) ?: current.buttonBgColor
+    if (migratedBg != current.buttonBgColor) {
+        current = current.copy(buttonBgColor = migratedBg)
+    }
+    val migratedButtons =
+        current.buttons.map { btn ->
+            val btnMigratedBg = migrateButtonBgColorOption(btn.buttonBgColor)
+            if (btnMigratedBg != btn.buttonBgColor) {
+                btn.copy(buttonBgColor = btnMigratedBg)
+            } else {
+                btn
+            }
+        }
+    if (migratedButtons != current.buttons) {
+        current = current.copy(buttons = migratedButtons)
+    }
+    if (current.visualAnchor.isCalibrated && current.visualAnchor.matchThreshold == null) {
+        current =
+            current.copy(
+                visualAnchor = current.visualAnchor.copy(matchThreshold = LEGACY_HARDCODED_MATCH_THRESHOLD),
+            )
+    }
+    return current
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 @Serializable
 data class ProfileAssociation(
@@ -601,9 +676,6 @@ data class ProfileAssociation(
  * @param layouts          All layouts in this profile (at least one).
  * @param activeLayoutId   ID of the currently displayed layout. Null means first layout.
  * @param macros           Macros belonging to this profile (flat list, no folders).
- * @param enableKeyboard   Whether the keyboard virtual device is active (auto-computed).
- * @param enableGamepad    Whether the gamepad virtual device is active (auto-computed).
- * @param enableMouse      Whether the mouse virtual device is active (auto-computed).
  * @param isDefault        Whether this is a restorable default profile.
  * @param association      Optional profile association config.
  */
@@ -614,10 +686,6 @@ data class PadProfile(
     val layouts: List<PadLayout> = emptyList(),
     val activeLayoutId: String? = null,
     val macros: List<Macro> = emptyList(),
-    val enableKeyboard: Boolean = false,
-    val enableGamepad: Boolean = false,
-    val enableMouse: Boolean = false,
-    val enableTouch: Boolean = false,
     val isDefault: Boolean = false,
     val association: ProfileAssociation? = null,
     val autoLayoutSwitching: Boolean = false,
@@ -666,10 +734,6 @@ private class PadProfileSurrogate(
     val layouts: List<PadLayout> = emptyList(),
     val activeLayoutId: String? = null,
     val macros: List<Macro> = emptyList(),
-    val enableKeyboard: Boolean = false,
-    val enableGamepad: Boolean = false,
-    val enableMouse: Boolean = false,
-    val enableTouch: Boolean = false,
     val isDefault: Boolean = false,
     val association: ProfileAssociation? = null,
     val associatedPackage: String? = null,
@@ -690,10 +754,6 @@ object PadProfileSerializer : KSerializer<PadProfile> {
                 layouts = value.layouts,
                 activeLayoutId = value.activeLayoutId,
                 macros = value.macros,
-                enableKeyboard = value.enableKeyboard,
-                enableGamepad = value.enableGamepad,
-                enableMouse = value.enableMouse,
-                enableTouch = value.enableTouch,
                 isDefault = value.isDefault,
                 association = value.association,
                 autoLayoutSwitching = value.autoLayoutSwitching,
@@ -713,10 +773,6 @@ object PadProfileSerializer : KSerializer<PadProfile> {
             layouts = surrogate.layouts,
             activeLayoutId = surrogate.activeLayoutId,
             macros = surrogate.macros,
-            enableKeyboard = surrogate.enableKeyboard,
-            enableGamepad = surrogate.enableGamepad,
-            enableMouse = surrogate.enableMouse,
-            enableTouch = surrogate.enableTouch,
             isDefault = surrogate.isDefault,
             association = finalAssoc,
             autoLayoutSwitching = surrogate.autoLayoutSwitching,

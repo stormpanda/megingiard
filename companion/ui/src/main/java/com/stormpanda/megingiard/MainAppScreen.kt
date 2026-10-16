@@ -9,7 +9,6 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.Display
-import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -62,9 +61,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.SwipeGestureProcessor
@@ -82,7 +78,6 @@ import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.macropad.TouchRecordingSheet
 import com.stormpanda.megingiard.macropad.TouchRecordingState
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
-import com.stormpanda.megingiard.mirror.AnchorPositioningCoordinator
 import com.stormpanda.megingiard.mirror.AnchorPositioningSheet
 import com.stormpanda.megingiard.mirror.AnchorTestCoordinator
 import com.stormpanda.megingiard.mirror.AnchorTestingSheet
@@ -106,9 +101,7 @@ import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
 import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.QuickMenuBarLayout
-import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
-import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
 import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
@@ -134,7 +127,6 @@ fun MainAppScreen() {
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsStateWithLifecycle()
     val isEditorActive by AppStateManager.isEditorActive.collectAsStateWithLifecycle()
-    val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsStateWithLifecycle()
 
     val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
@@ -160,40 +152,32 @@ fun MainAppScreen() {
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    val pendingImportUri by ConfigManager.pendingUri.collectAsStateWithLifecycle()
+    val pendingUriRequest by ConfigManager.pendingUriRequest.collectAsStateWithLifecycle()
     val pendingImport by ConfigManager.pendingParsedImport.collectAsStateWithLifecycle()
-    val pendingInAppUri by ConfigManager.pendingInAppUri.collectAsStateWithLifecycle()
     var importError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(pendingImportUri) {
-        val uri = pendingImportUri ?: return@LaunchedEffect
-        AppLog.d(TAG, "Parsing SAF import URI")
+    LaunchedEffect(pendingUriRequest) {
+        val request = pendingUriRequest ?: return@LaunchedEffect
+        AppLog.d(TAG, "Parsing import URI (isInApp=${request.isInApp})")
         ConfigManager
-            .parseImportUri(context, uri, isInApp = false)
-            .onSuccess { export ->
-                AppLog.i(TAG, "SAF import parsed: ${export.profiles.size} profile(s)")
-                ConfigManager.setParsedImport(export)
+            .parseImportUri(context, request.uri)
+            .onSuccess { archive ->
+                AppLog.i(TAG, "Import parsed: ${archive.export.profiles.size} profile(s)")
+                if (request.isInApp) {
+                    ConfigManager.setInAppParsedImport(archive)
+                } else {
+                    ConfigManager.setParsedImport(archive)
+                }
             }.onFailure { err ->
-                AppLog.e(TAG, "SAF import parse failed: ${err.message}")
-                ConfigManager.clearPendingImport()
-                importError = err.message ?: context.getString(R.string.config_error_unknown)
-            }
-    }
-
-    LaunchedEffect(pendingInAppUri) {
-        val uri = pendingInAppUri ?: return@LaunchedEffect
-        AppLog.d(TAG, "Parsing in-app import URI")
-        ConfigManager
-            .parseImportUri(context, uri, isInApp = true)
-            .onSuccess { export ->
-                AppLog.i(TAG, "In-app import parsed: ${export.profiles.size} profile(s)")
-                ConfigManager.setInAppParsedImport(export)
-            }.onFailure { err ->
-                AppLog.e(TAG, "In-app import parse failed: ${err.message}")
+                AppLog.e(TAG, "Import parse failed: ${err.message}")
                 val errorMsg = err.message ?: context.getString(R.string.config_error_unknown)
-                ConfigManager.clearInAppPendingImport()
-                ConfigManager.setInAppImportError(errorMsg)
-                importError = errorMsg
+                if (request.isInApp) {
+                    ConfigManager.clearInAppPendingImport()
+                    ConfigManager.setInAppImportError(errorMsg)
+                } else {
+                    ConfigManager.clearPendingImport()
+                    importError = errorMsg
+                }
             }
     }
 
@@ -238,7 +222,6 @@ fun MainAppScreen() {
                     .fillMaxSize()
                     .pointerInput(
                         overlayAtBottom,
-                        isValidScreen,
                         kbBarMinX,
                         kbBarMaxX,
                         isGesturesEnabled,
@@ -309,9 +292,6 @@ fun MainAppScreen() {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
-                                if (!isValidScreen) {
-                                    continue
-                                }
                                 val firstChange = event.changes.firstOrNull()
                                 val x = firstChange?.position?.x ?: 0f
                                 val y = firstChange?.position?.y ?: 0f
@@ -371,7 +351,6 @@ fun MainAppScreen() {
                     showIntegrationHome = showIntegrationHome,
                     isEditorActive = isEditorActive,
                     isViewportEditActive = isViewportEditActive,
-                    isBackgroundSettingsActive = isBackgroundSettingsActive,
                 )
             ) {
                 IntegrationHomeScreen()
@@ -450,7 +429,8 @@ fun MainAppScreen() {
                 )
             }
 
-            val isAutoTuning by VisualAutoTuneCoordinator.isCalibrating.collectAsStateWithLifecycle()
+            val autoTuneState by VisualAutoTuneCoordinator.uiState.collectAsStateWithLifecycle()
+            val isAutoTuning = autoTuneState.isCalibrating
             if (isAutoTuning) {
                 AutoTuneCalibrationSheet(
                     onCancel = {
@@ -470,13 +450,14 @@ fun MainAppScreen() {
                     AnchorPositioningSheet(
                         layoutId = payload.layoutId,
                         onDone = {
-                            AnchorPositioningCoordinator.requestDone()
+                            AppStateManager.resumeSuspended()
                         },
                     )
                 }
             }
 
-            val isAnchorTesting by AnchorTestCoordinator.isTesting.collectAsStateWithLifecycle()
+            val anchorTestState by AnchorTestCoordinator.uiState.collectAsStateWithLifecycle()
+            val isAnchorTesting = anchorTestState.isTesting
             if (isAnchorTesting) {
                 AnchorTestingSheet(
                     onDone = {
@@ -497,13 +478,12 @@ fun MainAppScreen() {
             ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
         }
 
-        pendingImport?.let { export ->
+        pendingImport?.let { archive ->
             IncomingImportDialog(
-                export = export,
+                export = archive.export,
                 onConfirm = {
-                    val pendingImages = ConfigManager.getPendingImages()
                     coroutineScope.launch {
-                        ConfigManager.applyImport(context, export, pendingImages)
+                        ConfigManager.applyImport(context, archive.export, archive.images)
                     }
                 },
                 onDismiss = { ConfigManager.clearPendingImport() },
@@ -516,8 +496,7 @@ fun MainAppScreen() {
             }
         }
 
-        val lifecycleOwner = LocalLifecycleOwner.current
-        DisposableEffect(context, lifecycleOwner) {
+        DisposableEffect(context) {
             val contentObserver =
                 object : ContentObserver(Handler(Looper.getMainLooper())) {
                     override fun onChange(selfChange: Boolean) {
@@ -529,22 +508,8 @@ fun MainAppScreen() {
             val uri = Settings.Secure.getUriFor(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
             context.contentResolver.registerContentObserver(uri, false, contentObserver)
 
-            val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-            val listener = AccessibilityManager.AccessibilityStateChangeListener { syncAccessibilityState(context) }
-            am?.addAccessibilityStateChangeListener(listener)
-
-            val observer =
-                LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_RESUME) {
-                        syncAccessibilityState(context)
-                    }
-                }
-            lifecycleOwner.lifecycle.addObserver(observer)
-
             onDispose {
                 context.contentResolver.unregisterContentObserver(contentObserver)
-                am?.removeAccessibilityStateChangeListener(listener)
-                lifecycleOwner.lifecycle.removeObserver(observer)
             }
         }
 
@@ -553,7 +518,6 @@ fun MainAppScreen() {
                 overlayAtBottom = overlayAtBottom,
                 onDismiss = {
                     OnboardingWizardManager.finishWizard()
-                    syncAccessibilityState(context)
                     AppStateManager.resetPrivdPromptState()
                 },
             )
@@ -562,7 +526,6 @@ fun MainAppScreen() {
         if (showPromptDialog && !isWizardActive && !isPrivdSetupWizardActive) {
             PrivdReconnectPromptDialog(
                 onDone = {
-                    syncAccessibilityState(context)
                     AppStateManager.setPrivdPromptDismissed(true)
                 },
             )
@@ -835,8 +798,7 @@ internal fun shouldShowCompanionHub(
     showIntegrationHome: Boolean,
     isEditorActive: Boolean,
     isViewportEditActive: Boolean,
-    isBackgroundSettingsActive: Boolean,
-): Boolean = showIntegrationHome && !isEditorActive && !isViewportEditActive && !isBackgroundSettingsActive
+): Boolean = showIntegrationHome && !isEditorActive && !isViewportEditActive
 
 private fun syncAccessibilityState(context: Context) {
     AppStateManager.setAccessibilityActive(MegingiardAccessibilityService.isEnabled(context))

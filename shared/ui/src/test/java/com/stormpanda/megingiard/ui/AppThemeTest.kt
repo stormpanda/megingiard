@@ -55,15 +55,11 @@ class AppThemeTest {
         val darkYellowPalette = paletteFor(ThemeMode.DARK, Color.Yellow)
         assertEquals(Color.Yellow, darkYellowPalette.accent)
         assertEquals(Color(0xFF121212), darkYellowPalette.onAccent)
-        assertEquals(Color(0xFF121212), darkYellowPalette.buttonIconTint)
-        assertEquals(Color(0xFF121212), darkYellowPalette.controlIndicatorActive)
 
         // Bright yellow accent in Dark OLED theme should resolve to appBackground (Color.Black)
         val oledYellowPalette = paletteFor(ThemeMode.DARK_OLED, Color.Yellow)
         assertEquals(Color.Yellow, oledYellowPalette.accent)
         assertEquals(Color.Black, oledYellowPalette.onAccent)
-        assertEquals(Color.Black, oledYellowPalette.buttonIconTint)
-        assertEquals(Color.Black, oledYellowPalette.controlIndicatorActive)
     }
 
     @Test
@@ -73,13 +69,11 @@ class AppThemeTest {
         val darkRedPalette = paletteFor(ThemeMode.DARK, Color(0xFFCC0000))
         assertEquals(Color(0xFFCC0000), darkRedPalette.accent)
         assertEquals(Color.White, darkRedPalette.onAccent)
-        assertEquals(Color.White, darkRedPalette.buttonIconTint)
 
         // Null custom accent falls back to default red with Color.White
         val defaultDarkPalette = paletteFor(ThemeMode.DARK, null)
         assertEquals(Color(0xFFCC0000), defaultDarkPalette.accent)
         assertEquals(Color.White, defaultDarkPalette.onAccent)
-        assertEquals(Color.White, defaultDarkPalette.buttonIconTint)
     }
 
     @Test

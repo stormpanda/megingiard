@@ -15,48 +15,62 @@ private const val THOR_SECONDARY_DISPLAY_FALLBACK = 4
 
 private const val RETROARCH_PACKAGE_PREFIX = "com.retroarch"
 
+private sealed interface SessionEntry {
+    val packageName: String
+
+    data class LaunchedApp(
+        val appInfo: InstalledAppInfo,
+    ) : SessionEntry {
+        override val packageName: String
+            get() = appInfo.packageName
+    }
+
+    data class DetectedPackage(
+        override val packageName: String,
+    ) : SessionEntry
+
+    fun resolveApp(): InstalledAppInfo? =
+        when (this) {
+            is LaunchedApp -> appInfo
+            is DetectedPackage -> InstalledAppsManager.installedApps.value.find { it.packageName == packageName && !it.isRom }
+        }
+}
+
 /**
  * Tracks the most recently active applications across both screens (Display 0 and Display 4)
  * and restores them when the user presses Back on the home gallery.
  */
 object GameFocusSessionTracker {
     @Volatile
-    private var _lastTopApp: InstalledAppInfo? = null
+    private var topSession: SessionEntry? = null
 
     @Volatile
-    private var _lastTopPackage: String? = null
-
-    @Volatile
-    private var _lastBottomApp: InstalledAppInfo? = null
-
-    @Volatile
-    private var _lastBottomPackage: String? = null
+    private var bottomSession: SessionEntry? = null
 
     internal var overrideSecondaryDisplayIdForTesting: Int? = null
 
     val lastTopPackage: String?
-        get() = _lastTopApp?.packageName ?: _lastTopPackage
+        get() = topSession?.packageName
 
     val lastBottomPackage: String?
-        get() = _lastBottomApp?.packageName ?: _lastBottomPackage
+        get() = bottomSession?.packageName
 
     val lastTopApp: InstalledAppInfo?
-        get() = _lastTopApp
+        get() = topSession?.resolveApp()
 
     val lastBottomApp: InstalledAppInfo?
-        get() = _lastBottomApp
+        get() = bottomSession?.resolveApp()
 
     /**
      * Returns true if there is at least one tracked top or bottom app available to restore.
      */
-    fun hasActiveSession(): Boolean = lastTopPackage != null || lastBottomPackage != null
+    fun hasActiveSession(): Boolean = topSession != null || bottomSession != null
 
     /**
      * Records a launch initiated by Game Focus on the primary top display (Display 0).
      */
     fun recordTopLaunch(appInfo: InstalledAppInfo) {
-        _lastTopApp = appInfo
-        _lastTopPackage = appInfo.packageName
+        topSession = SessionEntry.LaunchedApp(appInfo)
         AppLog.i(TAG, "Recorded top screen launch: ${appInfo.label} (${appInfo.packageName})")
     }
 
@@ -64,8 +78,7 @@ object GameFocusSessionTracker {
      * Records a launch initiated by Game Focus on the secondary bottom display (Display 4).
      */
     fun recordBottomLaunch(appInfo: InstalledAppInfo) {
-        _lastBottomApp = appInfo
-        _lastBottomPackage = appInfo.packageName
+        bottomSession = SessionEntry.LaunchedApp(appInfo)
         AppLog.i(TAG, "Recorded bottom screen launch: ${appInfo.label} (${appInfo.packageName})")
     }
 
@@ -79,7 +92,7 @@ object GameFocusSessionTracker {
     ) {
         val targetSecondaryId = secondaryDisplayId ?: THOR_SECONDARY_DISPLAY_FALLBACK
         if (displayId == PRIMARY_DISPLAY_ID || displayId == INVALID_DISPLAY_ID) {
-            val currentTop = _lastTopApp
+            val currentTop = (topSession as? SessionEntry.LaunchedApp)?.appInfo
             if (currentTop != null && currentTop.isRom) {
                 val isEmulatorPackage =
                     currentTop.emulatorPackage == packageName ||
@@ -89,13 +102,11 @@ object GameFocusSessionTracker {
                     return
                 }
             }
-            _lastTopPackage = packageName
-            _lastTopApp = InstalledAppsManager.installedApps.value.find { it.packageName == packageName && !it.isRom }
-            AppLog.d(TAG, "Window changed on top screen ($displayId): package=$packageName, app=${_lastTopApp?.label}")
+            topSession = SessionEntry.DetectedPackage(packageName)
+            AppLog.d(TAG, "Window changed on top screen ($displayId): package=$packageName")
         } else if (displayId == targetSecondaryId) {
-            _lastBottomPackage = packageName
-            _lastBottomApp = InstalledAppsManager.installedApps.value.find { it.packageName == packageName && !it.isRom }
-            AppLog.d(TAG, "Window changed on bottom screen ($displayId): package=$packageName, app=${_lastBottomApp?.label}")
+            bottomSession = SessionEntry.DetectedPackage(packageName)
+            AppLog.d(TAG, "Window changed on bottom screen ($displayId): package=$packageName")
         }
     }
 
@@ -103,10 +114,8 @@ object GameFocusSessionTracker {
      * Clears all session tracking state.
      */
     fun clearSession() {
-        _lastTopApp = null
-        _lastTopPackage = null
-        _lastBottomApp = null
-        _lastBottomPackage = null
+        topSession = null
+        bottomSession = null
         AppLog.d(TAG, "Cleared session tracking state")
     }
 
@@ -129,8 +138,8 @@ object GameFocusSessionTracker {
         var topRestored = false
         var bottomRestored = false
 
-        val topApp = _lastTopApp
-        val topPkg = _lastTopPackage
+        val topApp = lastTopApp
+        val topPkg = lastTopPackage
         if (topApp != null) {
             AppLog.i(TAG, "Restoring top app from InstalledAppInfo: ${topApp.label}")
             topRestored = InstalledAppsManager.launchAppOnPrimaryDisplay(context, topApp)
@@ -146,8 +155,8 @@ object GameFocusSessionTracker {
         val secondaryDisplay = DisplayDetector.findSecondaryDisplay(context)
         val secondaryDisplayId = overrideSecondaryDisplayIdForTesting ?: secondaryDisplay?.displayId ?: THOR_SECONDARY_DISPLAY_FALLBACK
 
-        val bottomApp = _lastBottomApp
-        val bottomPkg = _lastBottomPackage
+        val bottomApp = lastBottomApp
+        val bottomPkg = lastBottomPackage
         if (bottomApp != null) {
             AppLog.i(TAG, "Restoring bottom app from InstalledAppInfo: ${bottomApp.label}")
             bottomRestored = InstalledAppsManager.launchAppOnSecondaryDisplay(context, bottomApp)

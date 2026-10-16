@@ -224,7 +224,7 @@ class SteamGridDbToPaletteSyncPipelineE2ETest {
         AppPaletteExtractor.invalidatePalette(appWithCover.packageName)
         assertNull(AppPaletteExtractor.getCachedColorsOrNull(appWithCover))
 
-        val appWithoutCover = appWithCover.withCover(null)
+        val appWithoutCover = appWithCover.copy(coverPath = null, coverImageId = null)
         assertNull(appWithoutCover.coverPath)
         assertNull(FocusImageCache.getCoverBitmap(appWithoutCover))
 

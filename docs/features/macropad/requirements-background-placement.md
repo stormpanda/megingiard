@@ -10,12 +10,12 @@
 
 - **Theme-Invariant Pitch Black Plain Background:** The plain canvas background of a MacroPad (when no custom background image is configured) MUST always be pitch black (`Color.Black`), completely invariant to the active theme palette. Regardless of whether Dark, Dark OLED, Norse (`megingiard`), Mjolnir, Valkyrie, Bifrost, Yggdrasil, or Odin Mono is active, the MacroPad canvas base background does not adopt theme background colors (`appBackground`) and remains solid pitch black across Use Mode (`PadSurface`), Editor Mode (`PadCanvas`), and behind embedded mirror cutouts (`EmbeddedMirrorView`).
 - An optional **Background Display** mode renders the Screen Mirror output behind the MacroPad buttons on the secondary display via `EmbeddedMirrorView`.
-- Enabled via a **toggle** in MacroPad tool settings (default: off).
+- Configured via the **Mirror** sidebar deck (`EditorSection.MIRROR`, `MirrorSettingsEditor.kt`).
 - When Background Display is enabled and the user enters MacroPad mode, `ScreenCaptureService` is **automatically started** (identical to how Mirror mode auto-starts when that setting is active). The user is prompted for MediaProjection consent if not already capturing. Declining within a session is respected until the next mode entry.
 - When background display is enabled and capturing is active, `MacroPadScreen` renders `EmbeddedMirrorView` at Layer 0 underneath `PadSurface(transparentBackground = true)`.
 - In background display mode, the **Quick Menu Bar** MUST remain visible on the secondary display, and edge swipes from the configured bar edge MUST open/close the Quick Menu so users can always access navigation/actions even if no mirror-control button exists in the current layout.
-- **Per-layout background settings:** Dimming parameters are stored **per layout** in `PadLayout` (not globally).
-- **Background Settings Overlay** (`BackgroundSettingsOverlay`): Configures the active layout's dimming parameters, edge blending (`GamepadSliderCard`), layout-wide touch tracking, and per-cutout smoothing settings.
+- **Per-layout mirror & background settings:** Dimming parameters and mirror cutouts are stored **per layout** in `PadLayout` (not globally).
+- **Mirror Deck (`MirrorSettingsEditor.kt`):** Configures the active layout's mirror cutouts, dimming parameters, edge blending (`GamepadSliderCard`), layout-wide touch tracking, and per-cutout smoothing settings.
 - **Dimming** (0–90%, default 0%): Configured via a `GamepadSliderCard` that draws a semi-transparent black overlay on top of the mirror background.
 - A special **Background Peek** action (`PadAction.BackgroundPeek`): toggles hiding all buttons and dimming.
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
@@ -109,11 +109,7 @@
   - **Gestures:** Toggles for Tap-to-Click, 2-Finger Tap (Right Click), 3-Finger Tap (Middle Click), and Tap-and-Drag.
   - **Scrolling:** Toggles for Two-Finger Scroll, Natural Scroll Direction, and Scroll Speed multiplier (0.5x to 3.0x).
   - **Haptics:** Toggle for haptic vibration on taps and gestures.
-- **Dedicated Editor Modal:** Accessible from the **Touchpad Settings** toolbar button in `EditorToolbar` (`BackgroundTouchpadSettingsEditor`).
-- **Editor Toolbar Reordering:** Toolbar buttons are ordered into three rows:
-  - Row 1: `Add Button` | `Change Background`
-  - Row 2: `Unlock Buttons` | `Touchpad Settings`
-  - Row 3: `Change Grid`
+- **Dedicated In-Deck Sub-Page:** Accessible from the **Background Touchpad** action card in the **Layouts Deck** (`MacroPadSubPage.LayoutTouchpad` / `LayoutTouchpadSubPageContent` in `BackgroundTouchpadSettingsEditor.kt`).
 - **Mutual Exclusion with Touch Projection:**
   - Background Touchpad and Touch Projection (screen cutout touch injection) are mutually exclusive.
   - Enabling Touch Projection on a layout displays a warning and confirmation dialog offering to turn OFF the Background Touchpad.

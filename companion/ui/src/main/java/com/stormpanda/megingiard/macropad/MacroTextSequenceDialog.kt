@@ -12,7 +12,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
@@ -68,12 +67,12 @@ fun generateTextSequenceSteps(
 internal fun TextSequenceGeneratorSubPageContent(
     macroName: String,
     suggestedStartTimeMs: Long,
-    accentColor: Color,
     onGenerate: (List<MacroStep.KeyboardKeyTap>) -> Unit,
     onDiscard: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
+    val accentColor = colors.accent
 
     var textInput by remember { mutableStateOf("") }
     var keyDurationMs by remember { mutableIntStateOf(MTSD_DEFAULT_KEY_DURATION_MS.toInt()) }
@@ -98,7 +97,7 @@ internal fun TextSequenceGeneratorSubPageContent(
         }
 
     val isConfirmEnabled = generatedSteps.isNotEmpty()
-    val hasChanges = textInput.isNotBlank()
+    val hasChanges = generatedSteps.isNotEmpty()
 
     val promptState =
         rememberSaveExitPromptState(
@@ -177,6 +176,7 @@ internal fun TextSequenceGeneratorSubPageContent(
 
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_macro_text_sequence_generate_title),
+        enabled = isConfirmEnabled,
         description =
             if (generatedSteps.isNotEmpty()) {
                 stringResource(

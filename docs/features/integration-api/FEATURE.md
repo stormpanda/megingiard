@@ -1,6 +1,6 @@
 # Feature: Megingiard Integration API
 
-> **Related source:** `companion/domain/src/main/java/com/stormpanda/megingiard/ipc/`, `companion/ui/src/main/java/com/stormpanda/megingiard/provider/`
+> **Related source:** `shared/catalog/src/main/java/com/stormpanda/megingiard/catalog/ipc/`, `companion/ui/src/main/java/com/stormpanda/megingiard/provider/`, `shared/session/src/main/java/com/stormpanda/megingiard/session/`
 
 ---
 
@@ -71,7 +71,9 @@ The Megingiard Integration API exposes a standardized, robust, and backwards-com
  └───────────────────────────────────────────────┘
 ```
 
-The Integration API is built on top of Android's IPC `ContentProvider` system. It is fully declared as exported in the manifest (`android:exported="true"`), making it visible to all applications on the system without requiring dangerous permissions.
+The Integration API is built on top of Android's IPC `ContentProvider` system. It is declared as exported in the manifest (`android:exported="true"`), making `/profiles`, `/theme`, and `updateClientState` accessible to integration clients while enforcing caller verification on sensitive operations:
+- **`updateClientState` Caller Package Verification**: `MegingiardSettingsProvider.isCallerPackageValid()` verifies that a non-blank `client_package` belongs to `Binder.getCallingUid()` via `PackageManager.getPackagesForUid()` before accepting state updates from external processes.
+- **`/settings` Signature Verification**: Queries to `content://com.stormpanda.megingiard.provider/settings` (which exposes the user's SteamGridDB API token) are restricted to callers signed with the same certificate (`PackageManager.checkSignatures(Process.myUid(), callingUid) == SIGNATURE_MATCH`).
 
 ### Provider Call Interface (`updateClientState`)
 
@@ -85,8 +87,14 @@ val extras = Bundle().apply {
     putBoolean("is_active", true)
     putString("focused_package", "org.retroarch")
     putString("focused_rom_path", "/path/to/game.sfc")
+    putString("focused_rom_identifier", "game.sfc")
     putString("hovered_package", "com.android.settings")
     putString("hovered_label", "Settings")
+    putString("hovered_rom_path", "/path/to/hovered.sfc")
+    putString("hovered_rom_identifier", "hovered.sfc")
+    putString("hovered_system_id", "snes")
+    putInt("hovered_primary_color", 0xFF112233.toInt())
+    putInt("hovered_secondary_color", 0xFF445566.toInt())
 }
 val result = context.contentResolver.call(uri, "updateClientState", null, extras)
 val isSuccess = result?.getBoolean("success", false) ?: false
@@ -106,7 +114,9 @@ Clients query configured profiles by invoking `query()` on `content://com.stormp
 
 | File | Responsibility |
 | --- | --- |
-| [`MegingiardIpcContract.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/domain/src/main/java/com/stormpanda/megingiard/ipc/MegingiardIpcContract.kt) | Defines shared URIs, paths, and column constants for IPC. |
+| [`MegingiardIpcContract.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/catalog/src/main/java/com/stormpanda/megingiard/catalog/ipc/MegingiardIpcContract.kt) | Defines shared URIs, paths, and column constants for IPC. |
 | [`AppStateManager.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | Maintains live StateFlows for integration client presence and focused apps. |
+| [`AutoSwitchCoordinator.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/domain/src/main/java/com/stormpanda/megingiard/macropad/AutoSwitchCoordinator.kt) | Coordinates automatic MacroPad profile switching on foreground app and active game session changes. |
+| [`EmulatorDetectionFunnel.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/session/src/main/java/com/stormpanda/megingiard/session/EmulatorDetectionFunnel.kt) | Routes foreground emulator packages to registered `:shared:session` detectors (`RetroArchDetector`, `GameNativeDetector`, `Pcsx2AndroidDetector`, `YuzuDetector`, `PpssppDetector`) and publishes `activeSession`. |
 | [`MegingiardSettingsProvider.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/provider/MegingiardSettingsProvider.kt) | Handles database queries for profiles and method calls for state changes. |
-| [`IntegrationHomeScreen.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/IntegrationHomeScreen.kt) | Renders the redesigned Companion Home Hub featuring a Hero Game Context Card, Companion Tools Quick Deck (MacroPad, Touchpad, Keyboard, Screen Mirror), and Companion Status panel. |
+| [`IntegrationHomeScreen.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/IntegrationHomeScreen.kt) | Renders the Companion Home Hub featuring a Hero Game Context Card and a 2x2 Companion Tools Deck (MacroPad, Global Settings, Keyboard, and Touchpad). |

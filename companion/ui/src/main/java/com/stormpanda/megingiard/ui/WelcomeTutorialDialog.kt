@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 
 private const val TAG = "WelcomeTutorialDialog"
@@ -20,6 +22,10 @@ private val WT_INTRO_SPACING = 6.dp
 @Composable
 fun WelcomeStepContent() {
     val colors = LocalAppColors.current
+
+    LaunchedEffect(Unit) {
+        AppLog.d(TAG, "WelcomeStepContent displayed")
+    }
 
     Column {
         Text(
@@ -46,16 +52,5 @@ fun WelcomeStepContent() {
             color = colors.onSurfaceSecondary,
             style = MaterialTheme.typography.bodyMedium,
         )
-    }
-}
-
-@Composable
-fun WelcomeTutorialDialog(onDismiss: () -> Unit) {
-    AppTutorialModal(
-        title = stringResource(R.string.welcome_title),
-        tag = TAG,
-        onDismiss = onDismiss,
-    ) {
-        WelcomeStepContent()
     }
 }

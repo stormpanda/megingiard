@@ -1,7 +1,6 @@
 # Feature: Configuration Export / Import
 
-> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/config/`  
-> _(Settings UI entry points are in `companion/ui/src/main/java/com/stormpanda/megingiard/settings/`.)_
+> **Related source:** `:shared:core` (`shared/core/src/main/kotlin/com/stormpanda/megingiard/config/`), `:companion:domain` (`companion/domain/src/main/java/com/stormpanda/megingiard/config/`), `:companion:ui` (`companion/ui/src/main/java/com/stormpanda/megingiard/settings/`)
 
 ---
 
@@ -19,8 +18,7 @@ the same device or share individual profiles with other Megingiard users.
   MacroPad profiles (each containing its own macros) to a single `.mgrd` backup file.
 - The export file MUST be created via the Android Storage Access Framework (SAF) so the user
   controls the destination folder.
-- The user MAY optionally provide author, description, and comma-separated tags before exporting
-  (community metadata).
+- The user MAY optionally provide author and description before exporting (community metadata; the schema also supports an optional `tags` list, which is displayed on import if present in the archive but is not exposed in the export UI).
 - The suggested default filename MUST include the application version name (prefixed with "v"), the current date, and, if provided, the author
   (up to 20 chars) and description (up to 30 chars) to help users identify files.
   Format: `megingiard_v<versionName>_<date>[_<author>][_<description>].mgrd`.
@@ -70,7 +68,7 @@ the same device or share individual profiles with other Megingiard users.
 - The user MUST be able to select which profile to export when more than one profile exists.
 - The export file MUST contain an empty `settings` map — app settings are never included in
   a profile-share export, so importing it cannot overwrite another user's app preferences.
-- The user MAY optionally provide author, description, and comma-separated tags before exporting.
+- The user MAY optionally provide author and description before exporting (`tags` is supported in the schema and displayed on import, though not exposed in the export UI).
 - The suggested filename format is:
   `megingiard_profile_v<versionName>_<date>[_<profileName up to 30 chars>][_<author up to 20 chars>].mgrd`.
 - An animated toast notification ("Profile exported successfully") MUST be shown after the profile export is saved without interrupting the user with a modal dialog.
@@ -94,7 +92,7 @@ the same device or share individual profiles with other Megingiard users.
 - When invoking the "Restore Backup" function under Global Settings, a dedicated sub-menu within the two-pane scaffold (`RestoreBackupSubPage`) MUST be displayed.
 - The first option in the selection list MUST be "External File", which routes the user to the standard SAF file picker upon selection.
 - Subsequent options in the list MUST show the 5 internal daily backups, labelled by their localized creation weekday, date, and time (e.g. `Sunday, 2026-05-24 21:15`), and showing the count of profiles, layouts, and macros.
-- Selecting an internal daily backup or an external file MUST transition the right-pane deck into a dedicated in-deck **Review & Apply** view showing archive metadata, contents breakdown, overwrite notice, and an "Apply & Restore" gamepad action card without showing floating popup modals. Pressing back smoothly returns to the backup selection list. Upon confirming the restore, an animated toast notification ("Backup restored successfully") MUST be shown.
+- Selecting an internal daily backup or an external file MUST transition the right-pane deck into a dedicated in-deck **Review & Apply** view showing archive metadata, contents breakdown, overwrite notice, and an "Import" gamepad action card without showing floating popup modals. Pressing back smoothly returns to the backup selection list. Upon confirming the restore, an animated toast notification ("Configuration imported successfully.") MUST be shown.
 
 ---
 
@@ -129,13 +127,13 @@ MainActivity  ← holds ActivityResultLaunchers
                 ConfigManager.setPendingInAppUri(uri, mode)
                         │
                         ▼
-                MainAppScreen.LaunchedEffect(pendingImportUri)
+                MainAppScreen.LaunchedEffect(pendingImportRequest)
                         │  suspend – Dispatchers.IO
                         ▼
-                ConfigManager.readFromUri()  →  ConfigManager.setParsedImport()
+                ConfigManager.readFromUri()  →  ConfigManager.setInAppParsedImport(archive)
                         │
                         ▼
-                GlobalSettingsScreen RestoreBackupSubPage (In-Deck Review & Apply)
+                GlobalSettingsScreen RestoreReviewSubPage (In-Deck Review & Apply)
                         ├── BACKUP_RESTORE → ConfigManager.applyImport()
                         └── PROFILE_SHARE  → ConfigManager.applyProfileImport()
 ```
@@ -146,16 +144,19 @@ For external file intents (`ACTION_VIEW`):
 File manager / share sheet
         │  Intent(ACTION_VIEW, uri, mimeType=application/vnd.megingiard.config+json)
         ▼
+LaunchTrampolineActivity.onCreate()
+        │  forwards ACTION_VIEW + uri + FLAG_GRANT_READ_URI_PERMISSION to secondary display
+        ▼
 MainActivity.onNewIntent() / onCreate()
         │
         ▼
 ConfigManager.setPendingUri(uri)   ← StateFlow bridge
         │
         ▼
-MainAppScreen.LaunchedEffect(pendingImportUri)
+MainAppScreen.LaunchedEffect(pendingImportRequest)
         │  suspend – Dispatchers.IO
         ▼
-ConfigManager.readFromUri()  →  ConfigManager.setParsedImport(export)
+ConfigManager.readFromUri()  →  ConfigManager.setParsedImport(archive)
         │
         ▼
 IncomingImportDialog  ─── user confirms → ConfigManager.applyImport()
@@ -212,41 +213,44 @@ Adding a new setting requires assigning the key to a section in `SECTION_MAP` or
   Macros are embedded inside each `PadProfile.macros`.
 
 - **Checksum scope (v4):** SHA-256 of the minified kotlinx.serialization JSON encoding (with
-  `encodeDefaults = true`) of settings and profiles only.
-  Key order is determined by the declaration order of the `@Serializable` data class fields —
-  no additional sorting or canonicalization is applied. Metadata changes do not invalidate the
-  checksum. On import, verification first attempts raw JSON element payload evaluation to preserve
-  hash fidelity for legacy/older exports created before new default fields were introduced, falling back to
-  re-encoded object graph verification.
+  `encodeDefaults = true`) of `settings`, `profiles`, and (when bundled images are present) sorted
+  `imageHashes` (`bg_<layoutId>` / `mask_<layoutId>` → SHA-256 hex of raw image bytes).
+  Key order is determined by the declaration order of the `@Serializable` data class fields
+  (with `imageHashes` sorted lexicographically by key) — no additional sorting or canonicalization is
+  applied to `settings` or `profiles`. Metadata changes do not invalidate the checksum. On import,
+  verification first attempts raw JSON element payload evaluation (including `imageHashes` when present)
+  to preserve hash fidelity for legacy/older exports created before new default fields were introduced,
+  falling back to re-encoded object graph verification.
 
 ### Source Files
 
-| File                                   | Role                                                                                                                                                                                                                |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `config/ConfigSchema.kt`               | `@Serializable` data classes (`MegingiardExport`, `ExportMetadata`) + `SCHEMA_VERSION` + `MGRD_MIME_TYPE`                                                                                                           |
-| `config/ConfigManager.kt`              | Unified export/import manager: `ExportKind` / `ImportMode` discriminators, coordinator StateFlows, export (`buildExport`, `buildProfileExport`), import (`applyImport`, `applyProfileImport`), UUID remap, checksum |
-| `settings/SettingsManager.kt`          | `exportGroupedSettings()` + `importGroupedSettings()` — bulk DataStore I/O                                                                                                                                          |
-| `settings/SettingsKeys.kt`             | Preference keys, section key groups (`GLOBAL_KEYS`, etc.), `SECTION_MAP`, and `EXCLUDED_KEYS`                                                                                                                     |
-| `settings/SettingsKeysTest.kt`         | Reflection-based unit test guard asserting 100% coverage of declared preference keys across `SECTION_MAP` and `EXCLUDED_KEYS`                                                                                    |
-| `settings/GlobalSettingsScreen.kt`     | State hoists, navigation scaffold, sections orchestrator                                                                                             |
-| `settings/tabs/ConfigurationSettingsTab.kt` | Configuration tab composable and export/import sub-pages (`CreateBackupSubPage`, `ShareProfileSubPage`, `RestoreBackupSubPage`, `RestoreReviewSubPage`) |
-| `settings/GlobalSettingsComponents.kt` | SettingsCategory enum, SettingsSubPage enum, and enum display name mapping helpers                                                                                                  |
-| `MainAppScreen.kt`                     | `LaunchedEffect(pendingImportUri)` + `IncomingImportDialog` for external file intents                                                                                                                               |
-| `MainActivity.kt`                      | `handleIncomingIntent()` / `onNewIntent()` — routes `ACTION_VIEW` uri to `ConfigManager`; holds `createDocumentLauncher` / `openDocumentLauncher`; discriminates `ExportKind` to call correct build function        |
-| `AndroidManifest.xml`                  | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json`                                                                                                                                            |
-| `res/values/strings.xml`               | All user-visible strings for the feature (prefix `config_`, `settings_config_`)                                                                                                                                     |
+| File                                                       | Role                                                                                                                                                                                                                |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `:shared:core` `config/ConfigSchema.kt`                    | `@Serializable` data classes (`MegingiardExport`, `ExportMetadata`, `InternalBackup`) + `SCHEMA_VERSION` + `MGRD_MIME_TYPE`                                                                                         |
+| `:shared:core` `config/FilenameBuilder.kt`                 | Suggested `.mgrd` filename generation and sanitization (`buildFilename`, `buildProfileFilename`, `sanitizeSegment`)                                                                                                 |
+| `:shared:core` `settings/SettingsEnums.kt`                 | `SettingsCategory` and `SettingsSubPage` enums                                                                                                                                                                      |
+| `:companion:domain` `config/ConfigManager.kt`              | Unified export/import manager: `ExportKind` / `ImportMode` discriminators, coordinator StateFlows, export (`buildExport`, `buildProfileExport`), import (`applyImport`, `applyProfileImport`), UUID remap, checksum |
+| `:companion:domain` `settings/SettingsManager.kt`          | `exportGroupedSettings()` + `importGroupedSettingsAwait()` — bulk DataStore I/O                                                                                                                                     |
+| `:companion:domain` `settings/SettingsKeys.kt`             | Preference keys, section key groups (`GLOBAL_KEYS`, etc.), `SECTION_MAP`, and `EXCLUDED_KEYS`                                                                                                                       |
+| `:companion:domain` `settings/SettingsKeysTest.kt`         | Reflection-based unit test guard asserting 100% coverage of declared preference keys across `SECTION_MAP`, `EXCLUDED_KEYS`, and import type sets                                                                    |
+| `:companion:ui` `settings/GlobalSettingsScreen.kt`         | State hoists, navigation scaffold, sections orchestrator                                                                                                                                                            |
+| `:companion:ui` `settings/tabs/ConfigurationSettingsTab.kt` | Configuration tab composable and export/import sub-pages (`CreateBackupSubPage`, `ShareProfileSubPage`, `RestoreBackupSubPage`, `RestoreReviewSubPage`)                                                            |
+| `:companion:ui` `settings/GlobalSettingsComponents.kt`     | Enum display name mapping helpers (`SettingsCategory.titleResId()`, `SettingsSubPage.titleResId()`)                                                                                                                 |
+| `:companion:ui` `MainAppScreen.kt`                         | `LaunchedEffect(pendingImportRequest)` + `IncomingImportDialog` for external file intents                                                                                                                           |
+| `:companion:ui` `LaunchTrampolineActivity.kt`              | Receives external `ACTION_VIEW` intents from `AndroidManifest.xml` and forwards the `.mgrd` URI + read permissions to `MainActivity` on the secondary display                                                        |
+| `:companion:ui` `MainActivity.kt`                          | `handleIncomingIntent()` / `onNewIntent()` — routes `ACTION_VIEW` uri to `ConfigManager`; holds `createDocumentLauncher` / `openDocumentLauncher`; discriminates `ExportKind` to call correct build function        |
+| `:companion:ui` `AndroidManifest.xml`                      | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json` on `LaunchTrampolineActivity`                                                                                                               |
+| `:companion:ui` `res/values/strings.xml`                   | All user-visible strings for the feature (prefix `config_`, `settings_config_`)                                                                                                                                     |
 
 ### UUID Remapping on Import
 
 When MacroPad data is imported, `ConfigManager.importMacroPadData()`:
 
-1. For each imported `PadProfile`, assigns a new UUID.
+1. For each imported `PadProfile`, assigns a new UUID and clears device-specific transient flags (`skipAutoRestoration`, `assignedRomId`, `assignedRomTitle`).
 2. For each macro inside the profile, assigns a new UUID and builds `macroIdMap` (old → new).
-3. For v2 imports: collects referenced legacy macros (from the top-level `macros` list) that
-   aren't already inside the profile and adopts them with new UUIDs.
-4. Remaps every `PadButton` whose action is `PadAction.Macro` via `macroIdMap`
+3. Remaps every `PadButton` whose action is `PadAction.Macro` via `macroIdMap`
    (falls back to original ID if not mapped).
-5. For each layout containing custom background images (`backgrounds/bg_<layoutId>`) or mask overlay images (`masks/mask_<layoutId>`), copies or extracts the media files into the target directories (`backgrounds/` and `masks/`) under new UUID paths. For legacy archives with `useBackgroundImageAsMask = true`, automatically migrates the image and adjustment properties into `masks/mask_<newLayoutId>` and clears `useBackgroundImageAsMask`.
+4. For each layout containing custom background images or mask overlay images (stored in the ZIP archive under `backgrounds/bg_<layoutId>` and `backgrounds/mask_<layoutId>`, normalized in-memory to keys `bg_<layoutId>` and `mask_<layoutId>`), extracts or copies the media files into the target directories (`filesDir/backgrounds/bg_<newLayoutId>` and `filesDir/masks/mask_<newLayoutId>`) under new UUID paths. For legacy archives with `useBackgroundImageAsMask = true`, automatically migrates the background image and adjustment properties into `filesDir/masks/mask_<newLayoutId>` and clears `useBackgroundImageAsMask`.
 
 This guarantees imported data never collides with existing data even when re-importing the same
 file multiple times.
@@ -254,7 +258,7 @@ file multiple times.
 ### Settings Application
 
 Settings are exported/imported directly as DataStore key/value maps grouped by section.
-On import, `SettingsManager.importGroupedSettings()` writes all values to DataStore in a
+On import, `SettingsManager.importGroupedSettingsAwait()` writes all values to DataStore in a
 single `edit {}` call. The existing reactive pipeline (the `dataStore.data.collect {}` block
 in `SettingsManager.init()`) automatically re-hydrates all `StateFlow`s, updating Compose UI
 immediately.
@@ -278,8 +282,8 @@ Configuration exports (`CreateBackupSubPage` and `ShareProfileSubPage`) and rest
 To protect configuration data, Megingiard automates daily configuration backups stored locally in the DataStore:
 
 1. **Storage Isolation**: The internal backups list (`KEY_INTERNAL_BACKUPS` preference key) is kept separate from `SECTION_MAP`. This ensures backups are isolated, are never included in custom config exports, and are not modified or cleared by external imports.
-2. **First-Load Auto-Backup**: Upon app startup, the first emission of `dataStore.data` collects the fully loaded configuration. A volatile thread-safe flag `autoBackupTriggered` ensures that `triggerAutoBackupIfNeeded(context)` is invoked exactly once per process lifetime. The function checks for a backup matching today's local date string (`java.time.LocalDate.now().toString()`). If absent, it builds a full configuration snapshot using `ConfigManager.buildExport` and saves it.
+2. **First-Load Auto-Backup**: Upon app startup, the first emission of `dataStore.data` collects the fully loaded configuration and decodes `_internalBackups` (guarded by `isInternalBackupsLoaded`). Within that same one-time initialization block, `triggerAutoBackupIfNeeded(context)` runs sequentially: it checks for a backup matching today's local date string (`java.time.LocalDate.now().toString()`), and if absent, builds a full configuration snapshot using `ConfigManager.buildExport` and saves it.
 3. **5-Day Retention**: Backups are kept as a serialized list of `@Serializable data class InternalBackup` entries. When a new backup is appended, the list is sorted by `timestampMs` descending and capped at 5 entries via `.take(5)`. This ensures backups representing the last 5 days the app was actually used on are preserved indefinitely.
 4. **Direct Restore Selection Sub-Page & In-Deck Review**: `RestoreBackupSubPage` renders a dedicated sub-menu within Global Settings presenting the "External File" option first, followed by the daily automatic backups. Option labels are formatted using localized weekdays and exact creation times (e.g. `Sunday, 2026-05-24 21:15`). Sub-labels display a detailed profiles, layouts, and macros count. Selecting an internal backup or external file transitions the sub-page directly into the in-deck Review & Apply deck view showing archive metadata, contents overview, overwrite notice, and an Apply action card.
-5. **CPU Serialization Optimization**: To prevent redundant CPU cycles during continuous settings updates (such as high-frequency coordinate saves from active MacroPad dragging actions), the preference observer caches the last-seen raw JSON string. The full JSON list is only decoded and updated into `_internalBackups` if the string content of `KEY_INTERNAL_BACKUPS` actually changes. Any serialization/decoding errors are caught and logged with diagnostic warnings (`AppLog.w`) containing detailed failure diagnostics to prevent silent failure.
+5. **Load-Once In-Memory State**: To avoid redundant JSON decoding on continuous settings emissions (such as high-frequency MacroPad updates), the preference observer decodes `KEY_INTERNAL_BACKUPS` into `_internalBackups` once on initial DataStore load (guarded by `isInternalBackupsLoaded`). Subsequent updates in `saveBackup` compute the new list from `_internalBackups.value`, update in-memory state immediately, and persist the encoded JSON to DataStore. Any decoding errors on load are caught and logged with diagnostic warnings (`AppLog.w`).
 

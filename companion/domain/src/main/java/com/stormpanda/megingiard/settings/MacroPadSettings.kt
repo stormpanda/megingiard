@@ -19,7 +19,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 private const val TAG = "MacroPadSettings"
-private const val MACROPAD_SAVE_DEBOUNCE_MS = 500L
+private const val MACROPAD_SAVE_DEBOUNCE_MS = 250L
 private const val PRIVD_DEFAULT_DEADZONE = 0.15f
 
 /**
@@ -52,8 +52,7 @@ object MacroPadSettings {
             encodeDefaults = true
         }
 
-    private var lastLoadedProfilesJson: String? = null
-    private var lastLoadedActiveProfileId: String? = null
+    @Volatile
     private var hasLoadedOnce = false
 
     private val _gamepadSwapFaceButtons = MutableStateFlow(false)
@@ -87,7 +86,7 @@ object MacroPadSettings {
         this.scope = scope
 
         // Debounced MacroPad save — coalesces rapid drag-frame emissions into a
-        // single DataStore write 500 ms after the last call to saveMacroPadData().
+        // single DataStore write 250 ms after the last call to saveMacroPadData().
         scope.launch {
             _macroPadSaveRequests
                 .debounce(MACROPAD_SAVE_DEBOUNCE_MS)
@@ -102,8 +101,6 @@ object MacroPadSettings {
         _deadzoneRight.value = PRIVD_DEFAULT_DEADZONE
         _buttonAlignmentSnapping.value = true
         hasLoadedOnce = false
-        lastLoadedProfilesJson = null
-        lastLoadedActiveProfileId = null
     }
 
     internal fun loadFrom(prefs: Preferences) {
@@ -114,16 +111,11 @@ object MacroPadSettings {
         prefs[KEY_MACROPAD_SNAP_ALIGNMENT]?.let { _buttonAlignmentSnapping.value = it }
 
         // MacroPad profiles
+        if (hasLoadedOnce) return
+        hasLoadedOnce = true
+
         val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
         val activeId = prefs[KEY_MACROPAD_ACTIVE_PROFILE_ID]
-
-        if (hasLoadedOnce && macropadProfilesJson == lastLoadedProfilesJson && activeId == lastLoadedActiveProfileId) {
-            return
-        }
-        hasLoadedOnce = true
-        lastLoadedProfilesJson = macropadProfilesJson
-        lastLoadedActiveProfileId = activeId
-
         val profiles =
             if (macropadProfilesJson != null) {
                 runCatching {
@@ -194,7 +186,14 @@ object MacroPadSettings {
         _macroPadSaveRequests.tryEmit(Unit)
     }
 
-    /** Performs the actual DataStore write. Called exclusively from the debounce collector in [init]. */
+    /** Immediately flushes current in-memory MacroPad data to DataStore if initialized. */
+    suspend fun flushMacroPadDataNow() {
+        if (::dataStore.isInitialized) {
+            writeMacroPadDataNow()
+        }
+    }
+
+    /** Performs the actual DataStore write. Called exclusively from the debounce collector in [init] or [flushMacroPadDataNow]. */
     private suspend fun writeMacroPadDataNow() {
         val profiles = MacroPadState.profiles.value
         val activeId = MacroPadState.activeProfileId.value
@@ -207,7 +206,5 @@ object MacroPadSettings {
                 prefs.remove(KEY_MACROPAD_ACTIVE_PROFILE_ID)
             }
         }
-        lastLoadedProfilesJson = json
-        lastLoadedActiveProfileId = activeId
     }
 }

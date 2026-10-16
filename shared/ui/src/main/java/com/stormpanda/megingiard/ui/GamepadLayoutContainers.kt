@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Icon
@@ -26,7 +27,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import java.util.Locale
+
+private val GC_INFO_BOX_RADIUS = 8.dp
+private const val GC_INFO_BOX_BG_ALPHA = 0.5f
+private const val GC_INFO_BOX_BORDER_ALPHA = 0.2f
+private val GC_INFO_BOX_BORDER_WIDTH = 1.dp
+private val GC_INFO_BOX_PADDING_H = 14.dp
+private val GC_INFO_BOX_PADDING_V = 12.dp
+private val GC_INFO_BOX_SPACING = 10.dp
+private val GC_INFO_BOX_ICON_SIZE = 20.dp
+private val GC_INFO_BOX_TEXT_SPACING = 2.dp
+private val GC_INFO_BOX_SHAPE = RoundedCornerShape(GC_INFO_BOX_RADIUS)
 
 /**
  * Uppercase section header label with tracked letter spacing and design token colors.

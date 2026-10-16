@@ -31,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,7 +64,6 @@ private val KMQ_CHIP_CONTENT_SPACING = 6.dp
 @Composable
 internal fun KeyboardMacroQuickRow(
     visible: Boolean,
-    accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -111,7 +109,6 @@ internal fun KeyboardMacroQuickRow(
                         MacroQuickChip(
                             macro = macro,
                             isRunning = isRunning,
-                            accentColor = accentColor,
                             onClick = {
                                 if (isRunning) {
                                     AppLog.d(TAG, "Stopping macro '${macro.name}' via keyboard quick row")
@@ -133,14 +130,13 @@ internal fun KeyboardMacroQuickRow(
 private fun MacroQuickChip(
     macro: Macro,
     isRunning: Boolean,
-    accentColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    val bg = if (isRunning) accentColor.copy(alpha = KMQ_RUNNING_BG_ALPHA) else colors.surfaceVariant
+    val bg = if (isRunning) colors.accent.copy(alpha = KMQ_RUNNING_BG_ALPHA) else colors.surfaceVariant
     val contentColor = if (isRunning) colors.onAccent else colors.onSurface
-    val borderColor = if (isRunning) accentColor else colors.divider
+    val borderColor = if (isRunning) colors.accent else colors.divider
 
     Row(
         modifier =

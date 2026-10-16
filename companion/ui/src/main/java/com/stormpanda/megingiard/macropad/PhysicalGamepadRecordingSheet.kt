@@ -89,22 +89,6 @@ private val PR_SPACING_L = 14.dp
 private val PR_CONTAINER_PADDING = 20.dp
 private val PR_BORDER_WIDTH = 1.dp
 
-private fun dpadArrowLabel(
-    dirX: Int,
-    dirY: Int,
-): String =
-    when {
-        dirX > 0 && dirY < 0 -> "↗"
-        dirX > 0 && dirY == 0 -> "→"
-        dirX > 0 && dirY > 0 -> "↘"
-        dirX == 0 && dirY < 0 -> "↑"
-        dirX == 0 && dirY > 0 -> "↓"
-        dirX < 0 && dirY < 0 -> "↖"
-        dirX < 0 && dirY == 0 -> "←"
-        dirX < 0 && dirY > 0 -> "↙"
-        else -> "·"
-    }
-
 /**
  * Full-screen companion HUD shown on the secondary bottom display while a physical
  * gamepad recording session is active.
@@ -252,7 +236,7 @@ internal fun PhysicalGamepadRecordingSheet(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             // D-Pad direction
-                            val dpadArrow = dpadArrowLabel(recording.dpadDirectionX, recording.dpadDirectionY)
+                            val dpadArrow = dirArrow(recording.dpadDirectionX, recording.dpadDirectionY)
                             val isDpadActive = recording.dpadDirectionX != 0 || recording.dpadDirectionY != 0
                             Box(
                                 modifier =

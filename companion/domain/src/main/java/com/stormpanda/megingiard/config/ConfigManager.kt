@@ -30,7 +30,9 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.InputStream
 import java.time.Instant
 import java.util.UUID
 import java.util.zip.ZipEntry
@@ -41,6 +43,10 @@ private const val TAG = "ConfigManager"
 
 /** Safety cap — reject files larger than 10 MB to prevent OOM. */
 private const val MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+
+/** Safety cap — reject extracted archives larger than 20 MB total to prevent ZIP-bomb OOM. */
+private const val MAX_TOTAL_ZIP_BYTES = 20 * 1024 * 1024
+private const val READ_BUFFER_SIZE = 8192
 
 /** Minimum schema version accepted on import. Currently only v3 is supported. */
 private const val MIN_SUPPORTED_SCHEMA = 3
@@ -75,19 +81,26 @@ object ConfigManager {
     sealed interface ExportKind {
         val metadata: ExportMetadata
         val includeBackgrounds: Boolean
+        val suggestedFilename: String
 
         /** Full-app backup: all settings + all profiles. */
         data class Backup(
             override val metadata: ExportMetadata,
             override val includeBackgrounds: Boolean = true,
-        ) : ExportKind
+        ) : ExportKind {
+            override val suggestedFilename: String
+                get() = buildExportFilename(metadata)
+        }
 
         /** Single-profile share: no settings, one profile. */
         data class ProfileShare(
             override val metadata: ExportMetadata,
             val profile: PadProfile,
             override val includeBackgrounds: Boolean = true,
-        ) : ExportKind
+        ) : ExportKind {
+            override val suggestedFilename: String
+                get() = buildProfileExportFilename(metadata, profile.name)
+        }
     }
 
     /** Discriminates backup restores from profile-only imports. */
@@ -105,28 +118,20 @@ object ConfigManager {
         )
     val exportRequest: SharedFlow<ExportKind> = _exportRequest.asSharedFlow()
 
-    /** Suggested default filename for the "create document" picker. */
-    private val _exportFilename = MutableStateFlow("")
-    val exportFilename: StateFlow<String> = _exportFilename.asStateFlow()
-
     fun requestExport(
         metadata: ExportMetadata,
-        filename: String,
         includeBackgrounds: Boolean = true,
     ) {
-        AppLog.d(TAG, "requestExport filename=$filename includeBackgrounds=$includeBackgrounds")
-        _exportFilename.value = filename
+        AppLog.d(TAG, "requestExport includeBackgrounds=$includeBackgrounds")
         _exportRequest.tryEmit(ExportKind.Backup(metadata, includeBackgrounds))
     }
 
     fun requestProfileExport(
         metadata: ExportMetadata,
         profile: PadProfile,
-        filename: String,
         includeBackgrounds: Boolean = true,
     ) {
-        AppLog.d(TAG, "requestProfileExport profile=${profile.name} filename=$filename includeBackgrounds=$includeBackgrounds")
-        _exportFilename.value = filename
+        AppLog.d(TAG, "requestProfileExport profile=${profile.name} includeBackgrounds=$includeBackgrounds")
         _exportRequest.tryEmit(ExportKind.ProfileShare(metadata, profile, includeBackgrounds))
     }
 
@@ -146,97 +151,108 @@ object ConfigManager {
 
     fun requestImport(mode: ImportMode = ImportMode.BACKUP_RESTORE) {
         AppLog.d(TAG, "requestImport mode=$mode")
+        _pendingInAppImportMode.value = mode
         _importRequest.tryEmit(mode)
     }
 
-    // ── Coordinator StateFlows (import from external ACTION_VIEW intent) ────────
+    // ── Coordinator StateFlows (import from external ACTION_VIEW & in-app picker) ──
 
-    /** Non-null while MainAppScreen should parse an externally-opened .mgrd URI. */
-    private val _pendingUri = MutableStateFlow<Uri?>(null)
-    val pendingUri: StateFlow<Uri?> = _pendingUri.asStateFlow()
+    /** Request to parse a `.mgrd` URI in [MainAppScreen], tagged by origin. */
+    data class PendingUriRequest(
+        val uri: Uri,
+        val isInApp: Boolean,
+    )
+
+    /** Self-contained result of parsing a `.mgrd` JSON or ZIP archive. */
+    data class ParsedArchive(
+        val export: MegingiardExport,
+        val images: Map<String, ByteArray> = emptyMap(),
+    )
+
+    /** Non-null while MainAppScreen should parse an incoming .mgrd URI. */
+    private val _pendingUriRequest = MutableStateFlow<PendingUriRequest?>(null)
+    val pendingUriRequest: StateFlow<PendingUriRequest?> = _pendingUriRequest.asStateFlow()
 
     /** Non-null while MainAppScreen should show IncomingImportDialog for an external import. */
-    private val _pendingParsedImport = MutableStateFlow<MegingiardExport?>(null)
-    val pendingParsedImport: StateFlow<MegingiardExport?> = _pendingParsedImport.asStateFlow()
+    private val _pendingParsedImport = MutableStateFlow<ParsedArchive?>(null)
+    val pendingParsedImport: StateFlow<ParsedArchive?> = _pendingParsedImport.asStateFlow()
 
-    /** Extracted background image binaries from pending external import ZIP package. */
-    private val _pendingImportImages = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
-
-    /** Called by MainActivity when an ACTION_VIEW intent with a .mgrd URI is received. */
-    fun setPendingUri(uri: Uri) {
-        AppLog.i(TAG, "setPendingUri: $uri")
-        _pendingUri.value = uri
-    }
-
-    /** Called by MainAppScreen after successfully parsing an external import URI. */
-    fun setParsedImport(export: MegingiardExport) {
-        AppLog.d(TAG, "setParsedImport")
-        _pendingParsedImport.value = export
-        _pendingUri.value = null
-    }
-
-    /** Clears external import state — call after confirm or dismiss of IncomingImportDialog. */
-    fun clearPendingImport() {
-        AppLog.d(TAG, "clearPendingImport")
-        _pendingUri.value = null
-        _pendingParsedImport.value = null
-        _pendingImportImages.value = emptyMap()
-    }
-
-    // ── Coordinator StateFlows (import from in-app Settings picker) ───────────
-
-    /** Non-null while MainAppScreen should parse an in-app Settings .mgrd URI. */
-    private val _pendingInAppUri = MutableStateFlow<Uri?>(null)
-    val pendingInAppUri: StateFlow<Uri?> = _pendingInAppUri.asStateFlow()
-
-    /** Non-null while GlobalSettingsScreen should show ImportPreviewDialog. */
-    private val _pendingInAppParsedImport = MutableStateFlow<MegingiardExport?>(null)
-    val pendingInAppParsedImport: StateFlow<MegingiardExport?> = _pendingInAppParsedImport.asStateFlow()
-
-    /** Extracted background image binaries from pending in-app import ZIP package. */
-    private val _pendingInAppImportImages = MutableStateFlow<Map<String, ByteArray>>(emptyMap())
+    /** Non-null while GlobalSettingsScreen should show RestoreReviewSubPage. */
+    private val _pendingInAppParsedImport = MutableStateFlow<ParsedArchive?>(null)
+    val pendingInAppParsedImport: StateFlow<ParsedArchive?> = _pendingInAppParsedImport.asStateFlow()
 
     /** Tracks whether the pending in-app import is a full backup or a profile share. */
     private val _pendingInAppImportMode = MutableStateFlow(ImportMode.BACKUP_RESTORE)
     val pendingInAppImportMode: StateFlow<ImportMode> = _pendingInAppImportMode.asStateFlow()
 
-    fun getPendingInAppImageCount(): Int = _pendingInAppImportImages.value.size
+    private val _inAppImportError = MutableStateFlow<String?>(null)
+    val inAppImportError: StateFlow<String?> = _inAppImportError.asStateFlow()
 
-    fun getPendingInAppImages(): Map<String, ByteArray> = _pendingInAppImportImages.value
+    fun getPendingInAppImageCount(): Int = _pendingInAppParsedImport.value?.images?.size ?: 0
 
-    fun getPendingImages(): Map<String, ByteArray> = _pendingImportImages.value
+    /** Called by MainActivity when an ACTION_VIEW intent with a .mgrd URI is received. */
+    fun setPendingUri(uri: Uri) {
+        AppLog.i(TAG, "setPendingUri: $uri")
+        _pendingUriRequest.value = PendingUriRequest(uri, isInApp = false)
+    }
 
     /** Called by MainActivity when the in-app file picker returns a .mgrd URI. */
     fun setPendingInAppUri(
         uri: Uri,
-        mode: ImportMode = ImportMode.BACKUP_RESTORE,
+        mode: ImportMode = _pendingInAppImportMode.value,
     ) {
         AppLog.i(TAG, "setPendingInAppUri: $uri mode=$mode")
         _pendingInAppImportMode.value = mode
-        _pendingInAppUri.value = uri
+        _pendingUriRequest.value = PendingUriRequest(uri, isInApp = true)
     }
 
-    /** Called by MainAppScreen after successfully parsing an in-app import URI. */
-    fun setInAppParsedImport(export: MegingiardExport) {
+    fun setPendingInAppImportMode(mode: ImportMode) {
+        AppLog.d(TAG, "setPendingInAppImportMode: $mode")
+        _pendingInAppImportMode.value = mode
+    }
+
+    /** Called by MainAppScreen after successfully parsing an external import URI. */
+    fun setParsedImport(archive: ParsedArchive) {
+        AppLog.d(TAG, "setParsedImport")
+        _pendingParsedImport.value = archive
+        _pendingUriRequest.value = null
+    }
+
+    /** Called by MainAppScreen or GlobalSettingsScreen when staging an in-app import for review. */
+    fun setInAppParsedImport(
+        export: MegingiardExport,
+        images: Map<String, ByteArray> = emptyMap(),
+    ) {
+        setInAppParsedImport(ParsedArchive(export, images))
+    }
+
+    fun setInAppParsedImport(archive: ParsedArchive) {
         AppLog.d(TAG, "setInAppParsedImport")
-        _pendingInAppParsedImport.value = export
-        _pendingInAppUri.value = null
+        _pendingInAppParsedImport.value = archive
+        _pendingUriRequest.value = null
     }
-
-    private val _inAppImportError = MutableStateFlow<String?>(null)
-    val inAppImportError: StateFlow<String?> = _inAppImportError.asStateFlow()
 
     fun setInAppImportError(error: String?) {
         AppLog.d(TAG, "setInAppImportError: $error")
         _inAppImportError.value = error
     }
 
-    /** Clears in-app import state — call after confirm or dismiss of ImportPreviewDialog. */
+    /** Clears external import state — call after confirm or dismiss of IncomingImportDialog. */
+    fun clearPendingImport() {
+        AppLog.d(TAG, "clearPendingImport")
+        if (_pendingUriRequest.value?.isInApp == false) {
+            _pendingUriRequest.value = null
+        }
+        _pendingParsedImport.value = null
+    }
+
+    /** Clears in-app import state — call after confirm or dismiss of RestoreReviewSubPage. */
     fun clearInAppPendingImport() {
         AppLog.d(TAG, "clearInAppPendingImport")
-        _pendingInAppUri.value = null
+        if (_pendingUriRequest.value?.isInApp == true) {
+            _pendingUriRequest.value = null
+        }
         _pendingInAppParsedImport.value = null
-        _pendingInAppImportImages.value = emptyMap()
         _inAppImportError.value = null
         _pendingInAppImportMode.value = ImportMode.BACKUP_RESTORE
     }
@@ -268,7 +284,7 @@ object ConfigManager {
     // ── Export ────────────────────────────────────────────────────────────────
 
     /**
-     * Builds a export from the current app state.
+     * Builds an export from the current app state.
      * Macros are embedded inside each PadProfile — no top-level macros or folders.
      */
     suspend fun buildExport(
@@ -277,25 +293,12 @@ object ConfigManager {
         includeBackgrounds: Boolean = true,
     ): MegingiardExport {
         AppLog.i(TAG, "buildExport: author=${metadata.author} includeBackgrounds=$includeBackgrounds")
-        val settings = SettingsManager.exportGroupedSettings()
-        val profiles = MacroPadState.profiles.value
-
-        val imageHashes =
-            if (context != null && includeBackgrounds) {
-                collectImageHashes(context, profiles)
-            } else {
-                emptyMap()
-            }
-
-        val checksum = computeChecksum(settings, profiles, imageHashes)
-        AppLog.d(TAG, "buildExport: checksum=$checksum profiles=${profiles.size} imageHashes=${imageHashes.size}")
-
-        return MegingiardExport(
-            schemaVersion = SCHEMA_VERSION,
+        return buildExportInternal(
             metadata = metadata,
-            checksum = checksum,
-            settings = settings,
-            profiles = profiles,
+            settings = SettingsManager.exportGroupedSettings(),
+            profiles = MacroPadState.profiles.value,
+            context = context,
+            includeBackgrounds = includeBackgrounds,
         )
     }
 
@@ -310,47 +313,82 @@ object ConfigManager {
         includeBackgrounds: Boolean = true,
     ): MegingiardExport {
         AppLog.i(TAG, "buildProfileExport: profile=${profile.name} includeBackgrounds=$includeBackgrounds")
-        val profiles = listOf(profile)
+        return buildExportInternal(
+            metadata = metadata,
+            settings = emptyMap(),
+            profiles = listOf(profile),
+            context = context,
+            includeBackgrounds = includeBackgrounds,
+        )
+    }
+
+    private fun buildExportInternal(
+        metadata: ExportMetadata,
+        settings: Map<String, Map<String, JsonElement>>,
+        profiles: List<PadProfile>,
+        context: Context?,
+        includeBackgrounds: Boolean,
+    ): MegingiardExport {
         val imageHashes =
             if (context != null && includeBackgrounds) {
                 collectImageHashes(context, profiles)
             } else {
                 emptyMap()
             }
-        val checksum = computeChecksum(emptyMap(), profiles, imageHashes)
-        AppLog.d(TAG, "buildProfileExport: checksum=$checksum imageHashes=${imageHashes.size}")
+        val checksum = computeChecksum(settings, profiles, imageHashes)
+        AppLog.d(TAG, "buildExportInternal: checksum=$checksum profiles=${profiles.size} imageHashes=${imageHashes.size}")
         return MegingiardExport(
             schemaVersion = SCHEMA_VERSION,
             metadata = metadata,
             checksum = checksum,
-            settings = emptyMap(),
+            settings = settings,
             profiles = profiles,
         )
     }
 
-    private fun resolveLayoutBackgroundFile(
-        context: Context,
-        bgPath: String?,
-        layoutId: String,
-    ): File? {
-        if (bgPath.isNullOrEmpty()) return null
-        val fileByPath = File(context.filesDir, bgPath)
-        if (fileByPath.exists() && fileByPath.isFile) return fileByPath
-        val fileByLayoutId = File(File(context.filesDir, "backgrounds"), "bg_$layoutId")
-        if (fileByLayoutId.exists() && fileByLayoutId.isFile) return fileByLayoutId
-        return null
+    private fun InputStream.readBytesBounded(maxBytes: Int): ByteArray {
+        val out = ByteArrayOutputStream()
+        val buf = ByteArray(READ_BUFFER_SIZE)
+        var total = 0
+        while (true) {
+            val n = read(buf)
+            if (n < 0) break
+            total += n
+            check(total <= maxBytes) {
+                "File too large: exceeds $maxBytes bytes"
+            }
+            out.write(buf, 0, n)
+        }
+        return out.toByteArray()
     }
 
-    private fun resolveLayoutMaskFile(
+    private fun isSafeFileInDir(
+        baseDir: File,
+        target: File,
+    ): Boolean =
+        runCatching {
+            val baseCanonical = baseDir.canonicalFile.path
+            val targetCanonical = target.canonicalFile.path
+            targetCanonical.startsWith("$baseCanonical${File.separator}")
+        }.getOrDefault(false)
+
+    private fun resolveLocalMediaFile(
         context: Context,
-        maskPath: String?,
+        dirName: String,
+        prefix: String,
+        relativePath: String?,
         layoutId: String,
     ): File? {
-        if (maskPath.isNullOrEmpty()) return null
-        val fileByPath = File(context.filesDir, maskPath)
-        if (fileByPath.exists() && fileByPath.isFile) return fileByPath
-        val fileByLayoutId = File(File(context.filesDir, "masks"), "mask_$layoutId")
-        if (fileByLayoutId.exists() && fileByLayoutId.isFile) return fileByLayoutId
+        if (relativePath.isNullOrEmpty()) return null
+        val mediaDir = File(context.filesDir, dirName)
+        val fileByPath = File(context.filesDir, relativePath)
+        if (!relativePath.contains("..") && isSafeFileInDir(mediaDir, fileByPath) && fileByPath.exists() && fileByPath.isFile) {
+            return fileByPath
+        }
+        val fileByLayoutId = File(mediaDir, "${prefix}_$layoutId")
+        if (isSafeFileInDir(mediaDir, fileByLayoutId) && fileByLayoutId.exists() && fileByLayoutId.isFile) {
+            return fileByLayoutId
+        }
         return null
     }
 
@@ -361,13 +399,11 @@ object ConfigManager {
         buildMap {
             for (profile in profiles) {
                 for (layout in profile.layouts) {
-                    val bgFile = resolveLayoutBackgroundFile(context, layout.backgroundImagePath, layout.id)
-                    if (bgFile != null) {
-                        put("bg_${layout.id}", bgFile)
+                    resolveLocalMediaFile(context, "backgrounds", "bg", layout.backgroundImagePath, layout.id)?.let {
+                        put("bg_${layout.id}", it)
                     }
-                    val maskFile = resolveLayoutMaskFile(context, layout.maskImagePath, layout.id)
-                    if (maskFile != null) {
-                        put("mask_${layout.id}", maskFile)
+                    resolveLocalMediaFile(context, "masks", "mask", layout.maskImagePath, layout.id)?.let {
+                        put("mask_${layout.id}", it)
                     }
                 }
             }
@@ -446,11 +482,10 @@ object ConfigManager {
     suspend fun parseImportUri(
         context: Context,
         uri: Uri,
-        isInApp: Boolean = false,
-    ): Result<MegingiardExport> {
-        AppLog.i(TAG, "parseImportUri uri=$uri isInApp=$isInApp")
+    ): Result<ParsedArchive> {
+        AppLog.i(TAG, "parseImportUri uri=$uri")
         return withContext(Dispatchers.IO) {
-            readFromUri(context, uri, isInApp).also { result ->
+            readFromUri(context, uri).also { result ->
                 if (result.isSuccess) {
                     AppLog.i(TAG, "parseImportUri succeeded")
                 } else {
@@ -466,10 +501,9 @@ object ConfigManager {
     fun readFromUri(
         context: Context,
         uri: Uri,
-        isInApp: Boolean = false,
-    ): Result<MegingiardExport> =
+    ): Result<ParsedArchive> =
         runCatching {
-            AppLog.i(TAG, "readFromUri: uri=$uri isInApp=$isInApp")
+            AppLog.i(TAG, "readFromUri: uri=$uri")
             // Reject oversized files before allocating: check declared size if available.
             context.contentResolver
                 .query(
@@ -488,11 +522,7 @@ object ConfigManager {
                 }
             val bytes =
                 context.contentResolver.openInputStream(uri)?.use { input ->
-                    val read = input.readBytes()
-                    check(read.size <= MAX_FILE_SIZE_BYTES) {
-                        "File too large: ${read.size} bytes (max $MAX_FILE_SIZE_BYTES)"
-                    }
-                    read
+                    input.readBytesBounded(MAX_FILE_SIZE_BYTES)
                 } ?: error("Could not open input stream for URI: $uri")
 
             val isZip =
@@ -505,12 +535,17 @@ object ConfigManager {
             if (isZip) {
                 var jsonText: String? = null
                 val imagesMap = mutableMapOf<String, ByteArray>()
+                var totalExtractedBytes = 0
                 ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
                     var entry = zip.nextEntry
                     while (entry != null) {
                         val entryName = entry.name
                         if (!entry.isDirectory) {
-                            val entryBytes = zip.readBytes()
+                            val entryBytes = zip.readBytesBounded(MAX_FILE_SIZE_BYTES)
+                            totalExtractedBytes += entryBytes.size
+                            check(totalExtractedBytes <= MAX_TOTAL_ZIP_BYTES) {
+                                "Archive too large when uncompressed: exceeds $MAX_TOTAL_ZIP_BYTES bytes"
+                            }
                             if (entryName == "config.json" || entryName.endsWith(".json")) {
                                 jsonText = entryBytes.toString(Charsets.UTF_8)
                             } else if (entryName.startsWith("backgrounds/") ||
@@ -518,7 +553,7 @@ object ConfigManager {
                                 entryName.startsWith("bg_") ||
                                 entryName.startsWith("mask_")
                             ) {
-                                val key = entryName.removePrefix("backgrounds/").removePrefix("masks/").removePrefix("bg_")
+                                val key = entryName.substringAfterLast("/")
                                 imagesMap[key] = entryBytes
                             }
                         }
@@ -528,20 +563,10 @@ object ConfigManager {
                 }
                 val json = jsonText ?: error("Invalid .mgrd package — missing config.json")
                 val export = parseAndVerify(json, imagesMap)
-                if (isInApp) {
-                    _pendingInAppImportImages.value = imagesMap
-                } else {
-                    _pendingImportImages.value = imagesMap
-                }
-                export
+                ParsedArchive(export, imagesMap)
             } else {
                 val json = bytes.toString(Charsets.UTF_8)
-                if (isInApp) {
-                    _pendingInAppImportImages.value = emptyMap()
-                } else {
-                    _pendingImportImages.value = emptyMap()
-                }
-                parseAndVerify(json)
+                ParsedArchive(parseAndVerify(json))
             }
         }
 
@@ -574,7 +599,10 @@ object ConfigManager {
         images: Map<String, ByteArray>? = null,
     ) {
         AppLog.i(TAG, "applyImport: schema=${export.schemaVersion}")
-        val resolvedImages = images ?: _pendingInAppImportImages.value.ifEmpty { _pendingImportImages.value }
+        val resolvedImages =
+            images
+                ?: _pendingInAppParsedImport.value?.images?.ifEmpty { null }
+                ?: _pendingParsedImport.value?.images.orEmpty()
         try {
             if (export.settings.isNotEmpty()) {
                 SettingsManager.importGroupedSettingsAwait(export.settings)
@@ -599,7 +627,10 @@ object ConfigManager {
     ) {
         AppLog.i(TAG, "applyProfileImport: schema=${export.schemaVersion} profiles=${export.profiles.size}")
         check(export.profiles.isNotEmpty()) { "The file does not contain any profiles" }
-        val resolvedImages = images ?: _pendingInAppImportImages.value.ifEmpty { _pendingImportImages.value }
+        val resolvedImages =
+            images
+                ?: _pendingInAppParsedImport.value?.images?.ifEmpty { null }
+                ?: _pendingParsedImport.value?.images.orEmpty()
         try {
             importMacroPadData(context, export.profiles, resolvedImages)
         } finally {
@@ -621,12 +652,7 @@ object ConfigManager {
         currentPath: String?,
         destPrefix: String = prefix,
     ): String? {
-        val keyFromPath = currentPath?.substringAfterLast("/")?.removePrefix("${prefix}_")
-        val imageBytes =
-            images["${prefix}_$oldLayoutId"]
-                ?: images["$dirPrefix/${prefix}_$oldLayoutId"]
-                ?: (if (prefix == "bg") images[oldLayoutId] else null)
-                ?: keyFromPath?.let { key -> images[key] ?: images["${prefix}_$key"] ?: images["$dirPrefix/${prefix}_$key"] }
+        val imageBytes = images["${prefix}_$oldLayoutId"] ?: if (prefix == "bg") images[oldLayoutId] else null
 
         if (imageBytes != null) {
             val destFile = File(targetDir, "${destPrefix}_$newLayoutId")
@@ -639,30 +665,15 @@ object ConfigManager {
             }
         }
 
-        if (!currentPath.isNullOrEmpty()) {
-            val srcFile = File(context.filesDir, currentPath)
-            val filesDirCanonical = context.filesDir.canonicalPath
-            val isSafePath =
-                !currentPath.contains("..") &&
-                    runCatching { srcFile.canonicalPath.startsWith(filesDirCanonical) }.getOrDefault(false)
-            val srcFileFallback = File(targetDir, "${prefix}_$oldLayoutId")
-            val existingSrc =
-                if (isSafePath && srcFile.exists()) {
-                    srcFile
-                } else if (srcFileFallback.exists()) {
-                    srcFileFallback
-                } else {
-                    null
-                }
-            if (existingSrc != null) {
-                val destFile = File(targetDir, "${destPrefix}_$newLayoutId")
-                return runCatching {
-                    existingSrc.copyTo(destFile, overwrite = true)
-                    "$dirPrefix/${destPrefix}_$newLayoutId"
-                }.getOrElse { e ->
-                    AppLog.e(TAG, "Failed to copy local $prefix for layout $newLayoutId", e)
-                    null
-                }
+        val existingSrc = resolveLocalMediaFile(context, dirPrefix, prefix, currentPath, oldLayoutId)
+        if (existingSrc != null) {
+            val destFile = File(targetDir, "${destPrefix}_$newLayoutId")
+            return runCatching {
+                existingSrc.copyTo(destFile, overwrite = true)
+                "$dirPrefix/${destPrefix}_$newLayoutId"
+            }.getOrElse { e ->
+                AppLog.e(TAG, "Failed to copy local $prefix for layout $newLayoutId", e)
+                null
             }
         }
         return null
@@ -704,25 +715,17 @@ object ConfigManager {
                 profile.layouts.map { layout ->
                     val oldLayoutId = layout.id
                     val newLayoutId = UUID.randomUUID().toString()
+                    val remappedButtons =
+                        layout.buttons.map { button ->
+                            button.copy(
+                                id = UUID.randomUUID().toString(),
+                                action = remapMacroAction(button.action, macroIdMap),
+                            )
+                        }
 
                     @Suppress("DEPRECATION")
-                    val isLegacyMask = layout.useBackgroundImageAsMask
-
-                    val newBgPath: String?
-                    val newMaskPath: String?
-                    val finalBgScale: Float
-                    val finalBgOffsetX: Float
-                    val finalBgOffsetY: Float
-                    val finalBgDim: Float
-                    val finalBgScaleMode: BackgroundScaleMode
-                    val finalMaskScale: Float
-                    val finalMaskOffsetX: Float
-                    val finalMaskOffsetY: Float
-                    val finalMaskDim: Float
-                    val finalMaskScaleMode: BackgroundScaleMode
-
-                    if (isLegacyMask) {
-                        newMaskPath =
+                    if (layout.useBackgroundImageAsMask) {
+                        val newMaskPath =
                             extractOrCopyMedia(
                                 context,
                                 images,
@@ -744,19 +747,25 @@ object ConfigManager {
                                 layout.maskImagePath,
                                 destPrefix = "mask",
                             )
-                        newBgPath = null
-                        finalBgScale = 1f
-                        finalBgOffsetX = 0f
-                        finalBgOffsetY = 0f
-                        finalBgDim = 0f
-                        finalBgScaleMode = BackgroundScaleMode.FILL
-                        finalMaskScale = layout.bgImageScale
-                        finalMaskOffsetX = layout.bgImageOffsetX
-                        finalMaskOffsetY = layout.bgImageOffsetY
-                        finalMaskDim = layout.backgroundImageDim
-                        finalMaskScaleMode = layout.bgScaleMode
+                        layout.copy(
+                            id = newLayoutId,
+                            backgroundImagePath = null,
+                            useBackgroundImageAsMask = false,
+                            bgImageScale = 1f,
+                            bgImageOffsetX = 0f,
+                            bgImageOffsetY = 0f,
+                            backgroundImageDim = 0f,
+                            bgScaleMode = BackgroundScaleMode.FILL,
+                            maskImagePath = newMaskPath,
+                            maskImageScale = layout.bgImageScale,
+                            maskImageOffsetX = layout.bgImageOffsetX,
+                            maskImageOffsetY = layout.bgImageOffsetY,
+                            maskImageDim = layout.backgroundImageDim,
+                            maskScaleMode = layout.bgScaleMode,
+                            buttons = remappedButtons,
+                        )
                     } else {
-                        newBgPath =
+                        val newBgPath =
                             extractOrCopyMedia(
                                 context,
                                 images,
@@ -767,7 +776,7 @@ object ConfigManager {
                                 newLayoutId,
                                 layout.backgroundImagePath,
                             )
-                        newMaskPath =
+                        val newMaskPath =
                             extractOrCopyMedia(
                                 context,
                                 images,
@@ -778,41 +787,14 @@ object ConfigManager {
                                 newLayoutId,
                                 layout.maskImagePath,
                             )
-                        finalBgScale = layout.bgImageScale
-                        finalBgOffsetX = layout.bgImageOffsetX
-                        finalBgOffsetY = layout.bgImageOffsetY
-                        finalBgDim = layout.backgroundImageDim
-                        finalBgScaleMode = layout.bgScaleMode
-                        finalMaskScale = layout.maskImageScale
-                        finalMaskOffsetX = layout.maskImageOffsetX
-                        finalMaskOffsetY = layout.maskImageOffsetY
-                        finalMaskDim = layout.maskImageDim
-                        finalMaskScaleMode = layout.maskScaleMode
+                        layout.copy(
+                            id = newLayoutId,
+                            backgroundImagePath = newBgPath,
+                            useBackgroundImageAsMask = false,
+                            maskImagePath = newMaskPath,
+                            buttons = remappedButtons,
+                        )
                     }
-
-                    layout.copy(
-                        id = newLayoutId,
-                        backgroundImagePath = newBgPath,
-                        useBackgroundImageAsMask = false,
-                        bgImageScale = finalBgScale,
-                        bgImageOffsetX = finalBgOffsetX,
-                        bgImageOffsetY = finalBgOffsetY,
-                        backgroundImageDim = finalBgDim,
-                        bgScaleMode = finalBgScaleMode,
-                        maskImagePath = newMaskPath,
-                        maskImageScale = finalMaskScale,
-                        maskImageOffsetX = finalMaskOffsetX,
-                        maskImageOffsetY = finalMaskOffsetY,
-                        maskImageDim = finalMaskDim,
-                        maskScaleMode = finalMaskScaleMode,
-                        buttons =
-                            layout.buttons.map { button ->
-                                button.copy(
-                                    id = UUID.randomUUID().toString(),
-                                    action = remapMacroAction(button.action, macroIdMap),
-                                )
-                            },
-                    )
                 }
 
             // Preserve the source profile's active layout selection when possible.
@@ -867,11 +849,11 @@ object ConfigManager {
         val imageHashes =
             extractedImages
                 .mapKeys { (k, _) ->
-                    val cleanKey = k.removePrefix("backgrounds/").removePrefix("masks/")
+                    val cleanKey = k.substringAfterLast("/")
                     if (cleanKey.startsWith("bg_") || cleanKey.startsWith("mask_")) {
                         cleanKey
                     } else {
-                        "bg_${cleanKey.removePrefix("bg_")}"
+                        "bg_$cleanKey"
                     }
                 }.mapValues { (_, bytes) ->
                     HmacUtil
@@ -885,27 +867,16 @@ object ConfigManager {
                 val rawSettings = rootObj["settings"] ?: JsonObject(emptyMap())
                 val rawProfiles = rootObj["profiles"] ?: JsonArray(emptyList())
 
-                val rawPayloadNoImages =
-                    checksumJson.encodeToString(RawChecksumPayload(rawSettings, rawProfiles, emptyMap()))
-                val hexNoImages = HmacUtil.sha256Hex(rawPayloadNoImages.toByteArray(Charsets.UTF_8)).lowercase()
-                if ("sha256:$hexNoImages" == export.checksum) return true
-
-                if (imageHashes.isNotEmpty()) {
-                    val rawPayloadWithImages =
-                        checksumJson.encodeToString(RawChecksumPayload(rawSettings, rawProfiles, imageHashes))
-                    val hexWithImages = HmacUtil.sha256Hex(rawPayloadWithImages.toByteArray(Charsets.UTF_8)).lowercase()
-                    if ("sha256:$hexWithImages" == export.checksum) return true
-                }
+                val rawPayload =
+                    checksumJson.encodeToString(RawChecksumPayload(rawSettings, rawProfiles, imageHashes))
+                val hex = HmacUtil.sha256Hex(rawPayload.toByteArray(Charsets.UTF_8)).lowercase()
+                if ("sha256:$hex" == export.checksum) return true
             }.onFailure { e ->
                 AppLog.w(TAG, "Raw JSON checksum verification failed: ${e.message}")
             }
         }
 
-        val expectedWithoutImages = computeChecksum(export.settings, export.profiles, emptyMap())
-        if (expectedWithoutImages == export.checksum) return true
-
-        val expectedWithImages = computeChecksum(export.settings, export.profiles, imageHashes)
-        return expectedWithImages == export.checksum
+        return computeChecksum(export.settings, export.profiles, imageHashes) == export.checksum
     }
 
     @Serializable

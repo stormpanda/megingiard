@@ -51,20 +51,16 @@ object MegingiardIpcContract {
         val isHostCompanionApp =
             context.packageName == COMPANION_PACKAGE || context.packageName == COMPANION_DEBUG_PACKAGE
 
-        AUTHORITY =
+        val useDebugAuthority =
             if (isHostCompanionApp) {
-                if (isDebug) "com.stormpanda.megingiard.debug.provider" else "com.stormpanda.megingiard.provider"
+                isDebug
             } else {
                 val releaseInstalled = isPackageInstalled(pm, COMPANION_PACKAGE)
                 val debugInstalled = isPackageInstalled(pm, COMPANION_DEBUG_PACKAGE)
-                when {
-                    isDebug && debugInstalled -> "com.stormpanda.megingiard.debug.provider"
-                    !isDebug && releaseInstalled -> "com.stormpanda.megingiard.provider"
-                    releaseInstalled -> "com.stormpanda.megingiard.provider"
-                    debugInstalled -> "com.stormpanda.megingiard.debug.provider"
-                    else -> if (isDebug) "com.stormpanda.megingiard.debug.provider" else "com.stormpanda.megingiard.provider"
-                }
+                if (isDebug) debugInstalled || !releaseInstalled else !releaseInstalled && debugInstalled
             }
+
+        AUTHORITY = if (useDebugAuthority) "$COMPANION_DEBUG_PACKAGE.provider" else "$COMPANION_PACKAGE.provider"
 
         BASE_URI = Uri.parse("content://$AUTHORITY")
         THEME_URI = Uri.parse("content://$AUTHORITY/$PATH_THEME")

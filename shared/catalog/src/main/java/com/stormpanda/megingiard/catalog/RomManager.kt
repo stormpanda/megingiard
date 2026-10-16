@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -60,12 +61,37 @@ object RomManager {
     private const val MAX_SCAN_DEPTH = 3
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val persistSupervisor = SupervisorJob()
+    private val persistScope = CoroutineScope(Dispatchers.IO + persistSupervisor)
+    private val persistLock = Any()
 
     private val _romFolders = MutableStateFlow<List<CustomRomFolder>>(emptyList())
     val romFolders: StateFlow<List<CustomRomFolder>> = _romFolders.asStateFlow()
 
     private val _romApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val romApps: StateFlow<List<InstalledAppInfo>> = _romApps.asStateFlow()
+
+    private val stateLock = Any()
+
+    @Volatile
+    private var isRomFoldersLoaded = false
+
+    @VisibleForTesting
+    fun resetForTesting() {
+        synchronized(stateLock) {
+            isRomFoldersLoaded = false
+            _romFolders.value = emptyList()
+            _romApps.value = emptyList()
+        }
+        synchronized(romCleanedNames) {
+            romCleanedNames.clear()
+        }
+    }
+
+    @VisibleForTesting
+    internal suspend fun awaitPersistenceForTesting() {
+        persistSupervisor.children.toList().joinAll()
+    }
 
     @VisibleForTesting
     fun setRomAppsForTesting(apps: List<InstalledAppInfo>) {
@@ -114,33 +140,41 @@ object RomManager {
     }
 
     fun loadRomFolders(context: Context) {
-        loadJsonFile<List<CustomRomFolder>>(context, FILE_ROM_FOLDERS)?.let { folders ->
-            _romFolders.value = folders
-            AppLog.d(TAG, "Loaded ${folders.size} ROM folders from disk")
-        }
-
-        loadJsonFile<Map<String, String>>(context, FILE_ROM_CLEANED_NAMES)?.let { map ->
-            synchronized(romCleanedNames) {
-                romCleanedNames.clear()
-                romCleanedNames.putAll(map)
+        synchronized(stateLock) {
+            if (isRomFoldersLoaded) return
+            isRomFoldersLoaded = true
+            loadJsonFile<List<CustomRomFolder>>(context, FILE_ROM_FOLDERS)?.let { folders ->
+                _romFolders.value = folders
+                AppLog.d(TAG, "Loaded ${folders.size} ROM folders from disk")
             }
-            AppLog.d(TAG, "Loaded ${map.size} cleaned ROM names from disk")
+            loadJsonFile<Map<String, String>>(context, FILE_ROM_CLEANED_NAMES)?.let { map ->
+                synchronized(romCleanedNames) {
+                    romCleanedNames.clear()
+                    romCleanedNames.putAll(map)
+                }
+                AppLog.d(TAG, "Loaded ${map.size} cleaned ROM names from disk")
+            }
         }
     }
 
     private fun saveRomCleanedNames(context: Context) {
-        val content = synchronized(romCleanedNames) { romCleanedNames.toMap() }
-        saveJsonFile(context, FILE_ROM_CLEANED_NAMES, content)
-        AppLog.d(TAG, "Saved cleaned ROM names to disk")
+        persistScope.launch {
+            synchronized(persistLock) {
+                val content = synchronized(romCleanedNames) { romCleanedNames.toMap() }
+                saveJsonFile(context, FILE_ROM_CLEANED_NAMES, content)
+                AppLog.d(TAG, "Saved cleaned ROM names to disk")
+            }
+        }
     }
 
-    private fun saveRomFolders(
-        context: Context,
-        folders: List<CustomRomFolder>,
-    ) {
-        _romFolders.value = folders
-        saveJsonFile(context, FILE_ROM_FOLDERS, folders)
-        AppLog.d(TAG, "Saved ${folders.size} ROM folders to disk")
+    private fun saveRomFolders(context: Context) {
+        persistScope.launch {
+            synchronized(persistLock) {
+                val folders = synchronized(stateLock) { _romFolders.value }
+                saveJsonFile(context, FILE_ROM_FOLDERS, folders)
+                AppLog.d(TAG, "Saved ${folders.size} ROM folders to disk")
+            }
+        }
     }
 
     private fun resolveDocumentFile(
@@ -166,6 +200,7 @@ object RomManager {
         uri: Uri,
     ): AddRomFolderResult =
         withContext(Dispatchers.IO) {
+            loadRomFolders(context)
             // 1. Take persistable URI permission
             try {
                 context.contentResolver.takePersistableUriPermission(
@@ -231,8 +266,14 @@ object RomManager {
                     systemName = systemDef.displayName,
                     emulatorPackage = defaultEmulatorPackage,
                 )
-            current.add(newFolder)
-            saveRomFolders(context, current)
+            synchronized(stateLock) {
+                val latest = _romFolders.value.toMutableList()
+                if (latest.none { it.uriString == newFolder.uriString }) {
+                    latest.add(newFolder)
+                }
+                _romFolders.value = latest.toList()
+            }
+            saveRomFolders(context)
 
             // 4. Reload ROM apps
             reloadRomAppsSuspend(context)
@@ -244,8 +285,11 @@ object RomManager {
         folderUri: String,
         coreName: String?,
     ) {
-        val current = _romFolders.value.map { if (it.uriString == folderUri) it.copy(retroArchCore = coreName) else it }
-        saveRomFolders(context, current)
+        loadRomFolders(context)
+        synchronized(stateLock) {
+            _romFolders.value = _romFolders.value.map { if (it.uriString == folderUri) it.copy(retroArchCore = coreName) else it }
+        }
+        saveRomFolders(context)
         reloadRomApps(context)
     }
 
@@ -254,8 +298,11 @@ object RomManager {
         folderUri: String,
         packageName: String?,
     ) {
-        val current = _romFolders.value.map { if (it.uriString == folderUri) it.copy(emulatorPackage = packageName) else it }
-        saveRomFolders(context, current)
+        loadRomFolders(context)
+        synchronized(stateLock) {
+            _romFolders.value = _romFolders.value.map { if (it.uriString == folderUri) it.copy(emulatorPackage = packageName) else it }
+        }
+        saveRomFolders(context)
         reloadRomApps(context)
     }
 
@@ -263,9 +310,13 @@ object RomManager {
         context: Context,
         folder: CustomRomFolder,
     ) {
-        val current = _romFolders.value.toMutableList()
-        current.removeAll { it.uriString == folder.uriString }
-        saveRomFolders(context, current)
+        loadRomFolders(context)
+        synchronized(stateLock) {
+            val current = _romFolders.value.toMutableList()
+            current.removeAll { it.uriString == folder.uriString }
+            _romFolders.value = current.toList()
+        }
+        saveRomFolders(context)
 
         val namesChanged =
             synchronized(romCleanedNames) {
@@ -313,6 +364,7 @@ object RomManager {
         context: Context,
         triggerScrape: Boolean = true,
     ) = withContext(Dispatchers.IO) {
+        loadRomFolders(context)
         var namesChanged = false
         val allRomApps =
             buildList {
@@ -355,47 +407,23 @@ object RomManager {
                             "rom.${folder.systemId}." +
                                 rawLabel.replace(Regex("[^a-zA-Z0-9_]"), "_") +
                                 "_" + romUriStr.hashCode().absoluteValue
-                        val label = InstalledAppsManager.getCustomLabel(pseudoPackageName) ?: cleanedLabel
-
-                        val cachedCoverFile = InstalledAppsManager.coverFileFor(context, pseudoPackageName)
-                        val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
-                        val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
-                        val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
-                        val coverImageId = if (hasCover) InstalledAppsManager.getCoverImageId(pseudoPackageName) else null
-
-                        val cachedLibraryIconFile = InstalledAppsManager.libraryIconFileFor(context, pseudoPackageName)
-                        val hasLibraryIcon = cachedLibraryIconFile.exists() && cachedLibraryIconFile.length() > 0
-                        val libraryIconPath = if (hasLibraryIcon) cachedLibraryIconFile.absolutePath else null
-                        val libraryIconLastModified = if (hasLibraryIcon) cachedLibraryIconFile.lastModified() else 0L
-                        val libraryIconRef = if (hasLibraryIcon) InstalledAppsManager.getLibraryIconRef(pseudoPackageName) else null
-
-                        val cachedLogoFile = InstalledAppsManager.logoFileFor(context, pseudoPackageName)
-                        val hasLogo = cachedLogoFile.exists() && cachedLogoFile.length() > 0
-                        val logoLastModified = if (hasLogo) cachedLogoFile.lastModified() else 0L
 
                         add(
-                            InstalledAppInfo(
-                                packageName = pseudoPackageName,
-                                activityName = "",
-                                label = label,
-                                coverPath = coverPath,
-                                isGame = true,
-                                isRom = true,
-                                romPath = romPath,
-                                romUri = romUriStr,
-                                systemId = folder.systemId,
-                                retroArchCore = folder.retroArchCore,
-                                emulatorPackage = folder.emulatorPackage,
-                                coverLastModified = coverLastModified,
-                                coverImageId = coverImageId,
-                                defaultLabel = cleanedLabel,
-                                libraryIconPath = libraryIconPath,
-                                libraryIconImageId = libraryIconRef?.id,
-                                libraryIconType = libraryIconRef?.type,
-                                libraryIconLastModified = libraryIconLastModified,
-                                coverOptedOut = InstalledAppsManager.isCoverOptedOut(pseudoPackageName),
-                                libraryIconOptedOut = InstalledAppsManager.isLibraryIconOptedOut(pseudoPackageName),
-                                logoLastModified = logoLastModified,
+                            InstalledAppsManager.enrichAppInfo(
+                                InstalledAppInfo(
+                                    packageName = pseudoPackageName,
+                                    activityName = "",
+                                    label = cleanedLabel,
+                                    isGame = true,
+                                    isRom = true,
+                                    romPath = romPath,
+                                    romUri = romUriStr,
+                                    systemId = folder.systemId,
+                                    retroArchCore = folder.retroArchCore,
+                                    emulatorPackage = folder.emulatorPackage,
+                                    defaultLabel = cleanedLabel,
+                                ),
+                                context,
                             ),
                         )
                     }
@@ -412,63 +440,14 @@ object RomManager {
         }
     }
 
-    fun updateRomCover(
+    internal fun updateRomApp(
         packageName: String,
-        coverPath: String?,
-        coverImageId: Int? = null,
+        transform: (InstalledAppInfo) -> InstalledAppInfo,
     ) {
-        _romApps.update { it.withUpdatedCover(packageName, coverPath, coverImageId) }
-        AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath (imageId: $coverImageId)")
-    }
-
-    fun updateRomLogo(
-        packageName: String,
-        lastModified: Long,
-    ) {
-        _romApps.update { it.withUpdatedLogo(packageName, lastModified) }
-        AppLog.i(TAG, "Updated in-memory ROM logo timestamp for $packageName to $lastModified")
-    }
-
-    fun updateRomCoverOptOut(
-        packageName: String,
-        optedOut: Boolean,
-    ) {
-        _romApps.update { it.withUpdatedCoverOptOut(packageName, optedOut) }
-        AppLog.i(TAG, "Updated in-memory ROM cover opt-out for $packageName to $optedOut")
-    }
-
-    fun updateRomLibraryIconOptOut(
-        packageName: String,
-        optedOut: Boolean,
-    ) {
-        _romApps.update { it.withUpdatedLibraryIconOptOut(packageName, optedOut) }
-        AppLog.i(TAG, "Updated in-memory ROM library icon opt-out for $packageName to $optedOut")
-    }
-
-    fun updateRomLibraryIcon(
-        packageName: String,
-        iconPath: String?,
-        imageId: Int? = null,
-        type: String? = null,
-        lastModified: Long = System.currentTimeMillis(),
-    ) {
-        _romApps.update { it.withUpdatedLibraryIcon(packageName, iconPath, imageId, type, lastModified) }
-        AppLog.i(
-            TAG,
-            "Updated in-memory ROM library icon path for $packageName to $iconPath (imageId: $imageId, type: $type, lastModified: $lastModified)",
-        )
-    }
-
-    /**
-     * Updates the displayed label of a ROM in memory only. Persistence of custom names is owned by
-     * [InstalledAppsManager.updateAppLabel] / [InstalledAppsManager.resetAppLabel].
-     */
-    internal fun updateRomLabelInMemory(
-        packageName: String,
-        newLabel: String,
-    ) {
-        _romApps.update { it.withUpdatedLabel(packageName, newLabel) }
-        AppLog.i(TAG, "Updated in-memory ROM label for $packageName to '$newLabel'")
+        _romApps.update { apps ->
+            apps.map { if (it.packageName == packageName) transform(it) else it }
+        }
+        AppLog.d(TAG, "Updated in-memory ROM metadata for $packageName")
     }
 
     internal fun collectRomFilesRecursively(
@@ -489,11 +468,6 @@ object RomManager {
         }
         return result
     }
-
-    internal fun detectSystem(
-        context: Context,
-        files: Array<DocumentFile>,
-    ): String? = detectSystem(context, files.toList())
 
     internal fun detectSystem(
         context: Context,

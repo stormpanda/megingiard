@@ -20,12 +20,4 @@ class MegingiardThemeClientTest {
             val themeFlow = MegingiardThemeClient.observeTheme(context)
             assertNotNull(themeFlow)
         }
-
-    @Test
-    fun testObserveThemeUpdates_returnsFlow() =
-        runTest {
-            val context: Context = RuntimeEnvironment.getApplication()
-            val updatesFlow = MegingiardThemeClient.observeThemeUpdates(context)
-            assertNotNull(updatesFlow)
-        }
 }

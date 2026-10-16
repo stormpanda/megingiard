@@ -11,7 +11,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-private const val TAG = "GameFocusPreferencesTest"
+private const val TAG = "GFPreferencesTest"
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])

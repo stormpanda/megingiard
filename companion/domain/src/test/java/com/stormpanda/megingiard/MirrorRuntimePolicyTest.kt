@@ -24,6 +24,7 @@ class MirrorRuntimePolicyTest {
         autoSwitchWantsMirror: Boolean = false,
         privdMirrorConnecting: Boolean = false,
         tutorialsActive: Boolean = false,
+        touchpadWantsMirror: Boolean = false,
     ) = MirrorRuntimePolicyState(
         promptInFlight = promptInFlight,
         isOnValidScreen = isOnValidScreen,
@@ -33,18 +34,17 @@ class MirrorRuntimePolicyTest {
         autoSwitchWantsMirror = autoSwitchWantsMirror,
         privdMirrorConnecting = privdMirrorConnecting,
         tutorialsActive = tutorialsActive,
+        touchpadWantsMirror = touchpadWantsMirror,
     )
 
     private fun checkConnecting(
         privdState: PrivdState,
         promptActive: Boolean = false,
-        hasCreds: Boolean = true,
         dismissed: Boolean = false,
         isManuallyDisconnected: Boolean = false,
     ) = isPrivdMirrorConnecting(
         privdState = privdState,
         promptActive = promptActive,
-        hasCreds = hasCreds,
         dismissed = dismissed,
         isManuallyDisconnected = isManuallyDisconnected,
     )
@@ -82,6 +82,44 @@ class MirrorRuntimePolicyTest {
                     isCapturing = false,
                     layoutWantsMirror = false,
                     autoSwitchWantsMirror = true,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `starts when touchpad wants mirror even if layout does not want mirror`() {
+        assertEquals(
+            MirrorRuntimeAction.START,
+            decideMirrorRuntimeAction(
+                policyState(
+                    isCapturing = false,
+                    layoutWantsMirror = false,
+                    touchpadWantsMirror = true,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `keeps capture running while touchpad wants mirror and stops once touchpad no longer wants mirror`() {
+        assertEquals(
+            MirrorRuntimeAction.NONE,
+            decideMirrorRuntimeAction(
+                policyState(
+                    isCapturing = true,
+                    layoutWantsMirror = false,
+                    touchpadWantsMirror = true,
+                ),
+            ),
+        )
+        assertEquals(
+            MirrorRuntimeAction.STOP,
+            decideMirrorRuntimeAction(
+                policyState(
+                    isCapturing = true,
+                    layoutWantsMirror = false,
+                    touchpadWantsMirror = false,
                 ),
             ),
         )
@@ -132,16 +170,14 @@ class MirrorRuntimePolicyTest {
 
     @Test
     fun `isPrivdMirrorConnecting blocks during race window and allows once dismissed`() {
-        assertTrue(checkConnecting(PrivdState.FAILED, hasCreds = true, dismissed = false))
-        assertFalse(checkConnecting(PrivdState.FAILED, hasCreds = true, dismissed = true))
+        assertTrue(checkConnecting(PrivdState.FAILED, dismissed = false))
+        assertFalse(checkConnecting(PrivdState.FAILED, dismissed = true))
 
         assertTrue(checkConnecting(PrivdState.CONNECTING))
         assertTrue(checkConnecting(PrivdState.BOOTSTRAPPING))
 
-        assertTrue(checkConnecting(PrivdState.OFF, hasCreds = true))
-        assertTrue(checkConnecting(PrivdState.OFF, hasCreds = false))
+        assertTrue(checkConnecting(PrivdState.OFF))
 
-        assertFalse(checkConnecting(PrivdState.OFF, hasCreds = true, isManuallyDisconnected = true))
-        assertFalse(checkConnecting(PrivdState.OFF, hasCreds = false, isManuallyDisconnected = true))
+        assertFalse(checkConnecting(PrivdState.OFF, isManuallyDisconnected = true))
     }
 }

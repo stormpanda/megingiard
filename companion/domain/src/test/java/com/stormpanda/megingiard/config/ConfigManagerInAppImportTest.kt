@@ -26,7 +26,7 @@ class ConfigManagerInAppImportTest {
         val testUri = Uri.parse("content://com.android.providers.downloads/document/123")
         ConfigManager.setPendingInAppUri(testUri, ConfigManager.ImportMode.PROFILE_SHARE)
 
-        assertEquals(testUri, ConfigManager.pendingInAppUri.value)
+        assertEquals(ConfigManager.PendingUriRequest(testUri, isInApp = true), ConfigManager.pendingUriRequest.value)
         assertEquals(ConfigManager.ImportMode.PROFILE_SHARE, ConfigManager.pendingInAppImportMode.value)
     }
 
@@ -34,7 +34,7 @@ class ConfigManagerInAppImportTest {
     fun testSetInAppParsedImportClearsPendingUri() {
         val testUri = Uri.parse("content://com.android.providers.downloads/document/456")
         ConfigManager.setPendingInAppUri(testUri, ConfigManager.ImportMode.BACKUP_RESTORE)
-        assertEquals(testUri, ConfigManager.pendingInAppUri.value)
+        assertEquals(ConfigManager.PendingUriRequest(testUri, isInApp = true), ConfigManager.pendingUriRequest.value)
 
         val sampleExport =
             MegingiardExport(
@@ -52,8 +52,8 @@ class ConfigManagerInAppImportTest {
             )
 
         ConfigManager.setInAppParsedImport(sampleExport)
-        assertNull(ConfigManager.pendingInAppUri.value)
-        assertEquals(sampleExport, ConfigManager.pendingInAppParsedImport.value)
+        assertNull(ConfigManager.pendingUriRequest.value)
+        assertEquals(sampleExport, ConfigManager.pendingInAppParsedImport.value?.export)
     }
 
     @Test
@@ -64,7 +64,7 @@ class ConfigManagerInAppImportTest {
         ConfigManager.clearInAppPendingImport()
         assertNull(ConfigManager.inAppImportError.value)
         assertNull(ConfigManager.pendingInAppParsedImport.value)
-        assertNull(ConfigManager.pendingInAppUri.value)
+        assertNull(ConfigManager.pendingUriRequest.value)
         assertEquals(ConfigManager.ImportMode.BACKUP_RESTORE, ConfigManager.pendingInAppImportMode.value)
     }
 

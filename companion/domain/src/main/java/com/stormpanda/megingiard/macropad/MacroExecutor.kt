@@ -182,7 +182,7 @@ object MacroExecutor {
         val activeAxes = mutableMapOf<Int, Int>() // axis code → last non-zero value
         var liveHatX = 0
         var liveHatY = 0
-        var liveTouchPos: Pair<Float, Float>? = null
+        val activeTouchSlots = mutableSetOf<Int>()
 
         _runningMacroIds.update { it + macro.id }
         try {
@@ -228,17 +228,17 @@ object MacroExecutor {
                         }
 
                         MacroEventType.TOUCH_DOWN -> {
-                            liveTouchPos = Pair(event.normX, event.normY)
+                            activeTouchSlots += event.code
                             TouchInjector.injectTouch(event.code, TouchAction.DOWN, event.normX, event.normY)
                         }
 
                         MacroEventType.TOUCH_MOVE -> {
-                            liveTouchPos = Pair(event.normX, event.normY)
+                            activeTouchSlots += event.code
                             TouchInjector.injectTouch(event.code, TouchAction.MOVE, event.normX, event.normY)
                         }
 
                         MacroEventType.TOUCH_UP -> {
-                            liveTouchPos = null
+                            activeTouchSlots -= event.code
                             TouchInjector.injectTouch(event.code, TouchAction.UP, event.normX, event.normY)
                         }
 
@@ -261,7 +261,7 @@ object MacroExecutor {
         } finally {
             AppLog.d(
                 TAG,
-                "macro '${macro.name}' done (buttons=${pressedButtons.size} keys=${pressedKeys.size} axes=${activeAxes.size} hat=$liveHatX,$liveHatY touch=${liveTouchPos != null})",
+                "macro '${macro.name}' done (buttons=${pressedButtons.size} keys=${pressedKeys.size} axes=${activeAxes.size} hat=$liveHatX,$liveHatY touch=${activeTouchSlots.isNotEmpty()})",
             )
             // Release all inputs that are still active. This handles early cancellation
             // (user taps stop mid-sequence) in addition to the normal end-of-sequence reset.
@@ -272,7 +272,7 @@ object MacroExecutor {
                 GamepadInjector.hat(axis = 0, value = 0)
                 GamepadInjector.hat(axis = 1, value = 0)
             }
-            if (liveTouchPos != null) {
+            if (activeTouchSlots.isNotEmpty()) {
                 TouchInjector.releaseAllSlots()
             }
             // Race-safe state cleanup: only remove our map entry and running-ID if this job is

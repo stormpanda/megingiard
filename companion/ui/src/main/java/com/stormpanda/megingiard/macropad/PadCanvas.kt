@@ -187,13 +187,101 @@ private data class HandlePosition(
     val rotation: Float,
 )
 
+internal data class LayoutLayerBitmaps(
+    val bgBitmap: ImageBitmap?,
+    val maskBitmap: ImageBitmap?,
+)
+
+@Composable
+internal fun rememberLayoutLayerBitmaps(
+    context: Context,
+    layout: PadLayout?,
+): LayoutLayerBitmaps {
+    var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion) {
+        val path = layout?.backgroundImagePath
+        if (path != null) {
+            try {
+                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                bgBitmap = decoded?.asImageBitmap()
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to decode background image $path", e)
+                bgBitmap = null
+            }
+        } else {
+            bgBitmap = null
+        }
+    }
+
+    var maskBitmap by remember(layout?.maskImagePath, layout?.maskImageVersion) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(layout?.maskImagePath, layout?.maskImageVersion) {
+        val path = layout?.maskImagePath
+        if (path != null) {
+            try {
+                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                maskBitmap = decoded?.asImageBitmap()
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to decode mask image $path", e)
+                maskBitmap = null
+            }
+        } else {
+            maskBitmap = null
+        }
+    }
+
+    return LayoutLayerBitmaps(bgBitmap = bgBitmap, maskBitmap = maskBitmap)
+}
+
+@Composable
+internal fun LayoutImageLayer(
+    layout: PadLayout?,
+    bitmaps: LayoutLayerBitmaps,
+    modifier: Modifier = Modifier,
+) {
+    val bgBitmap = bitmaps.bgBitmap
+    val maskBitmap = bitmaps.maskBitmap
+    if (bgBitmap == null && maskBitmap == null) return
+
+    val bgImageDimFilter =
+        remember(layout?.backgroundImageDim) {
+            dimColorFilter(layout?.backgroundImageDim ?: 0f)
+        }
+    val maskImageDimFilter =
+        remember(layout?.maskImageDim) {
+            dimColorFilter(layout?.maskImageDim ?: 0f)
+        }
+
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val currentLayout = MacroPadState.previewLayout.value ?: layout
+        if (bgBitmap != null) {
+            drawAdjustedBitmap(
+                bitmap = bgBitmap,
+                scaleMode = currentLayout?.bgScaleMode ?: layout?.bgScaleMode ?: BackgroundScaleMode.FILL,
+                userScale = currentLayout?.bgImageScale ?: layout?.bgImageScale ?: 1f,
+                offsetX = currentLayout?.bgImageOffsetX ?: layout?.bgImageOffsetX ?: 0f,
+                offsetY = currentLayout?.bgImageOffsetY ?: layout?.bgImageOffsetY ?: 0f,
+                colorFilter = bgImageDimFilter,
+            )
+        }
+        if (maskBitmap != null) {
+            drawAdjustedBitmap(
+                bitmap = maskBitmap,
+                scaleMode = currentLayout?.maskScaleMode ?: layout?.maskScaleMode ?: BackgroundScaleMode.FILL,
+                userScale = currentLayout?.maskImageScale ?: layout?.maskImageScale ?: 1f,
+                offsetX = currentLayout?.maskImageOffsetX ?: layout?.maskImageOffsetX ?: 0f,
+                offsetY = currentLayout?.maskImageOffsetY ?: layout?.maskImageOffsetY ?: 0f,
+                colorFilter = maskImageDimFilter,
+            )
+        }
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Pad canvas — drag buttons to reposition
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 internal fun PadCanvas(
-    profile: PadProfile,
     layout: PadLayout?,
     accentColor: Color,
     gridMode: GridMode,
@@ -229,47 +317,9 @@ internal fun PadCanvas(
         }
     }
 
-    var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion) {
-        val path = layout?.backgroundImagePath
-        if (path != null) {
-            try {
-                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, path)
-                bgBitmap = decoded?.asImageBitmap()
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to decode background image $path", e)
-                bgBitmap = null
-            }
-        } else {
-            bgBitmap = null
-        }
-    }
-
-    var maskBitmap by remember(layout?.maskImagePath, layout?.maskImageVersion) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(layout?.maskImagePath, layout?.maskImageVersion) {
-        val path = layout?.maskImagePath
-        if (path != null) {
-            try {
-                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, path)
-                maskBitmap = decoded?.asImageBitmap()
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to decode mask image $path", e)
-                maskBitmap = null
-            }
-        } else {
-            maskBitmap = null
-        }
-    }
-
-    val bgImageDimFilter =
-        remember(layout?.backgroundImageDim) {
-            dimColorFilter(layout?.backgroundImageDim ?: 0f)
-        }
-
-    val maskImageDimFilter =
-        remember(layout?.maskImageDim) {
-            dimColorFilter(layout?.maskImageDim ?: 0f)
-        }
+    val layerBitmaps = rememberLayoutLayerBitmaps(context, layout)
+    val bgBitmap = layerBitmaps.bgBitmap
+    val maskBitmap = layerBitmaps.maskBitmap
 
     val isCropping = isCroppingBackground || isCroppingMask
     val activeCropBitmap =
@@ -373,38 +423,11 @@ internal fun PadCanvas(
         }
 
     Box(modifier = padModifier.then(cropModifier)) {
-        if (!shouldHideBackground && !transparentBackground && (bgBitmap != null || maskBitmap != null)) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val currentLayout = MacroPadState.previewLayout.value ?: layout
-                if (bgBitmap != null) {
-                    val mode = currentLayout?.bgScaleMode ?: layout?.bgScaleMode ?: BackgroundScaleMode.FILL
-                    val scale = currentLayout?.bgImageScale ?: layout?.bgImageScale ?: 1f
-                    val offX = currentLayout?.bgImageOffsetX ?: layout?.bgImageOffsetX ?: 0f
-                    val offY = currentLayout?.bgImageOffsetY ?: layout?.bgImageOffsetY ?: 0f
-                    drawAdjustedBitmap(
-                        bitmap = bgBitmap!!,
-                        scaleMode = mode,
-                        userScale = scale,
-                        offsetX = offX,
-                        offsetY = offY,
-                        colorFilter = bgImageDimFilter,
-                    )
-                }
-                if (maskBitmap != null) {
-                    val mode = currentLayout?.maskScaleMode ?: layout?.maskScaleMode ?: BackgroundScaleMode.FILL
-                    val scale = currentLayout?.maskImageScale ?: layout?.maskImageScale ?: 1f
-                    val offX = currentLayout?.maskImageOffsetX ?: layout?.maskImageOffsetX ?: 0f
-                    val offY = currentLayout?.maskImageOffsetY ?: layout?.maskImageOffsetY ?: 0f
-                    drawAdjustedBitmap(
-                        bitmap = maskBitmap!!,
-                        scaleMode = mode,
-                        userScale = scale,
-                        offsetX = offX,
-                        offsetY = offY,
-                        colorFilter = maskImageDimFilter,
-                    )
-                }
-            }
+        if (!shouldHideBackground && !transparentBackground) {
+            LayoutImageLayer(
+                layout = layout,
+                bitmaps = layerBitmaps,
+            )
         }
         // Grid overlay — drawn behind buttons
         if (gridMode != GridMode.OFF && canvasSize.width > 0 && canvasSize.height > 0) {
@@ -772,7 +795,6 @@ private fun DraggableButton(
 
     val density = LocalDensity.current
     val isTrackpoint = btn.action is PadAction.TrackpointMove
-    val isDeviceDisabled = false
 
     val btnWidthDp = btn.widthDp.dp
     val btnHeightDp = btn.heightDp.dp
@@ -893,7 +915,6 @@ private fun DraggableButton(
             height = btnHeightDp,
             shape = chipShape,
             isIconOnly = isIconOnly,
-            isDeviceDisabled = isDeviceDisabled,
             borderColor = effectiveBorder,
             bgColor = effectiveBg,
             modifier =

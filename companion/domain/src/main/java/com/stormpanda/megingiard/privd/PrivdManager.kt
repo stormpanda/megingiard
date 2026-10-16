@@ -4,59 +4,17 @@ import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import java.io.File
 
 /**
- * Features that become available when Privileged Mode is connected.
- * Each entry has its own user-controllable enable flag (see
- * [com.stormpanda.megingiard.settings.MacroPadSettings]).
- *
- * To add a new feature:
- *   1. Add an enum value here.
- *   2. Add a per-feature DataStore key in `SettingsKeys.kt`.
- *   3. Expose a `StateFlow<Boolean>` + setter on [com.stormpanda.megingiard.settings.MacroPadSettings].
- *   4. Wire the consumer to check both [PrivdManager.state] == RUNNING **and** the per-feature flag.
- */
-enum class PrivdFeature {
-    /**
-     * MacroPad gamepad events are merged into the physical controller's evdev
-     * node (single-controller emulation). When disabled, the app falls back
-     * to the virtual uinput gamepad.
-     */
-    GAMEPAD_MERGE,
-
-    /**
-     * Physical gamepad input is recorded directly from the evdev node during
-     * macro recording sessions, capturing analog stick paths with full fidelity.
-     * When disabled, the existing virtual touch-controller overlay recording
-     * path is used instead.
-     */
-    GAMEPAD_RECORDING,
-
-    /**
-     * Primary-display mirror is captured via the on-device privileged daemon
-     * spawning an `app_process` server child (no MediaProjection consent
-     * dialog, lower CPU). When disabled, the standard MediaProjection +
-     * VirtualDisplay path is used. DRM frames render black on the privileged
-     * path — same limitation as scrcpy.
-     */
-    MIRROR,
-}
-
-/**
  * Lifecycle state of the privileged-mode subsystem.
- *
- * **Meilenstein A note** — Bootstrap of the daemon currently happens
- * out-of-band: the user runs `adb shell /data/local/tmp/megingiard_privd &`
- * once, then taps "Connect" in settings. Meilenstein B will replace this
- * with on-device libadb-android pairing + auto-bootstrap, but the state
- * machine and per-feature flags are designed to outlive that change.
  */
 enum class PrivdState {
     /** Privileged Mode is off (no connection, no in-flight bootstrap). */
@@ -68,7 +26,7 @@ enum class PrivdState {
     /** Connection attempt in progress. */
     CONNECTING,
 
-    /** Daemon is reachable; per-feature flags decide who actually uses it. */
+    /** Daemon is reachable and authenticated. */
     RUNNING,
 
     /** Last connect attempt failed — see [PrivdManager.lastError] for details. */
@@ -82,14 +40,11 @@ private const val TAG = "PrivdManager"
  * localized string resource — strings live in `strings.xml`, not here.
  */
 enum class PrivdError {
-    /** The abstract socket is not reachable — daemon is probably not running. */
+    /** The loopback socket is not reachable — daemon is probably not running. */
     DAEMON_UNREACHABLE,
 
     /** ADB Wireless-Debugging pairing rejected the entered code or timed out. */
     PAIRING_FAILED,
-
-    /** Could not auto-discover an ADB Wireless-Debugging endpoint via mDNS. */
-    ADB_DISCOVERY_FAILED,
 
     /** ADB connect after pairing failed (peer offline, key mismatch, …). */
     ADB_CONNECT_FAILED,
@@ -109,67 +64,76 @@ enum class PrivdError {
 
     /** ADB pairing is explicitly required (credentials/key rejected by adbd). */
     ADB_PAIRING_REQUIRED,
-
-    /** Daemon protocol or binary version does not match expected app version. */
-    VERSION_MISMATCH,
 }
 
 /**
  * Top-level controller for Privileged Mode.
  *
- * Owns the lifecycle abstraction (`OFF` → `CONNECTING` → `RUNNING` / `FAILED`)
- * and exposes a single read-only [state] stream that the UI binds to.
- * Bootstrapping the actual daemon process is delegated:
- *   - **Meilenstein A**: manual — user starts the daemon via `adb shell` once;
- *     [connect] just attempts a [PrivdClient.connect] and reports the result.
- *   - **Meilenstein B**: automatic — a `PrivdBootstrapper` (TBD) will use
- *     libadb-android to push the binary and spawn it via Wireless Debugging,
- *     then call into [connect] the same way.
+ * Derives the user-visible [state] stream reactively from [PrivdClient.state],
+ * bootstrap status, and [lastError].
  *
- * Per AGENTS.md §4: backing `MutableStateFlow`s are private; only the
+ * Per AGENTS.md §7.1: backing `MutableStateFlow`s are private; only the
  * read-only [state] / [lastError] surfaces escape this object.
  */
 object PrivdManager {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private var clientObserverJob: Job? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
-    private val _state = MutableStateFlow(PrivdState.OFF)
-    val state: StateFlow<PrivdState> = _state.asStateFlow()
-
-    internal fun setStateForTesting(state: PrivdState) {
-        _state.value = state
-    }
+    private val _isBootstrapping = MutableStateFlow(false)
+    private val _testStateOverride = MutableStateFlow<PrivdState?>(null)
 
     private val _lastError = MutableStateFlow<PrivdError?>(null)
     val lastError: StateFlow<PrivdError?> = _lastError.asStateFlow()
 
-    private var _isManuallyDisconnected = false
-    val isManuallyDisconnected: Boolean get() = _isManuallyDisconnected
+    val state: StateFlow<PrivdState> =
+        combine(
+            PrivdClient.state,
+            _isBootstrapping,
+            _lastError,
+            _testStateOverride,
+        ) { clientState, bootstrapping, error, testOverride ->
+            when {
+                testOverride != null -> testOverride
+                clientState == PrivdConnectionState.CONNECTED -> PrivdState.RUNNING
+                bootstrapping -> PrivdState.BOOTSTRAPPING
+                clientState == PrivdConnectionState.CONNECTING -> PrivdState.CONNECTING
+                error != null -> PrivdState.FAILED
+                else -> PrivdState.OFF
+            }
+        }.stateIn(
+            scope = scope,
+            started = SharingStarted.Eagerly,
+            initialValue = PrivdState.OFF,
+        )
+
+    internal fun setStateForTesting(state: PrivdState?) {
+        if (state == PrivdState.OFF || state == null) {
+            _isBootstrapping.value = false
+            _lastError.value = null
+        }
+        _testStateOverride.value = state
+    }
 
     val isRootBridgeAvailable: Boolean get() = PServiceBridge.isAvailable()
 
     fun connect(context: Context): Boolean {
-        AppLog.i(TAG, "connect() called (current state=${_state.value})")
-        _isManuallyDisconnected = false
-        _state.value = PrivdState.CONNECTING
+        AppLog.i(TAG, "connect() called (current state=${state.value})")
+        _testStateOverride.value = null
+        _isBootstrapping.value = false
         _lastError.value = null
         val ok = PrivdClient.connect()
         if (ok) {
-            _state.value = PrivdState.RUNNING
             AppLog.i(TAG, "Privileged Mode is RUNNING")
-            startClientObserver()
             return true
         }
 
         // Direct connect failed. Attempt Tier-1 fast-track via PServer root bridge
         if (PServiceBridge.isAvailable()) {
             AppLog.i(TAG, "Direct connect failed. PServer root bridge is available — attempting fast-track bootstrap.")
-            _state.value = PrivdState.BOOTSTRAPPING
+            _isBootstrapping.value = true
             val pOk = PServerBootstrapper.bootstrap(context)
+            _isBootstrapping.value = false
             if (pOk) {
-                _state.value = PrivdState.RUNNING
                 AppLog.i(TAG, "PServer fast-track bootstrap succeeded — Privileged Mode is RUNNING")
-                startClientObserver()
                 return true
             }
             AppLog.w(TAG, "PServer fast-track bootstrap failed — falling back to Tier-2 ADB route")
@@ -183,76 +147,46 @@ object PrivdManager {
             return PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")
         }
 
-        _state.value = PrivdState.FAILED
         _lastError.value = PrivdError.DAEMON_UNREACHABLE
         AppLog.w(TAG, "Privileged Mode FAILED — daemon not reachable and no bootstrap method succeeded")
         return false
     }
 
     /**
-     * Disconnects from the daemon. The daemon itself stays alive.
-     */
-    fun disconnect() {
-        AppLog.i(TAG, "disconnect()")
-        _isManuallyDisconnected = true
-        clientObserverJob?.cancel()
-        clientObserverJob = null
-        PrivdClient.disconnect()
-        _state.value = PrivdState.OFF
-        _lastError.value = null
-    }
-
-    /**
      * Used during the VERIFYING phase of bootstrap. Attempts a raw socket
-     * connect without publishing CONNECTING/FAILED state transitions, to avoid
-     * UI flicker on each retry. On success, transitions state to RUNNING and
-     * starts the client observer. The caller is responsible for calling
-     * [reportBootstrapFailure] if all retries are exhausted.
-     *
-     * @return `true` if the daemon socket was reached and `PrivdClient` is now
-     * connected.
+     * connect while [_isBootstrapping] keeps [state] at [PrivdState.BOOTSTRAPPING]
+     * to avoid UI flicker on each retry. On success, [PrivdClient.state] becomes
+     * [PrivdConnectionState.CONNECTED] and [state] transitions to [PrivdState.RUNNING].
      */
     internal fun verifyConnect(): Boolean {
-        _isManuallyDisconnected = false
+        _testStateOverride.value = null
         val ok = PrivdClient.connect()
         if (ok) {
-            _state.value = PrivdState.RUNNING
+            _isBootstrapping.value = false
+            _lastError.value = null
             AppLog.i(TAG, "verifyConnect() succeeded — Privileged Mode is RUNNING")
-            startClientObserver()
         }
         return ok
     }
 
     internal fun reportBootstrapStart() {
         AppLog.i(TAG, "bootstrap started")
-        _state.value = PrivdState.BOOTSTRAPPING
+        _testStateOverride.value = null
         _lastError.value = null
+        _isBootstrapping.value = true
     }
 
     internal fun reportBootstrapFailure(error: PrivdError) {
         AppLog.w(TAG, "bootstrap failed: $error")
-        _state.value = PrivdState.FAILED
+        _testStateOverride.value = null
+        _isBootstrapping.value = false
         _lastError.value = error
     }
 
-    /**
-     * Observes [PrivdClient.state] while the connection is RUNNING. If the
-     * transport drops unexpectedly (I/O error, daemon killed) this drives
-     * [PrivdManager.state] back to FAILED so the UI reflects the real state.
-     */
-    private fun startClientObserver() {
-        clientObserverJob?.cancel()
-        clientObserverJob =
-            scope.launch {
-                PrivdClient.state.collect { clientState ->
-                    if (clientState == PrivdConnectionState.DISCONNECTED &&
-                        _state.value == PrivdState.RUNNING
-                    ) {
-                        AppLog.w(TAG, "PrivdClient dropped unexpectedly — setting state to FAILED")
-                        _state.value = PrivdState.FAILED
-                        _lastError.value = PrivdError.DAEMON_UNREACHABLE
-                    }
-                }
-            }
+    internal fun onClientDisconnected() {
+        AppLog.w(TAG, "PrivdClient dropped unexpectedly — setting lastError to DAEMON_UNREACHABLE")
+        _testStateOverride.value = null
+        _isBootstrapping.value = false
+        _lastError.value = PrivdError.DAEMON_UNREACHABLE
     }
 }

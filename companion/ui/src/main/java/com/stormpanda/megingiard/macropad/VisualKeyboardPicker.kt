@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
@@ -42,7 +43,6 @@ private val VKP_SECTION_SPACING = 12.dp
 private const val VKP_SELECTED_ALPHA = 0.35f
 private val VKP_BORDER_WIDTH = 1.dp
 private val VKP_SELECTED_BORDER_WIDTH = 2.dp
-private val VKP_KEY_FONT_SIZE = 12.sp
 private val VKP_KEY_TEXT_HPADDING = 2.dp
 
 internal data class KeyItem(
@@ -162,7 +162,9 @@ internal fun VisualKeyboardPicker(
     onSelectKey: (keycode: Int, label: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppLog.d(TAG, "VisualKeyboardPicker: selectedKeycode=$selectedKeycode")
+    LaunchedEffect(selectedKeycode) {
+        AppLog.d(TAG, "VisualKeyboardPicker: selectedKeycode=$selectedKeycode")
+    }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -241,7 +243,7 @@ private fun KeyboardRow(
                 Text(
                     text = key.label,
                     color = if (isSelected) accentColor else colors.onSurface,
-                    fontSize = VKP_KEY_FONT_SIZE,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

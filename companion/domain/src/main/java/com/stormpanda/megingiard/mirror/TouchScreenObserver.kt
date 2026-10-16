@@ -10,7 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import java.util.Collections
 
 private const val TAG = "TouchScreenObserver"
 private const val MAX_TOUCH_SLOTS = 10
@@ -148,32 +147,35 @@ internal class TouchEventParser(
  * Automatically routes through [PrivdClient.touchEvdevEvents] (`SUB TOUCH`) when Privileged Mode is active.
  */
 object TouchScreenObserver {
-    private val activeClients = Collections.synchronizedSet(mutableSetOf<String>())
+    private data class ClientCallbacks(
+        val onTouchNormalized: ((Float, Float) -> Unit)? = null,
+        val onTouchEvent: ((slot: Int, action: TouchAction, normX: Float, normY: Float) -> Unit)? = null,
+    )
+
+    private val activeClients = mutableMapOf<String, ClientCallbacks>()
     private var job: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-    /**
-     * Legacy single-point callback for normalized landscape coordinates `[0, 1]`.
-     */
-    @Volatile var onTouchNormalized: ((Float, Float) -> Unit)? = null
-
-    /**
-     * Full multi-touch stream callback delivering slot index, action, and normalized landscape coordinates `[0, 1]`.
-     */
-    @Volatile var onTouchEvent: ((slot: Int, action: TouchAction, normX: Float, normY: Float) -> Unit)? = null
 
     val isRunning: Boolean
         get() = job?.isActive == true
 
     /**
-     * Starts the passive touch screen reader for a specific client [clientToken].
+     * Starts the passive touch screen reader for a specific client [clientToken] with optional callbacks.
      * Coordinates lifecycle across multiple concurrent active clients.
      */
     @Synchronized
-    fun start(clientToken: String) {
+    fun start(
+        clientToken: String,
+        onTouchNormalized: ((Float, Float) -> Unit)? = null,
+        onTouchEvent: ((slot: Int, action: TouchAction, normX: Float, normY: Float) -> Unit)? = null,
+    ) {
         val wasEmpty = activeClients.isEmpty()
-        activeClients.add(clientToken)
-        AppLog.i(TAG, "start() client='$clientToken' activeClients=$activeClients")
+        activeClients[clientToken] =
+            ClientCallbacks(
+                onTouchNormalized = onTouchNormalized,
+                onTouchEvent = onTouchEvent,
+            )
+        AppLog.i(TAG, "start() client='$clientToken' activeClients=${activeClients.keys}")
         if (wasEmpty) {
             startInternal()
         }
@@ -185,15 +187,13 @@ object TouchScreenObserver {
      */
     @Synchronized
     fun stop(clientToken: String) {
-        if (!activeClients.contains(clientToken)) {
+        if (!activeClients.containsKey(clientToken)) {
             AppLog.d(TAG, "stop() called for non-active client '$clientToken'. Ignoring.")
             return
         }
         activeClients.remove(clientToken)
-        AppLog.i(TAG, "stop() client='$clientToken' activeClients=$activeClients")
+        AppLog.i(TAG, "stop() client='$clientToken' activeClients=${activeClients.keys}")
         if (activeClients.isEmpty()) {
-            onTouchNormalized = null
-            onTouchEvent = null
             stopInternal()
         }
     }
@@ -203,11 +203,27 @@ object TouchScreenObserver {
      */
     @Synchronized
     fun stopAll() {
-        AppLog.i(TAG, "stopAll() activeClients=$activeClients")
+        AppLog.i(TAG, "stopAll() activeClients=${activeClients.keys}")
         activeClients.clear()
-        onTouchNormalized = null
-        onTouchEvent = null
         stopInternal()
+    }
+
+    @Synchronized
+    private fun snapshotCallbacks(): List<ClientCallbacks> = activeClients.values.toList()
+
+    internal fun dispatchTouchEvent(
+        slot: Int,
+        action: TouchAction,
+        normX: Float,
+        normY: Float,
+    ) {
+        val callbacks = snapshotCallbacks()
+        for (cb in callbacks) {
+            cb.onTouchEvent?.invoke(slot, action, normX, normY)
+            if (action == TouchAction.DOWN || action == TouchAction.MOVE) {
+                cb.onTouchNormalized?.invoke(normX, normY)
+            }
+        }
     }
 
     private fun startInternal() {
@@ -217,15 +233,13 @@ object TouchScreenObserver {
         val parser =
             TouchEventParser(
                 onDown = { slot, nx, ny ->
-                    onTouchEvent?.invoke(slot, TouchAction.DOWN, nx, ny)
-                    onTouchNormalized?.invoke(nx, ny)
+                    dispatchTouchEvent(slot, TouchAction.DOWN, nx, ny)
                 },
                 onMove = { slot, nx, ny ->
-                    onTouchEvent?.invoke(slot, TouchAction.MOVE, nx, ny)
-                    onTouchNormalized?.invoke(nx, ny)
+                    dispatchTouchEvent(slot, TouchAction.MOVE, nx, ny)
                 },
                 onUp = { slot, nx, ny ->
-                    onTouchEvent?.invoke(slot, TouchAction.UP, nx, ny)
+                    dispatchTouchEvent(slot, TouchAction.UP, nx, ny)
                 },
             )
 

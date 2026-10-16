@@ -1,7 +1,7 @@
 # Feature: Virtual Touchpad
 
-> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/touchpad/` (UI), `companion/domain/src/main/java/com/stormpanda/megingiard/touchpad/` (gesture processing), `companion/domain/src/main/java/com/stormpanda/megingiard/input/` (shared injection infrastructure)
-> **Native source:** `companion/ui/src/main/cpp/megingiard_privd.c` (Megingiard System Service)
+> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/touchpad/` (UI), `companion/domain/src/main/java/com/stormpanda/megingiard/touchpad/` (gesture processing), `companion/domain/src/main/java/com/stormpanda/megingiard/settings/TouchpadSettings.kt` (settings), `companion/domain/src/main/java/com/stormpanda/megingiard/input/` (injection facades), `companion/ui/src/main/java/com/stormpanda/megingiard/input/InjectorLifecycleManager.kt` (injector lifecycle)
+> **Native source:** `companion/ui/src/main/cpp/megingiard_privd.c`, `companion/ui/src/main/cpp/cmd_parsers.h` (Megingiard System Service)
 > **Binary assets:** `companion/ui/src/main/assets/megingiard_privd_arm64`
 > **Build instructions:** [BUILD_NATIVE.md](../../BUILD_NATIVE.md)
 
@@ -23,13 +23,13 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
 
 ### FR-T2: Visual Feedback & UI Style
 
-- The touchpad overlay is styled similarly to the keyboard layout with a top toolbar showing a mode toggle button, a middle touch surface with informational text, and physical LMB, MMB (middle mouse button, scaled to 1/3 size of LMB/RMB), and RMB click buttons (in Mouse Mode) with no text labels.
-- A bottom toolbar contains a collapse button (down arrow), a play/pause button (visible only in absolute touch mode to toggle top screen mirroring), and a settings button (cog icon).
+- The touchpad overlay renders an interactive touch surface above a single unified bottom toolbar. In Mouse Mode, physical LMB, MMB (middle mouse button, scaled to 1/3 width of LMB/RMB), and RMB click buttons with no text labels are anchored along the bottom of the touch surface, with optional M4 and M5 buttons in the top-left and top-right corners.
+- The unified bottom toolbar contains a left-aligned collapse button (down arrow), a center-aligned segmented mode toggle (`ModeToggleButton` switching between Mouse and Touch modes), and right-aligned action buttons: a play/pause button (visible only in absolute Touch Mode to toggle top-screen mirroring) and a settings button (cog icon).
 
-### FR-T4: No Special Permissions Required
+### FR-T4: Privileged Mode Requirement
 
-- The touchpad MUST function within the standard app permission set on the AYN Thor.
-- No root access or additional Android permissions beyond the app's declared set are required (the `/dev/uinput` and `/dev/input/event6` device nodes have permissions allowing access for the standard shell/app UID).
+- The touchpad requires **Privileged Mode** (`megingiard_privd` running as `shell` UID 2000) rather than root access.
+- Because the unprivileged app process (`untrusted_app` SELinux domain) cannot open `/dev/uinput` or `/dev/input/event6` directly, `PrivdClient` connects to `megingiard_privd` over a local loopback TCP socket (`127.0.0.1`, release ports `51234..51238` / debug ports `51244..51248`) authenticated via an HMAC-SHA256 challenge-response handshake, and the `shell`-UID daemon performs the kernel input writes.
 
 ### FR-T5: Input Modes & Settings
 
@@ -41,7 +41,7 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
   - **Two-finger scroll:** When enabled, dragging two fingers vertically scroll the screen (Mouse Mode only).
   - **Physical click buttons:** Three visual buttons (LMB, MMB, RMB) are rendered at the bottom of the touch area, styled like the space bar of the keyboard.
   - **Mouse 4 / Mouse 5 buttons:** When enabled via settings, two square buttons labeled **M4** and **M5** are displayed in the top-left and top-right corners of the relative touchpad area, simulating Mouse 4 (Back) and Mouse 5 (Forward) clicks.
-- **Touch Mode (Absolute Touch):** Maps coordinates directly to the native `TouchInjector` client registry to perform absolute touch projection.
+- **Touch Mode (Absolute Touch):** Maps coordinates directly to `TouchInjector` to perform absolute touch projection.
   - **16:9 Aspect Ratio:** The touch surface is constrained to a `16:9` aspect ratio aligned to the bottom part of the screen, matching the primary screen dimensions to prevent mapping scaling distortion.
   - **Touchpad Screen Mirroring:** Can display a real-time mirror of the full top screen inside the touch area. A play button in the bottom toolbar toggles mirroring.
   - **Restore State:** Closing the touchpad (or turning off touchpad mirroring) stops the screen capture if it was initiated by the touchpad, restoring the macro pad's mirror capture to its exact prior state.
@@ -56,29 +56,32 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
 
 Android's `adb shell input` APIs perform synchronous Binder IPC to `InputManagerService` for each event — approximately **7 ms per call**, which is too slow for real-time mouse/touch injection.
 
-Megingiard uses the mandatory **Megingiard System Service** (`megingiard_privd`) running with shell privileges for low-latency (< 1 ms) direct Linux input injection over a local abstract domain socket (`megingiard_privd`):
+Megingiard uses the mandatory **Megingiard System Service** (`megingiard_privd`) running with `shell` privileges (UID 2000) for low-latency (< 1 ms) direct Linux input injection over an HMAC-SHA256-authenticated loopback TCP socket (`127.0.0.1`, ports `51234..51238` in release / `51244..51248` in debug):
 
-1. **Mouse Mode**: The daemon initializes a virtual input device via `/dev/uinput` (`uinput_mouse`) and accepts socket commands to simulate relative mouse motion (`REL_X`/`REL_Y`), mouse button presses (`BTN_LEFT`/`BTN_RIGHT`/`BTN_MIDDLE`), and scroll wheel events (`REL_WHEEL`).
+1. **Mouse Mode**: The daemon initializes a virtual input device via `/dev/uinput` (`uinput_mouse`) and accepts socket commands to simulate relative mouse motion (`REL_X`/`REL_Y`), mouse button presses (`BTN_LEFT`/`BTN_RIGHT`/`BTN_MIDDLE`/`BTN_SIDE`/`BTN_EXTRA`), and scroll wheel events (`REL_WHEEL`).
 2. **Touch Mode**: Used in Touch Mode and Mirror Touch Projection. The daemon opens the touchscreen device node `/dev/input/event6` directly and writes Linux `struct input_event` Multi-Touch Protocol Type B structures.
 
 ### System Service: Socket Protocol & Lifecycle
 
 Injector lifecycles are managed globally by `InjectorLifecycleManager`, which maintains active `MouseInjector`, `TouchInjector`, and `KeyInjector` registrations whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), stopping them when backgrounded (`onStop`) or during the Privileged Mode setup wizard IME:
 
-1. `InjectorLifecycleManager.watch(context)` is initiated centrally in `MainActivity.onCreate()`.
-2. Commands are routed from `MouseInjector` and `TouchInjector` directly into `PrivdClient`, which communicates with `megingiard_privd` over the local abstract UNIX domain socket.
+1. `InjectorLifecycleManager.watch()` is initiated centrally in `MainActivity.onCreate()`.
+2. Commands are routed from `MouseInjector` and `TouchInjector` directly into `PrivdClient`, which communicates with `megingiard_privd` over the authenticated loopback TCP socket.
 3. Individual screens (`FullscreenMouseOverlay`, `MacroPadScreen`) route events directly to `MouseInjector` or `TouchInjector` without starting or stopping background processes on local composition/disposal.
 
-### Socket Protocol (Mouse Mode)
+### Socket Protocol (Mouse & Touch Modes)
 
 Commands are sent as newline-terminated ASCII strings across the `PrivdClient` socket connection to `megingiard_privd`:
 
-| Command | Format       | Description                                                           |
-| ------- | ------------ | --------------------------------------------------------------------- |
-| MOVE    | `MM dx dy\n` | Move cursor relatively by `dx` and `dy` pixels                        |
-| CLICK   | `MB btn D\n` | Press mouse button `btn` down ('L' = Left, 'R' = Right, 'M' = Middle) |
-| RELEASE | `MB btn U\n` | Release mouse button `btn` up                                         |
-| SCROLL  | `MW delta\n` | Scroll relative wheel by `delta`                                      |
+| Command     | Format                | Description                                                                                                  |
+| ----------- | --------------------- | ------------------------------------------------------------------------------------------------------------ |
+| MOVE        | `MM dx dy\n`          | Move cursor relatively by `dx` and `dy` pixels                                                               |
+| CLICK       | `MB btn D\n`          | Press mouse button `btn` down (`'L'` = Left, `'R'` = Right, `'M'` = Middle, `'4'` = Mouse 4, `'5'` = Mouse 5) |
+| RELEASE     | `MB btn U\n`          | Release mouse button `btn` up (`'L'`, `'R'`, `'M'`, `'4'`, `'5'`)                                            |
+| SCROLL      | `MW delta\n`          | Scroll relative wheel by `delta`                                                                             |
+| TOUCH DOWN  | `D <slot> <x> <y>\n`  | Begin touch contact in MT slot `0..9` at raw physical sensor coordinates `(x, y)`                            |
+| TOUCH MOVE  | `M <slot> <x> <y>\n`  | Move active touch contact in MT slot `0..9` to raw physical sensor coordinates `(x, y)`                      |
+| TOUCH UP    | `U <slot>\n`          | Lift touch contact in MT slot `0..9`                                                                         |
 
 ### Writer Thread & Event Transmission
 
@@ -87,37 +90,30 @@ Commands are sent as newline-terminated ASCII strings across the `PrivdClient` s
 ```
 loop:
   command = queue.take()               // blocks until an event is available
-  write command to abstract domain socket
+  write command to loopback TCP socket
 ```
 
-**Rationale:** Touch or mouse move events can arrive rapidly. Transmitting commands over the non-blocking abstract domain socket to the daemon's event loop achieves sub-millisecond dispatch without IPC stalls. Clicks, scrolls, and key presses are preserved in order.
+**Rationale:** Touch or mouse move events can arrive rapidly. Transmitting commands over the loopback TCP socket to the daemon's event loop achieves sub-millisecond dispatch without IPC stalls. Clicks, scrolls, and key presses are preserved in order.
 
 ### Gesture & Movement Processing
 
-`FullscreenMouseOverlay` tracks finger touches using `awaitPointerEvent()` in a Compose `pointerInput` block and dispatches them to a `TouchpadGestureProcessor` instance.
+`FullscreenMouseOverlay` and `KeyboardScreen` track finger touches via the shared `Modifier.touchpadSurfaceInput(processor, useMouse)` modifier (`awaitPointerEvent()` loop) and dispatch them to a `TouchpadGestureProcessor` instance configured with a `TouchpadGestureConfig` snapshot.
 
 In relative **Mouse Mode** (`useMouse = true`):
 
-- Touch coordinates are measured. Relative delta values (`change.positionChange()`) are retrieved, scaled by a baseline speed (`TP_MOUSE_SENSITIVITY = 2f`) and the user's `sensitivity` setting (clamped between `0.1f` and `10.0f`), and forwarded to `MouseInjector.moveMouse(dx, dy)`.
-- If two-finger scroll is enabled and exactly two fingers are placed on the touchpad (`downPositions.size == 2`), vertical scroll wheel events are generated instead of cursor movement. Vertical movement (`deltaY`) is accumulated, and when crossing a threshold of `12f` pixels, `MouseInjector.scrollWheel(units)` is invoked.
+- Touch coordinates are measured. Relative delta values (`change.positionChange()`) are retrieved, scaled by a baseline speed (`TP_MOUSE_SENSITIVITY = 2f`) and the user's `sensitivity` setting (clamped to `0.1f..3.0f`), and forwarded to `MouseInjector.moveMouse(dx, dy)`.
+- If two-finger scroll is enabled and exactly two fingers are placed on the touchpad (`downPositions.size == 2`), vertical scroll wheel events are generated instead of cursor movement. Vertical movement (`deltaY`) is accumulated (scaled by `scrollSpeed`, clamped to `0.5f..3.0f`), and when crossing a threshold of `12f` pixels, `MouseInjector.scrollWheel(units)` is invoked.
 - Tap detection tracks pointer down times (`pressTimes`) and positions (`downPositions`).
-  - If a single finger is released within `TP_TAP_TIMEOUT_MS = 200L` without moving beyond `TP_TAP_SLOP_PX = 20f` pixels, a Left Click (LMB down + up) is simulated via a coroutine:
+  - Short taps released within `TP_TAP_TIMEOUT_MS = 200L` without moving beyond `TP_TAP_SLOP_PX = 20f` pixels invoke the unified `clickButton(button)` helper for 1-finger (`MouseButton.LEFT`), 2-finger (`MouseButton.RIGHT`), or 3-finger (`MouseButton.MIDDLE`) taps, guaranteeing `buttonUp` inside `finally` unless handed off to tap-and-drag:
     ```kotlin
-    MouseInjector.leftDown()
-    delay(TP_CLICK_DURATION_MS) // 40ms hold time
-    MouseInjector.leftUp()
-    ```
-  - If two fingers are tapped under the same constraints, a Right Click (RMB down + up) is simulated:
-    ```kotlin
-    MouseInjector.rightDown()
-    delay(TP_CLICK_DURATION_MS)
-    MouseInjector.rightUp()
-    ```
-  - If three fingers are tapped under the same constraints, a Middle Click (MMB down + up) is simulated:
-    ```kotlin
-    MouseInjector.middleDown()
-    delay(TP_CLICK_DURATION_MS)
-    MouseInjector.middleUp()
+    MouseInjector.buttonDown(button)
+    try {
+        delay(TP_CLICK_DURATION_MS) // 40ms hold time
+    } finally {
+        if (button != MouseButton.LEFT || !isDragging) {
+            MouseInjector.buttonUp(button)
+        }
+    }
     ```
   - If a double tap is initiated (a finger press within `TP_DOUBLE_TAP_TIMEOUT_MS = 500L` after a single-finger tap release) and held down, a drag state (`isDragging = true`) is activated:
     - On press: triggers `MouseInjector.leftDown()`.
@@ -132,31 +128,32 @@ In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch P
   sensorY = normalizedX * 1920
   ```
 - These coordinates are sent to slot-aware `TouchInjector.injectTouch(slot, action, normX, normY)` which maps concurrent pointer contacts to distinct Linux input slots (`0..9`) and transmits commands directly to `PrivdClient`, enabling slot-aware multi-touch on the absolute touchpad.
-- When `TouchInjector.stop(token)` is called, it removes the client registration. If the client registry becomes empty, the injector sends slot-specific `UP` commands for all supported touch slots and flushes before releasing. This prevents Android from retaining a visible touch indicator.
-- **Mode Switching Safety:** When toggling dynamically between Mouse Mode and Touch Mode while fingers are down, `TouchpadGestureProcessor.onCancel()` and `LaunchedEffect(touchpadUseMouse)` unconditionally release all active touch slots (`TouchAction.UP`) and mouse drag/click states before switching background injectors. This prevents orphaned pointer slots or stuck mouse buttons.
+- When `TouchInjector.releaseAllSlots()` is called (for example by `InjectorLifecycleManager` on backgrounding), the injector sends slot-specific `UP` commands for all supported touch slots (`0..9`). This prevents Android from retaining a visible touch indicator.
+- **Mode Switching Safety:** `Modifier.touchpadSurfaceInput` is keyed on `(processor, useMouse)`. When toggling dynamically between Mouse Mode and Touch Mode or disposing the surface while fingers are down, its `finally` block invokes `TouchpadGestureProcessor.onCancel()`, which unconditionally releases all active touch slots (`TouchAction.UP`) and mouse drag/click states. This prevents orphaned pointer slots or stuck mouse buttons.
 
 ### Secondary Display Rendering & Touchpad Mirroring
 
 `FullscreenMouseOverlay` is composed directly inside `MainAppScreen` on the secondary display as an animated overlay layer above `MacroPadScreen`.
 
-`MainAppScreen` ensures only one instance of `MouseInjector` runs at a time.
-
-Dismissal on the secondary display reuses the edge-swipe gesture path: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenMouseActive.value = false`.
+Dismissal on the secondary display reuses the edge-swipe gesture path: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD`.
 
 **Touchpad Mirroring Integration:**
 
 - When absolute touchpad mirroring is active (`isMirroringActive == true`), `FullscreenMouseOverlay` renders `EmbeddedMirrorView` with owner `MasterSurfaceRegistry.OWNER_TOUCHPAD` (`priority = 20`) and `ScreenCutout.FULLSCREEN` directly inside its 16:9 touch pad area. `MasterSurfaceRegistry` routes the video capture stream to the Touchpad and automatically restores MacroPad's surface when the Touchpad closes or mirroring is paused.
 - A semi-transparent black overlay dims the mirrored stream based on the user-configured `touchpadMirrorDim` level.
-- The lifecycle of the capture service is managed: if the capture service was started _by_ the touchpad, it is stopped immediately when the touchpad is closed or mode is toggled, restoring the previous active/inactive screen capture state of the MacroPad.
+- The lifecycle of the capture service is managed declaratively by `MirrorRuntimePolicy` (`touchpadWantsMirror = isFullscreenMouseActive && !touchpadUseMouse && touchpadMirroringEnabled`): when the touchpad is closed or mode/mirroring is toggled off, capture demand falls back to MacroPad's layout mirror settings without mutating `PadLayout.mirrorAutoStart`.
 
 ### Source Files
 
-| File                          | Layer           | Responsibility                                                                        |
-| ----------------------------- | --------------- | ------------------------------------------------------------------------------------- |
-| `FullscreenMouseOverlay.kt`   | `:app` UI       | Fullscreen relative-mouse Compose overlay, pointer event loop                         |
-| `TouchpadGestureProcessor.kt` | `:domain` Logic | Compose-free gesture tracking; mouse (relative + taps) and touch (absolute) processor |
-| `TouchpadSettings.kt`         | `:domain` Logic | Persistent settings for touchpad mode (tap-to-click, two-finger-tap, etc.)            |
-| `MouseInjector.kt`            | `:domain` Logic | Relative mouse injection facade routing directly to `PrivdClient`                     |
-| `TouchInjector.kt`            | `:domain` Logic | Absolute touch injection facade routing directly to `PrivdClient`                     |
-| `megingiard_privd.c`          | C Source        | Megingiard System Service daemon handling multi-touch and virtual mouse injection     |
-| `megingiard_privd_arm64`      | Native Asset    | Pre-built Megingiard System Service binary asset (`companion/ui/src/main/assets/`)    |
+| File                                   | Layer               | Responsibility                                                                                       |
+| -------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------- |
+| `FullscreenMouseOverlay.kt`            | `:companion:ui`     | Fullscreen mouse/touch Compose overlay, shared `rememberGlobalTouchpadProcessor` & `touchpadSurfaceInput` |
+| `TouchpadSettingsOverlay.kt`           | `:companion:ui`     | Top-display touchpad settings modal and shared `TouchpadGestureAndScrollCards` / `stepTenths`        |
+| `BackgroundTouchpadSettingsEditor.kt`  | `:companion:ui`     | MacroPad background touchpad settings editor reusing `TouchpadGestureAndScrollCards`                 |
+| `InjectorLifecycleManager.kt`          | `:companion:ui`     | Foreground/background lifecycle observer starting/stopping `KeyInjector`, `MouseInjector`, and `TouchInjector` |
+| `TouchpadGestureProcessor.kt`          | `:companion:domain` | Compose-free gesture tracking (`TouchpadGestureConfig`); relative mouse and absolute touch processor |
+| `TouchpadSettings.kt`                  | `:companion:domain` | Persistent settings in `settings/` for touchpad mode (sensitivity bounds, tap-to-click, scroll, etc.) |
+| `MouseInjector.kt`                     | `:companion:domain` | Relative mouse injection facade routing directly to `PrivdClient`                                    |
+| `TouchInjector.kt`                     | `:companion:domain` | Absolute touch injection facade routing directly to `PrivdClient`                                    |
+| `megingiard_privd.c` / `cmd_parsers.h` | C Source            | Megingiard System Service daemon and protocol parsers for multi-touch and virtual mouse injection    |
+| `megingiard_privd_arm64`               | Native Asset        | Pre-built Megingiard System Service binary asset (`companion/ui/src/main/assets/`)                   |

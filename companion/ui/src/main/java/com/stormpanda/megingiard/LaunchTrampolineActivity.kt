@@ -7,7 +7,7 @@ import android.os.Bundle
 import android.view.Display
 import com.stormpanda.megingiard.catalog.DisplayDetector
 
-private const val TAG = "LaunchTrampolineActivity"
+private const val TAG = "LaunchTrampolineAct"
 
 /**
  * Invisible entry point Activity that routes launches of Megingiard to the secondary
@@ -47,10 +47,6 @@ class LaunchTrampolineActivity : Activity() {
                     }
                 }
             startActivity(targetIntent, options.toBundle())
-
-            if (targetDisplayId != Display.DEFAULT_DISPLAY) {
-                PrimaryFocusAnchorActivity.anchorPrimaryFocus(this)
-            }
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to route launch intent to MainActivity", e)
         } finally {

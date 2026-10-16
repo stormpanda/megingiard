@@ -74,9 +74,7 @@ object SettingsManager {
     private var initialized = false
 
     @Volatile
-    private var autoBackupTriggered = false
-
-    private var lastBackupsJsonStr: String? = null
+    private var isInternalBackupsLoaded = false
 
     private val _internalBackups = MutableStateFlow<List<InternalBackup>>(emptyList())
     val internalBackups: StateFlow<List<InternalBackup>> = _internalBackups.asStateFlow()
@@ -104,9 +102,6 @@ object SettingsManager {
 
     const val CURRENT_WELCOME_TOUR_VERSION = 1
 
-    private val _showMacroEditorTutorial = MutableStateFlow(true)
-    val showMacroEditorTutorial: StateFlow<Boolean> = _showMacroEditorTutorial.asStateFlow()
-
     private val _welcomeTourCompletedVersion = MutableStateFlow(0)
     val welcomeTourCompletedVersion: StateFlow<Int> = _welcomeTourCompletedVersion.asStateFlow()
 
@@ -120,8 +115,7 @@ object SettingsManager {
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
 
     // Logging
-    private val _logLevel = MutableStateFlow(AppLog.Level.WARN)
-    val logLevel: StateFlow<AppLog.Level> = _logLevel.asStateFlow()
+    val logLevel: StateFlow<AppLog.Level> = AppLog.levelFlow
 
     fun resetForTesting(
         context: Context? = null,
@@ -138,11 +132,12 @@ object SettingsManager {
         _excludeFromRecents.value = false
         _steamGridDbApiToken.value = ""
         _appLanguage.value = AppLanguage.SYSTEM
-        _logLevel.value = AppLog.Level.WARN
         AppLog.level = AppLog.Level.WARN
         _welcomeTourCompletedVersion.value = 0
-        _showMacroEditorTutorial.value = true
         _internalBackups.value = emptyList()
+        isInternalBackupsLoaded = false
+        TouchpadSettings.resetForTesting()
+        MirrorSettings.resetForTesting()
         MacroPadSettings.resetForTesting()
         KeyboardSettings.resetForTesting()
         UpdateManager.resetForTesting()
@@ -165,11 +160,12 @@ object SettingsManager {
         initialized = true
         dataStore = context.applicationContext.settingsDataStore
 
-        // Apply the persisted log level synchronously before returning so that
-        // code running immediately after init() (e.g. SignatureGuard) already
-        // logs at the user-configured level.  A bounded timeout prevents ANR on
-        // pathological I/O — if DataStore does not respond within the window, the
-        // default WARN level is retained and startup proceeds normally.
+        // Apply bootstrap settings (log level, theme, accent, SteamGridDB token,
+        // and MacroPad profiles) synchronously before returning so that code
+        // running immediately after init() (e.g. SignatureGuard, initial UI frame)
+        // already uses the user-configured state. A bounded timeout prevents ANR on
+        // pathological I/O — if DataStore does not respond within the window,
+        // defaults are retained and startup proceeds normally.
         runBlocking(Dispatchers.IO) {
             try {
                 val prefs =
@@ -177,16 +173,7 @@ object SettingsManager {
                         dataStore.data.first()
                     }
                 if (prefs != null) {
-                    val level =
-                        AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] }
-                            ?: AppLog.Level.WARN
-                    _logLevel.value = level
-                    AppLog.level = level
-
-                    _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
-                    _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
-                    _customAccentColor.value = prefs[KEY_CUSTOM_ACCENT_COLOR] ?: prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
-                    _steamGridDbApiToken.value = prefs[KEY_STEAMGRIDDB_API_TOKEN] ?: ""
+                    applyBootstrapPrefs(prefs)
                 } else {
                     AppLog.w(TAG, "DataStore bootstrap timed out — retaining default log level")
                 }
@@ -212,58 +199,45 @@ object SettingsManager {
                 .collect { prefs ->
                     AppLog.i(TAG, "settings loaded from DataStore")
 
+                    applyBootstrapPrefs(prefs)
                     prefs[KEY_EXCLUDE_FROM_RECENTS]?.let { _excludeFromRecents.value = it }
-                    prefs[KEY_ACCENT_COLOR]?.let { _accentColor.value = it }
-                    prefs[KEY_CUSTOM_ACCENT_COLOR]?.let { _customAccentColor.value = it }
-                    prefs[KEY_THEME_MODE]?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } }?.let { _themeMode.value = it }
                     prefs[KEY_OVERLAY_AT_BOTTOM]?.let { _overlayAtBottom.value = it }
                     prefs[KEY_OVERLAY_FADE_OUT]?.let { _overlayFadeOut.value = it }
-                    prefs[KEY_STEAMGRIDDB_API_TOKEN]?.let { _steamGridDbApiToken.value = it }
 
-                    prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL]?.let { _showMacroEditorTutorial.value = it }
                     prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION]?.let { _welcomeTourCompletedVersion.value = it }
                     MirrorSettings.loadFrom(prefs)
                     KeyboardSettings.loadFrom(prefs)
                     TouchpadSettings.loadFrom(prefs)
                     prefs[KEY_APP_LANGUAGE]?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } }?.let {
-                        _appLanguage.value =
-                            it
+                        _appLanguage.value = it
                     }
-                    prefs[KEY_LOG_LEVEL]?.let { name -> AppLog.Level.entries.firstOrNull { it.name == name } }?.let {
-                        _logLevel.value = it
-                        AppLog.level = it
-                    }
-                    MacroPadSettings.loadFrom(prefs)
                     UpdateManager.loadFrom(prefs)
 
-                    val backupsJsonStr = prefs[KEY_INTERNAL_BACKUPS]
-                    if (backupsJsonStr != lastBackupsJsonStr) {
-                        lastBackupsJsonStr = backupsJsonStr
-                        _internalBackups.value = decodeBackups(backupsJsonStr)
-                    }
-
-                    if (!autoBackupTriggered) {
-                        autoBackupTriggered = true
+                    if (!isInternalBackupsLoaded) {
+                        isInternalBackupsLoaded = true
+                        _internalBackups.value = decodeBackups(prefs[KEY_INTERNAL_BACKUPS])
                         triggerAutoBackupIfNeeded(context.applicationContext)
                     }
                 }
         }
     }
 
+    private fun applyBootstrapPrefs(prefs: Preferences) {
+        prefs[KEY_LOG_LEVEL]?.let { name -> AppLog.Level.entries.firstOrNull { it.name == name } }?.let {
+            AppLog.level = it
+        }
+        prefs[KEY_THEME_MODE]?.let { name -> ThemeMode.entries.firstOrNull { it.name == name } }?.let {
+            _themeMode.value = it
+        }
+        prefs[KEY_ACCENT_COLOR]?.let { _accentColor.value = it }
+        prefs[KEY_CUSTOM_ACCENT_COLOR]?.let { _customAccentColor.value = it }
+        prefs[KEY_STEAMGRIDDB_API_TOKEN]?.let { _steamGridDbApiToken.value = it }
+        MacroPadSettings.loadFrom(prefs)
+        UpdateManager.loadFrom(prefs)
+    }
+
     private val optionalDataStore: DataStore<Preferences>?
         get() = if (::dataStore.isInitialized) dataStore else null
-
-    fun setShowMacroEditorTutorial(value: Boolean) {
-        updateSettingPref(
-            KEY_SHOW_MACRO_EDITOR_TUTORIAL,
-            value,
-            _showMacroEditorTutorial,
-            scope,
-            optionalDataStore,
-            TAG,
-            "setShowMacroEditorTutorial",
-        )
-    }
 
     fun setWelcomeTourCompletedVersion(value: Int) {
         updateSettingPref(
@@ -279,11 +253,9 @@ object SettingsManager {
 
     fun resetAllTutorials() {
         AppLog.d(TAG, "resetAllTutorials()")
-        _showMacroEditorTutorial.value = true
         _welcomeTourCompletedVersion.value = 0
         scope.launch {
             optionalDataStore?.edit { prefs ->
-                prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] = true
                 prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION] = 0
             }
         }
@@ -349,22 +321,22 @@ object SettingsManager {
     }
 
     fun setLogLevel(value: AppLog.Level) {
-        updateEnumSettingPref(
-            KEY_LOG_LEVEL,
-            value,
-            _logLevel,
-            scope,
-            optionalDataStore,
-            TAG,
-            "setLogLevel",
-            onChanged = { AppLog.level = value },
-        )
+        AppLog.d(TAG, "setLogLevel($value)")
+        AppLog.level = value
+        val ds = optionalDataStore ?: return
+        scope.launch {
+            try {
+                ds.edit { prefs ->
+                    prefs[KEY_LOG_LEVEL] = value.name
+                }
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to persist setting key ${KEY_LOG_LEVEL.name}: $e")
+            }
+        }
     }
 
     // Keyboard setters live in [KeyboardSettings]; touchpad setters in [TouchpadSettings].
-
-    // MacroPad background setters live in [BackgroundSettings].
-    // MacroPad recording-dialog flags + gamepad-swap setter + saveMacroPadData live in [MacroPadSettings].
+    // MacroPad gamepad-swap + snap-alignment setters + saveMacroPadData live in [MacroPadSettings].
 
     // Mirror session state save/restore lives in [MirrorSettings].
 
@@ -386,7 +358,6 @@ object SettingsManager {
                     when (raw) {
                         is Boolean -> JsonPrimitive(raw)
                         is Int -> JsonPrimitive(raw)
-                        is Long -> JsonPrimitive(raw)
                         is Float -> JsonPrimitive(raw)
                         is String -> JsonPrimitive(raw)
                         else -> continue
@@ -401,28 +372,9 @@ object SettingsManager {
      * Writes all settings from [sections] into DataStore in a single edit.
      * The existing `.collect {}` in [init] automatically re-hydrates every [StateFlow]
      * after the edit completes — no manual setter calls needed.
-     *
-     * Type dispatch uses [KEY_BY_NAME] to resolve the actual [Preferences.Key] and
-     * `prefs.asMap()` to detect the stored type, so DataStore proto fields are always
-     * written with the correct type (not a heuristic-guessed type).
-     */
-    fun importGroupedSettings(sections: Map<String, Map<String, JsonElement>>) {
-        AppLog.i(TAG, "importGroupedSettings: sections=${sections.keys}")
-        scope.launch {
-            importGroupedSettingsInternal(sections)
-        }
-    }
-
-    /**
-     * Awaitable variant — callers that need to know when the DataStore write completes
-     * (e.g. [ConfigManager.applyImport]) should call this directly from a suspend context.
      */
     suspend fun importGroupedSettingsAwait(sections: Map<String, Map<String, JsonElement>>) {
         AppLog.i(TAG, "importGroupedSettingsAwait: sections=${sections.keys}")
-        importGroupedSettingsInternal(sections)
-    }
-
-    private suspend fun importGroupedSettingsInternal(sections: Map<String, Map<String, JsonElement>>) {
         dataStore.edit { prefs ->
             for ((_, entries) in sections) {
                 for ((keyName, element) in entries) {
@@ -467,47 +419,45 @@ object SettingsManager {
 
     suspend fun saveBackup(backup: InternalBackup) {
         AppLog.d(TAG, "saveBackup: date=${backup.dateString}")
+        val newList =
+            (_internalBackups.value.filter { it.dateString != backup.dateString } + backup)
+                .sortedByDescending { it.timestampMs }
+                .take(5)
+        _internalBackups.value = newList
         dataStore.edit { prefs ->
-            val currentList = decodeBackups(prefs[KEY_INTERNAL_BACKUPS])
-            val newList =
-                (currentList.filter { it.dateString != backup.dateString } + backup)
-                    .sortedByDescending { it.timestampMs }
-                    .take(5)
             prefs[KEY_INTERNAL_BACKUPS] = backupsJson.encodeToString(newList)
         }
     }
 
-    private fun triggerAutoBackupIfNeeded(context: Context) {
-        scope.launch {
-            try {
-                val currentDateStr =
-                    LocalDate
-                        .now()
-                        .toString()
-                val alreadyHasBackup = _internalBackups.value.any { it.dateString == currentDateStr }
-                if (alreadyHasBackup) {
-                    AppLog.d(TAG, "Auto-backup already exists for today ($currentDateStr), skipping.")
-                    return@launch
-                }
-
-                AppLog.i(TAG, "Creating automatic daily configuration backup for $currentDateStr")
-                val metadata =
-                    ConfigManager.defaultMetadata(context).copy(
-                        author = null,
-                        description = null,
-                    )
-                val export = ConfigManager.buildExport(metadata)
-                val backup =
-                    InternalBackup(
-                        dateString = currentDateStr,
-                        timestampMs = System.currentTimeMillis(),
-                        export = export,
-                    )
-                saveBackup(backup)
-                AppLog.i(TAG, "Automatic daily backup saved successfully.")
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to create automatic daily backup", e)
+    private suspend fun triggerAutoBackupIfNeeded(context: Context) {
+        try {
+            val currentDateStr =
+                LocalDate
+                    .now()
+                    .toString()
+            val alreadyHasBackup = _internalBackups.value.any { it.dateString == currentDateStr }
+            if (alreadyHasBackup) {
+                AppLog.d(TAG, "Auto-backup already exists for today ($currentDateStr), skipping.")
+                return
             }
+
+            AppLog.i(TAG, "Creating automatic daily configuration backup for $currentDateStr")
+            val metadata =
+                ConfigManager.defaultMetadata(context).copy(
+                    author = null,
+                    description = null,
+                )
+            val export = ConfigManager.buildExport(metadata)
+            val backup =
+                InternalBackup(
+                    dateString = currentDateStr,
+                    timestampMs = System.currentTimeMillis(),
+                    export = export,
+                )
+            saveBackup(backup)
+            AppLog.i(TAG, "Automatic daily backup saved successfully.")
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to create automatic daily backup", e)
         }
     }
 }

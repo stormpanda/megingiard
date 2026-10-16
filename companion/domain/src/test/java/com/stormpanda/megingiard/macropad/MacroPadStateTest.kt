@@ -83,7 +83,6 @@ class MacroPadStateTest {
         buttonTextColor: ColorOption = ColorOption.Neutral,
         buttonBgColor: ColorOption = ColorOption.Neutral,
         mirrorEdgeBlendWidth: Float = 0f,
-        mirrorConfigured: Boolean = false,
         visualAnchor: LayoutVisualAnchor = LayoutVisualAnchor(),
     ) = PadLayout(
         id = id,
@@ -108,7 +107,6 @@ class MacroPadStateTest {
         buttonTextColor = buttonTextColor,
         buttonBgColor = buttonBgColor,
         mirrorEdgeBlendWidth = mirrorEdgeBlendWidth,
-        mirrorConfigured = mirrorConfigured,
         visualAnchor = visualAnchor,
     )
 
@@ -135,19 +133,6 @@ class MacroPadStateTest {
         activeId: String? = profiles.firstOrNull()?.id,
     ) {
         MacroPadState.loadFrom(profiles.toList(), activeId)
-    }
-
-    private fun assertFlags(
-        kb: Boolean = false,
-        gp: Boolean = false,
-        ms: Boolean = false,
-        touch: Boolean = false,
-        profile: PadProfile = MacroPadState.activeProfile.value!!,
-    ) {
-        assertEquals(kb, profile.enableKeyboard)
-        assertEquals(gp, profile.enableGamepad)
-        assertEquals(ms, profile.enableMouse)
-        assertEquals(touch, profile.enableTouch)
     }
 
     @Test
@@ -266,75 +251,6 @@ class MacroPadStateTest {
                 .first { it.id == "p1" }
                 .name,
         )
-    }
-
-    @Test
-    fun `withSyncedDeviceFlags synchronization rules`() {
-        val p1 = testProfile(id = "p1", layouts = listOf(testLayout(id = "l1", buttons = emptyList())), activeLayoutId = "l1")
-        loadProfiles(p1)
-
-        // 1. Empty button list -> all flags false
-        assertFlags()
-
-        fun updateWithAction(action: PadAction) {
-            val cur = MacroPadState.activeProfile.value!!
-            MacroPadState.updateLayout(cur.layouts.first().copy(buttons = listOf(testButton(action = action))))
-        }
-
-        // 2. Keyboard button
-        updateWithAction(PadAction.KeyboardKey(65, "A"))
-        assertFlags(kb = true)
-
-        // 3. Gamepad button
-        updateWithAction(PadAction.GamepadButton(96, "GP"))
-        assertFlags(gp = true)
-
-        // 4. Mouse button
-        updateWithAction(PadAction.MouseButton(MouseButton.LEFT))
-        assertFlags(ms = true)
-
-        // 5. Trackpoint VIRTUAL_TOUCH button
-        updateWithAction(PadAction.TrackpointMove(mode = TrackpointMode.VIRTUAL_TOUCH))
-        assertFlags(touch = true)
-
-        // 6. MirrorTouchProjection button -> all injector flags remain false
-        updateWithAction(PadAction.MirrorTouchProjection)
-        assertFlags()
-
-        // 7. Macro button -> all flags force-enabled (true)
-        updateWithAction(PadAction.Macro("macro-1"))
-        assertFlags(kb = true, gp = true, ms = true, touch = true)
-
-        // 8. Enable Background Touchpad -> enableMouse force-enabled
-        val active = MacroPadState.activeProfile.value!!
-        MacroPadState.updateLayout(
-            active.layouts.first().copy(
-                buttons = emptyList(),
-                backgroundTouchpad = BackgroundTouchpadConfig(enabled = true),
-            ),
-        )
-        assertFlags(ms = true)
-    }
-
-    @Test
-    fun `fullscreen keyboard and mouse actions do not enable background injector flags`() {
-        val p1 =
-            testProfile(
-                id = "p1",
-                layouts =
-                    listOf(
-                        testLayout(
-                            id = "l1",
-                            buttons =
-                                listOf(
-                                    testButton(id = "b1", action = PadAction.FullScreenKeyboard()),
-                                    testButton(id = "b2", action = PadAction.FullScreenMouse()),
-                                ),
-                        ),
-                    ),
-            )
-        loadProfiles(p1)
-        assertFlags()
     }
 
     @Test
@@ -514,6 +430,31 @@ class MacroPadStateTest {
         val dupBtn = dupLayout.buttons.first()
         assertNotEquals("btn-1", dupBtn.id)
         assertEquals(dupMacro.id, (dupBtn.action as PadAction.Macro).macroId)
+    }
+
+    @Test
+    fun `duplicateProfile remaps layout ids and active layout id`() {
+        val l1 = testLayout(id = "layout-1", name = "Lay1")
+        val l2 = testLayout(id = "layout-2", name = "Lay2")
+        loadProfiles(testProfile(id = "p1", name = "P1", layouts = listOf(l1, l2), activeLayoutId = "layout-2"))
+
+        val layoutMapping = MacroPadState.duplicateProfile("p1")
+        assertNotNull(layoutMapping)
+        assertEquals(2, layoutMapping?.size)
+
+        val profiles = MacroPadState.profiles.value
+        assertEquals(2, profiles.size)
+        val dupProfile = profiles.first { it.id != "p1" }
+
+        val newLayout1Id = layoutMapping?.get("layout-1")
+        val newLayout2Id = layoutMapping?.get("layout-2")
+        assertNotNull(newLayout1Id)
+        assertNotNull(newLayout2Id)
+        assertNotEquals("layout-1", newLayout1Id)
+        assertNotEquals("layout-2", newLayout2Id)
+
+        assertEquals(listOf(newLayout1Id, newLayout2Id), dupProfile.layouts.map { it.id })
+        assertEquals(newLayout2Id, dupProfile.activeLayoutId)
     }
 
     @Test
@@ -700,7 +641,7 @@ class MacroPadStateTest {
 
     @Test
     fun `setPreviewLayout and clearPreviewLayout manage in-flight layout preview`() {
-        val savedLayout = testLayout(id = "l1", name = "Saved Layout", buttonTextColor = ColorOption.Neutral, mirrorConfigured = true)
+        val savedLayout = testLayout(id = "l1", name = "Saved Layout", buttonTextColor = ColorOption.Neutral)
         val p1 = testProfile(id = "p1", layouts = listOf(savedLayout), activeLayoutId = "l1")
         loadProfiles(p1)
 
@@ -729,7 +670,7 @@ class MacroPadStateTest {
     @Test
     fun `setPreviewButton replaces existing button or appends new button in activeLayout preview`() {
         val b1 = testButton(id = "btn-1", label = "A", posX = 0.2f, posY = 0.2f, action = PadAction.KeyboardKey(65, "A"))
-        val savedLayout = testLayout(id = "l1", name = "Saved Layout", buttons = listOf(b1), mirrorConfigured = true)
+        val savedLayout = testLayout(id = "l1", name = "Saved Layout", buttons = listOf(b1))
         val p1 = testProfile(id = "p1", layouts = listOf(savedLayout), activeLayoutId = "l1")
         loadProfiles(p1)
 
@@ -800,7 +741,6 @@ class MacroPadStateTest {
                 id = "l1",
                 buttonBgColor = ColorOption.Custom(0xFF00FF00.toInt()),
                 buttons = listOf(b1, b2),
-                mirrorConfigured = true,
             )
         loadProfiles(testProfile(id = "p1", layouts = listOf(layout), activeLayoutId = "l1"))
 
@@ -1155,13 +1095,13 @@ class MacroPadStateTest {
                 signature = VisualAnchorSignature("layout-1", listOf(AnchorPoint(0.5f, 0.5f, 255, 255, 255))),
                 matchThreshold = null,
             )
-        val calibratedLayout = testLayout(id = "l1", name = "Calibrated", visualAnchor = legacyCalibratedAnchor, mirrorConfigured = true)
+        val calibratedLayout = testLayout(id = "l1", name = "Calibrated", visualAnchor = legacyCalibratedAnchor)
 
         val uncalibratedAnchor = LayoutVisualAnchor(enabled = false, signature = null, matchThreshold = null)
-        val uncalibratedLayout = testLayout(id = "l2", name = "Uncalibrated", visualAnchor = uncalibratedAnchor, mirrorConfigured = true)
+        val uncalibratedLayout = testLayout(id = "l2", name = "Uncalibrated", visualAnchor = uncalibratedAnchor)
 
         val customThresholdAnchor = LayoutVisualAnchor(enabled = true, matchThreshold = 0.90f)
-        val customLayout = testLayout(id = "l3", name = "Custom", visualAnchor = customThresholdAnchor, mirrorConfigured = true)
+        val customLayout = testLayout(id = "l3", name = "Custom", visualAnchor = customThresholdAnchor)
 
         val profile = testProfile(id = "p1", layouts = listOf(calibratedLayout, uncalibratedLayout, customLayout), activeLayoutId = "l1")
         loadProfiles(profile)
@@ -1180,5 +1120,38 @@ class MacroPadStateTest {
 
         // Custom threshold preserved
         assertEquals(0.90f, layouts[2].visualAnchor.matchThreshold)
+    }
+
+    @Test
+    fun `duplicateProfile clones mirrorCutouts with new UUIDs`() {
+        val cutout =
+            ScreenCutout(
+                id = "cutout-orig",
+                name = "HUD",
+                srcX = 0.1f,
+                srcY = 0.1f,
+                srcWidth = 0.3f,
+                srcHeight = 0.3f,
+                destX = 0.2f,
+                destY = 0.2f,
+                destWidth = 0.4f,
+                destHeight = 0.4f,
+            )
+        val layout = testLayout(id = "l1", name = "Main", mirrorCutouts = listOf(cutout))
+        val profile = testProfile(id = "p1", name = "RPG", layouts = listOf(layout), activeLayoutId = "l1")
+        loadProfiles(profile)
+
+        MacroPadState.duplicateProfile("p1")
+
+        val profiles = MacroPadState.profiles.value
+        assertEquals(2, profiles.size)
+        val duplicatedProfile = profiles.first { it.id != "p1" }
+        val duplicatedCutout =
+            duplicatedProfile.layouts
+                .single()
+                .mirrorCutouts
+                .single()
+        assertNotEquals("cutout-orig", duplicatedCutout.id)
+        assertEquals("HUD", duplicatedCutout.name)
     }
 }

@@ -30,7 +30,10 @@ class ScreenCaptureFollowTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     private val cutoutId = "test-cutout-id"
 
-    private fun getCutout(id: String = cutoutId) = ScreenCaptureManager.cutouts.value.find { it.id == id }!!
+    private fun getCutout(id: String = cutoutId): NormalizedCrop {
+        val cutout = ScreenCaptureManager.cutouts.value.find { it.id == id }!!
+        return InteractiveCutoutController.getEffectiveCrop(cutout)
+    }
 
     @Before
     fun setUp() {
@@ -66,7 +69,6 @@ class ScreenCaptureFollowTest {
         ScreenCaptureManager.scope = CoroutineScope(SupervisorJob() + testDispatcher)
         ScreenCaptureManager.resetMirrorSessionState()
         ScreenCaptureManager.setCapturing(false)
-        ScreenCaptureManager.setSurfaceSize(1920f, 1080f)
         ScreenCaptureManager.setCaptureSourceSize(1920, 1080)
     }
 
@@ -152,7 +154,7 @@ class ScreenCaptureFollowTest {
         assertTrue(MacroPadState.activeLayout.value!!.mirrorFollowActive)
 
         assertFalse(ScreenCaptureManager.isFollowActive.value)
-        MirrorViewportController.restoreFromLayout()
+        ScreenCaptureManager.restoreFromLayout()
         assertTrue(ScreenCaptureManager.isFollowActive.value)
     }
 

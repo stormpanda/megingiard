@@ -5,10 +5,12 @@ import android.content.pm.PackageInfo
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -26,7 +28,17 @@ import java.util.zip.ZipOutputStream
 class RomManagerTest {
     private val context: Context = RuntimeEnvironment.getApplication()
 
-    private fun docFiles(vararg names: String): Array<DocumentFile> = names.map { DocumentFile.fromFile(File(it)) }.toTypedArray()
+    @Before
+    fun setUp() {
+        RomManager.resetForTesting()
+    }
+
+    @After
+    fun tearDown() {
+        RomManager.resetForTesting()
+    }
+
+    private fun docFiles(vararg names: String): List<DocumentFile> = names.map { DocumentFile.fromFile(File(it)) }
 
     @Test
     fun testDetectSystem_snes() {
@@ -45,7 +57,7 @@ class RomManagerTest {
 
     @Test
     fun testDetectSystem_empty() {
-        assertNull(RomManager.detectSystem(context, emptyArray()))
+        assertNull(RomManager.detectSystem(context, emptyList()))
     }
 
     @Test
@@ -71,7 +83,7 @@ class RomManagerTest {
                 docFile.uri,
                 FileInputStream(zipFile),
             )
-            val systemId = RomManager.detectSystem(context, arrayOf(docFile))
+            val systemId = RomManager.detectSystem(context, listOf(docFile))
             assertEquals("gba", systemId)
         } finally {
             zipFile.delete()
@@ -103,6 +115,7 @@ class RomManagerTest {
         assertEquals("snes9x_libretro_android.so", folder.retroArchCore)
 
         // Verify it was persisted to disk
+        runBlocking { RomManager.awaitPersistenceForTesting() }
         val diskContent = file.readText()
         assertTrue(diskContent.contains("snes9x_libretro_android.so"))
 
@@ -134,6 +147,7 @@ class RomManagerTest {
         assertEquals("dev.eden.eden_emulator", folder.emulatorPackage)
 
         // Verify persistence
+        runBlocking { RomManager.awaitPersistenceForTesting() }
         val diskContent = file.readText()
         assertTrue(diskContent.contains("dev.eden.eden_emulator"))
 
@@ -161,7 +175,7 @@ class RomManagerTest {
 
     @Test
     fun testUpdateRomCover() {
-        RomManager.updateRomCover("test.rom.pkg", "/path/to/cover.png")
+        RomManager.updateRomApp("test.rom.pkg") { it.copy(coverPath = "/path/to/cover.png") }
         // Verified function execution without crash
     }
 

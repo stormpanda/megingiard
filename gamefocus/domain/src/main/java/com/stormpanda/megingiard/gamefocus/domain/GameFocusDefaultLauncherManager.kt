@@ -7,7 +7,7 @@ import android.content.pm.PackageManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.DisplayDetector
 
-private const val TAG = "GameFocusDefaultLauncherManager"
+private const val TAG = "GFDefaultLauncherMgr"
 
 const val COMPANION_PACKAGE = "com.stormpanda.megingiard"
 const val COMPANION_PACKAGE_DEBUG = "com.stormpanda.megingiard.debug"
