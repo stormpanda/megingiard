@@ -106,7 +106,6 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.VerticalRollingCarousel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -153,10 +152,6 @@ private val FTL_SUBTITLE_GAP = 2.dp
 private val FTL_BADGE_TEXT_GAP = 4.dp
 private const val FTL_PROMPT_ANIM_DURATION_MS = 200
 private const val FTL_PROMPT_SLIDE_DIVISOR = 2
-
-private class JobRefHolder(
-    var job: Job? = null,
-)
 
 @Composable
 fun FocusTopLauncherScreen(
@@ -345,7 +340,6 @@ fun FocusTopLauncherScreen(
     val scope = rememberCoroutineScope()
     var isLetterOverlayActive by remember { mutableStateOf(false) }
     var selectedLetterNavIndex by remember { mutableIntStateOf(0) }
-    val letterCommitJobRef = remember { JobRefHolder() }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -361,7 +355,6 @@ fun FocusTopLauncherScreen(
             .collectLatest { isScrolling ->
                 if (isScrolling && isLetterOverlayActive) {
                     AppLog.i(TAG, "Pager scroll in progress while letter carousel active -> cancelling overlay without action")
-                    letterCommitJobRef.job?.cancel()
                     isLetterOverlayActive = false
                 }
             }
@@ -372,7 +365,6 @@ fun FocusTopLauncherScreen(
         if (dpadLeftTrigger > 0 && categoryApps.isNotEmpty()) {
             if (isLetterOverlayActive) {
                 AppLog.i(TAG, "D-pad LEFT pressed while letter carousel active -> cancelling overlay without action")
-                letterCommitJobRef.job?.cancel()
                 isLetterOverlayActive = false
             } else {
                 val baseIndex = if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
@@ -395,7 +387,6 @@ fun FocusTopLauncherScreen(
         if (dpadStepRightTrigger > 0 && categoryApps.isNotEmpty()) {
             if (isLetterOverlayActive) {
                 AppLog.i(TAG, "D-pad RIGHT pressed while letter carousel active -> cancelling overlay without action")
-                letterCommitJobRef.job?.cancel()
                 isLetterOverlayActive = false
             } else {
                 val baseIndex = if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
@@ -420,23 +411,23 @@ fun FocusTopLauncherScreen(
 
     // Reset letter overlay on category switch or dialog edit
     LaunchedEffect(selectedCategory, editingAppInfo) {
-        letterCommitJobRef.job?.cancel()
         isLetterOverlayActive = false
     }
 
-    fun scheduleLetterCommit() {
-        letterCommitJobRef.job?.cancel()
-        letterCommitJobRef.job =
-            scope.launch {
-                delay(FTL_LETTER_NAV_DEBOUNCE_MS)
-                val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
-                isLetterOverlayActive = false
-                if (targetLetter != null) {
-                    val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(categoryApps, targetLetter)
-                    AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
+    // Auto-hide and commit letter navigation after debounce
+    LaunchedEffect(isLetterOverlayActive, selectedLetterNavIndex, prevLetterTrigger, nextLetterTrigger) {
+        if (isLetterOverlayActive) {
+            delay(FTL_LETTER_NAV_DEBOUNCE_MS)
+            val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
+            isLetterOverlayActive = false
+            if (targetLetter != null) {
+                val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(categoryApps, targetLetter)
+                AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
+                scope.launch {
                     activePagerState.animateScrollToPage(targetAppIndex)
                 }
             }
+        }
     }
 
     // Handle Gamepad L1 step (previous starting letter in letter carousel)
@@ -454,7 +445,6 @@ fun FocusTopLauncherScreen(
                     TAG,
                     "L1 letter carousel step for ${selectedCategory.id}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
                 )
-                scheduleLetterCommit()
             }
         }
     }
@@ -474,7 +464,6 @@ fun FocusTopLauncherScreen(
                     TAG,
                     "R1 letter carousel step for ${selectedCategory.id}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
                 )
-                scheduleLetterCommit()
             }
         }
     }
