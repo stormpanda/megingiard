@@ -20,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,14 +30,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.cancellation.CancellationException
 
 private const val TAG = "InstalledAppsManager"
@@ -99,9 +98,16 @@ object InstalledAppsManager {
     @Volatile
     private var isScrapeAttemptsLoaded = false
 
-    /** Single-flight guard for scraping passes; [isRerunRequested] schedules a follow-up pass. */
-    private val scrapeMutex = Mutex()
-    private val isRerunRequested = AtomicBoolean(false)
+    /** Conflated channel so concurrent scrape triggers coalesce into at most one follow-up pass. */
+    private val scrapeRequests = Channel<Context>(Channel.CONFLATED)
+
+    init {
+        scope.launch {
+            for (context in scrapeRequests) {
+                executeScrapingPass(context)
+            }
+        }
+    }
 
     private val _favorites = MutableStateFlow<Set<String>>(emptySet())
     val favorites: StateFlow<Set<String>> = _favorites.asStateFlow()
@@ -1033,32 +1039,7 @@ object InstalledAppsManager {
         if (apiKey.isNotBlank()) {
             latestSteamGridDbApiKey = apiKey
         }
-        scope.launch { runScrapingPasses(context) }
-    }
-
-    /**
-     * Runs scraping passes single-flight. A request arriving while a pass is active only sets
-     * [isRerunRequested]; the active owner re-checks the flag after unlocking, so no request is lost.
-     */
-    private suspend fun runScrapingPasses(context: Context) {
-        while (true) {
-            if (!scrapeMutex.tryLock()) {
-                AppLog.d(TAG, "Scraping pass already in progress; scheduling follow-up pass")
-                isRerunRequested.set(true)
-                return
-            }
-            try {
-                do {
-                    isRerunRequested.set(false)
-                    executeScrapingPass(context)
-                } while (isRerunRequested.get())
-            } finally {
-                scrapeMutex.unlock()
-            }
-            // A request may have arrived between the last flag check and unlock.
-            if (!isRerunRequested.get()) return
-            AppLog.d(TAG, "Follow-up scraping pass requested during unlock; restarting")
-        }
+        scrapeRequests.trySend(context.applicationContext ?: context)
     }
 
     private suspend fun executeScrapingPass(context: Context) {
