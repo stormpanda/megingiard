@@ -50,18 +50,6 @@ class AnchorPresenceManagerTest {
     }
 
     @Test
-    fun `getDelayedFrame returns null when delay is zero`() {
-        val frame = AnchorPresenceManager.getDelayedFrame("cutout_123", delayFrames = 0)
-        assertNull(frame)
-    }
-
-    @Test
-    fun `getDelayedFrame returns null when no frames buffered`() {
-        val frame = AnchorPresenceManager.getDelayedFrame("non_existent_cutout", delayFrames = 2)
-        assertNull(frame)
-    }
-
-    @Test
     fun `getFrozenFrame returns null when neither cache nor disk has frame`() {
         val context = RuntimeEnvironment.getApplication()
         val frame = AnchorPresenceManager.getFrozenFrame(context, "cutout_no_frame")
@@ -123,14 +111,12 @@ class AnchorPresenceManagerTest {
             viewMode = CompanionViewMode.MACROPAD,
         )
         assertFalse(AnchorPresenceManager.isMonitoring)
-        assertEquals(0, AnchorPresenceManager.ringBufferCount)
         assertEquals(0, AnchorPresenceManager.lastValidFrameCount)
     }
 
     @Test
-    fun `clearAllBuffers empties all ring buffers and freeze frame bitmaps`() {
+    fun `clearAllBuffers empties freeze frame bitmaps`() {
         AnchorPresenceManager.clearAllBuffers()
-        assertEquals(0, AnchorPresenceManager.ringBufferCount)
         assertEquals(0, AnchorPresenceManager.lastValidFrameCount)
     }
 

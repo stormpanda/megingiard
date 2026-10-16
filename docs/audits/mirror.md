@@ -232,7 +232,7 @@
 > Select which findings to implement (`All`, `Low-risk only`, or specific IDs):
 
 - [ ] **`[MR-09]`** — Delete vestigial single-viewport & session-persistence ghost layer (`MirrorViewportController`, `surfaceWidth`/`surfaceHeight`, `projectCoordinates`, `ViewportMath`, 6 `MirrorSettings` keys, single-viewport draw branch) *(Complexity: High, Risk: Low)*
-- [ ] **`[MR-07]`** — Remove unreachable CPU anchor-monitoring loop, `CutoutFrameRingBuffer.kt`, and `matchesSparseProbe` *(Complexity: High, Risk: Low)*
+- [x] **`[MR-07]`** — Remove unreachable CPU anchor-monitoring loop, `CutoutFrameRingBuffer.kt`, and `matchesSparseProbe` *(Complexity: High, Risk: Low)*
 - [x] **`[MR-03]`** — Deduplicate `startCalibration` and `startLayoutAnchorCalibration` loops in `VisualAutoTuneCoordinator` *(Complexity: High, Risk: Low)*
 - [ ] **`[MR-15]`** — Replace `directPrivdStartGeneration` and 3 collectors in `ScreenCaptureService` with `combine(...).collectLatest` *(Complexity: Med, Risk: Low)*
 - [x] **`[MR-02]`** — Inline `DirectPrivdMirrorSession` into `ScreenCaptureService` and delete wrapper class *(Complexity: Med, Risk: Low)*
