@@ -460,10 +460,6 @@ fun FocusTopLauncherScreen(
         }
     }
 
-    LaunchedEffect(selectedCategory) {
-        backgroundApp = categoryApps.getOrNull(activePagerState.currentPage)
-    }
-
     // Extract dynamic 2 main colors asynchronously off the UI thread using AndroidX Palette API
     val defaultPalette =
         remember(appColors.accent, appColors.appBackground) {

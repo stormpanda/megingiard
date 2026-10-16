@@ -292,7 +292,7 @@
 - [x] **`[GF-14]`** — Consolidate mirrored metadata mutator chains across `InstalledAppsManager` and `RomManager` *(Complexity: High, Risk: Med)*
 - [x] **`[GF-15]`** — Replace hand-rolled `Mutex.tryLock` + `AtomicBoolean` double-loop in `runScrapingPasses` with conflated `Channel` *(Complexity: Med, Risk: Low)*
 - [x] **`[GF-16]`** — Consolidate 7 lock objects and 6 `@Volatile` load-once flags in `InstalledAppsManager` *(Complexity: High, Risk: Low)*
-- [ ] **`[GF-17]`** — Remove duplicate `loadInstalledApps` call in `onCreate` and overlapping `LaunchedEffect(selectedCategory)` *(Complexity: Low, Risk: Low)*
+- [x] **`[GF-17]`** — Remove duplicate `loadInstalledApps` call in `onCreate` and overlapping `LaunchedEffect(selectedCategory)` *(Complexity: Low, Risk: Low)*
 - [ ] **`[GF-18]`** — Remove redundant `MegingiardThemeClient.observeThemeUpdates` `ContentObserver` *(Complexity: Low, Risk: Low)*
 - [ ] **`[GF-19]`** — Remove dead `confirmPairingTrigger` counter and deduplicate `frozenHidden` computation *(Complexity: Low, Risk: Low)*
 - [ ] **`[GF-20]`** — Read artwork & title state directly from reactive `liveAppInfo` in `GameFocusEditGameOverlay` *(Complexity: Med, Risk: Low)*

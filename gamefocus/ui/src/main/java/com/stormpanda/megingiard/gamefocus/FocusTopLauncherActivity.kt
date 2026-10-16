@@ -385,7 +385,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
         initGameFocusLaunchers()
         AppPaletteExtractor.init(applicationContext)
-        InstalledAppsManager.loadInstalledApps(this)
         GameFocusPairManager.loadPairs(this)
         GameFocusGalleryManager.load(this)
         viewModel.setButtonPromptsVisible(GameFocusPreferences.areButtonPromptsVisible(this))
