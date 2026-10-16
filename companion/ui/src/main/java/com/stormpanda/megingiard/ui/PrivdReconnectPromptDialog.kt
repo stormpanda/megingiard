@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.onboarding.OnboardingStepState
@@ -57,7 +58,7 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
 
     val initialAccessibilityActive =
         rememberSaveable {
-            MegingiardAccessibilityService.isEnabled(context)
+            AppStateManager.isAccessibilityActive.value
         }
     val initialPrivdRunning =
         rememberSaveable {
@@ -92,7 +93,7 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
     var isNextAnimation by remember { mutableStateOf(true) }
 
     val setupStatus = rememberSystemSetupStatus(currentStepState.id)
-    val rootBridgeActions = rememberRootBridgeActions(setupStatus)
+    val rootBridgeActions = rememberRootBridgeActions()
     val privdState by PrivdManager.state.collectAsStateWithLifecycle()
 
     val isRootBridgeAvailable = remember { PrivdManager.isRootBridgeAvailable }

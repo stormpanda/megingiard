@@ -169,8 +169,8 @@ Auto-connect is mandatory and always active on app startup. There is no `privdAu
 
 - `AppStateManager.isPrivdPromptActive` (`StateFlow<Boolean>`) is derived reactively via `combine` over `onboardingCompleted`, `isOnboardingWizardOpen`, `isAccessibilityActive`, `PrivdManager.state`, and `isPrivdPromptDismissed`. When either Accessibility or Privileged Mode drops after initial onboarding is completed, the prompt activates automatically.
 - `PrivdReconnectPromptDialog` and `OnboardingWizardDialog` share:
-  - `rememberSystemSetupStatus(activeStepId)`: Single consolidated 1-second polling loop and `ON_RESUME` `LifecycleEventObserver` checking Accessibility, Wi-Fi, Developer Options, USB Debugging, Wireless Debugging, and ADB pairing credentials, plus reactive collection of `MegingiardAccessibilityService.isAutoSetupActive`.
-  - `rememberRootBridgeActions(setupStatus)`: Shared action handlers for 1-tap root-bridge Accessibility enabling (`settings put secure enabled_accessibility_services`) and `PrivdManager.connect()`.
+  - `rememberSystemSetupStatus(activeStepId)`: Reactive collection of `AppStateManager.isAccessibilityActive` and `MegingiardAccessibilityService.isAutoSetupActive`, combined with a 1-second polling loop (on the `PRIVILEGED` step) and `ON_RESUME` `LifecycleEventObserver` checking Wi-Fi, Developer Options, USB Debugging, Wireless Debugging, and ADB pairing credentials.
+  - `rememberRootBridgeActions()`: Shared action handlers for 1-tap root-bridge Accessibility enabling (`settings put secure enabled_accessibility_services`) and `PrivdManager.connect()`.
   - `SystemSetupStepContent` & `OnboardingWizardFooter`: Shared step content and navigation footer composables.
 - **Unsupported Language Fallback**: When `AutoSetupLanguageConfig.fromLocaleOrNull(systemLocale)` returns `null` (unsupported system language) and the Tier-1 root bridge is unavailable, `PrivilegedStepContent` replaces the automated checklist card and "Auto Setup" button with a **Manual Setup Steps Card** formatted in `colors.surfaceVariant` with rounded corners and border.
 

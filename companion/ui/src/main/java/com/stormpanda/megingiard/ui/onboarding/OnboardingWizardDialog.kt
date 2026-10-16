@@ -176,7 +176,6 @@ internal fun launchSystemAccessibilitySettings(context: Context) {
 internal class RootBridgeActionsState(
     private val context: Context,
     private val coroutineScope: CoroutineScope,
-    private val setupStatus: SystemSetupStatus,
 ) {
     var isActivatingAccessibility by mutableStateOf(false)
         private set
@@ -190,7 +189,7 @@ internal class RootBridgeActionsState(
             val success = PServiceBridge.enableAccessibility(context)
             val active = MegingiardAccessibilityService.isEnabled(context)
             withContext(Dispatchers.Main) {
-                setupStatus.isAccessibilityActive = active || success
+                AppStateManager.setAccessibilityActive(active || success)
                 isActivatingAccessibility = false
             }
         }
@@ -209,11 +208,11 @@ internal class RootBridgeActionsState(
 }
 
 @Composable
-internal fun rememberRootBridgeActions(setupStatus: SystemSetupStatus): RootBridgeActionsState {
+internal fun rememberRootBridgeActions(): RootBridgeActionsState {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    return remember(context, coroutineScope, setupStatus) {
-        RootBridgeActionsState(context, coroutineScope, setupStatus)
+    return remember(context, coroutineScope) {
+        RootBridgeActionsState(context, coroutineScope)
     }
 }
 
@@ -274,11 +273,6 @@ internal class SystemSetupStatus(
     var isAutoSetupActive by mutableStateOf(initialAutoSetupActive)
 
     fun refresh(context: Context) {
-        val active = MegingiardAccessibilityService.isEnabled(context)
-        if (active != isAccessibilityActive) {
-            isAccessibilityActive = active
-            AppLog.i(TAG, "Accessibility service status change detected: active=$active")
-        }
         isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
         isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
         isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
@@ -291,11 +285,12 @@ internal class SystemSetupStatus(
 internal fun rememberSystemSetupStatus(currentStepId: OnboardingStepId): SystemSetupStatus {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val isAccessibilityActive by AppStateManager.isAccessibilityActive.collectAsStateWithLifecycle()
     val isAutoSetupActive by MegingiardAccessibilityService.isAutoSetupActive.collectAsStateWithLifecycle()
     val status =
         remember(context) {
             SystemSetupStatus(
-                initialAccessibilityActive = MegingiardAccessibilityService.isEnabled(context),
+                initialAccessibilityActive = isAccessibilityActive,
                 initialWifiActive = MegingiardAccessibilityService.isWifiActive(context),
                 initialDevModeActive = MegingiardAccessibilityService.isDevModeActive(context),
                 initialUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context),
@@ -304,6 +299,7 @@ internal fun rememberSystemSetupStatus(currentStepId: OnboardingStepId): SystemS
                 initialAutoSetupActive = isAutoSetupActive,
             )
         }
+    status.isAccessibilityActive = isAccessibilityActive
     status.isAutoSetupActive = isAutoSetupActive
 
     DisposableEffect(context, lifecycleOwner) {
@@ -320,7 +316,7 @@ internal fun rememberSystemSetupStatus(currentStepId: OnboardingStepId): SystemS
     }
 
     LaunchedEffect(currentStepId) {
-        if (currentStepId == OnboardingStepId.ACCESSIBILITY || currentStepId == OnboardingStepId.PRIVILEGED) {
+        if (currentStepId == OnboardingStepId.PRIVILEGED) {
             AppLog.d(TAG, "Starting 1s continuous polling loop for prerequisite status ($currentStepId)")
             while (isActive) {
                 status.refresh(context)
@@ -352,7 +348,7 @@ fun OnboardingWizardDialog(
 
     val isQuickMenuStep = currentStepState.id == OnboardingStepId.QUICK_MENU
     val setupStatus = rememberSystemSetupStatus(currentStepState.id)
-    val rootBridgeActions = rememberRootBridgeActions(setupStatus)
+    val rootBridgeActions = rememberRootBridgeActions()
     val privdState by PrivdManager.state.collectAsStateWithLifecycle()
 
     val isRootBridgeAvailable = remember { PrivdManager.isRootBridgeAvailable }
