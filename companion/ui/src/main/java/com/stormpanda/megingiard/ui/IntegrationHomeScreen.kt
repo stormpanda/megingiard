@@ -713,7 +713,7 @@ private fun HeroCompanionCard(
                                         )
                                     AppStateManager.openPrimaryModal(
                                         PrimaryModalConfig(
-                                            type = PrimaryModalType.PROFILE_SETTINGS,
+                                            type = PrimaryModalType.MACROPAD_EDITOR,
                                             payload =
                                                 PrimaryModalPayload.ProfileSettings(
                                                     isNewProfile = true,

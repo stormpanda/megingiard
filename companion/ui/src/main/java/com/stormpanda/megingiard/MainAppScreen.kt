@@ -128,7 +128,6 @@ fun MainAppScreen() {
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsStateWithLifecycle()
     val isEditorActive by AppStateManager.isEditorActive.collectAsStateWithLifecycle()
-    val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsStateWithLifecycle()
 
     val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
@@ -353,7 +352,6 @@ fun MainAppScreen() {
                     showIntegrationHome = showIntegrationHome,
                     isEditorActive = isEditorActive,
                     isViewportEditActive = isViewportEditActive,
-                    isBackgroundSettingsActive = isBackgroundSettingsActive,
                 )
             ) {
                 IntegrationHomeScreen()
@@ -799,8 +797,7 @@ internal fun shouldShowCompanionHub(
     showIntegrationHome: Boolean,
     isEditorActive: Boolean,
     isViewportEditActive: Boolean,
-    isBackgroundSettingsActive: Boolean,
-): Boolean = showIntegrationHome && !isEditorActive && !isViewportEditActive && !isBackgroundSettingsActive
+): Boolean = showIntegrationHome && !isEditorActive && !isViewportEditActive
 
 private fun syncAccessibilityState(context: Context) {
     AppStateManager.setAccessibilityActive(MegingiardAccessibilityService.isEnabled(context))

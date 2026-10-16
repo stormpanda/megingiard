@@ -411,9 +411,6 @@ object AppStateManager {
     private val _suspendedPrimaryModal = MutableStateFlow<PrimaryModalConfig?>(null)
     val suspendedPrimaryModal: StateFlow<PrimaryModalConfig?> = _suspendedPrimaryModal.asStateFlow()
 
-    val hasSuspendedPrimaryModal: StateFlow<Boolean> =
-        _suspendedPrimaryModal.map { it != null }.stateIn(scope, SharingStarted.Eagerly, false)
-
     private val _isQuickMenuOpen = MutableStateFlow(false)
     val isQuickMenuOpen: StateFlow<Boolean> = _isQuickMenuOpen.asStateFlow()
 
@@ -430,17 +427,7 @@ object AppStateManager {
     val isGlobalSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.GLOBAL_SETTINGS)
     val isKeyboardSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.KEYBOARD_SETTINGS)
     val isTouchpadSettingsOpen: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.TOUCHPAD_SETTINGS)
-    val isBackgroundSettingsActive: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.BACKGROUND_SETTINGS)
-
-    val isEditorActive: StateFlow<Boolean> =
-        _activePrimaryModal
-            .map {
-                it?.type == PrimaryModalType.MACROPAD_EDITOR ||
-                    it?.type == PrimaryModalType.MACROPAD_INSPECTOR ||
-                    it?.type == PrimaryModalType.LAYOUT_SETTINGS ||
-                    it?.type == PrimaryModalType.PROFILE_SETTINGS ||
-                    it?.type == PrimaryModalType.MACRO_TIMELINE_EDITOR
-            }.stateIn(scope, SharingStarted.Eagerly, false)
+    val isEditorActive: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.MACROPAD_EDITOR)
 
     val isViewportEditActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.VIEWPORT_EDIT)
     val isFullscreenKeyboardActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.KEYBOARD)
@@ -594,13 +581,12 @@ object AppStateManager {
         combine(
             PrivdManager.state,
             MacroPadSettings.privdPromptDismissed,
-            isBackgroundSettingsActive,
             _isAccessibilityActive,
             privdPromptLatched,
-        ) { state, dismissed, bgSettingsActive, accessibilityActive, latched ->
+        ) { state, dismissed, accessibilityActive, latched ->
             when {
                 !accessibilityActive -> true
-                dismissed || bgSettingsActive -> false
+                dismissed -> false
                 state == PrivdState.FAILED -> true
                 else -> latched
             }
@@ -833,16 +819,6 @@ object AppStateManager {
         }
     }
 
-    fun setBackgroundSettingsActive(active: Boolean) {
-        AppLog.i(TAG, "setBackgroundSettingsActive($active)")
-        if (active) {
-            setPrivdPromptDismissed(true)
-            openPrimaryModal(PrimaryModalConfig(PrimaryModalType.BACKGROUND_SETTINGS))
-        } else if (_activePrimaryModal.value?.type == PrimaryModalType.BACKGROUND_SETTINGS) {
-            closePrimaryModal()
-        }
-    }
-
     fun setEditorActive(active: Boolean) {
         AppLog.i(TAG, "setEditorActive($active)")
         if (active) {
@@ -930,8 +906,7 @@ object AppStateManager {
         scope.launch {
             PrivdManager.state.collect { state ->
                 if (state == PrivdState.FAILED &&
-                    !MacroPadSettings.privdPromptDismissed.value &&
-                    !isBackgroundSettingsActive.value
+                    !MacroPadSettings.privdPromptDismissed.value
                 ) {
                     privdPromptLatched.value = true
                 } else if (state == PrivdState.RUNNING &&

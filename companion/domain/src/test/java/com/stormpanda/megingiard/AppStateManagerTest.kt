@@ -127,7 +127,7 @@ class AppStateManagerTest {
     }
 
     @Test
-    fun `changing active layout preserves layout editor and background settings modes`() {
+    fun `changing active layout preserves layout editor mode`() {
         val l1Id = UUID.randomUUID().toString()
         val l2Id = UUID.randomUUID().toString()
         val p1Id = UUID.randomUUID().toString()
@@ -139,12 +139,6 @@ class AppStateManagerTest {
         MacroPadState.setActiveLayoutId(l2Id)
         assertTrue(AppStateManager.isEditorActive.value)
         AppStateManager.setEditorActive(false)
-
-        AppStateManager.setBackgroundSettingsActive(true)
-        assertTrue(AppStateManager.isBackgroundSettingsActive.value)
-        MacroPadState.setActiveLayoutId(l1Id)
-        assertTrue(AppStateManager.isBackgroundSettingsActive.value)
-        AppStateManager.setBackgroundSettingsActive(false)
     }
 
     @Test
@@ -152,7 +146,6 @@ class AppStateManagerTest {
         runTest {
             // Reset states
             AppStateManager.setPrivdPromptDismissed(false)
-            AppStateManager.setBackgroundSettingsActive(false)
             PrivdManager.setStateForTesting(PrivdState.OFF)
 
             // Yield to allow combine collection to initialize
@@ -188,12 +181,6 @@ class AppStateManagerTest {
             PrivdManager.setStateForTesting(PrivdState.FAILED)
             testScheduler.advanceUntilIdle()
             assertTrue(AppStateManager.isPrivdPromptActive.value)
-
-            // 7. Open settings overlay -> prompt should hide and mark dismissed = true
-            AppStateManager.setBackgroundSettingsActive(true)
-            testScheduler.advanceUntilIdle()
-            assertFalse(AppStateManager.isPrivdPromptActive.value)
-            assertTrue(AppStateManager.isPrivdPromptDismissed.value)
         }
 
     @Test
@@ -308,7 +295,6 @@ class AppStateManagerTest {
     fun `resetPrivdPromptState clears prompt showing and dismissed flags`() =
         runTest {
             AppStateManager.setPrivdPromptDismissed(false)
-            AppStateManager.setBackgroundSettingsActive(false)
             PrivdManager.setStateForTesting(PrivdState.FAILED)
             testScheduler.advanceUntilIdle()
             assertTrue(AppStateManager.isPrivdPromptActive.value)
@@ -338,7 +324,6 @@ class AppStateManagerTest {
         runTest {
             // Reset states
             AppStateManager.resetPrivdPromptState()
-            AppStateManager.setBackgroundSettingsActive(false)
             AppStateManager.setAccessibilityActive(true)
             PrivdManager.setStateForTesting(PrivdState.RUNNING)
 
@@ -362,7 +347,6 @@ class AppStateManagerTest {
         runTest {
             // Setup initial running state with accessibility active
             AppStateManager.resetPrivdPromptState()
-            AppStateManager.setBackgroundSettingsActive(false)
             AppStateManager.setAccessibilityActive(true)
             PrivdManager.setStateForTesting(PrivdState.RUNNING)
 
@@ -770,7 +754,6 @@ class AppStateManagerTest {
             AppStateManager.setFullscreenKeyboardActive(true)
             AppStateManager.setFullscreenMouseActive(true)
             AppStateManager.setViewportEditActive(true)
-            AppStateManager.setBackgroundSettingsActive(true)
             AppStateManager.setGlobalSettingsOpen(true)
             AppStateManager.setKeyboardSettingsOpen(true)
             AppStateManager.setTouchpadSettingsOpen(true)
@@ -782,7 +765,6 @@ class AppStateManagerTest {
             assertFalse(AppStateManager.isFullscreenKeyboardActive.value)
             assertFalse(AppStateManager.isFullscreenMouseActive.value)
             assertFalse(AppStateManager.isViewportEditActive.value)
-            assertFalse(AppStateManager.isBackgroundSettingsActive.value)
             assertFalse(AppStateManager.isGlobalSettingsOpen.value)
             assertFalse(AppStateManager.isKeyboardSettingsOpen.value)
             assertFalse(AppStateManager.isTouchpadSettingsOpen.value)
@@ -962,8 +944,8 @@ class AppStateManagerTest {
     @Test
     fun `closeActiveModal resets activePrimaryModal and companion surface`() =
         runTest {
-            AppStateManager.openPrimaryModal(PrimaryModalType.MACROPAD_INSPECTOR)
-            assertEquals(PrimaryModalType.MACROPAD_INSPECTOR, AppStateManager.activePrimaryModal.value?.type)
+            AppStateManager.openPrimaryModal(PrimaryModalType.MACROPAD_EDITOR)
+            assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.activePrimaryModal.value?.type)
             assertTrue(AppStateManager.isEditorActive.value)
 
             AppStateManager.closeActiveModal()
@@ -1087,7 +1069,7 @@ class AppStateManagerTest {
         runTest {
             AppStateManager.closeActiveModal()
             AppStateManager.clearSuspended()
-            assertFalse(AppStateManager.hasSuspendedPrimaryModal.value)
+            assertEquals(null, AppStateManager.suspendedPrimaryModal.value)
 
             val modalConfig =
                 PrimaryModalConfig(
@@ -1105,12 +1087,10 @@ class AppStateManagerTest {
             // Suspend and dismiss
             AppStateManager.suspendCurrentAndDismiss()
             assertEquals(null, AppStateManager.activePrimaryModal.value)
-            assertTrue(AppStateManager.hasSuspendedPrimaryModal.value)
             assertEquals(modalConfig, AppStateManager.suspendedPrimaryModal.value)
 
             // Resume
             AppStateManager.resumeSuspended()
-            assertFalse(AppStateManager.hasSuspendedPrimaryModal.value)
             assertEquals(null, AppStateManager.suspendedPrimaryModal.value)
             assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.activePrimaryModal.value?.type)
             val restoredPayload = AppStateManager.activePrimaryModal.value?.payload as? PrimaryModalPayload.MacroPad
@@ -1128,10 +1108,9 @@ class AppStateManagerTest {
 
             val modalConfig = PrimaryModalConfig(type = PrimaryModalType.KEYBOARD_SETTINGS)
             AppStateManager.suspendCurrentAndDismiss(modalConfig)
-            assertTrue(AppStateManager.hasSuspendedPrimaryModal.value)
+            assertEquals(modalConfig, AppStateManager.suspendedPrimaryModal.value)
 
             AppStateManager.clearSuspended()
-            assertFalse(AppStateManager.hasSuspendedPrimaryModal.value)
             assertEquals(null, AppStateManager.suspendedPrimaryModal.value)
         }
 
@@ -1158,7 +1137,6 @@ class AppStateManagerTest {
 
                 val nextItem = awaitItem()
                 assertEquals(PrimaryModalType.ANCHOR_SELECTOR, nextItem?.type)
-                assertTrue(AppStateManager.hasSuspendedPrimaryModal.value)
                 assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.suspendedPrimaryModal.value?.type)
 
                 AppStateManager.closeActiveModal()

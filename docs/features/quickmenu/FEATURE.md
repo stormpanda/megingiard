@@ -38,7 +38,7 @@ the universal "go back" mechanism throughout the app.
   - **Haptic Feedback:** A light haptic tick is triggered when the drag distance crosses the threshold (`QuickMenuBarLayout.SWIPE_THRESHOLD = 50 dp`).
   - **Release-Based Trigger:** The action is triggered ONLY when the user lifts their finger (release) if the threshold was crossed.
   - **Cancellation:** If the user drags their finger back below the threshold and releases, the gesture is cancelled, and the icon slides back out of the screen.
-  - **Menu Active Exclusions:** The swipe gesture detectors MUST be disabled when any settings menu or editor is open (`isEditorActive`, `isGlobalSettingsOpen`, `isKeyboardSettingsOpen`, `isTouchpadSettingsOpen`, `isBackgroundSettingsActive`, or `isQuickMenuOpen`). They are only active in use mode (with or without active screen mirroring).
+  - **Menu Active Exclusions:** The swipe gesture detectors MUST be disabled when any settings menu or editor is open (`isEditorActive`, `isGlobalSettingsOpen`, `isKeyboardSettingsOpen`, `isTouchpadSettingsOpen`, or `isQuickMenuOpen`). They are only active in use mode (with or without active screen mirroring).
 - Swipe routing dispatches on release as follows:
   - **Any modal is active** (e.g. fullscreen keyboard/mouse overlay) → closes the active modal (`closeActiveModal()`).
   - **Quick Menu is open** → closes the Quick Menu (`closeQuickMenu()`).
@@ -162,7 +162,6 @@ precedence to the Quick Menu Bar navigation.
 | `AppStateManager.isQuickMenuOpen` | `AppStateManager` | `handleEdgeSwipe()` / scrim tap |
 | `AppStateManager.shutOffRequested` | `AppStateManager` | Shut Off confirm button in Quick Menu |
 | `AppStateManager.isEditorActive` | `AppStateManager` | "Edit Layout" button |
-| `AppStateManager.isBackgroundSettingsActive` | `AppStateManager` | Cogwheel settings button in layout editor toolbar |
 | `AppStateManager.isViewportEditActive` | `AppStateManager` | "Screen Mirroring" action button in Quick Menu |
 | `AppStateManager.activeSwipe` | `AppStateManager` | Gesture drag progress updates and release/cancel resets |
 | `ScreenCaptureManager.isFrozen` | `ScreenCaptureManager` | "Freeze/Unfreeze" button |
@@ -174,7 +173,7 @@ precedence to the Quick Menu Bar navigation.
 
 `isAnyModalActive` in `AppStateManager` is a derived `StateFlow` that is `true` whenever any of the
 interactive overlays (`activePrimaryModal != null`, `isFullscreenKeyboardActive`, `isFullscreenMouseActive`, `isViewportEditActive`,
-`isBackgroundSettingsActive`, `isGlobalSettingsOpen`, `isKeyboardSettingsOpen`, `isTouchpadSettingsOpen`, or `MacroPadState.isPeekActive`) are active. The edge-swipe
+`isGlobalSettingsOpen`, `isKeyboardSettingsOpen`, `isTouchpadSettingsOpen`, or `MacroPadState.isPeekActive`) are active. The edge-swipe
 handler reads `isAnyModalActive` to decide whether to close the active modal instead of toggling the Quick Menu. `closePrimaryModal()` clears `_activePrimaryModal` while leaving `_companionSurfaceMode` intact, ensuring the secondary display's surface and edge-swipe gesture interactions remain consistent upon dismissing top-screen dialogs.
 
 ### Primary Screen Overlay Gamepad Navigation & Gamepad-First UI Design
