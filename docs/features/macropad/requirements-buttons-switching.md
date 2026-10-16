@@ -109,7 +109,6 @@
 - **TrackpointMove:** Vibration fires continuously while the finger moves, with a **speed-adaptive rate**: the faster the trackpoint moves, the shorter the interval between pulses. The engine passes `sqrt(dx² + dy²)` as a magnitude to the callback; `PadSurface` computes `interval = clamp(2000 / magnitude, 50 ms, 333 ms)`. Slow movement (magnitude ≈ 6) → ~333 ms interval; fast movement (magnitude ≥ 40) → 50 ms minimum.
 - **ScrollWheel:** One tick fires per discrete scroll batch (no speed-adaptive throttle). Each batch represents a fixed number of scroll units dispatched in one gesture step.
 - **Discrete button press:** magnitude is always `0f`; the interval guard evaluates to 0 ms so the pulse fires immediately regardless of prior activity.
-- **Disabled-device buttons:** No haptic is triggered — the engine returns early before the callback is invoked.
 - **Implementation:** `MacroPadHitTestEngine` receives an `onHapticFeedback: ((String, HapticStrength, Int, Int, Float) -> Unit)?` constructor parameter (args: buttonId, strength, customDurationMs, customAmplitude, magnitude). The `PadSurface` composable in `MacroPadScreen.kt` resolves a `Vibrator` from the system service and passes a per-button rate-limiting closure that computes the dynamic interval. `triggerHaptic()` in `HapticFeedback.kt` (`:companion:ui`) performs the `VibrationEffect.createOneShot()` call, clamping custom params to safe ranges. The `:companion:domain` module remains Android-UI-free; only `HapticStrength` (an enum in `:shared:core`) crosses the boundary.
 
 ### FR-P15: App-Aware Automatic Profile Switching
@@ -131,9 +130,8 @@
 
 ### FR-P16: Entity Duplication and Copying
 
-- **Name Collision Formatting**: All copy and duplication operations MUST avoid adding a `(Copy)` suffix. Instead, standard conflict resolution numbering (e.g. `Combo (2)` or `Lay1 (2)`) is appended on name collision. If no collision occurs, the original name is kept.
-- **Contextual Dropdowns ("...")**: Individual action buttons in management bars and lists are merged into unified contextual "..." dropdown menus to keep the editor interface clean:
-  - **Profiles**: Edit, Duplicate, and Reorder options are accessed via a "..." dropdown in the profiles management row. Duplicating a profile deep-copies all its layouts and macros, and maps macro IDs within layout buttons.
-  - **Layouts**: Edit, Duplicate, Copy to Profile, and Reorder options are accessed via a "..." dropdown in the layouts management bar. Duplicating a layout clones all its buttons with new UUIDs within the active profile.
-  - **Button List**: Each item in the button list replaces the individual Delete button with a "..." dropdown providing Edit, Duplicate, Copy to Layout, and Delete options. Drag-reorder handles remain separate.
-  - **Dialogs & Overlays**: Property configuration dialogs (e.g., `ButtonEditDialog`) and inline configuration overlays (e.g., `InlineLayoutSettingsOverlay`) remain focused strictly on metadata settings editing, without copy or duplicate options.
+- **Name Collision Formatting**: All copy and duplication operations MUST avoid adding a `(Copy)` suffix via `nextUniqueName(baseName)` in `MacroPadLayout.kt`. Instead, standard conflict resolution numbering (e.g. `Combo (2)` or `Lay1 (2)`) is appended on name collision. If no collision occurs, the original name is kept.
+- **In-Deck Management Cards & Copy Sub-Pages**:
+  - **Profiles**: Edit, Duplicate, Reorder, Unlink, and Delete options are presented as dedicated `GamepadActionCard` and `GamepadTwoStepConfirmCard` rows in the **Profiles Deck** (`ProfilesDeck`). Duplicating a profile deep-copies all its layouts and macros, and maps macro IDs within layout buttons.
+  - **Layouts**: Edit, Duplicate, Copy to Profile (`CopyLayoutSubPageContent`), Reorder (`ReorderLayouts`), and Delete options are presented in the **Layouts Deck** (`LayoutsDeck`). Duplicating a layout clones all its buttons and cutouts with new UUIDs and duplicates background/mask media files under the new layout ID.
+  - **Buttons**: Edit, Duplicate, Copy to Layout (`CopyButtonSubPageContent`), and Delete options are accessible inside `EditButtonSubPageContent` (`PadButtonEditDialog.kt`), while reordering is accessible via the **Reorder Buttons** sub-page (`ReorderButtons`) in the **Buttons Deck**.

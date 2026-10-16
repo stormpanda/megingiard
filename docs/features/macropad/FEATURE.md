@@ -28,7 +28,7 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 
 - The MacroPad MUST support **multiple named profiles** that can be created, renamed, and deleted at any time in the editor. Deletion of the active profile is accessible from both the top-level **Profiles Deck** and the **Edit Profile** sub-menu via a two-step confirmation card (`GamepadTwoStepConfirmCard`). Attempting to delete the last remaining profile is rejected and displays a toast informing the user that the last profile cannot be deleted (`macropad_profile_cannot_delete_last_toast`).
 - Exactly **one profile is active** at a time; the active profile is displayed in use mode. Changing the active profile takes effect immediately.
-  Each profile stores its own layout list, macro list, and device flags (see FR-P4, FR-P7, FR-P8).
+  Each profile stores its own layout list and macro list (see FR-P7, FR-P8).
 - Profiles MUST persist across app restarts via **DataStore** (serialised as JSON using `kotlinx.serialization`).
 - On a clean install or whenever no profiles exist in the DataStore yet, a single default profile named `"Default"` with a default layout named `"Default"` MUST be created automatically on bootup and persisted.
 
@@ -37,14 +37,14 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 - Each profile can contain an **arbitrary number of buttons** placed anywhere on the pad canvas.
 - Button positions are stored as **normalised coordinates** [0.0, 1.0] relative to the pad dimensions, so the layout scales correctly at any pad size.
 - Each button has a user-defined **label**, a **shape** (circle, square, or icon only), a **size weight** (1.0 = default unit size), and an **action** (see FR-P3).
-- **Adding Buttons (`ChooseButtonType`)**: When the user taps "Add Button" from the Canvas or Buttons decks, a dedicated **Button Type** sub-menu opens first (`MacroPadSubPage.ChooseButtonType`) where they select the functional type (Keyboard, Gamepad, Mouse, Macro, Layout, Mirror, Other).
+- **Adding Buttons (`ChooseButtonType`)**: When the user taps "Add Button" from the Quick Actions or Buttons decks, a dedicated **Button Type** sub-menu opens first (`MacroPadSubPage.ChooseButtonType`) where they select the functional type (Keyboard, Gamepad, Mouse, Macro, Layout, Mirror, Other).
   - Upon selecting a type, the button editor (`EditButtonSubPageContent`) opens with the button type pre-selected, skipping redundant group pickers inside the button config screen.
   - When configuring the button action, only sub-category choices (if multiple exist for that type, e.g. Mouse Button vs Scroll Wheel vs Trackpoint) and detailed input parameters are displayed.
 - Buttons MUST be repositioned by **drag** inside the editor canvas.
 - The editor provides a **grid snap overlay** that can be toggled on and off at any time during layout editing. Two grid modes are available:
   - **Rectangular** — vertical and horizontal lines spaced at 30 dp (half the 60 dp button unit), forming a uniform grid. Crossing points are the snap targets.
   - **Radial** — concentric circles (centred on the canvas) spaced at 30 dp, with **evenly distributed snap points** along each circle. The number of snap points per circle scales with its circumference (roughly one point per 60 dp of arc length) and is always a **multiple of 4** (minimum 4). Circles alternate phase: odd-indexed circles (1st, 3rd, …) have 4 anchor points at the **diagonals** (45°, 135°, 225°, 315°); even-indexed circles have anchors at the **cardinal** directions (0°, 90°, 180°, 270°). Additional equidistant points fill the gaps between the 4 anchors. A dedicated snap point sits at the exact centre of the canvas. No horizontal or vertical lines are shown.
-- The grid mode cycles **Off → Rectangular → Radial → Off** via a single "Change Grid" toggle button located in the second row of the editor toolbar, above the canvas preview.
+- The grid mode is selected (**Off / Square / Radial**) via the **Snap Grid** choice card (`GamepadChoiceCard`) in the **Layouts** deck and the **Position & Size Buttons** (`MacroPadSubPage.EditButtonPositions`) sub-page.
 - When a grid is active, dragged buttons **magnetically snap** to the nearest grid intersection point. When the grid is off, buttons position freely.
 - Grid mode is **local editor state** — it is not persisted and resets to Off each time the editor opens.
 - **Smart Alignment Guides & Snapping (PowerPoint-style)**:
@@ -68,7 +68,7 @@ Each button supports one of the following actions:
 | `BackgroundPeek` | App-level peek toggle | _(none)_ |
 
 - `KeyboardKey` actions use `KeyInjector` from the keyboard package, which routes directly to `PrivdClient`. Each `KeyboardKey` action MAY carry up to **2 optional modifier keycodes** (`modifiers: List<Int>`, default empty). On button-down, modifiers are pressed in order before the base key; on button-up, the base key is released first, then modifiers in reverse order. Available modifiers: Ctrl L/R, Shift L/R, Alt, AltGr, Meta/Win, Fn (Linux keycode 464). `KeyInjector` transmits keycodes in the range **1–464** (including Fn) to `megingiard_privd`.
-- `GamepadButton` actions use `GamepadInjector`, which delegates directly to `PrivdGamepadInjector` to merge events into the connected physical controller's evdev node (`g_gamepad_fd`) via `megingiard_privd`. Gamepad buttons require Megingiard System Service. Each `GamepadButton` action MAY carry up to **3 optional extra button codes** (`extraBtnCodes: List<Int>`, default empty). On button-down, the primary button is pressed first, then extras in order; on button-up, extras are released in reverse order, then the primary button.
+- `GamepadButton` actions use `GamepadInjector`, which merges events directly into the connected physical controller's evdev node (`g_gamepad_fd`) via `megingiard_privd` (`PrivdClient`). Gamepad buttons require Megingiard System Service. Each `GamepadButton` action MAY carry up to **3 optional extra button codes** (`extraBtnCodes: List<Int>`, default empty). On button-down, the primary button is pressed first, then extras in order; on button-up, extras are released in reverse order, then the primary button.
 - **Visual Action Pickers (`VisualKeyboardPicker`, `VisualGamepadPicker`, `VisualMousePicker`, `ActionGridSubPages`)**:
   - In the button editor, selecting the primary action card opens a dedicated visual sub-page picker:
     - **Visual Keyboard Picker**: Displays a full, interactive virtual keyboard layout (F-keys, number row, QWERTY rows, bottom control row, navigation cluster) with 2D D-pad spatial navigation and (A) key selection.

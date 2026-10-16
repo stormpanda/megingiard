@@ -22,23 +22,25 @@ MacroPadState (object singleton)
       └── persisted via SettingsManager (DataStore + kotlinx.serialization JSON)
 
 MacroPadEditor (Composable, built on GamepadTwoPaneScaffold)
-      ├── Profiles Deck (create/rename/duplicate/delete/reorder)
-      ├── Layouts Deck (create/appearance/background/touchpad/duplicate/copy/reorder/delete)
-      ├── Canvas Deck (drag lock, snap grid mode, add button, WYSIWYG preview)
-      ├── Buttons Deck (add button, reorderable button list with edit/copy/delete)
-      └── Macros Deck (macro library & timeline launcher)
+      ├── Quick Actions Deck (shortcuts to New Button, New Macro, New Layout, New Profile, Position & Size Buttons, Edit Cutouts)
+      ├── Profiles Deck (select/create/rename/duplicate/reorder/unlink/delete)
+      ├── Layouts Deck (select/create/edit/background touchpad/snap grid/duplicate/copy/reorder/delete)
+      ├── Automation Deck (auto layout switching toggle, anchor calibration overview, presence badges)
+      ├── Mirror Deck (cutouts list, add/edit/position cutouts, background dimming, edge blending, touch projection)
+      ├── Background Deck (LayerImageSettingsEditor for background image, scale mode, crop, dimming)
+      ├── Mask Deck (LayerImageSettingsEditor for mask image, scale mode, crop, dimming)
+      ├── Buttons Deck (add button, position & size buttons, reorderable button list with edit/duplicate/copy/delete)
+      └── Macros Deck (create macro via ChooseMacroMode, reorder macros, macro list)
 
-MacroTimelineEditor (Gamepad-first in-deck sub-page, opened from Macros Deck)
-  ├── Save & Exit Action Row (dirty state tracking, pulse animation, save/discard)
+MacroTimelineSubPageContent (Gamepad-first in-deck sub-page, opened from Macros Deck or ChooseMacroMode)
+  ├── Save & Exit Action Row (dirty state tracking against MacroPadNavState.macroDraft, pulse animation, save/discard)
   ├── General Section: Name (GamepadTextFieldCard) and Test Run (GamepadActionCard)
-  ├── Recording & Quick Actions Section: Record Gamepad, Record Touch, Add Step, Reorder Steps, Undo, Redo
-  ├── Macro Steps Section: List of GamepadActionCard items (type label, action description, timing, edit shortcut)
+  ├── Recording & Actions Section: Record Controller Input, Record Screen Touch, and Manually Edit Steps (ManualMacroStepsSubPageContent)
+  │     └── ManualMacroStepsSubPageContent: Add Step (MacroStepEditSubPageContent), Reorder Steps (ReorderMacroStepsSubPageContent), and chronological step cards
   ├── Playback & Looping Section: Loop Toggle, Loop Pause Slider, Randomize Timing Toggle, Timing Offset Slider
   ├── Delete Macro Section: Two-step confirmation card
-  ├── Record Touch → TouchRecordingManager → PrimaryTouchRecordingOverlay (Display 0) / TouchRecordingSheet (Display 4)
-  └── Record Gamepad → GamepadRecordingOverlay / PhysicalGamepadRecordingSheet
-     ├── live passthrough via GamepadInjector (Privd physical evdev merge)
-     └── timed step compilation via GamepadRecordingManager / PhysicalGamepadRecordingManager
+  ├── Record Touch → TouchRecordingManager → TouchScreenObserver (Display 0) + TouchRecordingSheet (Display 4)
+  └── Record Controller Input → PhysicalGamepadRecordingManager (SUB GAMEPAD) + PhysicalGamepadRecordingSheet (Display 4)
 ```
 
 #### Background Display Rendering Pipeline
@@ -88,16 +90,17 @@ data class Macro(
 )
 ```
 
-**`MacroListEditor` rendering model:**
+**Macro sub-page navigation model:**
 
 ```
-MacroListEditor
-  └── MacroListView (flat LazyColumn)
-        ├── MacroRow... (drag-reorder via ReorderableItem)
-        └── [New Macro] chip at bottom
+MacrosDeck
+  ├── ChooseMacroModeSubPageContent (Record Controller Input, Record Screen Touch, Type Text Sequence, Build Step-by-Step)
+  │     └── TextSequenceGeneratorSubPageContent (generates KeyboardKeyTap steps from text)
+  ├── ReorderMacrosSubPageContent (reorder macros within profile)
+  └── MacroTimelineSubPageContent (edit macro settings, test run, record, or open step list)
+        └── ManualMacroStepsSubPageContent (add step, reorder steps, chronological step list)
+              └── MacroStepEditSubPageContent (create/edit individual MacroStep with ShiftMode)
 ```
-
-Context menu actions per macro row: Edit, Duplicate, Delete.
 
 **`MacroPicker` in `PadActionPicker`** displays a `GamepadInfoBox` guiding users to create macros in the Macros menu or via Quick Actions, and a `GamepadActionCard` opening `MacroPadSubPage.ChooseMacroAction` to pick from the profile's macro library in a 2-column grid.
 
@@ -110,7 +113,6 @@ PadProfile
         PadLayout
         ├── id: String          (UUID)
         ├── name: String
-        ├── enabled: Boolean    (deprecated / unused)
         ├── buttons: List<PadButton>
         ├── buttonTextColor: ColorOption
         ├── buttonBorderColor: ColorOption
@@ -144,31 +146,33 @@ PadProfile
         └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG | CUSTOM, default OFF)
 ```
 
-> **Schema Migration:** `PadButton` uses `PadButtonSerializer` to automatically translate legacy serialized configurations containing `buttonSize` (`SIZE_1X1`, `SIZE_2X1`, `SIZE_1X2`, `SIZE_2X2`) or `TrackpointMove.size` into exact `widthDp` and `heightDp` values upon decode. When serialized or exported, only modern stepless `widthDp` and `heightDp` fields are written.
+> **Schema Migration:** `PadButton` uses `PadButtonSerializer` to automatically translate legacy serialized configurations containing `buttonSize` (`SIZE_1X1`, `SIZE_2X1`, `SIZE_1X2`, `SIZE_2X2`) or `TrackpointMove.size` into exact `widthDp` and `heightDp` values upon decode, and `PadLayout.normalizedOnLoad()` normalises legacy background/mask and cutout fields on load. When serialized or exported, only modern stepless `widthDp` and `heightDp` fields are written.
 
 ### MacroPadNavState (`:companion:ui`)
 
-`MacroPadNavState` is an `internal object` singleton in `companion/ui/…/macropad/` that centralises navigation hierarchy and subpage stack state across composable lifecycles and modal suspensions.
+`MacroPadNavState` is an `internal object` singleton in `companion/ui/…/macropad/` that centralises navigation hierarchy, subpage stack state, and single-source-of-truth in-flight button/macro drafts across composable lifecycles and modal suspensions.
 
 | Property / Method | Description |
 | --- | --- |
-| `selectedSection: StateFlow<EditorSection>` | Active primary category deck (`QUICK_ACTIONS`, `PROFILES`, `LAYOUTS`, `AUTOMATION`, `MIRROR`, `BACKGROUND`, `BUTTONS`, `MACROS`). |
+| `selectedSection: StateFlow<EditorSection>` | Active primary category deck (`QUICK_ACTIONS`, `PROFILES`, `LAYOUTS`, `AUTOMATION`, `MIRROR`, `BACKGROUND`, `MASK`, `BUTTONS`, `MACROS`). |
 | `subPageStack: StateFlow<List<MacroPadSubPage>>` | Active stack of nested subpages, preserving deep subpages (e.g. `MacroTimeline`, `EditButtonPositions`, `EditLayout`) across suspension and remounting. |
-| `selectSection(section)` | Selects a top-level category and resets the subpage stack to empty. |
-| `push(subPage)` / `pop()` | Appends or drops the top subpage in the stack. |
-| `reset()` | Restores default state (`QUICK_ACTIONS`, empty stack) upon explicit editor exit (`onDone`). |
+| `buttonDraft: StateFlow<PadButton?>` / `setButtonDraft(draft)` | Authoritative in-flight `PadButton` draft while editing or creating a button; automatically synchronizes `MacroPadState.previewButton`. |
+| `macroDraft: StateFlow<Macro?>` / `setMacroDraft(draft)` | Authoritative in-flight `Macro` draft while creating or editing a macro across `MacroTimeline`, `ManualMacroSteps`, `ReorderMacroSteps`, and `MacroStepEdit`. |
+| `selectSection(section)` | Selects a top-level category and resets the subpage stack and drafts. |
+| `push(subPage)` / `pop()` | Appends or drops the top subpage in the stack, clearing drafts when their owning subpage is popped. |
+| `reset()` | Restores default state (`QUICK_ACTIONS`, empty stack, null drafts) upon explicit editor exit (`onDone`). |
 | `applyPrimaryModalPayload(payload)` | Directs incoming `PrimaryModalPayload` deep links into the appropriate section and subpage stack. |
 
 ### MacroPadMediaRepository (`:companion:ui`)
 
-`MacroPadMediaRepository` is an `object` singleton in `companion/ui/…/macropad/` that encapsulates all filesystem and bitmap storage operations for MacroPad layout backgrounds.
+`MacroPadMediaRepository` is an `object` singleton in `companion/ui/…/macropad/` that encapsulates all filesystem and bitmap storage operations for MacroPad layout background and mask images (parameterized by `LayerImageKind.BACKGROUND` and `LayerImageKind.MASK`).
 
 | Method | Description |
 | --- | --- |
 | `loadScaledBitmap(context, relativePath)` | Safely reads and decodes a scaled bitmap for `relativePath` under `context.filesDir` on `Dispatchers.IO`. |
-| `saveBackgroundImage(context, layoutId, srcUri)` | Scales and saves `srcUri` to `backgrounds/bg_[layoutId]` as WebP on `Dispatchers.IO`. |
-| `deleteBackgroundImage(context, layoutId)` | Deletes `backgrounds/bg_[layoutId]` if it exists on `Dispatchers.IO`. |
-| `duplicateBackgroundImage(context, originalLayoutId, newLayoutId)` | Copies background file during layout or profile duplication on `Dispatchers.IO`. |
+| `saveLayerImage(context, kind, layoutId, srcUri)` | Scales and saves `srcUri` to `backgrounds/bg_[layoutId]` or `masks/mask_[layoutId]` as WebP on `Dispatchers.IO` (with convenience wrappers `saveBackgroundImage` / `saveMaskImage`). |
+| `deleteLayerImage(context, kind, layoutId)` | Deletes the layer image file if it exists on `Dispatchers.IO` (with convenience wrappers `deleteBackgroundImage` / `deleteMaskImage`). |
+| `duplicateLayerImage(context, kind, originalLayoutId, newLayoutId)` | Copies the layer image file during layout or profile duplication on `Dispatchers.IO` (with convenience wrappers `duplicateBackgroundImage` / `duplicateMaskImage`). |
 
 ### Icon Rendering — Material Symbols Font
 
@@ -226,17 +230,17 @@ All input events from MacroPad actions (keyboard, mouse, gamepad, and touch) are
 - **Keyboard actions**: `KeyInjector` transmits keycode press and release commands (`KD <keycode>`, `KU <keycode>`).
 - **Gamepad actions**: `GamepadInjector` merges events (`GD`, `GU`, `HD`, `JS`) directly into the physical controller's kernel evdev node (`g_gamepad_fd`) over `PrivdClient`.
 
-### State Management
+#### State Management
 
 `MacroPadState` is an `object` singleton following the project-wide pattern:
 
-- Private `MutableStateFlow` backing fields: `_profiles`, `_activeProfileId`, `_activeLayoutId`
+- Private `MutableStateFlow` backing fields: `_profiles`, `_activeProfileId`, `_activeLayoutId`, `_activeProfile`, `_activeLayout`
 - Public read-only `StateFlow`: `profiles`, `activeProfile`, `activeLayout`
-- Mutation methods (`addProfile`, `updateProfile`, `deleteProfile`, `setActiveProfile`, `setActiveLayout`, etc.) re-emit state and schedule an asynchronous save to `SettingsManager`
+- All state mutations run inside a centralized `updateState(persist = true) { ... }` helper guarded by `stateLock` that atomically recomputes `_activeProfile` and `_activeLayout` before optionally scheduling a debounced asynchronous save (`MACROPAD_SAVE_DEBOUNCE_MS = 250L`) via `MacroPadSettings.saveMacroPadData()` (with `flushMacroPadDataNow()` for immediate flushes in config export and unit tests).
 
 ### Injector Lifecycle
 
-Input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) are managed globally via `InjectorLifecycleManager`. They start whenever Megingiard is in the foreground (`isActivityResumed && !isPrivdSetupWizardActive`) and stop during backgrounding or setup wizard IME text entry:
+Input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) are managed exclusively and globally via `InjectorLifecycleManager`. They start whenever Megingiard is in the foreground (`isActivityResumed && !isPrivdSetupWizardActive`) and stop during backgrounding or setup wizard IME text entry:
 
 ```kotlin
 scope.launch {
@@ -249,16 +253,14 @@ scope.launch {
         .collect { shouldRun ->
             if (shouldRun) startInjectors() else stopInjectors()
         }
+}
 ```
 
-The same conditional logic applies in `MacroPadEditor`'s `DisposableEffect`, which restarts only enabled injectors when the editor is dismissed. The same stop/restart pattern is also used by `QuickMenu` and `BackgroundSettingsOverlay` — injectors are stopped while these modals are open so the Android soft IME can appear for text input fields. `BackgroundMacroPadOverlay` additionally observes `isQuickMenuOpen` and stops/restarts injectors when the QuickMenu opens from inside the Presentation window.
+Individual screens and overlays (`MacroPadScreen`, `MacroPadEditor`, `QuickMenu`, etc.) never start or stop injectors in local `DisposableEffect`s (`AGENTS.md §3.5`).
 
 ### Hit Testing
 
-In use mode, all button hit testing (including `TrackpointMove` buttons) uses an **axis-aligned bounding box** check in the `pointerInput` handler. The bounding box is centred at `(btn.posX * w, btn.posY * h)` with dimensions derived from the button's logical size:
-
-- Regular buttons: `MP_BUTTON_UNIT_DP × buttonSize.cols` by `MP_BUTTON_UNIT_DP × buttonSize.rows`
-- TrackpointMove buttons: `MP_BUTTON_UNIT_DP × tpSize.multiplier` square
+In use mode, all button hit testing (including `TrackpointMove` buttons) uses an **axis-aligned bounding box** check (`MacroPadHitTestEngine.isPointInsideButton`) performed once per pointer-down inside `MacroPadHitTestEngine.onPress()`, which returns `true` when a button consumes the press. The bounding box is centred at `(btn.posX * w, btn.posY * h)` with dimensions derived from `btn.widthDp` and `btn.heightDp` scaled by display density.
 
 AABB hit detection is conservative for circular buttons (slightly over-accepts at corners) but this is acceptable for a game-pad-style UI.
 
@@ -267,23 +269,26 @@ AABB hit detection is conservative for circular buttons (slightly over-accepts a
 The pad surface occupies the full screen with **no padding** (`MP_SCREEN_PADDING = 0.dp` in `MacroPadScreen.kt`) — the pad extends to all four screen edges with no corner radius.
 The plain canvas background (when no custom background image is configured) is strictly theme-invariant and always pitch black (`Color.Black`), ensuring that MacroPad buttons and layout previews rest on pure black regardless of which global theme (`appBackground`) is active. No aspect-ratio constraint is applied; the pad grows or shrinks with the available display area.
 
-The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfiguration.current` and sets an explicit `width`/`height` of `screenWidth × screenHeight` — **pixel-identical** to the use-mode pad. Because button positions are stored as normalised coordinates [0.0, 1.0], any button placed in the editor maps to the exact same physical pixel in use mode, enabling true 1:1 WYSIWYG layout design.
+The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfiguration.current` and sets an explicit `width`/`height` of `screenWidth × screenHeight` — **pixel-identical** to the use-mode pad. Both `PadSurface` and `PadCanvas` share `rememberLayoutLayerBitmaps(context, layout)` and `LayoutImageLayer(layout, bitmaps, modifier)` in `PadCanvas.kt` for background and mask bitmap decoding and rendering. Because button positions are stored as normalised coordinates [0.0, 1.0], any button placed in the editor maps to the exact same physical pixel in use mode, enabling true 1:1 WYSIWYG layout design.
 
 ### Layout Editor
 
-`MacroPadEditor` is rendered inside a bottom-anchored `PrimaryOverlayContainer` modal sheet, fully aligned with the design language and components established with Global Settings. It utilizes a **Two-Pane Console Sidebar + Content Deck** layout with unified `MacroPadSubPage` navigation:
-- **Left Category Sidebar (210 dp):** Features category navigation tiles with illuminated focus borders and L1/R1 bumper tab switching:
-  - **Profiles (`Folder`):** Active profile carousel selector, New Profile, Rename Profile, Duplicate Profile, Reorder Profiles, Unlink App/Game (when linked), and Delete Profile.
-  - **Layouts (`ViewQuilt`):** Active layout carousel selector, New Layout, Layout Colors & Appearance (`GamepadColorPaletteCard` + Color Wheel drill-down with live preview), Background Image & Mask (`ImageCropDialog` with gamepad pan/zoom steppers), Touchpad Integration, Duplicate Layout, Copy Layout to Profile, Reorder Layouts, and Delete Layout.
-  - **Canvas (`Preview`):** Canvas Drag Lock toggle, Snap Grid Mode carousel (Off, Rectangular, Radial), Add Button action, and pixel-precise static 1240x1080 canvas preview.
-  - **Buttons (`SmartButton`):** Add Button trigger and reorderable button list with focus indicators, edit, duplicate, copy to layout (with confirmation toast), and delete actions.
-  - **Macros (`PlaylistPlay`):** Macro Library launcher and list of active profile macros with step count badges.
+`MacroPadEditor` is rendered inside a bottom-anchored `PrimaryOverlayContainer` modal sheet, fully aligned with the design language and components established with Global Settings. It utilizes a **Two-Pane Console Sidebar + Content Deck** layout (`GamepadTwoPaneScaffold`) with 9 sidebar sections (`EditorSection`) and unified `MacroPadSubPage` stack navigation:
+- **Left Category Sidebar (210 dp):** Features 9 category navigation tiles with illuminated focus borders and L1/R1 bumper tab switching:
+  - **Quick Actions (`Bolt`):** Deep-link shortcuts to frequent workflows (Add Button, Create Macro, New Layout, New Profile, Position & Size Buttons, Edit Mirror Cutouts).
+  - **Profiles (`Folder`):** Active profile choice card, New Profile, Edit Profile, Duplicate Profile, Reorder Profiles, Unlink App/Game (when linked), and Delete Profile.
+  - **Layouts (`ViewQuilt`):** Active layout choice card, New Layout, Edit Layout (name, text/border/background color sub-pages, invisible buttons default), Background Touchpad (`LayoutTouchpadSubPageContent`), Snap Grid Mode (`Off`, `Square`, `Radial`), Snap to Alignment toggle, Duplicate Layout, Copy Layout to Profile, Reorder Layouts, and Delete Layout.
+  - **Automation (`AutoAwesome`):** Profile-level automatic layout switching toggle, anchor calibration overview, active layout live presence status badges (`PRESENT` / `LOST`), and direct entry to anchor configuration (`AutomaticLayoutSwitchingSubPageContent`).
+  - **Mirror (`Cast`):** Mirror cutouts list, Add/Edit/Position Cutouts, background dimming, edge blending, and touch projection controls (`MirrorSettingsEditor.kt`).
+  - **Background (`Image`):** Custom background image configuration via `LayerImageSettingsEditor(kind = BACKGROUND)` (local picker, SteamGridDB scraper, scale mode, in-place crop toggle, dimming, two-step remove, and Save & Exit row).
+  - **Mask (`Layers`):** Custom mask overlay image configuration via `LayerImageSettingsEditor(kind = MASK)` (local picker, scale mode, in-place crop toggle, dimming, two-step remove, and Save & Exit row).
+  - **Buttons (`SmartButton`):** Add Button trigger (`ChooseButtonType`), Position & Size Buttons (`EditButtonPositions`), Reorder Buttons (`ReorderButtons`), and button list with live bottom-screen highlight indicators.
+  - **Macros (`PlaylistPlay`):** Create Macro trigger (`ChooseMacroMode`), Reorder Macros (`ReorderMacros`), and list of active profile macros opening `MacroTimelineSubPageContent`.
 - **Right Content Deck:** Dynamically presents gamepad-first cards (`GamepadChoiceCard`, `GamepadToggleCard`, `GamepadActionCard`, `GamepadColorPaletteCard`, `GamepadSliderCard`) wrapped in unified `GamepadDeck` containers with automatic category header dividers.
 - **In-App Deep-Linking & Modal Suspension/Resumption:**
   - `MacroPadEditor` reacts to `AppStateManager.activePrimaryModal` and `PrimaryModalPayload` (`MacroPad`, `ProfileSettings`) to deep-link directly into targeted categories, sub-pages, or macro steps. When creating a profile from external triggers (such as the Companion Hub Hero Card), `PrimaryModalPayload.ProfileSettings(isNewProfile = true, presetName = ..., association = ...)` opens the editor directly into the `NewProfile` sub-page with the title preset and the game association bound without prematurely committing an unconfirmed profile to storage.
-  - The **Quick Actions** sub-page (`MacroPadSubPage.QuickActions` / `QuickActionsSubPageContent`) in the Layouts deck provides one-tap navigation shortcuts to frequent destinations (Arrange Buttons, Mirror Cutout Editor, Accent Color & Theme, Joystick Deadzones, SteamGridDB API Token, Backup & Export, Share Profile).
-  - During Touch Macro Recording, `MacroTimelineEditor` calls `AppStateManager.suspendCurrentAndDismiss()` to close the editor overlay while recording directly on the running game/emulator via `TouchScreenObserver` (/dev/input/event6) with companion monitoring on `TouchRecordingSheet` on Display 4, and upon recording finish/cancellation `TouchRecordingSheet` calls `AppStateManager.resumeSuspended()` to immediately restore the timeline editor at the recorded macro step.
-- **In-Flight Changes Exit Confirmation:** Sub-pages with editable draft states (Button Settings, Layout Appearance, Layout Colors, Button Colors, Profile Settings, Macro Timeline, Background Settings, Background Crop) use `rememberSaveExitPromptState` and `GamepadSaveExitActionRow`. When unsaved changes exist and the user attempts to exit (via Gamepad B button, Escape, or system Back gesture), navigation is intercepted: the single Save button splits dynamically into side-by-side **Save & Exit** (accent highlighted) and **Discard & Exit** (destructive) buttons, scrolls automatically into view via `BringIntoViewRequester`, and shifts focus to Save & Exit. Pressing B a second time cancels the prompt and keeps the editor open.
+  - During Touch or Physical Gamepad Macro Recording, `MacroTimelineEditor` calls `AppStateManager.suspendCurrentAndDismiss()` to close the editor overlay while recording directly on the running game/emulator with companion monitoring on `TouchRecordingSheet` or `PhysicalGamepadRecordingSheet` on Display 4, and upon recording finish/cancellation calls `AppStateManager.resumeSuspended()` to immediately restore the timeline editor.
+- **In-Flight Changes Exit Confirmation:** Sub-pages with editable draft states (Button Settings, Layout Appearance, Profile Settings, Macro Timeline, Macro Step Edit, Background/Mask Settings, Background Touchpad) use `rememberSaveExitPromptState` and `GamepadSaveExitActionRow`. When unsaved changes exist and the user attempts to exit (via Gamepad B button, Escape, or system Back gesture), navigation is intercepted: the single Save button splits dynamically into side-by-side **Save & Exit** (accent highlighted) and **Discard & Exit** (destructive) buttons, scrolls automatically into view via `BringIntoViewRequester`, and shifts focus to Save & Exit. Pressing B a second time cancels the prompt and keeps the editor open.
 - **Auto Switch Reactivation Prompt on Editor Exit:** If Automatic Profile Switching was active (`CompanionViewMode.AUTO`) when opening the MacroPad editor and is subsequently deactivated during the editor session (e.g. by creating a new profile which sets `companionViewMode` to `MACROPAD`, or by manually switching modes), `AppStateManager.wasAutoSwitchDeactivatedInEditor` tracks this transition. When the user exits the editor (via Gamepad `B` button at the root stack, header close button `✕`, or outer scrim click), `PrimaryOverlayContainer` closes right away so no dialogs are stacked on top of each other. Once the primary overlay dismisses, `PrimaryModalHost` dispatches a standalone top-screen modal (`PrimaryModalType.REACTIVATE_AUTO_SWITCH`) via `GamepadConfirmModal`:
   - **Visual Alignment:** The dialog visually mirrors `PrimaryOverlayContainer`'s design tokens: a structured header bar (`colors.surfaceVariant.copy(alpha = 0.8f)`, 56 dp height, 20 dp padding, 18 sp SemiBold title in `onSurface`, accent icon, and header close button `✕`), content area matching the editor deck background (`colors.appBackground`), and card border framed with `rememberBezelBrush()` on a 16 dp rounded surface with 16 dp shadow elevation. Focus is strictly trapped within the card (`focusGroup()`, `focusProperties { exit = { FocusRequester.Cancel } }`).
   - **Reactivate Action:** Primary card (**Reactivate Auto Switch** / `Icons.Rounded.AutoFixHigh`, auto-focused by default, description "Restore automatic profile and layout switching") restores `CompanionViewMode.AUTO`, clears the tracking flag, and closes the modal.
@@ -293,7 +298,7 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
 
 ### Grid Snap Overlay
 
-The editor canvas supports an optional snap grid rendered behind the draggable buttons. Grid state (`GridMode` enum: `OFF`, `RECTANGULAR`, `RADIAL`) is local to the `EditorBody` composable and not persisted.
+The editor canvas supports an optional snap grid rendered behind the draggable buttons. Grid state (`GridMode` enum: `OFF`, `RECTANGULAR`, `RADIAL`) is local to `MacroPadEditor` and not persisted.
 
 **Rendering** — A `Canvas` composable in `PadCanvas` draws the grid when mode ≠ `OFF`:
 
@@ -305,4 +310,4 @@ The editor canvas supports an optional snap grid rendered behind the draggable b
 - **`snapRectangular`** rounds both pixel coordinates to the nearest grid step (integer multiples of `gridStepPx`).
 - **`snapRadial`** snaps the distance-from-centre to the nearest circle radius, then derives that circle's index to determine its phase offset (odd → 45°, even → 0°). The raw angle is shifted into phase-relative space before rounding to the nearest point index, then the phase offset is re-added to get the final snapped angle. The canvas centre is always a competing candidate; whichever snap target is closer to the raw position wins.
 
-**Toggle** — A "Change Grid" toggle button placed in the second row of the editor toolbar cycles the grid mode. Icons: `GridOff` (off), `Grid4x4` (rectangular), `TripOrigin` (radial). The button uses a rounded-rectangle border that matches the chip style; the icon tint is accent-coloured when a grid is active and secondary-surface-coloured when off.
+**Selector** — A **Snap Grid** `GamepadChoiceCard` (**Off / Square / Radial**) in the **Layouts Deck** and the **Position & Size Buttons** (`MacroPadSubPage.EditButtonPositions`) sub-page selects the active grid mode.

@@ -8,47 +8,79 @@
 
 ### Source Files
 
+#### `:companion:ui` (`com.stormpanda.megingiard.macropad`)
+
 | File | Responsibility |
 | --- | --- |
-| `MacroPadScreen.kt` | Use-mode Composable: pad render, multi-touch input, injector lifecycle; reactively switches between use-mode `PadSurface` and bottom-screen live editor `PadCanvas` when `AppStateManager.isEditorActive` is true; collects `MacroExecutor.runningMacroIds` and passes `isRunning` to each `PadButton` that references a running macro |
-| `MacroPadEditor.kt` | Full-screen layout editor built on `GamepadTwoPaneScaffold`: orchestrates the 9 sidebar categories (Quick Actions, Profiles, Layouts, Automation, Mirror, Background, Mask, Buttons, Macros), deck content columns, in-deck sub-page stack navigation, and exit auto-switch reactivation prompt (`GamepadConfirmModal`). |
-| `AutomationDeck.kt` | Automation category deck content (`AutomationDeckContent`): profile-level automatic layout switching toggle, anchor calibration overview, active layout live presence status badges (`PRESENT` / `LOST`), and direct entry to anchor configuration. |
-| `MacroPadSubPages.kt` | Architecture models and shared components for in-deck sub-menus: `EditorSection`, `MacroPadSubPage` sealed hierarchy, `GamepadSubPageHeader` breadcrumbs, and `ColorWheelSubPageContent`. |
-| `QuickActionsSubPage.kt` | Primary deck content (`QuickActionsDeckContent`) presenting deep-link navigation shortcuts to frequently used creation flows (New Button, New Macro, New Layout, New Profile), visual button repositioning, and screen mirroring layout editing. |
-| `EditorBaseComponents.kt` | Reusable UI pieces for the layout editor, including headers, section labels, and grid snap toggle buttons. |
-| `EditorInlineOverlays.kt` | In-deck sub-page composables for profile management and button actions: `NewProfileSubPageContent`, `EditProfileSubPageContent`, and `AppPickerSubPageContent`. |
-| `AlignmentMath.kt` | Pure Kotlin math helper in `:shared:core`: generalized center snapping, button adapters (`calculateButtonAlignmentSnap`, `calculateGamepadButtonMove`, `findAlignedCenterGuides`), cutout adapters, visual guide line discovery, and grid snap algorithms (`snapPosition`, `snapRectangular`, `snapRadial`) |
-| `PadCanvas.kt` | Bottom-screen live editor pad canvas: button drag positioning, smart alignment guides overlay (`AlignmentGuidesOverlay`), grid overlay rendering (`GridMode`, `GridOverlay`), highlight border when unlocked, directional drag handles when unlocked, inward-pointing triangle indicators (`HighlightPointer`) for highlighted buttons when locked, animated lock badge on lock/unlock transitions; accepts `layout: PadLayout?`, `gridMode`, and `isLocked` parameters |
-| `MacroPadToolSettings.kt` | Tool-settings panel: profile picker, shape/size controls, Edit Layout button |
-| `MacroPadState.kt` | Singleton state: profiles + active profile + active layout, profile/layout/macro CRUD, persistence trigger |
-| `MacroPadLayout.kt` | Serializable data model: `PadProfile`, `PadLayout`, `PadButton`, `PadAction` (incl. `PadAction.Macro`) |
-| `MacroData.kt` | Macro data model: `Macro` (with `loopEnabled: Boolean` and `loopPauseMs: Int` fields), `MacroStep` sealed class (`GamepadButtonTap`, `JoystickMove`, `JoystickPath`, `DPadTap`, `TouchTap`, `TouchPath`), `JoystickStick` enum, `TouchSample` and `PathSample` structures; includes the pure `completeTouchPathSamples()` helper that closes unfinished touch pointers with synthetic `TouchAction.UP` samples |
-| `MacroExecutor.kt` | Tap-to-toggle macro playback and test runs (`runTest()`): compiles steps to sorted event list, replays with coroutine delays over `PrivdClient` with `PrivdClient.isConnected` guard; tracks one `Job` per macro ID via `ConcurrentHashMap`; exposes `runningMacroIds: StateFlow<Set<String>>` for UI reactivity; `stop(macroId)` cancels the job; `stopAll()` cancels every running job (invoked by `MacroPadState.assignActiveProfileId()` on active-profile change); supports `Macro.loopEnabled` — loops the event sequence until stopped, with an optional `loopPauseMs` delay between iterations; tracks live input state (pressed buttons, active axes, hat, touch position) during dispatch and releases all active inputs in `finally`; guarantees all virtual devices return to neutral on stop or cancellation; provides `runTest()` to manage UI overlay suspension and process-scoped replay; race-safe cleanup: only removes the job from `runningJobs` and `_runningMacroIds` if `coroutineContext[Job]` still matches the registered entry |
-| `MacroTimelineEditor.kt` | Gamepad-first single-macro step timeline editor: in-deck sub-page (`MacroTimelineSubPageContent`) orchestrating gamepad action cards for steps, save/discard lifecycle, loop/randomization controls, and touch/gamepad recording flows. |
-| `MacroStepListItem.kt` | Helper formatting and icon resolution functions for macro steps (`stepIcon`, `stepTypeLabel`, `stepActionDescription`, `shortStepLabel`). |
-| `MacroStepEditDialog.kt` | In-deck sub-page (`MacroStepEditSubPageContent`) for creating/editing a single `MacroStep` using `GamepadSaveExitActionRow`, `GamepadChoiceCard`s, `GamepadSliderCard`s, and duplicate/delete cards. |
-| `TouchScreenObserver.kt` | Passive evdev reader for touchscreen on Display 0 supporting Linux Multi-Touch Type B protocol; streams real-time normalized touch events directly over `PrivdClient` (`SUB TOUCH`) without grabbing device |
-| `TouchRecordingSheet.kt` | Modern companion recording HUD rendered on the secondary bottom display (Display 4) during touch macro recording; displays live 16:9 screen radar with multi-touch pointer indicators, independent gesture trails, live multi-pointer coordinates, session timer, step counter, and Cancel / Stop & Save buttons |
-| `ChooseMacroModeSubPageContent.kt` | In-deck 2-column grid sub-page presenting 4 macro creation choices: Record Controller Input, Build Step-by-Step, Record Single Touch, and Record Touch Gesture |
-| `PhysicalGamepadRecordingSheet.kt` | Modern companion recording HUD rendered on the secondary bottom display during physical gamepad recording; presents live telemetry (animated pulsing recording pill, duration timer, step counter, circular analog stick deflection radars, D-Pad directional compass, active pressed button pills) and touch Stop/Cancel actions with automated modal resumption |
-| `PhysicalGamepadRecordingManager.kt` | Domain singleton managing evdev controller capture via `megingiard_privd` (`SUB GAMEPAD`); tracks button down/up, D-Pad hat deltas, and analog stick gesture paths with configurable deadzones; provides `GamepadRecordingState` and trims leading idle pauses |
-| `PadActionPicker.kt` | Base orchestrator dropdown layout for action categories and groups. |
-| `PadActionDisplay.kt` | Action type enums (`ActionGroup`, `ActionCategory`), string mappings, and localized gamepad button formatting/label templates. |
-| `PadActionSubPickers.kt` | Sub-widgets for configuring action details: `KeyboardKeyPicker` (with modifier support), `GamepadButtonPicker` (with face combos support), and `MacroPicker` (with info banner and sub-menu list launcher). |
-| `PadButtonEditDialog.kt` | In-deck button create/edit sub-page (`EditButtonSubPageContent`) and shared `ColorOptionPaletteSection`; groups button shape, size, and haptic strength in standard `GamepadComponents` cards. |
-| `BackgroundSettingsEditor.kt` | In-deck content (`LayoutBackgroundSubPageContent`, `LayoutMaskSubPageContent`, shared `LayerImageSettingsEditor`) for background and mask overlay image selection, live bottom-screen preview, in-place active/inactive crop toggle, scaling mode, dimming, and `GamepadSaveExitActionRow` save controls. |
-| `SteamGridDbScrapeDialog.kt` | In-deck sub-page (`SteamGridDbScrapeSubPageContent`) for searching and downloading artwork from SteamGridDB with gamepad focus and type filtering. |
-| `BackgroundTouchpadSettingsEditor.kt` | In-deck sub-page (`LayoutTouchpadSubPageContent`) for configuring per-layout relative mouse touchpad settings. |
-| `LayoutSettingsEditor.kt` | In-deck sub-pages (`EditLayoutSubPageContent`, `NewLayoutSubPageContent`, `AutomaticLayoutSwitchingSubPageContent`) for layout appearance colors, names, invisible button defaults, visual reference anchor positioning/calibration, required match rate threshold slider, stream delay, and lost-anchor effects (`CutoutLostAnchorEffect`). |
-| `CopyDialogs.kt` | In-deck sub-pages (`CopyLayoutSubPageContent`, `CopyButtonSubPageContent`) for copying layouts and buttons across profiles/layouts. |
-| `GamepadInjector.kt` | Public facade routing gamepad button, hat, and joystick commands (`GD`, `GU`, `HD`, `JS`) directly to `PrivdClient` for hardware evdev merge |
-| `GamepadKeycodes.kt` | Linux BTN\_\* + ABS\_\* constants + preset list |
-| `MouseInjector.kt` | Public facade routing relative mouse commands directly to `PrivdClient` |
-| `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions) routing to `PrivdClient` |
-| `MaterialIconRegistry.kt` | `searchIcons(query): List<String>` — filters `ALL_ROUNDED_ICON_NAMES` for the `IconPickerDialog` search field (reflection-based `resolve()` removed) |
-| `MaterialSymbols.kt` | `MaterialSymbolsFamily` (variable font, FILL=1) + `MaterialSymbol(name, size, tint)` composable — renders snake_case icon names via font ligatures |
+| `MacroPadScreen.kt` | Use-mode Composable: pad render (`PadSurface`), multi-touch input, background mirror & layout image layers, and single `DisposableEffect(hasFollowMode)` `TouchScreenObserver` registration; reactively switches between use-mode `PadSurface` and bottom-screen live editor `PadCanvas` when `AppStateManager.isEditorActive` is true; collects `MacroExecutor.runningMacroIds` |
+| `MacroPadEditor.kt` | Full-screen layout editor built on `GamepadTwoPaneScaffold`: orchestrates the 9 sidebar categories (`Quick Actions`, `Profiles`, `Layouts`, `Automation`, `Mirror`, `Background`, `Mask`, `Buttons`, `Macros`), deck content columns, in-deck sub-page stack navigation, and exit auto-switch reactivation prompt (`GamepadConfirmModal`) |
+| `MacroPadNavState.kt` | Singleton holding `selectedSection`, `subPageStack`, and single-source-of-truth `buttonDraft` and `macroDraft` across composable lifecycles and modal suspensions |
+| `MacroPadSubPages.kt` | Architecture models and shared components for in-deck sub-menus: `MacroPadSubPage` sealed hierarchy, `EditorColorTarget`, `GamepadSubPageHeader` breadcrumbs, `ColorWheelSubPageContent`, and shared `rememberButton2DAdjusterState` (`Button2DAdjusterState`) for 2D gamepad button movement and resizing |
+| `QuickActionsSubPage.kt` | Primary deck content (`QuickActionsDeckContent`) presenting deep-link navigation shortcuts to frequent creation and layout workflows |
+| `AutomationDeck.kt` | Automation category deck content (`AutomationDeckContent`): profile-level automatic layout switching toggle, anchor calibration overview, active layout live presence status badges (`PRESENT` / `LOST`), and direct entry to anchor configuration |
+| `MirrorSettingsEditor.kt` | Mirror category deck content (`MirrorDeckContent`) and cutout sub-pages (`EditMirrorCutoutSubPageContent`, `EditMirrorCutoutPositionsSubPageContent`, `ReorderCutoutsSubPageContent`) |
+| `BackgroundSettingsEditor.kt` | Unified layer image editor (`LayerImageSettingsEditor`, `LayoutBackgroundSubPageContent`, `LayoutMaskSubPageContent`) for background and mask overlay image selection, live bottom-screen preview via `MacroPadState.previewLayout`, in-place crop toggle, scaling mode, dimming, and `GamepadSaveExitActionRow` save controls |
+| `BackgroundTouchpadSettingsEditor.kt` | In-deck sub-page (`LayoutTouchpadSubPageContent`) for configuring per-layout relative mouse touchpad settings |
+| `LayoutSettingsEditor.kt` | In-deck sub-pages (`EditLayoutSubPageContent`, `NewLayoutSubPageContent`, `LayoutColorSubPageContent`, `AutomaticLayoutSwitchingSubPageContent`) for layout appearance colors, names, invisible button defaults, and visual reference anchor calibration |
+| `LayoutTransitionManager.kt` | Manages animated layout transitions and crossfades when switching active layouts |
+| `MacroPadMediaRepository.kt` | Singleton encapsulating filesystem and bitmap storage operations (`loadScaledBitmap`, `saveLayerImage`, `deleteLayerImage`, `duplicateLayerImage` parameterized by `LayerImageKind`) on `Dispatchers.IO` |
+| `PadCanvas.kt` | Bottom-screen live editor pad canvas and shared image layer renderer (`LayoutLayerBitmaps`, `rememberLayoutLayerBitmaps`, `LayoutImageLayer`, `drawAdjustedBitmap`): button drag/resize handles, smart alignment guides overlay, snap grid overlay, inward-pointing highlight triangles when locked, and floating `ButtonDimensionHud` |
+| `MacroPadButton.kt` | Use-mode button composable and animated macro execution indicators (breathing content, pulsing background, and `ICON_ONLY` sonar ripples) |
+| `PadButtonFace.kt` | Shared button face visual renderer (`PadButtonFace`, `PadButtonContent`) across use mode, editor canvas, and button deck previews |
+| `PadButtonEditDialog.kt` | In-deck button create/edit sub-page (`EditButtonSubPageContent`), `ButtonColorSubPageContent`, and `ColorPreviewInfoBox` |
+| `PadActionPicker.kt` | Action category selector card and dispatcher to action-specific sub-pickers in the button editor |
+| `PadActionDisplay.kt` | Action type enums (`ActionGroup`, `ActionCategory`), string mappings, and localized gamepad button formatting/label templates |
+| `PadActionSubPickers.kt` | Sub-widgets for configuring action details: `KeyboardKeyPicker`, `GamepadButtonPicker`, `MouseActionPicker`, `TrackpointPicker`, and `MacroPicker` |
+| `ActionGridSubPages.kt` | Shared `ActionGridItem` model and 2-column grid sub-pages (`ChooseButtonTypeSubPageContent`, `MirrorActionPickerSubPageContent`, `OverlayActionPickerSubPageContent`, `LayoutActionPickerSubPageContent`, `MacroActionPickerSubPageContent`) |
+| `VisualKeyboardPicker.kt` | Interactive virtual keyboard sub-page (`VisualKeyboardPicker`) with 2D D-pad spatial navigation |
+| `VisualGamepadPicker.kt` | Interactive virtual AYN Thor controller sub-page (`VisualGamepadPicker`) with 2D D-pad spatial navigation |
+| `VisualMousePicker.kt` | 2-column mouse action picker sub-page (`VisualMousePicker`) |
+| `AppLauncherManager.kt` | Resolves app names/icons via `PackageManager` and launches target apps on Display 4 with floating restore bubble |
+| `AppLauncherPicker.kt` | Card component in button editor for selecting an App Quick-Switch target |
+| `AppPickerUtils.kt` | Helper functions for loading and filtering installed launcher applications |
+| `FloatingBubbleOverlay.kt` | Secondary-display `TYPE_ACCESSIBILITY_OVERLAY` draggable bubble that restores Megingiard when tapped |
+| `ChooseMacroModeSubPageContent.kt` | In-deck 2-column grid sub-page presenting 4 macro creation choices: Record Controller Input, Record Screen Touch, Type Text Sequence, and Build Step-by-Step |
+| `MacroTimelineEditor.kt` | Gamepad-first single-macro editor sub-page (`MacroTimelineSubPageContent`) orchestrating macro name, test run, recording triggers, manual step editing entry, loop/randomization controls, and save/discard lifecycle |
+| `ManualMacroStepsSubPageContent.kt` | In-deck sub-page (`ManualMacroStepsSubPageContent`) listing chronological macro steps with Add Step and Reorder Steps actions |
+| `MacroStepEditDialog.kt` | In-deck sub-page (`MacroStepEditSubPageContent`) for creating/editing a single `MacroStep` with `ShiftMode`, visual key/gamepad pickers, and timing sliders |
+| `MacroStepListItem.kt` | Helper formatting, direction arrow (`dirArrow`), and icon resolution functions for macro steps |
+| `MacroTextSequenceDialog.kt` | In-deck sub-page (`TextSequenceGeneratorSubPageContent`) that converts a typed text string into timed `KeyboardKeyTap` macro steps |
+| `PhysicalGamepadRecordingSheet.kt` | Companion recording HUD rendered on Display 4 during physical gamepad recording with live stick radars, D-Pad compass, active button pills, and Stop/Cancel actions |
+| `TouchRecordingSheet.kt` | Companion recording HUD rendered on Display 4 during touch macro recording with live 16:9 multi-touch radar, gesture trails, and Stop/Cancel actions |
+| `CopyDialogs.kt` | In-deck sub-pages (`CopyLayoutSubPageContent`, `CopyButtonSubPageContent`) for copying layouts and buttons across profiles/layouts |
+| `ReorderOverlays.kt` | In-deck reorder sub-pages (`ReorderProfilesSubPageContent`, `ReorderLayoutsSubPageContent`, `ReorderButtonsSubPageContent`, `ReorderMacrosSubPageContent`, `ReorderMacroStepsSubPageContent`) |
+| `EditorBaseComponents.kt` | Reusable preview boxes (`ButtonPreviewBox`), section headers, and editor UI primitives |
+| `EditorInlineOverlays.kt` | In-deck sub-pages for profile management and app association (`NewProfileSubPageContent`, `EditProfileSubPageContent`, `AppPickerSubPageContent`) |
+| `MacroPadUtils.kt` | Color resolution helpers (`resolveTextColor`, `resolveBorderColor`, `resolveBgColor`) for `ColorOption` |
+| `HapticFeedback.kt` | `triggerHaptic()` helper executing `VibrationEffect.createOneShot()` with custom duration and amplitude clamping |
 | `IconPickerDialog.kt` | In-deck icon picker (`ChooseIconSubPageContent`): search card, current-selection two-step clear card, and 5-column `LazyVerticalGrid` of Material Symbols icons |
-| `RoundedIconNames.kt` | Auto-generated list of ~4 154 sorted snake_case icon name strings extracted from the font's GSUB table (regenerated via `scripts/generate_icon_names.py`) |
-| `AutoSwitchCoordinator.kt` | Domain singleton coordinating active profile transitions when foreground packages change, filtering out self-exclusion packages, and matching active profile mappings. |
-| `MegingiardAccessibilityService.kt` | Event-driven accessibility service in `:companion:ui` that captures foreground window focus transitions and forwards package changes to the domain-level coordinator. |
-| `SystemRoleClassifier.kt` | Deterministic system role and launcher classifier in `:shared:catalog` querying `PackageManager` for `Intent.CATEGORY_HOME` manifest registrations. |
+| `MaterialIconRegistry.kt` | `searchIcons(query): List<String>` — filters `ALL_ROUNDED_ICON_NAMES` for `ChooseIconSubPageContent` |
+| `RoundedIconNames.kt` | Auto-generated list of ~4 154 sorted snake_case icon name strings extracted from the font's GSUB table |
+
+#### `:companion:domain` & `:shared:*`
+
+| File | Responsibility |
+| --- | --- |
+| `MacroPadState.kt` (`:companion:domain`) | Singleton state: profiles, active profile, active layout, centralized `updateState` mutations with debounced persistence (`MacroPadSettings`), and transient editor preview state |
+| `MacroPadHitTestEngine.kt` (`:companion:domain`) | Multi-touch pointer state machine, single-pass `onPress` AABB hit testing, trackpoint relative/virtual-touch cursor tracking, and scroll wheel accumulation |
+| `MacroPadActionDispatch.kt` (`:companion:domain`) | Dispatches discrete button down/up actions to `KeyInjector`, `GamepadInjector`, `MouseInjector`, `MacroExecutor`, layout/profile switching, and mirror controls |
+| `MacroExecutor.kt` (`:companion:domain`) | Tap-to-toggle macro playback and `runTest()`: compiles steps via `MacroEventCompiler`, replays over `PrivdClient`, tracks `runningMacroIds`, and releases all pressed inputs in `finally` |
+| `GamepadInjector.kt` (`:companion:domain`) | Facade routing gamepad button, hat, and joystick commands (`GD`, `GU`, `HD`, `JS`) directly to `PrivdClient` for hardware evdev merge |
+| `PhysicalGamepadRecordingManager.kt` (`:companion:domain`) | Domain singleton managing evdev controller capture via `megingiard_privd` (`SUB GAMEPAD`) with synchronized `recordingLock` state transitions |
+| `TouchRecordingManager.kt` (`:companion:domain`) | Domain singleton managing tap and multi-touch gesture recording via `TouchScreenObserver` with computed live pointer properties on `TouchRecordingState.Recording` |
+| `BackgroundPickerManager.kt` (`:companion:domain`) | Coordinates system document picker URI results for background and mask images |
+| `AutoSwitchCoordinator.kt` (`:companion:domain`) | Coordinates active profile transitions when foreground packages or active emulator ROM sessions change |
+| `TouchScreenObserver.kt` (`:companion:domain`) | Multi-client passive evdev reader (`SUB TOUCH`) with per-client callback registration (`start(clientToken, onTouchNormalized, onTouchEvent)`) |
+| `InjectorLifecycleManager.kt` (`:companion:ui`) | Centrally starts and stops `KeyInjector`, `MouseInjector`, and `TouchInjector` based on foreground activity and setup wizard state |
+| `MegingiardAccessibilityService.kt` (`:companion:ui`) | Event-driven accessibility service forwarding foreground window focus changes to `AutoSwitchCoordinator` and hosting `FloatingBubbleOverlay` |
+| `MacroPadLayout.kt` (`:shared:core`) | Serializable data models (`PadProfile`, `PadLayout`, `PadButton`, `PadAction`, `ColorOption`), custom serializers, `normalizedOnLoad()`, and `nextUniqueName()` |
+| `MacroData.kt` (`:shared:core`) | Serializable `Macro` and `MacroStep` models, `Macro.randomized()`, and `completeTouchPathSamples()` |
+| `MacroEventCompiler.kt` (`:shared:core`) | Pure compiler converting `List<MacroStep>` into chronologically sorted, reset-prioritized `MacroEvent` sequences |
+| `MacroStepShift.kt` (`:shared:core`) | Pure `ShiftMode` (`NONE`, `START_DELTA`, `END_DELTA`) and `applyShiftSubsequent()` step timestamp shifting logic |
+| `EditorSection.kt` (`:shared:core`) | Enum defining the 9 MacroPad editor sidebar sections (`QUICK_ACTIONS`, `PROFILES`, `LAYOUTS`, `AUTOMATION`, `MIRROR`, `BACKGROUND`, `MASK`, `BUTTONS`, `MACROS`) |
+| `BackgroundScaleMode.kt` (`:shared:core`) | Enum defining `FILL`, `FIT`, and `STRETCH` image scaling modes |
+| `CutoutLostAnchorEffect.kt` (`:shared:core`) | Enum defining visual fallback behavior when a layout's reference anchor is lost |
+| `GamepadKeycodes.kt` (`:shared:core`) | Linux `BTN_*` and `ABS_*` constants and controller preset definitions |
+| `AlignmentMath.kt` (`:shared:core`) | Pure math helpers for center alignment snapping, 2D gamepad button movement, guide line discovery, and rectangular/radial grid snapping |
+| `MaterialSymbols.kt` (`:shared:ui`) | `MaterialSymbolsFamily` (variable font, FILL=1) and `MaterialSymbol(name, size, tint)` composable |
+| `SystemRoleClassifier.kt` (`:shared:catalog`) | Deterministic system role and home launcher classifier querying `PackageManager` for `Intent.CATEGORY_HOME` |

@@ -2,7 +2,7 @@
 
 > **Feature Spec:** [`docs/features/macropad/FEATURE.md`](../features/macropad/FEATURE.md)
 > **Modules & Packages:** `:companion:ui` (`.../macropad/`, `.../input/`), `:companion:domain` (`.../macropad/`, `.../input/`, `.../privd/`, `.../mirror/`), `:shared:core` (`.../macropad/`, `.../ui/`)
-> **Audit Status:** Draft — Awaiting Operator Selection
+> **Audit Status:** Completed
 
 ---
 
@@ -269,4 +269,4 @@
 - [x] **`[MP-19]`** — Extract shared background & mask bitmap loader and `Canvas` layer for `MacroPadScreen` and `PadCanvas` *(Complexity: Med, Risk: Low)*
 - [x] **`[MP-20]`** — Eliminate bidirectional `LaunchedEffect` ping-pong between local state and `MacroPadState.previewLayout` *(Complexity: Med, Risk: Low)*
 - [x] **`[MP-21]`** — Remove unused `accentColor: Color` and `title: String` parameters across 12 MacroPad sub-pages *(Complexity: Low, Risk: Low)*
-- [ ] **`[MP-22]`** — Synchronize `docs/features/macropad/*.md` with the 9-section deck editor, sub-page macro editor, and current source tree *(Complexity: Med, Risk: Low)*
+- [x] **`[MP-22]`** — Synchronize `docs/features/macropad/*.md` with the 9-section deck editor, sub-page macro editor, and current source tree *(Complexity: Med, Risk: Low)*
