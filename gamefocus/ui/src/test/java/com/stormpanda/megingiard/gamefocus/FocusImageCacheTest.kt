@@ -199,7 +199,7 @@ class FocusImageCacheTest {
             testBmp.recycle()
 
             val updatedTimestamp = 123456789L
-            val updatedRom = initialRom.withLogoLastModified(updatedTimestamp)
+            val updatedRom = initialRom.copy(logoLastModified = updatedTimestamp)
 
             val loadedBmp = FocusImageCache.getIconBitmapAsync(context, updatedRom)
             assertNotNull(loadedBmp)

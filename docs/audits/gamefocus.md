@@ -289,7 +289,7 @@
 - [x] **`[GF-11]`** — Unify split-brain `lastTopApp`/`lastTopPackage` and `lastBottomApp`/`lastBottomPackage` in `GameFocusSessionTracker` *(Complexity: Med, Risk: Low)*
 - [x] **`[GF-12]`** — Unify duplicated gallery & library menu builders and eliminate hardcoded integer index dispatch *(Complexity: High, Risk: Low)*
 - [x] **`[GF-13]`** — Deduplicate `libraryTabs` and `availableAndroidApps` computations (fixing unsorted pairing focus index bug) *(Complexity: Med, Risk: Low)*
-- [ ] **`[GF-14]`** — Consolidate mirrored metadata mutator chains across `InstalledAppsManager` and `RomManager` *(Complexity: High, Risk: Med)*
+- [x] **`[GF-14]`** — Consolidate mirrored metadata mutator chains across `InstalledAppsManager` and `RomManager` *(Complexity: High, Risk: Med)*
 - [ ] **`[GF-15]`** — Replace hand-rolled `Mutex.tryLock` + `AtomicBoolean` double-loop in `runScrapingPasses` with conflated `Channel` *(Complexity: Med, Risk: Low)*
 - [ ] **`[GF-16]`** — Consolidate 7 lock objects and 6 `@Volatile` load-once flags in `InstalledAppsManager` *(Complexity: High, Risk: Low)*
 - [ ] **`[GF-17]`** — Remove duplicate `loadInstalledApps` call in `onCreate` and overlapping `LaunchedEffect(selectedCategory)` *(Complexity: Low, Risk: Low)*

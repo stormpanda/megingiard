@@ -407,47 +407,23 @@ object RomManager {
                             "rom.${folder.systemId}." +
                                 rawLabel.replace(Regex("[^a-zA-Z0-9_]"), "_") +
                                 "_" + romUriStr.hashCode().absoluteValue
-                        val label = InstalledAppsManager.getCustomLabel(pseudoPackageName) ?: cleanedLabel
-
-                        val cachedCoverFile = InstalledAppsManager.coverFileFor(context, pseudoPackageName)
-                        val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
-                        val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
-                        val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
-                        val coverImageId = if (hasCover) InstalledAppsManager.getCoverImageId(pseudoPackageName) else null
-
-                        val cachedLibraryIconFile = InstalledAppsManager.libraryIconFileFor(context, pseudoPackageName)
-                        val hasLibraryIcon = cachedLibraryIconFile.exists() && cachedLibraryIconFile.length() > 0
-                        val libraryIconPath = if (hasLibraryIcon) cachedLibraryIconFile.absolutePath else null
-                        val libraryIconLastModified = if (hasLibraryIcon) cachedLibraryIconFile.lastModified() else 0L
-                        val libraryIconRef = if (hasLibraryIcon) InstalledAppsManager.getLibraryIconRef(pseudoPackageName) else null
-
-                        val cachedLogoFile = InstalledAppsManager.logoFileFor(context, pseudoPackageName)
-                        val hasLogo = cachedLogoFile.exists() && cachedLogoFile.length() > 0
-                        val logoLastModified = if (hasLogo) cachedLogoFile.lastModified() else 0L
 
                         add(
-                            InstalledAppInfo(
-                                packageName = pseudoPackageName,
-                                activityName = "",
-                                label = label,
-                                coverPath = coverPath,
-                                isGame = true,
-                                isRom = true,
-                                romPath = romPath,
-                                romUri = romUriStr,
-                                systemId = folder.systemId,
-                                retroArchCore = folder.retroArchCore,
-                                emulatorPackage = folder.emulatorPackage,
-                                coverLastModified = coverLastModified,
-                                coverImageId = coverImageId,
-                                defaultLabel = cleanedLabel,
-                                libraryIconPath = libraryIconPath,
-                                libraryIconImageId = libraryIconRef?.id,
-                                libraryIconType = libraryIconRef?.type,
-                                libraryIconLastModified = libraryIconLastModified,
-                                coverOptedOut = InstalledAppsManager.isCoverOptedOut(pseudoPackageName),
-                                libraryIconOptedOut = InstalledAppsManager.isLibraryIconOptedOut(pseudoPackageName),
-                                logoLastModified = logoLastModified,
+                            InstalledAppsManager.enrichAppInfo(
+                                InstalledAppInfo(
+                                    packageName = pseudoPackageName,
+                                    activityName = "",
+                                    label = cleanedLabel,
+                                    isGame = true,
+                                    isRom = true,
+                                    romPath = romPath,
+                                    romUri = romUriStr,
+                                    systemId = folder.systemId,
+                                    retroArchCore = folder.retroArchCore,
+                                    emulatorPackage = folder.emulatorPackage,
+                                    defaultLabel = cleanedLabel,
+                                ),
+                                context,
                             ),
                         )
                     }
@@ -464,63 +440,14 @@ object RomManager {
         }
     }
 
-    fun updateRomCover(
+    internal fun updateRomApp(
         packageName: String,
-        coverPath: String?,
-        coverImageId: Int? = null,
+        transform: (InstalledAppInfo) -> InstalledAppInfo,
     ) {
-        _romApps.update { it.withUpdatedCover(packageName, coverPath, coverImageId) }
-        AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath (imageId: $coverImageId)")
-    }
-
-    fun updateRomLogo(
-        packageName: String,
-        lastModified: Long,
-    ) {
-        _romApps.update { it.withUpdatedLogo(packageName, lastModified) }
-        AppLog.i(TAG, "Updated in-memory ROM logo timestamp for $packageName to $lastModified")
-    }
-
-    fun updateRomCoverOptOut(
-        packageName: String,
-        optedOut: Boolean,
-    ) {
-        _romApps.update { it.withUpdatedCoverOptOut(packageName, optedOut) }
-        AppLog.i(TAG, "Updated in-memory ROM cover opt-out for $packageName to $optedOut")
-    }
-
-    fun updateRomLibraryIconOptOut(
-        packageName: String,
-        optedOut: Boolean,
-    ) {
-        _romApps.update { it.withUpdatedLibraryIconOptOut(packageName, optedOut) }
-        AppLog.i(TAG, "Updated in-memory ROM library icon opt-out for $packageName to $optedOut")
-    }
-
-    fun updateRomLibraryIcon(
-        packageName: String,
-        iconPath: String?,
-        imageId: Int? = null,
-        type: String? = null,
-        lastModified: Long = System.currentTimeMillis(),
-    ) {
-        _romApps.update { it.withUpdatedLibraryIcon(packageName, iconPath, imageId, type, lastModified) }
-        AppLog.i(
-            TAG,
-            "Updated in-memory ROM library icon path for $packageName to $iconPath (imageId: $imageId, type: $type, lastModified: $lastModified)",
-        )
-    }
-
-    /**
-     * Updates the displayed label of a ROM in memory only. Persistence of custom names is owned by
-     * [InstalledAppsManager.updateAppLabel] / [InstalledAppsManager.resetAppLabel].
-     */
-    internal fun updateRomLabelInMemory(
-        packageName: String,
-        newLabel: String,
-    ) {
-        _romApps.update { it.withUpdatedLabel(packageName, newLabel) }
-        AppLog.i(TAG, "Updated in-memory ROM label for $packageName to '$newLabel'")
+        _romApps.update { apps ->
+            apps.map { if (it.packageName == packageName) transform(it) else it }
+        }
+        AppLog.d(TAG, "Updated in-memory ROM metadata for $packageName")
     }
 
     internal fun collectRomFilesRecursively(

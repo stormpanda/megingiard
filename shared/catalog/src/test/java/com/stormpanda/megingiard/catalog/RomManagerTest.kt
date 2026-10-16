@@ -175,7 +175,7 @@ class RomManagerTest {
 
     @Test
     fun testUpdateRomCover() {
-        RomManager.updateRomCover("test.rom.pkg", "/path/to/cover.png")
+        RomManager.updateRomApp("test.rom.pkg") { it.copy(coverPath = "/path/to/cover.png") }
         // Verified function execution without crash
     }
 

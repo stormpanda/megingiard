@@ -587,7 +587,7 @@ object InstalledAppsManager {
         optedOut: Boolean,
     ) {
         setArtworkOptOut(context, ArtworkKind.COVER, packageName, optedOut)
-        updateCoverOptOut(packageName, optedOut)
+        refreshAppMetadata(context, packageName)
     }
 
     fun setLibraryIconOptedOut(
@@ -596,7 +596,7 @@ object InstalledAppsManager {
         optedOut: Boolean,
     ) {
         setArtworkOptOut(context, ArtworkKind.LIBRARY_ICON, packageName, optedOut)
-        updateLibraryIconOptOut(packageName, optedOut)
+        refreshAppMetadata(context, packageName)
     }
 
     private fun setArtworkOptOut(
@@ -614,37 +614,60 @@ object InstalledAppsManager {
         persistScope.launch { saveArtworkOptOuts(context) }
     }
 
-    fun updateCoverOptOut(
-        packageName: String,
-        optedOut: Boolean,
-    ) {
-        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomCoverOptOut(packageName, optedOut)
-            return
-        }
-        installedAndroidAppsFlow.update { it.withUpdatedCoverOptOut(packageName, optedOut) }
+    /**
+     * Populates a raw [InstalledAppInfo] with current in-memory metadata (custom label, cover ID,
+     * library icon reference, artwork opt-outs) and disk-cached artwork timestamps/paths.
+     */
+    internal fun enrichAppInfo(
+        rawApp: InstalledAppInfo,
+        context: Context,
+    ): InstalledAppInfo {
+        val packageName = rawApp.packageName
+        val defaultLabel = rawApp.defaultLabel ?: rawApp.label
+        val label = getCustomLabel(packageName) ?: defaultLabel
+
+        val cachedCoverFile = coverFileFor(context, packageName)
+        val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0L
+        val coverImageId = if (hasCover) getCoverImageId(packageName) else null
+
+        val cachedLibraryIconFile = libraryIconFileFor(context, packageName)
+        val hasLibraryIcon = cachedLibraryIconFile.exists() && cachedLibraryIconFile.length() > 0L
+        val libraryIconRef = if (hasLibraryIcon) getLibraryIconRef(packageName) else null
+
+        val cachedLogoFile = logoFileFor(context, packageName)
+        val hasLogo = cachedLogoFile.exists() && cachedLogoFile.length() > 0L
+
+        return rawApp.copy(
+            label = label,
+            defaultLabel = defaultLabel,
+            coverPath = if (hasCover) cachedCoverFile.absolutePath else null,
+            coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L,
+            coverImageId = coverImageId,
+            libraryIconPath = if (hasLibraryIcon) cachedLibraryIconFile.absolutePath else null,
+            libraryIconImageId = libraryIconRef?.id,
+            libraryIconType = libraryIconRef?.type,
+            libraryIconLastModified = if (hasLibraryIcon) cachedLibraryIconFile.lastModified() else 0L,
+            coverOptedOut = isCoverOptedOut(packageName),
+            libraryIconOptedOut = isLibraryIconOptedOut(packageName),
+            logoLastModified = if (hasLogo) cachedLogoFile.lastModified() else 0L,
+        )
     }
 
-    fun updateLibraryIconOptOut(
+    /**
+     * Re-applies [enrichAppInfo] to the in-memory catalog entry for [packageName] (Android app or ROM).
+     */
+    internal fun refreshAppMetadata(
+        context: Context,
         packageName: String,
-        optedOut: Boolean,
     ) {
         if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomLibraryIconOptOut(packageName, optedOut)
-            return
+            RomManager.updateRomApp(packageName) { enrichAppInfo(it, context) }
+        } else {
+            installedAndroidAppsFlow.update { apps ->
+                apps.map { if (it.packageName == packageName) enrichAppInfo(it, context) else it }
+            }
         }
-        installedAndroidAppsFlow.update { it.withUpdatedLibraryIconOptOut(packageName, optedOut) }
-    }
-
-    fun updateAppLogo(
-        packageName: String,
-        lastModified: Long,
-    ) {
-        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomLogo(packageName, lastModified)
-            return
-        }
-        installedAndroidAppsFlow.update { it.withUpdatedLogo(packageName, lastModified) }
+        AppLog.d(TAG, "Refreshed in-memory metadata for $packageName")
     }
 
     /** Location of the cached logo image for ROM [packageName]. */
@@ -716,7 +739,7 @@ object InstalledAppsManager {
                         )
                 val gamePackagesFromIntent = gameResolveList.map { it.activityInfo.packageName }.toSet()
 
-                val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }
+                File(context.cacheDir, DIR_COVERS).mkdirs()
 
                 val apps =
                     resolveInfoList
@@ -730,38 +753,18 @@ object InstalledAppsManager {
                                     .loadLabel(packageManager)
                                     .toString()
                             val defaultLabel = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
-                            val label = synchronized(customAppNames) { customAppNames[packageName] } ?: defaultLabel
                             val activityName = resolveInfo.activityInfo.name
                             val isGame = isPackageAGame(appInfo, gamePackagesFromIntent)
 
-                            val cachedCoverFile = File(coversDir, "$packageName$COVER_FILE_EXTENSION")
-                            val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
-                            val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
-                            val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
-                            val coverImageId = if (hasCover) getCoverImageId(packageName) else null
-
-                            val cachedLibraryIconFile = libraryIconFileFor(context, packageName)
-                            val hasLibraryIcon = cachedLibraryIconFile.exists() && cachedLibraryIconFile.length() > 0
-                            val libraryIconPath = if (hasLibraryIcon) cachedLibraryIconFile.absolutePath else null
-                            val libraryIconLastModified = if (hasLibraryIcon) cachedLibraryIconFile.lastModified() else 0L
-                            val libraryIconRef = if (hasLibraryIcon) getLibraryIconRef(packageName) else null
-
-                            InstalledAppInfo(
-                                packageName = packageName,
-                                activityName = activityName,
-                                label = label,
-                                coverPath = coverPath,
-                                isGame = isGame,
-                                coverLastModified = coverLastModified,
-                                coverImageId = coverImageId,
-                                defaultLabel = defaultLabel,
-                                libraryIconPath = libraryIconPath,
-                                libraryIconImageId = libraryIconRef?.id,
-                                libraryIconType = libraryIconRef?.type,
-                                libraryIconLastModified = libraryIconLastModified,
-                                coverOptedOut = isCoverOptedOut(packageName),
-                                libraryIconOptedOut = isLibraryIconOptedOut(packageName),
-                                logoLastModified = 0L,
+                            enrichAppInfo(
+                                InstalledAppInfo(
+                                    packageName = packageName,
+                                    activityName = activityName,
+                                    label = defaultLabel,
+                                    isGame = isGame,
+                                    defaultLabel = defaultLabel,
+                                ),
+                                context,
                             )
                         }.sortedBy { it.label.lowercase() }
 
@@ -772,37 +775,6 @@ object InstalledAppsManager {
                 // Trigger background SteamGridDB cover scraping if API key is configured
                 triggerSteamGridDbScraping(context)
             }
-    }
-
-    fun updateAppCover(
-        packageName: String,
-        coverPath: String?,
-        coverImageId: Int? = null,
-    ) {
-        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomCover(packageName, coverPath, coverImageId)
-            return
-        }
-        installedAndroidAppsFlow.update { it.withUpdatedCover(packageName, coverPath, coverImageId) }
-        AppLog.i(TAG, "Updated in-memory cover path for $packageName to $coverPath (imageId: $coverImageId)")
-    }
-
-    fun updateAppLibraryIcon(
-        packageName: String,
-        iconPath: String?,
-        imageId: Int? = null,
-        type: String? = null,
-        lastModified: Long = System.currentTimeMillis(),
-    ) {
-        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomLibraryIcon(packageName, iconPath, imageId, type, lastModified)
-            return
-        }
-        installedAndroidAppsFlow.update { it.withUpdatedLibraryIcon(packageName, iconPath, imageId, type, lastModified) }
-        AppLog.i(
-            TAG,
-            "Updated in-memory library icon path for $packageName to $iconPath (imageId: $imageId, type: $type, lastModified: $lastModified)",
-        )
     }
 
     /**
@@ -819,7 +791,7 @@ object InstalledAppsManager {
             customAppNames[packageName] = newLabel
         }
         persistScope.launch { saveCustomAppNames(context) }
-        applyLabelInMemory(packageName, newLabel)
+        refreshAppMetadata(context, packageName)
         AppLog.i(TAG, "Updated custom label for $packageName to '$newLabel'")
     }
 
@@ -843,20 +815,9 @@ object InstalledAppsManager {
             AppLog.w(TAG, "resetAppLabel: no default label known for $packageName")
             return null
         }
-        applyLabelInMemory(packageName, defaultLabel)
+        refreshAppMetadata(context, packageName)
         AppLog.i(TAG, "Reset label for $packageName to default '$defaultLabel' (customRemoved=$removed)")
         return defaultLabel
-    }
-
-    private fun applyLabelInMemory(
-        packageName: String,
-        newLabel: String,
-    ) {
-        if (packageName.startsWith(ROM_PACKAGE_PREFIX)) {
-            RomManager.updateRomLabelInMemory(packageName, newLabel)
-        } else {
-            installedAndroidAppsFlow.update { it.withUpdatedLabel(packageName, newLabel) }
-        }
     }
 
     /** Location of the cached cover image for [packageName]. */
@@ -904,10 +865,10 @@ object InstalledAppsManager {
             val file = coverFileFor(context, packageName)
             if (!writeImageAtomically(file, bytes)) return@withContext null
             onCoverWritten()
-            setCoverOptedOut(context, packageName, false)
+            setArtworkOptOut(context, ArtworkKind.COVER, packageName, false)
             recordScrapeAttempt(context, packageName, ArtworkKind.COVER)
             setCoverImageId(context, packageName, imageId)
-            updateAppCover(packageName, file.absolutePath, imageId)
+            refreshAppMetadata(context, packageName)
             AppLog.i(TAG, "Applied custom cover for $packageName (imageId=$imageId)")
             file.absolutePath
         }
@@ -928,10 +889,10 @@ object InstalledAppsManager {
             AppLog.w(TAG, "Failed to delete cover ${file.absolutePath}")
         }
         onCoverRemoved()
-        setCoverOptedOut(context, packageName, true)
+        setArtworkOptOut(context, ArtworkKind.COVER, packageName, true)
         recordScrapeAttempt(context, packageName, ArtworkKind.COVER)
         setCoverImageId(context, packageName, null)
-        updateAppCover(packageName, null, null)
+        refreshAppMetadata(context, packageName)
         AppLog.i(TAG, "Reverted $packageName to default icon")
     }
 
@@ -1032,12 +993,11 @@ object InstalledAppsManager {
                 return@withContext null
             }
             if (!writeImageAtomically(file, downsampledBytes)) return@withContext null
-            val lastModified = file.lastModified()
             onIconWritten()
-            setLibraryIconOptedOut(context, packageName, false)
+            setArtworkOptOut(context, ArtworkKind.LIBRARY_ICON, packageName, false)
             recordScrapeAttempt(context, packageName, ArtworkKind.LIBRARY_ICON)
             setLibraryIconRef(context, packageName, LibraryIconRef(id = imageId, type = type))
-            updateAppLibraryIcon(packageName, file.absolutePath, imageId, type, lastModified)
+            refreshAppMetadata(context, packageName)
             AppLog.i(TAG, "Applied custom library icon for $packageName (imageId=$imageId, type=$type)")
             file.absolutePath
         }
@@ -1056,10 +1016,10 @@ object InstalledAppsManager {
             AppLog.w(TAG, "Failed to delete library icon ${file.absolutePath}")
         }
         onIconRemoved()
-        setLibraryIconOptedOut(context, packageName, true)
+        setArtworkOptOut(context, ArtworkKind.LIBRARY_ICON, packageName, true)
         recordScrapeAttempt(context, packageName, ArtworkKind.LIBRARY_ICON)
         setLibraryIconRef(context, packageName, null)
-        updateAppLibraryIcon(packageName, null, null, null, 0L)
+        refreshAppMetadata(context, packageName)
         AppLog.i(TAG, "Reverted $packageName to default library icon")
     }
 
@@ -1191,7 +1151,7 @@ object InstalledAppsManager {
                     runScrapeStep(context, app, ArtworkKind.COVER) { scrapeCover(context, plan, gameId, apiKey) }
                 }
                 if (plan.scrapeLogo) {
-                    runScrapeStep(context, app, ArtworkKind.LOGO) { scrapeLogo(plan, gameId, apiKey) }
+                    runScrapeStep(context, app, ArtworkKind.LOGO) { scrapeLogo(context, plan, gameId, apiKey) }
                 }
                 if (plan.scrapeLibraryIcon) {
                     runScrapeStep(context, app, ArtworkKind.LIBRARY_ICON) { scrapeLibraryIcon(context, plan, gameId, apiKey) }
@@ -1255,13 +1215,14 @@ object InstalledAppsManager {
             }
         if (!writeImageAtomically(plan.coverFile, bytes)) return false
         setCoverImageId(context, app.packageName, firstImage.id)
-        updateAppCover(app.packageName, plan.coverFile.absolutePath, firstImage.id)
+        refreshAppMetadata(context, app.packageName)
         AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label} (imageId=${firstImage.id})")
         return true
     }
 
     /** @return true when the ROM logo step completed (saved, or no logo available). */
     private suspend fun scrapeLogo(
+        context: Context,
         plan: AppScrapePlan,
         gameId: Int,
         apiKey: String,
@@ -1285,7 +1246,7 @@ object InstalledAppsManager {
                 return false
             }
         if (!writeImageAtomically(plan.logoFile, logoBytes)) return false
-        updateAppLogo(app.packageName, plan.logoFile.lastModified())
+        refreshAppMetadata(context, app.packageName)
         AppLog.i(TAG, "Successfully scraped SteamGridDB logo for ROM: ${app.label}")
         return true
     }
@@ -1321,9 +1282,8 @@ object InstalledAppsManager {
             return true
         }
         if (!writeImageAtomically(plan.libraryIconFile, downsampledBytes)) return false
-        val lastModified = plan.libraryIconFile.lastModified()
         setLibraryIconRef(context, app.packageName, LibraryIconRef(id = firstIcon.id, type = IMAGE_TYPE_ICONS))
-        updateAppLibraryIcon(app.packageName, plan.libraryIconFile.absolutePath, firstIcon.id, IMAGE_TYPE_ICONS, lastModified)
+        refreshAppMetadata(context, app.packageName)
         AppLog.i(TAG, "Successfully scraped SteamGridDB library icon for ${app.label} (imageId=${firstIcon.id})")
         return true
     }
