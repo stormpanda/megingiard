@@ -333,28 +333,26 @@ internal fun PadSurface(
             TouchProjectionController(edgeZonePx, overlayAtBottom)
         }
 
-    LaunchedEffect(isFollowActive, isCapturing) {
-        if (isFollowActive && isCapturing) {
+    val hasFollowMode = isFollowActive && isCapturing
+    DisposableEffect(hasFollowMode) {
+        if (hasFollowMode) {
             TouchScreenObserver.start(
                 clientToken = "MacroPadScreen_FollowMode",
                 onTouchNormalized = { nx, ny ->
                     ScreenCaptureManager.onTouchReceived(nx, ny)
                 },
             )
-        } else {
+        }
+        onDispose {
             TouchScreenObserver.stop("MacroPadScreen_FollowMode")
         }
     }
 
-    LaunchedEffect(vibrator) {
+    DisposableEffect(vibrator) {
         InteractiveCutoutController.onHapticFeedback = {
             triggerHaptic(vibrator, HapticStrength.LIGHT, 0, 0)
         }
-    }
-
-    DisposableEffect(Unit) {
         onDispose {
-            TouchScreenObserver.stop("MacroPadScreen_FollowMode")
             InteractiveCutoutController.onHapticFeedback = null
         }
     }
