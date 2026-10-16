@@ -201,48 +201,24 @@ object AutoSwitchCoordinator {
         if (isLauncherOrSwitcher) {
             AppLog.d(TAG, "onPackageChanged: Preserving focused game state while task switcher/launcher '$normalized' is active.")
             return
-        } else if (!isRegisteredEmulator) {
-            AppStateManager.setStandaloneForegroundState(normalized, null)
-        } else {
-            val session = EmulatorDetectionFunnel.activeSession.value ?: EmulatorDetectionFunnel.lastDetectedSession.value
-            if (session != null && session.packageName == normalized) {
-                AppStateManager.setStandaloneForegroundState(
-                    focusedApp = session.packageName,
-                    focusedRomPath = session.romPath ?: session.romIdentifier,
-                    focusedRomIdentifier = session.romIdentifier ?: session.romPath,
-                )
+        }
+        if (EmulatorDetectionFunnel.activeSession.value?.packageName != normalized) {
+            val currentFocusedPkg = AppStateManager.focusedAppPackageName.value
+            val currentFocusedRom = AppStateManager.focusedRomPath.value
+            val currentActiveProfile = MacroPadState.activeProfile.value
+            if (isRegisteredEmulator &&
+                currentFocusedPkg == normalized &&
+                currentActiveProfile?.matches(normalized, currentFocusedRom, isActiveProfile = true) == true
+            ) {
+                AppLog.d(TAG, "onPackageChanged: preserving active ROM path '$currentFocusedRom' for emulator '$normalized'")
             } else {
-                val currentFocusedPkg = AppStateManager.focusedAppPackageName.value
-                val currentFocusedRom = AppStateManager.focusedRomPath.value
-                val currentActiveProfile = MacroPadState.activeProfile.value
-                if (currentFocusedPkg == normalized &&
-                    currentActiveProfile?.matches(normalized, currentFocusedRom, isActiveProfile = true) == true
-                ) {
-                    AppLog.d(TAG, "onPackageChanged: preserving active ROM path '$currentFocusedRom' for emulator '$normalized'")
-                } else {
-                    AppStateManager.setStandaloneForegroundState(normalized, null)
-                }
+                AppStateManager.setStandaloneForegroundState(normalized, null)
             }
-        }
 
-        // 4. Auto profile switching
-        val session = EmulatorDetectionFunnel.activeSession.value ?: EmulatorDetectionFunnel.lastDetectedSession.value
-        if (isRegisteredEmulator && session != null && session.packageName == normalized) {
-            AppLog.d(
-                TAG,
-                "onPackageChanged: active ROM session exists for emulator '$normalized' (${session.romIdentifier ?: session.romPath})",
-            )
-            tryAutoSwitch(
-                session.packageName,
-                session.romIdentifier ?: session.romPath,
-                session.systemId,
-                logContext = "emulator session (${session.gameTitle})",
-            )
-            return
-        }
-
-        if (!tryAutoSwitch(normalized, logContext = "app '$normalized'") && !isRegisteredEmulator) {
-            AppLog.d(TAG, "onPackageChanged: no profile mapped to package '$normalized'")
+            // 4. Immediate package-level auto profile switch fallback (ROM sessions are handled by activeSession collector)
+            if (!tryAutoSwitch(normalized, logContext = "app '$normalized'") && !isRegisteredEmulator) {
+                AppLog.d(TAG, "onPackageChanged: no profile mapped to package '$normalized'")
+            }
         }
     }
 

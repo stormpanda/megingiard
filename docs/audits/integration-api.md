@@ -284,7 +284,7 @@
 - [x] **`[IA-16]`** — Avoid scanning `/storage` and double-reading `ppsspp.ini` on every 1s poll tick in `PpssppDetector` *(Complexity: Med, Risk: Low)*
 - [x] **`[IA-17]`** — Replace mixed `Mutex` + manual `pollingJob` + unsynchronized `clearSession()` in `EmulatorDetectionFunnel` with `collectLatest` *(Complexity: Med, Risk: Low)*
 - [x] **`[IA-18]`** — Consolidate 5x overlapping Accessibility liveness sync triggers *(Complexity: Med, Risk: Low)*
-- [ ] **`[IA-19]`** — Remove stale synchronous session read in `AutoSwitchCoordinator.onPackageChanged` *(Complexity: Med, Risk: Low)*
+- [x] **`[IA-19]`** — Remove stale synchronous session read in `AutoSwitchCoordinator.onPackageChanged` *(Complexity: Med, Risk: Low)*
 - [ ] **`[IA-20]`** — Remove premature `notify*Changed` broadcasts from `MegingiardSettingsProvider.onCreate()` *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-21]`** — Replace 16 individual `StateFlow` subscriptions & 11-arg `resolveTargetAppInfo` in `IntegrationHomeScreen` with consolidated focus state *(Complexity: High, Risk: Low)*
 - [ ] **`[IA-22]`** — Deduplicate 3x `ProfileAssociation` construction blocks in `IntegrationHomeScreen` *(Complexity: Low, Risk: Low)*
