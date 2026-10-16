@@ -428,14 +428,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                     Button(
                         onClick = {
                             val pkg = targetPkg ?: return@Button
-                            val romTarget = targetRomIdentifier ?: targetRom
-                            val romFileName = romTarget?.substringAfterLast('/')?.substringAfterLast('\\')
-                            val assoc =
-                                ProfileAssociation(
-                                    packageName = pkg,
-                                    systemId = targetSystem,
-                                    romFileName = romFileName,
-                                )
+                            val assoc = buildTargetProfileAssociation(pkg, targetRom, targetRomIdentifier, targetSystem)
                             MacroPadState.updateProfile(pendingProfile.copy(association = assoc))
                             profileToRelink = null
                         },
@@ -711,13 +704,12 @@ private fun HeroCompanionCard(
                         Row(horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING)) {
                             Button(
                                 onClick = {
-                                    val targetRom = targetRomIdentifier ?: targetRomPath
-                                    val romFileName = targetRom?.substringAfterLast('/')?.substringAfterLast('\\')
                                     val assoc =
-                                        ProfileAssociation(
-                                            packageName = targetPackage,
-                                            systemId = targetSystemId,
-                                            romFileName = romFileName,
+                                        buildTargetProfileAssociation(
+                                            pkg = targetPackage,
+                                            targetRom = targetRomPath,
+                                            targetRomIdentifier = targetRomIdentifier,
+                                            targetSystem = targetSystemId,
                                         )
                                     AppStateManager.openPrimaryModal(
                                         PrimaryModalConfig(
@@ -848,13 +840,12 @@ private fun HeroCompanionCard(
                                                     if (isAlreadyLinked) {
                                                         onRelinkRequested(profile)
                                                     } else {
-                                                        val targetRom = targetRomIdentifier ?: targetRomPath
-                                                        val romFileName = targetRom?.substringAfterLast('/')?.substringAfterLast('\\')
                                                         val assoc =
-                                                            ProfileAssociation(
-                                                                packageName = targetPackage,
-                                                                systemId = targetSystemId,
-                                                                romFileName = romFileName,
+                                                            buildTargetProfileAssociation(
+                                                                pkg = targetPackage,
+                                                                targetRom = targetRomPath,
+                                                                targetRomIdentifier = targetRomIdentifier,
+                                                                targetSystem = targetSystemId,
                                                             )
                                                         val updatedProfile = profile.copy(association = assoc)
                                                         MacroPadState.updateProfile(updatedProfile)
@@ -1124,6 +1115,21 @@ internal data class TargetAppInfo(
     val romIdentifier: String? = null,
     val systemId: String?,
 )
+
+private fun buildTargetProfileAssociation(
+    pkg: String,
+    targetRom: String?,
+    targetRomIdentifier: String?,
+    targetSystem: String?,
+): ProfileAssociation {
+    val romTarget = targetRomIdentifier ?: targetRom
+    val romFileName = romTarget?.substringAfterLast('/')?.substringAfterLast('\\')
+    return ProfileAssociation(
+        packageName = pkg,
+        systemId = targetSystem,
+        romFileName = romFileName,
+    )
+}
 
 internal fun resolveTargetAppInfo(
     focusState: AppStateManager.EffectiveFocusState,
