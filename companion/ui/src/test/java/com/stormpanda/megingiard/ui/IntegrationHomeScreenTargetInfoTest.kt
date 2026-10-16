@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.ui
 
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.session.ActiveGameSession
@@ -51,16 +52,19 @@ class IntegrationHomeScreenTargetInfoTest {
         installedApps: List<InstalledAppInfo> = listOf(testApp),
         resolveAppLabel: (String) -> String? = { null },
     ) = resolveTargetAppInfo(
-        hoveredPackage = hoveredPackage,
-        hoveredAppLabel = hoveredAppLabel,
-        hoveredRomPath = hoveredRomPath,
-        hoveredRomIdentifier = hoveredRomIdentifier,
-        hoveredSystemId = hoveredSystemId,
+        focusState =
+            AppStateManager.EffectiveFocusState(
+                focusedAppPackageName = focusedAppPackageName,
+                focusedRomPath = focusedRomPath,
+                focusedRomIdentifier = focusedRomIdentifier,
+                hoveredAppPackageName = hoveredPackage,
+                hoveredAppLabel = hoveredAppLabel,
+                hoveredRomPath = hoveredRomPath,
+                hoveredRomIdentifier = hoveredRomIdentifier,
+                hoveredSystemId = hoveredSystemId,
+            ),
         activeSession = activeSession,
         lastDetectedSession = lastDetectedSession,
-        focusedAppPackageName = focusedAppPackageName,
-        focusedRomPath = focusedRomPath,
-        focusedRomIdentifier = focusedRomIdentifier,
         installedApps = installedApps,
         resolveAppLabel = resolveAppLabel,
     )

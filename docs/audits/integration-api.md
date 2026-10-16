@@ -286,7 +286,7 @@
 - [x] **`[IA-18]`** — Consolidate 5x overlapping Accessibility liveness sync triggers *(Complexity: Med, Risk: Low)*
 - [x] **`[IA-19]`** — Remove stale synchronous session read in `AutoSwitchCoordinator.onPackageChanged` *(Complexity: Med, Risk: Low)*
 - [x] **`[IA-20]`** — Remove premature `notify*Changed` broadcasts from `MegingiardSettingsProvider.onCreate()` *(Complexity: Low, Risk: Low)*
-- [ ] **`[IA-21]`** — Replace 16 individual `StateFlow` subscriptions & 11-arg `resolveTargetAppInfo` in `IntegrationHomeScreen` with consolidated focus state *(Complexity: High, Risk: Low)*
+- [x] **`[IA-21]`** — Replace 16 individual `StateFlow` subscriptions & 11-arg `resolveTargetAppInfo` in `IntegrationHomeScreen` with consolidated focus state *(Complexity: High, Risk: Low)*
 - [ ] **`[IA-22]`** — Deduplicate 3x `ProfileAssociation` construction blocks in `IntegrationHomeScreen` *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-23]`** — Fix stale `MegingiardIpcContract.kt` module path in `FEATURE.md` *(Complexity: Low, Risk: Low)*
 - [ ] **`[IA-24]`** — Remove outdated RetroArch package preference claim from `FEATURE.md` §3.2 *(Complexity: Low, Risk: Low)*

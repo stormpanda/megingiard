@@ -136,34 +136,26 @@ private val IH_BATTERY_LOW_COLOR = AppPalettes.batteryLow
 fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val colors = LocalAppColors.current
 
-    val clientPackage by AppStateManager.externalClientPackage.collectAsStateWithLifecycle()
-    val isClientActive by AppStateManager.isExternalClientActive.collectAsStateWithLifecycle()
+    val focusState by AppStateManager.effectiveFocusState.collectAsStateWithLifecycle()
     val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
-    val hoveredAppLabel by AppStateManager.hoveredAppLabel.collectAsStateWithLifecycle()
 
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsStateWithLifecycle()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
     val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsStateWithLifecycle()
     val isUpdateAvailable by UpdateManager.updateAvailable.collectAsStateWithLifecycle()
-
-    val hoveredPrimaryColor by AppStateManager.hoveredAppPrimaryColor.collectAsStateWithLifecycle()
-    val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsStateWithLifecycle()
-    val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsStateWithLifecycle()
-    val hoveredRomPath by AppStateManager.hoveredRomPath.collectAsStateWithLifecycle()
-    val hoveredRomIdentifier by AppStateManager.hoveredRomIdentifier.collectAsStateWithLifecycle()
-    val hoveredSystemId by AppStateManager.hoveredSystemId.collectAsStateWithLifecycle()
     val activeSession by EmulatorDetectionFunnel.activeSession.collectAsStateWithLifecycle()
     val lastDetectedSession by EmulatorDetectionFunnel.lastDetectedSession.collectAsStateWithLifecycle()
-    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsStateWithLifecycle()
-    val focusedRomPath by AppStateManager.focusedRomPath.collectAsStateWithLifecycle()
-    val focusedRomIdentifier by AppStateManager.focusedRomIdentifier.collectAsStateWithLifecycle()
 
-    val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
+    val isGameFocus =
+        focusState.isExternalClientActive &&
+            focusState.externalClientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
+    val hoveredPrimaryColor = focusState.hoveredAppPrimaryColor
+    val hoveredSecondaryColor = focusState.hoveredAppSecondaryColor
 
     val targetPrimary =
         remember(isGameFocus, hoveredPrimaryColor, colors.accent) {
             if (isGameFocus && hoveredPrimaryColor != null) {
-                Color(hoveredPrimaryColor!!).copy(alpha = IH_AMBIENT_PRIMARY_ALPHA)
+                Color(hoveredPrimaryColor).copy(alpha = IH_AMBIENT_PRIMARY_ALPHA)
             } else {
                 colors.accent.copy(alpha = IH_AMBIENT_PRIMARY_ALPHA)
             }
@@ -171,7 +163,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val targetSecondary =
         remember(isGameFocus, hoveredSecondaryColor, colors.onSurfaceSecondary) {
             if (isGameFocus && hoveredSecondaryColor != null) {
-                Color(hoveredSecondaryColor!!).copy(alpha = IH_AMBIENT_SECONDARY_ALPHA)
+                Color(hoveredSecondaryColor).copy(alpha = IH_AMBIENT_SECONDARY_ALPHA)
             } else {
                 colors.onSurfaceSecondary.copy(alpha = IH_AMBIENT_SECONDARY_ALPHA)
             }
@@ -199,29 +191,15 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
 
     val targetInfo =
         remember(
-            hoveredPackage,
-            hoveredAppLabel,
-            hoveredRomPath,
-            hoveredRomIdentifier,
-            hoveredSystemId,
+            focusState,
             activeSession,
             lastDetectedSession,
-            focusedAppPackageName,
-            focusedRomPath,
-            focusedRomIdentifier,
             installedApps,
         ) {
             resolveTargetAppInfo(
-                hoveredPackage = hoveredPackage,
-                hoveredAppLabel = hoveredAppLabel,
-                hoveredRomPath = hoveredRomPath,
-                hoveredRomIdentifier = hoveredRomIdentifier,
-                hoveredSystemId = hoveredSystemId,
+                focusState = focusState,
                 activeSession = activeSession,
                 lastDetectedSession = lastDetectedSession,
-                focusedAppPackageName = focusedAppPackageName,
-                focusedRomPath = focusedRomPath,
-                focusedRomIdentifier = focusedRomIdentifier,
                 installedApps = installedApps,
                 resolveAppLabel = { pkg -> resolveAppLabel(context, pkg) },
             )
@@ -1148,23 +1126,22 @@ internal data class TargetAppInfo(
 )
 
 internal fun resolveTargetAppInfo(
-    hoveredPackage: String?,
-    hoveredAppLabel: String?,
-    hoveredRomPath: String?,
-    hoveredRomIdentifier: String? = null,
-    hoveredSystemId: String?,
+    focusState: AppStateManager.EffectiveFocusState,
     activeSession: ActiveGameSession?,
     lastDetectedSession: ActiveGameSession?,
-    focusedAppPackageName: String?,
-    focusedRomPath: String?,
-    focusedRomIdentifier: String? = null,
     installedApps: List<InstalledAppInfo>,
     resolveAppLabel: (String) -> String? = { null },
 ): TargetAppInfo {
     val active = activeSession
     val last = lastDetectedSession
-    val focused = focusedAppPackageName
-    val hovered = hoveredPackage
+    val focused = focusState.focusedAppPackageName
+    val focusedRomPath = focusState.focusedRomPath
+    val focusedRomIdentifier = focusState.focusedRomIdentifier
+    val hovered = focusState.hoveredAppPackageName
+    val hoveredAppLabel = focusState.hoveredAppLabel
+    val hoveredRomPath = focusState.hoveredRomPath
+    val hoveredRomIdentifier = focusState.hoveredRomIdentifier
+    val hoveredSystemId = focusState.hoveredSystemId
 
     return if (hovered != null) {
         val label =
