@@ -1067,17 +1067,8 @@ fun FocusTopLauncherScreen(
     }
 }
 
-/** Result of [FocusImageCache.decodeSampledIcon]; [wasIcoContainer] signals the disk file should be normalized to PNG. */
-internal class SampledIcon(
-    val bitmap: Bitmap,
-    val wasIcoContainer: Boolean,
-)
-
 internal object FocusImageCache {
     private const val MAX_ICON_DIMENSION_PX = 256
-    private const val MAX_ICON_DISK_BYTES = 256 * 1024L
-    private const val ICON_REWRITE_PNG_QUALITY = 95
-    private const val BYTES_PER_KB = 1024
     private val coverCache = LruCache<String, ImageBitmap>(80)
     private val iconCache = LruCache<String, ImageBitmap>(80)
     private val missingIconKeys = ConcurrentHashMap.newKeySet<String>()
@@ -1217,20 +1208,14 @@ internal object FocusImageCache {
                 AppLog.w(TAG, "Library icon file does not exist or is empty: $path")
                 return@withContext null
             }
-            val sampled = decodeSampledIcon(file)
-            if (sampled == null) {
+            val bitmap = decodeSampledIconBitmap(file)
+            if (bitmap == null) {
                 missingLibraryIconKeys.add(cacheKey)
                 AppLog.w(TAG, "Failed to decode library icon bitmap from $path")
                 return@withContext null
             }
-            val diskBitmap = sampled.bitmap.asImageBitmap()
+            val diskBitmap = bitmap.asImageBitmap()
             iconCache.put(cacheKey, diskBitmap)
-
-            // Normalize legacy ICO containers and oversized (>256KB) files to a downsampled PNG thumbnail
-            if (sampled.wasIcoContainer || file.length() > MAX_ICON_DISK_BYTES) {
-                rewriteIconThumbnail(file, sampled.bitmap, appInfo.label)
-            }
-
             diskBitmap
         }
     }
@@ -1277,46 +1262,13 @@ internal object FocusImageCache {
     }
 
     /**
-     * Replaces [file] with a PNG encoding of [bitmap] via a temp file + rename.
-     * Must be called off the main thread.
-     */
-    private fun rewriteIconThumbnail(
-        file: File,
-        bitmap: Bitmap,
-        label: String,
-    ) {
-        val tempFile = File(file.parentFile, "${file.name}.tmp")
-        try {
-            FileOutputStream(tempFile).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, ICON_REWRITE_PNG_QUALITY, out)
-            }
-            if (tempFile.length() > 0L && tempFile.renameTo(file)) {
-                AppLog.i(TAG, "Rewrote disk icon as downsampled PNG for $label (${file.length() / BYTES_PER_KB} KB)")
-            } else {
-                AppLog.w(TAG, "Failed to replace disk icon for $label with downsampled PNG")
-            }
-        } catch (e: Exception) {
-            AppLog.w(TAG, "Failed to rewrite downsampled icon thumbnail for $label: ${e.message}")
-        } finally {
-            if (tempFile.exists() && !tempFile.delete()) {
-                AppLog.w(TAG, "Failed to delete temp icon file ${tempFile.name}")
-            }
-        }
-    }
-
-    internal fun decodeSampledIconBitmap(
-        file: File,
-        maxDimensionPx: Int = MAX_ICON_DIMENSION_PX,
-    ): Bitmap? = decodeSampledIcon(file, maxDimensionPx)?.bitmap
-
-    /**
      * Decodes [file] downsampled to at most [maxDimensionPx]. Windows ICO containers that the
      * platform decoder cannot read are unpacked via [IcoImageExtractor]. Has no disk side effects.
      */
-    internal fun decodeSampledIcon(
+    internal fun decodeSampledIconBitmap(
         file: File,
         maxDimensionPx: Int = MAX_ICON_DIMENSION_PX,
-    ): SampledIcon? {
+    ): Bitmap? {
         if (!file.exists() || file.length() == 0L) return null
         return try {
             val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -1366,21 +1318,18 @@ internal object FocusImageCache {
                     BitmapFactory.decodeFile(file.absolutePath, decodeOptions)
                 } ?: return null
 
-            val finalBitmap =
-                if (decoded.width > maxDimensionPx || decoded.height > maxDimensionPx) {
-                    val scale = minOf(maxDimensionPx.toFloat() / decoded.width, maxDimensionPx.toFloat() / decoded.height)
-                    val scaledW = (decoded.width * scale).toInt().coerceAtLeast(1)
-                    val scaledH = (decoded.height * scale).toInt().coerceAtLeast(1)
-                    val scaled = Bitmap.createScaledBitmap(decoded, scaledW, scaledH, true)
-                    if (scaled != decoded) {
-                        decoded.recycle()
-                    }
-                    scaled
-                } else {
-                    decoded
+            if (decoded.width > maxDimensionPx || decoded.height > maxDimensionPx) {
+                val scale = minOf(maxDimensionPx.toFloat() / decoded.width, maxDimensionPx.toFloat() / decoded.height)
+                val scaledW = (decoded.width * scale).toInt().coerceAtLeast(1)
+                val scaledH = (decoded.height * scale).toInt().coerceAtLeast(1)
+                val scaled = Bitmap.createScaledBitmap(decoded, scaledW, scaledH, true)
+                if (scaled != decoded) {
+                    decoded.recycle()
                 }
-
-            SampledIcon(bitmap = finalBitmap, wasIcoContainer = extractedBytes != null)
+                scaled
+            } else {
+                decoded
+            }
         } catch (e: Exception) {
             AppLog.w(TAG, "Failed to decode sampled icon from ${file.name}: ${e.message}")
             null
@@ -1396,15 +1345,11 @@ internal object FocusImageCache {
         val iconFile = File(fileDir, "${appInfo.packageName}.png")
         if (iconFile.exists() && iconFile.length() > 0) {
             val startTime = System.currentTimeMillis()
-            val sampled = decodeSampledIcon(iconFile)
-            if (sampled != null) {
+            val bitmap = decodeSampledIconBitmap(iconFile)
+            if (bitmap != null) {
                 val elapsed = System.currentTimeMillis() - startTime
                 AppLog.d(TAG, "Loaded disk-cached ${if (appInfo.isRom) "logo" else "icon"} PNG for ${appInfo.label} in ${elapsed}ms")
-                // Normalize ICO containers, and rewrite oversized (>256KB) ROM logos as downsampled thumbnails
-                if (sampled.wasIcoContainer || (appInfo.isRom && iconFile.length() > MAX_ICON_DISK_BYTES)) {
-                    rewriteIconThumbnail(iconFile, sampled.bitmap, appInfo.label)
-                }
-                return sampled.bitmap
+                return bitmap
             }
         }
 

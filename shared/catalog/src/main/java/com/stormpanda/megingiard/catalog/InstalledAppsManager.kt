@@ -43,7 +43,6 @@ private const val TAG = "InstalledAppsManager"
 private const val FILE_FAVORITES = "gamefocus_favorites.txt"
 private const val FILE_HIDDEN = "gamefocus_hidden.txt"
 private const val FILE_LAST_USED = "gamefocus_last_used.txt"
-private const val FILE_SCRAPED_APPS = "gamefocus_scraped_apps.txt"
 private const val FILE_ARTWORK_OPTOUTS = "gamefocus_artwork_optouts.json"
 private const val FILE_SCRAPE_ATTEMPTS = "gamefocus_scrape_attempts.json"
 private const val FILE_APP_NAMES = "gamefocus_app_names.json"
@@ -482,24 +481,6 @@ object InstalledAppsManager {
                         )
                     } catch (e: Exception) {
                         AppLog.w(TAG, "Failed to load $FILE_SCRAPE_ATTEMPTS: ${e.message}")
-                    }
-                } else {
-                    val legacyFile = File(context.filesDir, FILE_SCRAPED_APPS)
-                    if (legacyFile.exists()) {
-                        scrapeAttempts = ScrapeAttempts.fromLegacy(loadStringSet(context, FILE_SCRAPED_APPS))
-                        persistScope.launch {
-                            if (!saveScrapeAttempts(context)) {
-                                AppLog.w(TAG, "Keeping legacy $FILE_SCRAPED_APPS because migrated attempts could not be saved")
-                                return@launch
-                            }
-                            try {
-                                if (legacyFile.delete()) {
-                                    AppLog.d(TAG, "Deleted legacy $FILE_SCRAPED_APPS after migration")
-                                }
-                            } catch (e: Exception) {
-                                AppLog.w(TAG, "Failed to delete legacy $FILE_SCRAPED_APPS: ${e.message}")
-                            }
-                        }
                     }
                 }
                 isScrapeAttemptsLoaded = true

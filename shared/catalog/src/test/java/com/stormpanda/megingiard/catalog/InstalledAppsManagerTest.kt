@@ -489,17 +489,8 @@ class InstalledAppsManagerTest {
     }
 
     @Test
-    fun testScrapeAttempts_legacyMigrationAndPerKind() {
+    fun testScrapeAttempts_perKind() {
         val context: Context = RuntimeEnvironment.getApplication()
-        val legacyFile = File(context.filesDir, "gamefocus_scraped_apps.txt")
-        legacyFile.writeText("com.legacy.app\n")
-
-        InstalledAppsManager.reloadPersistedMetadataForTesting(context)
-        runBlocking { InstalledAppsManager.awaitPendingWritesForTesting() }
-
-        assertTrue(InstalledAppsManager.wasAttempted("com.legacy.app", ArtworkKind.COVER))
-        assertTrue(InstalledAppsManager.wasAttempted("com.legacy.app", ArtworkKind.LOGO))
-        assertTrue(InstalledAppsManager.wasAttempted("com.legacy.app", ArtworkKind.LIBRARY_ICON))
 
         assertFalse(InstalledAppsManager.wasAttempted("com.new.app", ArtworkKind.COVER))
         InstalledAppsManager.recordScrapeAttempt(context, "com.new.app", ArtworkKind.COVER)

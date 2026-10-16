@@ -93,15 +93,4 @@ internal data class ScrapeAttempts(
             ArtworkKind.LOGO -> logo
             ArtworkKind.LIBRARY_ICON -> libraryIcon
         }
-
-    companion object {
-        /**
-         * Migrates the legacy `gamefocus_scraped_apps.txt` registry: every legacy package is treated as attempted
-         * for all kinds, so existing apps are not backfilled with new artwork kinds automatically.
-         */
-        fun fromLegacy(legacyPackages: Set<String>): ScrapeAttempts {
-            AppLog.i(TAG, "Migrating ${legacyPackages.size} legacy scraped packages to per-kind scrape attempts")
-            return ScrapeAttempts(cover = legacyPackages, logo = legacyPackages, libraryIcon = legacyPackages)
-        }
-    }
 }
