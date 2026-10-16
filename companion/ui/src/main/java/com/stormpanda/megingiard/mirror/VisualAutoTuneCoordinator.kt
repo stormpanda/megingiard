@@ -68,12 +68,6 @@ internal object VisualAutoTuneCoordinator {
     private val _dynamicPercent = MutableStateFlow(0)
     val dynamicPercent: StateFlow<Int> = _dynamicPercent.asStateFlow()
 
-    private val _progress = MutableStateFlow(0f)
-    val progress: StateFlow<Float> = _progress.asStateFlow()
-
-    private val _remainingSeconds = MutableStateFlow(0)
-    val remainingSeconds: StateFlow<Int> = _remainingSeconds.asStateFlow()
-
     private val _lastTunedPercent = MutableStateFlow<Int?>(null)
     val lastTunedPercent: StateFlow<Int?> = _lastTunedPercent.asStateFlow()
 
@@ -318,8 +312,6 @@ internal object VisualAutoTuneCoordinator {
         _isCalibrating.value = true
         _calibrationType.value = type
         _lastTunedPercent.value = null
-        _progress.value = 0f
-        _remainingSeconds.value = 0
         _sampleCount.value = 0
         _canFinish.value = false
         _dynamicPercent.value = 0
@@ -469,8 +461,6 @@ internal object VisualAutoTuneCoordinator {
         _canFinish.value = false
         _sampleCount.value = 0
         _dynamicPercent.value = 0
-        _progress.value = 0f
-        _remainingSeconds.value = 0
     }
 
     /**

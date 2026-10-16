@@ -244,7 +244,7 @@
 - [x] **`[MR-10]`** — Delete unused `CutoutLayoutEditorHelpModal` Composable and its imports *(Complexity: Low, Risk: Low)*
 - [ ] **`[MR-14]`** — Consolidate fragmented `MutableStateFlow`s into `AnchorTestUiState` and `AutoTuneUiState` data classes *(Complexity: Low, Risk: Low)*
 - [ ] **`[MR-18]`** — Commit anchor crop changes directly to `MacroPadState` and delete `AnchorPositioningCoordinator.kt` *(Complexity: Low, Risk: Low)*
-- [ ] **`[MR-11]`** — Delete dead `progress`/`remainingSeconds` flows in `VisualAutoTuneCoordinator` and unused `activeSurface` in `MirrorFrameSampler` *(Complexity: Low, Risk: Low)*
+- [x] **`[MR-11]`** — Delete dead `progress`/`remainingSeconds` flows in `VisualAutoTuneCoordinator` and unused `activeSurface` in `MirrorFrameSampler` *(Complexity: Low, Risk: Low)*
 - [ ] **`[MR-17]`** — Extract shared top-overlay initial focus & recovery effect into `EditorToolbox.kt` *(Complexity: Low, Risk: Low)*
 - [x] **`[MR-05]`** — Remove pre-Android 12 (`API <= 30`) `M_LAYER_STACK_FROM` reflection fallback in `SurfaceControlReflect.java` *(Complexity: Low, Risk: Low)*
 - [x] **`[MR-06]`** — Remove no-op `synchronized(old)` blocks around `Bitmap.recycle()` *(Complexity: Low, Risk: Low)*
