@@ -1062,60 +1062,6 @@ object MacroPadState {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Mirror viewport persistence (per-layout)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * Saves the current mirror viewport (scale and offsets) into the active layout's
-     * [PadLayout.mirrorSavedScale/X/Y] fields and persists via [MacroPadSettings.saveMacroPadData].
-     *
-     * Called by [MirrorViewportController] after a debounce when [com.stormpanda.megingiard.settings.MirrorSettings.rememberViewport] is enabled.
-     * A no-op if no active layout is found or the values are unchanged.
-     */
-    fun saveMirrorViewport(
-        scale: Float,
-        offsetX: Float,
-        offsetY: Float,
-    ) {
-        val layoutId = activeLayout.value?.id ?: return
-        saveMirrorViewport(layoutId, scale, offsetX, offsetY)
-    }
-
-    /**
-     * Saves mirror viewport values into the specified layout ID.
-     *
-     * Used by [MirrorViewportController] to persist the viewport that belongs to
-     * the layout which produced the gesture, even if the user switches layouts
-     * before a debounce window completes.
-     */
-    fun saveMirrorViewport(
-        layoutId: String,
-        scale: Float,
-        offsetX: Float,
-        offsetY: Float,
-    ) {
-        val changed =
-            updateLayoutInProfiles(layoutId) { layout ->
-                if (layout.mirrorSavedScale == scale &&
-                    layout.mirrorSavedOffsetX == offsetX &&
-                    layout.mirrorSavedOffsetY == offsetY
-                ) {
-                    null
-                } else {
-                    layout.copy(
-                        mirrorSavedScale = scale,
-                        mirrorSavedOffsetX = offsetX,
-                        mirrorSavedOffsetY = offsetY,
-                        mirrorConfigured = true,
-                    )
-                }
-            }
-        if (changed) {
-            AppLog.d(TAG, "saveMirrorViewport layoutId=$layoutId scale=$scale offset=($offsetX,$offsetY)")
-        }
-    }
-
     fun saveMirrorCutouts(
         layoutId: String,
         cutouts: List<ScreenCutout>,

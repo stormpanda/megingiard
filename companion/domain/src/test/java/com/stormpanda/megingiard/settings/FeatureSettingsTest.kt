@@ -116,21 +116,10 @@ class FeatureSettingsTest {
 
     @Test
     fun testMirrorSettingsSetters() {
-        MirrorSettings.setRememberViewport(true)
-        assertTrue(MirrorSettings.rememberViewport.value)
-
-        MirrorSettings.setRememberLock(true)
-        assertTrue(MirrorSettings.rememberLock.value)
-
-        MirrorSettings.setRememberProjection(true)
-        assertTrue(MirrorSettings.rememberProjection.value)
-
         MirrorSettings.setCutoutAlignmentSnapping(false)
         assertFalse(MirrorSettings.cutoutAlignmentSnapping.value)
         MirrorSettings.setCutoutAlignmentSnapping(true)
         assertTrue(MirrorSettings.cutoutAlignmentSnapping.value)
-
-        MirrorSettings.saveMirrorSessionState()
     }
 
     @Test

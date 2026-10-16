@@ -287,10 +287,8 @@ fun MirrorEditorTopOverlay(
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else METO_FALLBACK_SRC_WIDTH
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else METO_FALLBACK_SRC_HEIGHT
 
-    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsStateWithLifecycle()
-    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsStateWithLifecycle()
-    val secScreenW = if (surfaceWidth > 0f) surfaceWidth else METO_FALLBACK_SEC_WIDTH
-    val secScreenH = if (surfaceHeight > 0f) surfaceHeight else METO_FALLBACK_SEC_HEIGHT
+    val secScreenW = METO_FALLBACK_SEC_WIDTH
+    val secScreenH = METO_FALLBACK_SEC_HEIGHT
 
     var topHToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
     var topVToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }

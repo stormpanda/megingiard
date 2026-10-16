@@ -283,7 +283,6 @@ internal fun CutoutSettingsSubPageContent(
             cardFocusRequester = projectionFocusRequester,
             onConfirm = {
                 onUpdateCutout(cutout.copy(touchProjectionEnabled = true, interactivePanZoom = false), true)
-                ScreenCaptureManager.setLocked(true)
                 restoreFocusTrigger++
             },
         )
@@ -303,9 +302,6 @@ internal fun CutoutSettingsSubPageContent(
                     ),
                     false,
                 )
-                if (isChecked) {
-                    ScreenCaptureManager.setLocked(true)
-                }
             },
         )
     }

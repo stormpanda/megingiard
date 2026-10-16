@@ -25,12 +25,8 @@ internal val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
 internal val KEY_OVERLAY_FADE_OUT = booleanPreferencesKey("overlay_fade_out")
 internal val KEY_STEAMGRIDDB_API_TOKEN = stringPreferencesKey("steamgriddb_api_token")
 
-// Mirror session state persistence — "remember" flags
-internal val KEY_REMEMBER_VIEWPORT = booleanPreferencesKey("mirror_remember_viewport")
-internal val KEY_REMEMBER_LOCK = booleanPreferencesKey("mirror_remember_lock")
-internal val KEY_REMEMBER_PROJECTION = booleanPreferencesKey("mirror_remember_projection")
+// Mirror settings
 internal val KEY_MIRROR_SNAP_ALIGNMENT = booleanPreferencesKey("mirror_snap_alignment")
-// Mirror session state persistence — saved values (viewport moved to PadLayout.mirrorSaved*)
 
 // Appearance
 internal val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
@@ -77,9 +73,6 @@ internal val KEY_PRIVD_PROMPT_DISMISSED = booleanPreferencesKey("privd_prompt_di
 internal val KEY_PRIVD_DEADZONE_LEFT = floatPreferencesKey("privd_deadzone_left")
 internal val KEY_PRIVD_DEADZONE_RIGHT = floatPreferencesKey("privd_deadzone_right")
 
-internal val KEY_SAVED_LOCKED = booleanPreferencesKey("mirror_saved_locked")
-internal val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projection")
-
 // Tutorials persistence
 internal val KEY_WELCOME_TOUR_COMPLETED_VERSION = intPreferencesKey("welcome_tour_completed_version")
 
@@ -108,9 +101,6 @@ private val GLOBAL_KEYS: Set<Preferences.Key<*>> =
     )
 private val MIRROR_KEYS: Set<Preferences.Key<*>> =
     setOf(
-        KEY_REMEMBER_VIEWPORT,
-        KEY_REMEMBER_LOCK,
-        KEY_REMEMBER_PROJECTION,
         KEY_MIRROR_SNAP_ALIGNMENT,
     )
 private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> =
@@ -157,8 +147,6 @@ internal val EXCLUDED_KEYS: Set<Preferences.Key<*>> =
     setOf(
         KEY_MACROPAD_PROFILES,
         KEY_MACROPAD_ACTIVE_PROFILE_ID,
-        KEY_SAVED_LOCKED,
-        KEY_SAVED_PROJECTION,
         KEY_WELCOME_TOUR_COMPLETED_VERSION,
         KEY_INTERNAL_BACKUPS,
         KEY_PRIVD_PROMPT_DISMISSED,
@@ -176,9 +164,6 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_EXCLUDE_FROM_RECENTS,
         KEY_OVERLAY_AT_BOTTOM,
         KEY_OVERLAY_FADE_OUT,
-        KEY_REMEMBER_VIEWPORT,
-        KEY_REMEMBER_LOCK,
-        KEY_REMEMBER_PROJECTION,
         KEY_MIRROR_SNAP_ALIGNMENT,
         KEY_KB_TOUCHPAD_ENABLED,
         KEY_KB_AUTO_OPEN_ON_FOCUS,

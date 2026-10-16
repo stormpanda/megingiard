@@ -94,8 +94,6 @@ fun CutoutLayoutEditor() {
     val selectedCutoutId by AppStateManager.selectedCutoutId.collectAsStateWithLifecycle()
     val cutoutAlignmentSnapping by MirrorSettings.cutoutAlignmentSnapping.collectAsStateWithLifecycle()
     val density = LocalDensity.current
-    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsStateWithLifecycle()
-    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsStateWithLifecycle()
     val captureSourceWidth by ScreenCaptureManager.captureSourceWidth.collectAsStateWithLifecycle()
     val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsStateWithLifecycle()
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else 1920f
@@ -111,8 +109,8 @@ fun CutoutLayoutEditor() {
         val containerH = constraints.maxHeight.toFloat()
         if (containerW <= 0f || containerH <= 0f) return@BoxWithConstraints
 
-        val screenW = if (surfaceWidth > 0f) surfaceWidth else containerW
-        val screenH = if (surfaceHeight > 0f) surfaceHeight else containerH
+        val screenW = containerW
+        val screenH = containerH
 
         Box(
             modifier =

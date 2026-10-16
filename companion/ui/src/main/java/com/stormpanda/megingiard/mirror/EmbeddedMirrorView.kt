@@ -48,9 +48,6 @@ fun EmbeddedMirrorView(
     val cutouts by ScreenCaptureManager.cutouts.collectAsStateWithLifecycle()
     val edgeBlendWidthDp by ScreenCaptureManager.edgeBlendWidthDp.collectAsStateWithLifecycle()
     val maxFps by ScreenCaptureManager.maxFps.collectAsStateWithLifecycle()
-    val scale by ScreenCaptureManager.scale.collectAsStateWithLifecycle()
-    val offsetX by ScreenCaptureManager.offsetX.collectAsStateWithLifecycle()
-    val offsetY by ScreenCaptureManager.offsetY.collectAsStateWithLifecycle()
     val srcWidth by ScreenCaptureManager.captureSourceWidth.collectAsStateWithLifecycle()
     val srcHeight by ScreenCaptureManager.captureSourceHeight.collectAsStateWithLifecycle()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
@@ -331,9 +328,6 @@ fun EmbeddedMirrorView(
             mcc.isFrozen = isFrozen
             mcc.isViewportEditActive = isViewportEditActive
             mcc.frozenBitmap = frozenBitmap
-            mcc.viewportScale = if (overrideCutouts != null) 1f else scale
-            mcc.viewportOffsetX = if (overrideCutouts != null) 0f else offsetX
-            mcc.viewportOffsetY = if (overrideCutouts != null) 0f else offsetY
             mcc.bgBitmap = bgBitmap
             mcc.bgImageScale = if (effectiveShowLayoutBackground) layout?.bgImageScale ?: 1f else 1f
             mcc.bgImageOffsetX = if (effectiveShowLayoutBackground) layout?.bgImageOffsetX ?: 0f else 0f

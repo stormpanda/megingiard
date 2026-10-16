@@ -77,26 +77,6 @@ private fun cutout(
     flipVertical = flipVertical,
 )
 
-private fun assertProject(
-    touchX: Float,
-    touchY: Float,
-    expectedX: Float,
-    expectedY: Float,
-    scale: Float = 1f,
-    offsetX: Float = 0f,
-    offsetY: Float = 0f,
-    screenW: Float = 1920f,
-    screenH: Float = 1080f,
-    sw: Float = 1920f,
-    sh: Float = 1080f,
-    eps: Float = EPS,
-) {
-    val r = projectCoordinates(touchX, touchY, screenW, screenH, sw, sh, scale, offsetX, offsetY)
-    assertNotNull(r)
-    assertEquals(expectedX, r!!.first, eps)
-    assertEquals(expectedY, r.second, eps)
-}
-
 private fun assertCutoutProject(
     touchX: Float,
     touchY: Float,
@@ -206,116 +186,7 @@ private fun assertCutoutResize(
     expectedH?.let { assertEquals(it, geom.h, eps) }
 }
 
-/**
- * Tests for [projectCoordinates].
- *
- * Reference scenario: AYN Thor primary display 1080×1920, secondary display 1920×1080
- * Compose surface, letterboxed mirrored content of 1920×1080 (sw=screenW, sh=screenH).
- */
 class MirrorCoordinateTransformTest {
-    @Test
-    fun `center of screen at scale 1 maps to content center`() {
-        assertProject(touchX = 960f, touchY = 540f, expectedX = 0.5f, expectedY = 0.5f)
-    }
-
-    @Test
-    fun `top-left corner at scale 1 maps to (0,0)`() {
-        assertProject(touchX = 0f, touchY = 0f, expectedX = 0f, expectedY = 0f)
-    }
-
-    @Test
-    fun `bottom-right corner at scale 1 maps near (1,1)`() {
-        // 1f - 1px to stay within the 0..1 range.
-        val r =
-            projectCoordinates(
-                touchX = 1919f,
-                touchY = 1079f,
-                screenW = 1920f,
-                screenH = 1080f,
-                sw = 1920f,
-                sh = 1080f,
-                scale = 1f,
-                offsetX = 0f,
-                offsetY = 0f,
-            )
-        assertNotNull(r)
-        assertTrue(r!!.first > 0.999f && r.first <= 1f)
-        assertTrue(r.second > 0.999f && r.second <= 1f)
-    }
-
-    @Test
-    fun `2x zoom centered keeps screen center mapped to content center`() {
-        assertProject(touchX = 960f, touchY = 540f, expectedX = 0.5f, expectedY = 0.5f, scale = 2f)
-    }
-
-    @Test
-    fun `2x zoom narrows visible content - screen left edge maps to content quarter point`() {
-        // At 2× zoom the visible content X range is 0.25..0.75 of the source.
-        assertProject(touchX = 0f, touchY = 540f, expectedX = 0.25f, expectedY = 0.5f, scale = 2f)
-    }
-
-    @Test
-    fun `pan offset shifts mapped content`() {
-        // offsetX = +scale * sw/2 should move the screen center to the content's left edge.
-        assertProject(touchX = 960f, touchY = 540f, expectedX = 0f, expectedY = 0.5f, offsetX = 960f)
-    }
-
-    @Test
-    fun `out-of-bounds touch returns null`() {
-        // Touch beyond the right edge with no zoom/pan ⇒ nx > 1 ⇒ null.
-        val r =
-            projectCoordinates(
-                touchX = 5000f,
-                touchY = 540f,
-                screenW = 1920f,
-                screenH = 1080f,
-                sw = 1920f,
-                sh = 1080f,
-                scale = 1f,
-                offsetX = 0f,
-                offsetY = 0f,
-            )
-        assertNull(r)
-    }
-
-    @Test
-    fun `letterboxed content - touch in letterbox bar returns null`() {
-        // Source is 1920×1080 fitted into a 1920×1200 surface (taller). Letterbox bars at top/bottom.
-        // Content area: sw=1920, sh=1080 centered in screenW=1920, screenH=1200.
-        // Touch at y=10 (in top letterbox) ⇒ svY < 0 ⇒ ny < 0 ⇒ null.
-        val r =
-            projectCoordinates(
-                touchX = 960f,
-                touchY = 10f,
-                screenW = 1920f,
-                screenH = 1200f,
-                sw = 1920f,
-                sh = 1080f,
-                scale = 1f,
-                offsetX = 0f,
-                offsetY = 0f,
-            )
-        assertNull(r)
-    }
-
-    @Test
-    fun `letterboxed content - touch on visible content maps correctly`() {
-        assertProject(touchX = 960f, touchY = 600f, expectedX = 0.5f, expectedY = 0.5f, screenH = 1200f)
-    }
-
-    @Test
-    fun `degenerate inputs return null`() {
-        assertNull(
-            projectCoordinates(0f, 0f, 0f, 1080f, 1920f, 1080f, 1f, 0f, 0f),
-        )
-        assertNull(
-            projectCoordinates(0f, 0f, 1920f, 1080f, 1920f, 1080f, 0f, 0f, 0f),
-        )
-        assertNull(
-            projectCoordinates(0f, 0f, 1920f, 1080f, 0f, 1080f, 1f, 0f, 0f),
-        )
-    }
-
     @Test
     fun `projectCutoutCoordinates maps touch to primary display crop`() {
         assertCutoutProject(touchX = 150f, touchY = 150f, expectedX = 0.5f, expectedY = 0.5f)

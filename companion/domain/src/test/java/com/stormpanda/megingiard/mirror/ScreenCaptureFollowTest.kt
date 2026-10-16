@@ -66,7 +66,6 @@ class ScreenCaptureFollowTest {
         ScreenCaptureManager.scope = CoroutineScope(SupervisorJob() + testDispatcher)
         ScreenCaptureManager.resetMirrorSessionState()
         ScreenCaptureManager.setCapturing(false)
-        ScreenCaptureManager.setSurfaceSize(1920f, 1080f)
         ScreenCaptureManager.setCaptureSourceSize(1920, 1080)
     }
 
@@ -152,7 +151,7 @@ class ScreenCaptureFollowTest {
         assertTrue(MacroPadState.activeLayout.value!!.mirrorFollowActive)
 
         assertFalse(ScreenCaptureManager.isFollowActive.value)
-        MirrorViewportController.restoreFromLayout()
+        ScreenCaptureManager.restoreFromLayout()
         assertTrue(ScreenCaptureManager.isFollowActive.value)
     }
 

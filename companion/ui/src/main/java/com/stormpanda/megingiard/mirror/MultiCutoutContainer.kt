@@ -39,7 +39,6 @@ import kotlin.math.roundToInt
 private const val TAG = "MultiCutoutContainer"
 
 private const val MCC_TOUCH_TOLERANCE = 0.005f
-private const val MCC_UNCROPPED_THRESHOLD = 0.999f
 private const val MCC_MAX_ALPHA_FLOAT = 255f
 private const val MCC_MAX_ALPHA_INT = 255
 private const val TARGET_BLUR_RADIUS = 8f
@@ -275,22 +274,6 @@ internal class MultiCutoutContainer(
             ambientDimPaint.color = Color.argb(alpha, 0, 0, 0)
         }
     }
-
-    var viewportScale: Float = 1f
-        set(value) {
-            field = value
-            invalidate()
-        }
-    var viewportOffsetX: Float = 0f
-        set(value) {
-            field = value
-            invalidate()
-        }
-    var viewportOffsetY: Float = 0f
-        set(value) {
-            field = value
-            invalidate()
-        }
 
     private val addXfermode = PorterDuffXfermode(PorterDuff.Mode.ADD)
     private val transparentToBlackColors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
@@ -693,40 +676,12 @@ internal class MultiCutoutContainer(
                     }
                 } else {
                     // Live / Unfreezing: render hardware-accelerated live video stream directly from TextureView
-                    val isInteracting = InteractiveCutoutController.isCutoutActivelyInteracting(cutout.id)
-                    val isFollowActive = ScreenCaptureManager.isFollowActive.value
-                    val isUncropped =
-                        cutout.srcWidth >= MCC_UNCROPPED_THRESHOLD && cutout.srcHeight >= MCC_UNCROPPED_THRESHOLD
                     val liveSaveCount = canvas.save()
                     try {
-                        if (cutouts.size == 1 && isFollowActive && isUncropped && !cutout.interactivePanZoom && !isInteracting) {
-                            canvas.translate(viewportOffsetX, viewportOffsetY)
-                            canvas.scale(viewportScale, viewportScale, contentW / 2f, contentH / 2f)
-
-                            val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
-                            val destRatio = contentW / contentH
-
-                            var fitW = contentW
-                            var fitH = contentH
-                            if (srcRatio > destRatio) {
-                                fitH = contentW / srcRatio
-                            } else {
-                                fitW = contentH * srcRatio
-                            }
-
-                            val fitX = (contentW - fitW) / 2f
-                            val fitY = (contentH - fitH) / 2f
-                            canvas.translate(fitX, fitY)
-
-                            val scaleX = fitW / srcWidth
-                            val scaleY = fitH / srcHeight
-                            canvas.scale(scaleX, scaleY)
-                        } else {
-                            val scaleX = contentW / sw
-                            val scaleY = contentH / sh
-                            canvas.translate(-sx * scaleX, -sy * scaleY)
-                            canvas.scale(scaleX, scaleY)
-                        }
+                        val scaleX = contentW / sw
+                        val scaleY = contentH / sh
+                        canvas.translate(-sx * scaleX, -sy * scaleY)
+                        canvas.scale(scaleX, scaleY)
 
                         if (masterView != null) {
                             drawChild(canvas, masterView, drawTime)

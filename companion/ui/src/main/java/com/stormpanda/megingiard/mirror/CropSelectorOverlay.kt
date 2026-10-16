@@ -69,10 +69,8 @@ fun CropSelectorOverlay(
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else CS_FALLBACK_SRC_WIDTH
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else CS_FALLBACK_SRC_HEIGHT
 
-    val surfaceWidth by ScreenCaptureManager.surfaceWidth.collectAsStateWithLifecycle()
-    val surfaceHeight by ScreenCaptureManager.surfaceHeight.collectAsStateWithLifecycle()
-    val secScreenW = if (surfaceWidth > 0f) surfaceWidth else CS_FALLBACK_SEC_WIDTH
-    val secScreenH = if (surfaceHeight > 0f) surfaceHeight else CS_FALLBACK_SEC_HEIGHT
+    val secScreenW = CS_FALLBACK_SEC_WIDTH
+    val secScreenH = CS_FALLBACK_SEC_HEIGHT
 
     fun updateCutoutWithNewCrop(
         cutout: ScreenCutout,

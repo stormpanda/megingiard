@@ -17,7 +17,6 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
-import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -158,14 +157,10 @@ class ScreenCaptureService : Service() {
         capturedSrcHeight = srcHeight
         ScreenCaptureManager.setCaptureSourceSize(srcWidth, srcHeight)
 
-        MirrorViewportController.startPersistence(scope)
-        scope.launch {
-            MirrorSettings.restoreMirrorSessionState()
-            MirrorViewportController.restoreFromLayout()
-            AppLog.i(TAG, "privd session state restored → setCapturing(true)")
-            ScreenCaptureManager.setCapturing(true)
-            AppStateManager.setPromptInFlight(false)
-        }
+        ScreenCaptureManager.restoreFromLayout()
+        AppLog.i(TAG, "privd session state restored → setCapturing(true)")
+        ScreenCaptureManager.setCapturing(true)
+        AppStateManager.setPromptInFlight(false)
         return START_NOT_STICKY
     }
 

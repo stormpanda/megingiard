@@ -28,21 +28,6 @@ object ScreenCaptureManager {
     private val _isCapturing = MutableStateFlow(false)
     val isCapturing: StateFlow<Boolean> = _isCapturing.asStateFlow()
 
-    private val _scale = MutableStateFlow(1f)
-    val scale: StateFlow<Float> = _scale.asStateFlow()
-
-    private val _offsetX = MutableStateFlow(0f)
-    val offsetX: StateFlow<Float> = _offsetX.asStateFlow()
-
-    private val _offsetY = MutableStateFlow(0f)
-    val offsetY: StateFlow<Float> = _offsetY.asStateFlow()
-
-    private val _surfaceWidth = MutableStateFlow(0f)
-    val surfaceWidth: StateFlow<Float> = _surfaceWidth.asStateFlow()
-
-    private val _surfaceHeight = MutableStateFlow(0f)
-    val surfaceHeight: StateFlow<Float> = _surfaceHeight.asStateFlow()
-
     private val _cutouts = MutableStateFlow<List<ScreenCutout>>(emptyList())
     val cutouts: StateFlow<List<ScreenCutout>> = _cutouts.asStateFlow()
 
@@ -67,14 +52,10 @@ object ScreenCaptureManager {
     private val _screenshotPreview = MutableStateFlow<Bitmap?>(null)
     val screenshotPreview: StateFlow<Bitmap?> = _screenshotPreview.asStateFlow()
 
-    private val _isLocked = MutableStateFlow(false)
-    val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
-
     private val _isFollowActive = MutableStateFlow(false)
     val isFollowActive: StateFlow<Boolean> = _isFollowActive.asStateFlow()
 
     private var activeLayoutJob: Job? = null
-    private var activeCutoutsJob: Job? = null
 
     internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
         set(value) {
@@ -96,31 +77,34 @@ object ScreenCaptureManager {
 
     private fun restartCollectors() {
         activeLayoutJob?.cancel()
-        activeCutoutsJob?.cancel()
 
         activeLayoutJob =
             scope.launch {
+                var previousLayoutId: String? = null
                 MacroPadState.activeLayout.collect { layout ->
                     if (layout != null) {
+                        val oldLayoutId = previousLayoutId
+                        previousLayoutId = layout.id
                         _edgeBlendWidthDp.value = layout.mirrorEdgeBlendWidth
                         _maxFps.value = layout.mirrorMaxFps
                         _cutouts.value = layout.mirrorCutouts
+                        if (oldLayoutId != null && oldLayoutId != layout.id && _isCapturing.value) {
+                            setFollowActive(layout.mirrorFollowActive)
+                        }
                     } else {
+                        previousLayoutId = null
                         _edgeBlendWidthDp.value = 0f
                         _maxFps.value = 60
                         _cutouts.value = emptyList()
                     }
                 }
             }
+    }
 
-        activeCutoutsJob =
-            scope.launch {
-                _cutouts.collect { list ->
-                    if (list.any { it.touchProjectionEnabled }) {
-                        _isLocked.value = true
-                    }
-                }
-            }
+    fun restoreFromLayout() {
+        val layout = MacroPadState.activeLayout.value ?: return
+        AppLog.d(TAG, "restoreFromLayout layoutId=${layout.id} follow=${layout.mirrorFollowActive}")
+        setFollowActive(layout.mirrorFollowActive)
     }
 
     private var targetFollowX = 0f
@@ -150,26 +134,6 @@ object ScreenCaptureManager {
             _isFrozen.value = false
             setFrozenBitmap(null)
         }
-    }
-
-    fun setScale(scale: Float) {
-        _scale.value = scale
-    }
-
-    fun setOffsetX(x: Float) {
-        _offsetX.value = x
-    }
-
-    fun setOffsetY(y: Float) {
-        _offsetY.value = y
-    }
-
-    fun setSurfaceSize(
-        width: Float,
-        height: Float,
-    ) {
-        _surfaceWidth.value = width
-        _surfaceHeight.value = height
     }
 
     fun setCutouts(cutouts: List<ScreenCutout>) {
@@ -227,37 +191,12 @@ object ScreenCaptureManager {
         AppLog.d(TAG, "Cleared screenshot preview")
     }
 
-    fun setLocked(locked: Boolean) {
-        AppLog.d(TAG, "setLocked($locked)")
-        _isLocked.value = locked
-    }
-
-    /**
-     * Activates or deactivates touch projection.
-     * Enabling projection automatically enables lock (zoom/pan while forwarding is
-     * unusable). Disabling projection does not automatically release the lock —
-     * the user can unlock independently.
-     */
     fun setTouchProjectionActive(active: Boolean) {
-        AppLog.i(TAG, "setTouchProjectionActive($active)${if (active) " → auto-enabling lock" else ""}")
+        AppLog.i(TAG, "setTouchProjectionActive($active)")
         val layout = MacroPadState.activeLayout.value
         if (layout != null) {
             val updated = layout.mirrorCutouts.map { it.copy(touchProjectionEnabled = active) }
             MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
-        }
-        if (active) _isLocked.value = true
-    }
-
-    /**
-     * Toggles the lock state. If touch projection is currently active, toggling
-     * off also deactivates touch projection (since lock is required for it).
-     */
-    fun toggleLocked() {
-        val newLocked = !_isLocked.value
-        AppLog.d(TAG, "toggleLocked → $newLocked${if (!newLocked && isTouchProjectionActive.value) " (deactivating projection)" else ""}")
-        _isLocked.value = newLocked
-        if (!newLocked) {
-            setTouchProjectionActive(false)
         }
     }
 
@@ -383,10 +322,9 @@ object ScreenCaptureManager {
             }
     }
 
-    /** Resets all transient mirror session state (lock, projection, freeze, follow, interactive cutouts). */
+    /** Resets all transient mirror session state (freeze, follow, interactive cutouts). */
     fun resetMirrorSessionState() {
         AppLog.i(TAG, "resetMirrorSessionState")
-        _isLocked.value = false
         _isFrozen.value = false
         setFrozenBitmap(null)
         clearScreenshotPreview()
