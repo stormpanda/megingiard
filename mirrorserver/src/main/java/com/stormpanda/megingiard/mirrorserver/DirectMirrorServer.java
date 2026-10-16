@@ -8,8 +8,6 @@ import android.os.Parcel;
 import android.view.Surface;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -18,7 +16,6 @@ public final class DirectMirrorServer {
     private static final String DIRECT_SURFACE_DESCRIPTOR = "com.stormpanda.megingiard.mirrorserver.IDirectSurfaceReceiver";
     private static final int TRANSACTION_SET_SURFACE = IBinder.FIRST_CALL_TRANSACTION;
     private static final long SURFACE_DELIVERY_TIMEOUT_MS = 5_000L;
-    private static final int MAX_DIRECT_SURFACES = 8;
 
     private DirectMirrorServer() {}
 
@@ -45,9 +42,9 @@ public final class DirectMirrorServer {
             System.err.println("DirectMirrorServer: registered " + DIRECT_SURFACE_SERVICE_NAME);
 
             readinessSocket = new LocalServerSocket(socketName);
-            System.err.println("DirectMirrorServer: readiness socket bound, waiting for surfaces");
+            System.err.println("DirectMirrorServer: readiness socket bound, waiting for surface");
             if (!surfaceDelivered.await(SURFACE_DELIVERY_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-                System.err.println("DirectMirrorServer: timed out waiting for app surfaces");
+                System.err.println("DirectMirrorServer: timed out waiting for app surface");
                 System.exit(1);
                 return;
             }
@@ -94,23 +91,23 @@ public final class DirectMirrorServer {
 
     private static final class SurfaceReceiverBinder extends Binder {
         private final CountDownLatch surfaceDelivered;
-        private final List<Surface> activeSurfaces = new ArrayList<>();
-        private final List<IBinder> activeDisplayTokens = new ArrayList<>();
+        private Surface currentSurface;
+        private IBinder currentDisplay;
 
         SurfaceReceiverBinder(CountDownLatch surfaceDelivered) {
             this.surfaceDelivered = surfaceDelivered;
         }
 
         public synchronized void release() {
-            System.err.println("DirectMirrorServer: releasing " + activeDisplayTokens.size() + " displays");
-            for (IBinder token : activeDisplayTokens) {
-                try { SurfaceControlReflect.destroyDisplay(token); } catch (Throwable ignored) {}
+            if (currentDisplay != null) {
+                System.err.println("DirectMirrorServer: releasing display");
+                try { SurfaceControlReflect.destroyDisplay(currentDisplay); } catch (Throwable ignored) {}
+                currentDisplay = null;
             }
-            activeDisplayTokens.clear();
-            for (Surface surface : activeSurfaces) {
-                try { surface.release(); } catch (Throwable ignored) {}
+            if (currentSurface != null) {
+                try { currentSurface.release(); } catch (Throwable ignored) {}
+                currentSurface = null;
             }
-            activeSurfaces.clear();
         }
 
         @Override
@@ -122,80 +119,62 @@ public final class DirectMirrorServer {
             if (code != TRANSACTION_SET_SURFACE) return false;
             try {
                 data.enforceInterface(DIRECT_SURFACE_DESCRIPTOR);
-                
-                // Release all existing resources first before applying the new configuration
                 release();
 
-                int numSurfaces = data.readInt();
-                if (numSurfaces < 0 || numSurfaces > MAX_DIRECT_SURFACES) {
-                    System.err.println("[DirectMirror] Invalid numSurfaces: " + numSurfaces);
+                int hasSurface = data.readInt();
+                if (hasSurface == 0) {
+                    System.err.println("DirectMirrorServer: app cleared surface");
+                    reply.writeNoException();
+                    reply.writeInt(0);
+                    return true;
+                }
+                if (hasSurface != 1) {
+                    System.err.println("[DirectMirror] Invalid hasSurface flag: " + hasSurface);
                     if (reply != null) {
                         reply.writeNoException();
                         reply.writeInt(0);
                     }
                     return true;
                 }
-                System.err.println("DirectMirrorServer: receiving " + numSurfaces + " surfaces");
-                
-                if (numSurfaces == 0) {
-                    System.err.println("DirectMirrorServer: app sent 0 surfaces");
+
+                int w = data.readInt();
+                int h = data.readInt();
+                Surface surface = Surface.CREATOR.createFromParcel(data);
+                if (surface == null || !surface.isValid() || w <= 0 || h <= 0) {
+                    System.err.println("DirectMirrorServer: invalid surface or dimensions: " + w + "x" + h);
+                    if (surface != null) {
+                        try { surface.release(); } catch (Throwable ignored) {}
+                    }
                     reply.writeNoException();
                     reply.writeInt(0);
                     return true;
                 }
 
-                for (int i = 0; i < numSurfaces; i++) {
-                    int w = data.readInt();
-                    int h = data.readInt();
-                    if (data.readInt() == 0) {
-                        System.err.println("DirectMirrorServer: surface at index " + i + " is null");
-                        continue;
+                IBinder displayToken = null;
+                try {
+                    displayToken = SurfaceControlReflect.createDisplay("megingiard-direct-0", false);
+                    Rect rect = new Rect(0, 0, w, h);
+                    SurfaceControlReflect.configureDisplay(displayToken, surface, 0, rect, rect);
+                    currentDisplay = displayToken;
+                    currentSurface = surface;
+                } catch (Throwable t) {
+                    System.err.println("DirectMirrorServer: failed to configure display: " + t);
+                    if (displayToken != null) {
+                        try { SurfaceControlReflect.destroyDisplay(displayToken); } catch (Throwable ignored) {}
                     }
-                    Surface surface = Surface.CREATOR.createFromParcel(data);
-                    if (surface == null || !surface.isValid()) {
-                        System.err.println("DirectMirrorServer: surface at index " + i + " is invalid");
-                        if (surface != null) {
-                            try { surface.release(); } catch (Throwable ignored) {}
-                        }
-                        continue;
-                    }
-
-                    if (w <= 0 || h <= 0) {
-                        System.err.println("DirectMirrorServer: surface at index " + i + " has invalid dimensions: " + w + "x" + h);
-                        try { surface.release(); } catch (Throwable ignored) {}
-                        continue;
-                    }
-
-                    IBinder displayToken = null;
-                    try {
-                        displayToken = SurfaceControlReflect.createDisplay("megingiard-direct-" + i, false);
-                        Rect rect = new Rect(0, 0, w, h);
-                        SurfaceControlReflect.configureDisplay(displayToken, surface, 0, rect, rect);
-                        activeDisplayTokens.add(displayToken);
-                        activeSurfaces.add(surface);
-                    } catch (Throwable t) {
-                        System.err.println("DirectMirrorServer: failed to configure display for surface index " + i + ": " + t);
-                        if (displayToken != null) {
-                            try { SurfaceControlReflect.destroyDisplay(displayToken); } catch (Throwable ignored) {}
-                        }
-                        try { surface.release(); } catch (Throwable ignored) {}
-                    }
-                }
-
-                if (activeDisplayTokens.isEmpty()) {
-                    System.err.println("DirectMirrorServer: no valid surfaces accepted");
+                    try { surface.release(); } catch (Throwable ignored) {}
                     reply.writeNoException();
                     reply.writeInt(0);
                     return true;
                 }
 
                 surfaceDelivered.countDown();
-                System.err.println("DirectMirrorServer: " + activeDisplayTokens.size() + " surfaces parsed & configured");
+                System.err.println("DirectMirrorServer: surface parsed & configured");
                 reply.writeNoException();
                 reply.writeInt(1);
                 return true;
             } catch (Throwable t) {
-                System.err.println("DirectMirrorServer: setSurfaces failed: " + t);
+                System.err.println("DirectMirrorServer: setSurface failed: " + t);
                 t.printStackTrace();
                 reply.writeNoException();
                 reply.writeInt(0);
