@@ -87,9 +87,11 @@ import com.stormpanda.megingiard.ui.handle2DAdjustmentKeyEvent
 import com.stormpanda.megingiard.ui.launchDirectionalRepeat
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import com.stormpanda.megingiard.ui.toHexLabel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import java.util.UUID
 import kotlin.math.roundToInt
+import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "PadButtonEditDialog"
 
@@ -97,6 +99,250 @@ private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
 private val PBD_CORNER_SHAPE = RoundedCornerShape(PBD_CORNER_RADIUS_DP)
 private val PBD_ICON_SIZE_DP = 20.dp
+
+internal class Button2DAdjusterState(
+    private val coroutineScope: CoroutineScope,
+    private val resolveButton: (String) -> PadButton?,
+    private val onButtonChange: (PadButton) -> Unit,
+    private val resolveCanvasW: () -> Float,
+    private val resolveCanvasH: () -> Float,
+    private val resolveDensity: () -> Float,
+    private val resolveSnapEnabled: () -> Boolean,
+) {
+    var isR2Held by mutableStateOf(false)
+        private set
+    private var isL2Held by mutableStateOf(false)
+    private var activeDirectionKey by mutableIntStateOf(0)
+    private var activeRepeatJob by mutableStateOf<Job?>(null)
+
+    fun stopMovingImmediate() {
+        activeRepeatJob?.cancel()
+        activeRepeatJob = null
+        activeDirectionKey = 0
+        isL2Held = false
+        isR2Held = false
+    }
+
+    private fun moveButton(
+        btnId: String,
+        dx: Int,
+        dy: Int,
+    ) {
+        val targetBtn = resolveButton(btnId) ?: return
+        val otherButtons = MacroPadState.activeLayout.value?.buttons ?: emptyList()
+        val stepMultiplier = if (isL2Held) MPE_FINE_STEP_PX else MPE_NORMAL_STEP_PX
+        val (newX, newY) =
+            calculateGamepadButtonMove(
+                currentNormX = targetBtn.posX,
+                currentNormY = targetBtn.posY,
+                dirX = dx,
+                dirY = dy,
+                stepMultiplierPx = stepMultiplier,
+                movingButtonId = btnId,
+                otherButtons = otherButtons,
+                canvasW = resolveCanvasW(),
+                canvasH = resolveCanvasH(),
+                alignmentSnappingEnabled = resolveSnapEnabled(),
+            )
+        if (newX != targetBtn.posX || newY != targetBtn.posY) {
+            onButtonChange(targetBtn.copy(posX = newX, posY = newY))
+        }
+    }
+
+    private fun resizeButton(
+        btnId: String,
+        dx: Int,
+        dy: Int,
+    ) {
+        val targetBtn = resolveButton(btnId) ?: return
+        val stepDp = if (isL2Held) MPE_RESIZE_FINE_STEP_DP else MPE_RESIZE_NORMAL_STEP_DP
+        val isTrackpoint = targetBtn.action is PadAction.TrackpointMove
+        val res =
+            calculateGamepadButtonResize(
+                currentNormX = targetBtn.posX,
+                currentNormY = targetBtn.posY,
+                currentWidthDp = targetBtn.widthDp,
+                currentHeightDp = targetBtn.heightDp,
+                dirX = dx,
+                dirY = dy,
+                stepDp = stepDp,
+                canvasW = resolveCanvasW(),
+                canvasH = resolveCanvasH(),
+                density = resolveDensity(),
+                lockAspect = isTrackpoint,
+            )
+        if (res.newWidthDp != targetBtn.widthDp || res.newHeightDp != targetBtn.heightDp ||
+            res.newNormX != targetBtn.posX || res.newNormY != targetBtn.posY
+        ) {
+            onButtonChange(
+                targetBtn.copy(
+                    posX = res.newNormX,
+                    posY = res.newNormY,
+                    widthDp = res.newWidthDp,
+                    heightDp = res.newHeightDp,
+                ),
+            )
+        }
+    }
+
+    private fun dispatchAdjust(
+        btnId: String,
+        dx: Int,
+        dy: Int,
+    ) {
+        if (isR2Held) {
+            resizeButton(btnId, dx, dy)
+        } else {
+            moveButton(btnId, dx, dy)
+        }
+    }
+
+    private fun startMoving(
+        btnId: String,
+        keyCode: Int,
+        dx: Int,
+        dy: Int,
+    ) {
+        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) return
+        activeRepeatJob?.cancel()
+        activeDirectionKey = keyCode
+        dispatchAdjust(btnId, dx, dy)
+        activeRepeatJob =
+            coroutineScope.launchDirectionalRepeat(
+                keyCode = keyCode,
+                isActiveCheck = { activeDirectionKey == keyCode },
+            ) {
+                dispatchAdjust(btnId, dx, dy)
+            }
+    }
+
+    private fun stopMoving(keyCode: Int) {
+        if (activeDirectionKey == keyCode) {
+            activeRepeatJob?.cancel()
+            activeRepeatJob = null
+            activeDirectionKey = 0
+        }
+    }
+
+    fun handleKeyEvent(
+        keyEvent: ComposeKeyEvent,
+        buttonId: String,
+        isAdjusting: Boolean,
+        onDismiss: () -> Unit,
+    ): Boolean =
+        handle2DAdjustmentKeyEvent(
+            keyEvent = keyEvent,
+            isAdjusting = isAdjusting,
+            onStartAdjusting = { keyCode, dirX, dirY -> startMoving(buttonId, keyCode, dirX, dirY) },
+            onStopAdjusting = { keyCode -> stopMoving(keyCode) },
+            onDismissAdjustment = {
+                stopMovingImmediate()
+                onDismiss()
+            },
+            onModifierKeyDown = { keyCode ->
+                when (keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_L2 -> {
+                        isL2Held = true
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_BUTTON_R2 -> {
+                        if (!isR2Held) AppLog.d(TAG, "gamepad resize modifier active (R2)")
+                        isR2Held = true
+                        true
+                    }
+
+                    else -> {
+                        false
+                    }
+                }
+            },
+            onModifierKeyUp = { keyCode ->
+                when (keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_L2 -> {
+                        isL2Held = false
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_BUTTON_R2 -> {
+                        if (isR2Held) AppLog.d(TAG, "gamepad resize modifier released (R2)")
+                        isR2Held = false
+                        true
+                    }
+
+                    else -> {
+                        false
+                    }
+                }
+            },
+        )
+}
+
+@Composable
+internal fun rememberButton2DAdjusterState(
+    resolveButton: (String) -> PadButton?,
+    onButtonChange: (PadButton) -> Unit,
+): Button2DAdjusterState {
+    val coroutineScope = rememberCoroutineScope()
+    val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
+    val density = LocalDensity.current.density
+    val canvasMetrics by MacroPadState.canvasMetrics.collectAsStateWithLifecycle()
+    val effectiveCanvasW = canvasMetrics?.widthPx ?: MPE_CANVAS_WIDTH_PX
+    val effectiveCanvasH = canvasMetrics?.heightPx ?: MPE_CANVAS_HEIGHT_PX
+    val effectiveDensity = canvasMetrics?.density ?: density
+
+    val resolveButtonState = rememberUpdatedState(resolveButton)
+    val onButtonChangeState = rememberUpdatedState(onButtonChange)
+    val canvasWState = rememberUpdatedState(effectiveCanvasW)
+    val canvasHState = rememberUpdatedState(effectiveCanvasH)
+    val densityState = rememberUpdatedState(effectiveDensity)
+    val snapState = rememberUpdatedState(buttonAlignmentSnapping)
+
+    val state =
+        remember(coroutineScope) {
+            Button2DAdjusterState(
+                coroutineScope = coroutineScope,
+                resolveButton = { id -> resolveButtonState.value(id) },
+                onButtonChange = { btn -> onButtonChangeState.value(btn) },
+                resolveCanvasW = { canvasWState.value },
+                resolveCanvasH = { canvasHState.value },
+                resolveDensity = { densityState.value },
+                resolveSnapEnabled = { snapState.value },
+            )
+        }
+
+    DisposableEffect(state) {
+        onDispose {
+            state.stopMovingImmediate()
+        }
+    }
+
+    return state
+}
+
+@Composable
+internal fun Button2DAdjusterPill(
+    isAdjusting: Boolean,
+    isR2Held: Boolean,
+    isFocused: Boolean,
+) {
+    if (isAdjusting) {
+        GamepadPill(
+            text =
+                if (isR2Held) {
+                    stringResource(R.string.gamepad_action_resizing)
+                } else {
+                    stringResource(R.string.gamepad_action_moving)
+                },
+            isAccent = true,
+        )
+    } else {
+        GamepadPill(
+            text = stringResource(R.string.gamepad_action_move),
+            isHighlighted = isFocused,
+        )
+    }
+}
 
 @Composable
 internal fun describeButtonColorOption(
@@ -242,123 +488,6 @@ internal fun EditButtonSubPageContent(
     var posX by remember(button) { mutableFloatStateOf(button?.posX ?: 0.5f) }
     var posY by remember(button) { mutableFloatStateOf(button?.posY ?: 0.5f) }
     var isAdjusting by remember { mutableStateOf(false) }
-    var isR2Held by remember { mutableStateOf(false) }
-    var isL2Held by remember { mutableStateOf(false) }
-    val isL2HeldState = rememberUpdatedState(isL2Held)
-    val isR2HeldState = rememberUpdatedState(isR2Held)
-    val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
-    val coroutineScope = rememberCoroutineScope()
-    val density = LocalDensity.current.density
-    val canvasMetrics by MacroPadState.canvasMetrics.collectAsStateWithLifecycle()
-    val effectiveCanvasW = canvasMetrics?.widthPx ?: MPE_CANVAS_WIDTH_PX
-    val effectiveCanvasH = canvasMetrics?.heightPx ?: MPE_CANVAS_HEIGHT_PX
-    val effectiveDensity = canvasMetrics?.density ?: density
-    var activeDirectionKey by remember { mutableStateOf<Int?>(null) }
-    var activeRepeatJob by remember { mutableStateOf<Job?>(null) }
-
-    LaunchedEffect(isAdjusting) {
-        MacroPadState.setAdjustingButtonViaGamepad(isAdjusting)
-        if (isAdjusting) {
-            MacroPadState.setSelectedButtonId(stableButtonId)
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            activeRepeatJob?.cancel()
-            MacroPadState.setAdjustingButtonViaGamepad(false)
-        }
-    }
-
-    fun moveButton(
-        dx: Int,
-        dy: Int,
-    ) {
-        val currentLayout = MacroPadState.activeLayout.value ?: return
-        val stepMultiplier = if (isL2HeldState.value) MPE_FINE_STEP_PX else MPE_NORMAL_STEP_PX
-        val (newX, newY) =
-            calculateGamepadButtonMove(
-                currentNormX = posX,
-                currentNormY = posY,
-                dirX = dx,
-                dirY = dy,
-                stepMultiplierPx = stepMultiplier,
-                movingButtonId = stableButtonId,
-                otherButtons = currentLayout.buttons,
-                canvasW = effectiveCanvasW,
-                canvasH = effectiveCanvasH,
-                alignmentSnappingEnabled = buttonAlignmentSnapping,
-            )
-        posX = newX
-        posY = newY
-    }
-
-    fun resizeButton(
-        dx: Int,
-        dy: Int,
-    ) {
-        val stepDp = if (isL2HeldState.value) MPE_RESIZE_FINE_STEP_DP else MPE_RESIZE_NORMAL_STEP_DP
-        val isTrackpoint = action is PadAction.TrackpointMove
-        val res =
-            calculateGamepadButtonResize(
-                currentNormX = posX,
-                currentNormY = posY,
-                currentWidthDp = widthDp,
-                currentHeightDp = heightDp,
-                dirX = dx,
-                dirY = dy,
-                stepDp = stepDp,
-                canvasW = effectiveCanvasW,
-                canvasH = effectiveCanvasH,
-                density = effectiveDensity,
-                lockAspect = isTrackpoint,
-            )
-        posX = res.newNormX
-        posY = res.newNormY
-        widthDp = res.newWidthDp
-        heightDp = res.newHeightDp
-    }
-
-    fun dispatchAdjust(
-        dx: Int,
-        dy: Int,
-    ) {
-        if (isR2HeldState.value) {
-            resizeButton(dx, dy)
-        } else {
-            moveButton(dx, dy)
-        }
-    }
-
-    fun stopMovingImmediate() {
-        activeRepeatJob?.cancel()
-        activeRepeatJob = null
-        activeDirectionKey = null
-    }
-
-    fun startMoving(
-        keyCode: Int,
-        dx: Int,
-        dy: Int,
-    ) {
-        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) return
-        activeRepeatJob?.cancel()
-        activeDirectionKey = keyCode
-        dispatchAdjust(dx, dy)
-        activeRepeatJob =
-            coroutineScope.launchDirectionalRepeat(
-                keyCode = keyCode,
-                isActiveCheck = { activeDirectionKey == keyCode },
-            ) {
-                dispatchAdjust(dx, dy)
-            }
-    }
-
-    fun stopMoving(keyCode: Int) {
-        if (activeDirectionKey == keyCode) {
-            stopMovingImmediate()
-        }
-    }
 
     val currentButton =
         remember(
@@ -400,6 +529,30 @@ internal fun EditButtonSubPageContent(
                 invisible = invisible,
             )
         }
+
+    val adjusterState =
+        rememberButton2DAdjusterState(
+            resolveButton = { currentButton },
+            onButtonChange = { updated ->
+                posX = updated.posX
+                posY = updated.posY
+                widthDp = updated.widthDp
+                heightDp = updated.heightDp
+            },
+        )
+
+    LaunchedEffect(isAdjusting) {
+        MacroPadState.setAdjustingButtonViaGamepad(isAdjusting)
+        if (isAdjusting) {
+            MacroPadState.setSelectedButtonId(stableButtonId)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            MacroPadState.setAdjustingButtonViaGamepad(false)
+        }
+    }
 
     fun onActionChanged(newAction: PadAction) {
         AppLog.d(TAG, "onActionChanged: $newAction")
@@ -537,7 +690,7 @@ internal fun EditButtonSubPageContent(
         cardFocusRequester = adjustFocusRequester,
         onClick = {
             if (isAdjusting) {
-                stopMovingImmediate()
+                adjusterState.stopMovingImmediate()
                 isAdjusting = false
             } else {
                 isAdjusting = true
@@ -547,64 +700,16 @@ internal fun EditButtonSubPageContent(
         isAdjusting = isAdjusting,
         onFocusChanged = { isFocused ->
             if (!isFocused && isAdjusting) {
-                stopMovingImmediate()
+                adjusterState.stopMovingImmediate()
                 isAdjusting = false
             }
         },
         onCustomKeyEvent = { keyEvent ->
-            handle2DAdjustmentKeyEvent(
+            adjusterState.handleKeyEvent(
                 keyEvent = keyEvent,
+                buttonId = stableButtonId,
                 isAdjusting = isAdjusting,
-                onStartAdjusting = { keyCode, dirX, dirY ->
-                    startMoving(keyCode, dirX, dirY)
-                    true
-                },
-                onStopAdjusting = { keyCode ->
-                    stopMoving(keyCode)
-                    true
-                },
-                onDismissAdjustment = {
-                    stopMovingImmediate()
-                    isL2Held = false
-                    isR2Held = false
-                    isAdjusting = false
-                },
-                onModifierKeyDown = { keyCode ->
-                    when (keyCode) {
-                        KeyEvent.KEYCODE_BUTTON_L2 -> {
-                            isL2Held = true
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_BUTTON_R2 -> {
-                            if (!isR2Held) AppLog.d(TAG, "gamepad resize modifier active (R2)")
-                            isR2Held = true
-                            true
-                        }
-
-                        else -> {
-                            false
-                        }
-                    }
-                },
-                onModifierKeyUp = { keyCode ->
-                    when (keyCode) {
-                        KeyEvent.KEYCODE_BUTTON_L2 -> {
-                            isL2Held = false
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_BUTTON_R2 -> {
-                            if (isR2Held) AppLog.d(TAG, "gamepad resize modifier released (R2)")
-                            isR2Held = false
-                            true
-                        }
-
-                        else -> {
-                            false
-                        }
-                    }
-                },
+                onDismiss = { isAdjusting = false },
             )
         },
     ) { isFocused ->
@@ -620,22 +725,11 @@ internal fun EditButtonSubPageContent(
                 ),
             icon = Icons.Rounded.OpenWith,
             trailingContent = {
-                if (isAdjusting) {
-                    GamepadPill(
-                        text =
-                            if (isR2Held) {
-                                stringResource(R.string.gamepad_action_resizing)
-                            } else {
-                                stringResource(R.string.gamepad_action_moving)
-                            },
-                        isAccent = true,
-                    )
-                } else {
-                    GamepadPill(
-                        text = stringResource(R.string.gamepad_action_move),
-                        isHighlighted = isFocused,
-                    )
-                }
+                Button2DAdjusterPill(
+                    isAdjusting = isAdjusting,
+                    isR2Held = adjusterState.isR2Held,
+                    isFocused = isFocused,
+                )
             },
         )
     }
