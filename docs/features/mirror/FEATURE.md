@@ -74,8 +74,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### FR-M5: Stop Mirroring
 
 - A **Stop** button MUST be available inside the Mirror Control Card of the Quick Menu.
-- Stopping MUST release the `MediaProjection` (or privileged binder session) and cease all capture activity.
-- After stopping, the Quick Menu control card updates to show a "Play" button to re-initiate capture with a new consent/direct flow.
+- Stopping MUST release the privileged direct-mirror session and cease all capture activity.
+- After stopping, the Quick Menu control card updates to show a "Play" button to re-initiate capture.
 
 ### FR-M6: View Lock (Legacy background-only state)
 
@@ -92,18 +92,18 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Enabling Touch Projection on any cutout MUST automatically activate View Lock internally (preventing manual viewport zoom/pan gestures in background logic while maintaining support for follow-touch tracking).
 - A **semi-transparent indicator dot** MUST follow the finger on the mirror surface while Touch Projection is active, providing visual feedback that touch projection mode is engaged.
 - All injection state MUST be reset when mirroring is stopped or when switching away from Mirror mode.
-- Touch Projection settings are stored persistently in the layout config but their runtime session state remains active until explicitly turned off in settings or the mirror session is stopped.
+- Touch Projection settings are stored persistently in the layout config and `ScreenCaptureManager.isTouchProjectionActive` is derived directly from `MacroPadState.activeLayout`.
 
 ### FR-M8: Auto-start Gating (Per-Layout Memory)
 
 - Auto-start mirroring is always enabled globally. Mirroring resumes automatically on app launch and on layout switch according to the active layout's remembered state.
 - Each MacroPad layout MUST remember its last mirror state independently:
   - `PadLayout.mirrorAutoStart = true` is recorded when the user explicitly starts mirroring for that layout.
-  - `PadLayout.mirrorAutoStart = false` is recorded when the user explicitly stops mirroring for that layout or cancels the MediaProjection consent prompt.
-- The capture-prompt MUST auto-launch when the active layout's remembered state is `true`.
+  - `PadLayout.mirrorAutoStart = false` is recorded when the user explicitly stops mirroring for that layout.
+- The mirror session MUST auto-start when the active layout's remembered state is `true`.
 - Explicitly switching to a layout whose remembered state is `false` while currently capturing MUST stop the runtime mirror session without changing any layout's persisted remembered state.
-- Switching to a layout whose remembered state is `true` while not capturing MUST trigger the capture prompt.
-- The manual "Start mirroring" button MUST bypass the auto-start gate — pressing it always launches the capture prompt regardless of the layout's remembered state.
+- Switching to a layout whose remembered state is `true` while not capturing MUST start the mirror session.
+- The manual "Start mirroring" button MUST bypass the auto-start gate — pressing it always starts the mirror session regardless of the layout's remembered state.
 - **Empty Cutouts Start Hint**: When the user manually starts screen mirroring (via MacroPad button, Quick Actions, or Quick Menu) on a layout that currently has zero cutouts (`mirrorCutouts.isEmpty()`) and Viewport Edit mode is not active, screen mirroring begins immediately while an `AppAlertDialog` is presented on the secondary display informing the user that no cutouts exist in this layout.
   - Tapping **"Edit now"** dismisses the dialog and directly enters the Cutout Layout Editor (`AppStateManager.setViewportEditActive(true)`) with the clean canvas ready for adding cutouts.
   - Tapping **"Later"** (or dismissing the dialog via Back/scrim) closes the dialog while allowing screen mirroring capture to continue running in the background.
@@ -112,17 +112,16 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M9: Direct Mirror / System Service Mirror (No-Consent Path)
 
-- When **Global Settings → Megingiard System Service → Direct Mirror** is enabled **and** the system service daemon is `RUNNING`, the mirror MUST start without showing the system MediaProjection consent dialog.
-- The privileged direct path MUST be transparent to all other mirror features (FR-M2 viewport, FR-M3 freeze, FR-M6 lock, FR-M7 touch projection, FR-M8 auto-start gating).
-- The privileged direct path MUST use direct SurfaceControl output by passing the app-owned `SurfaceView` `Surface` to the shell `app_process` mirror server. If direct setup fails, it MUST fall back to the normal MediaProjection consent flow.
-- DRM-protected video frames MUST be expected to render as black on the privileged path — the same limitation as `scrcpy`. The settings description MUST inform the user.
-- When the per-feature flag is off, or the daemon is not `RUNNING`, the standard MediaProjection path MUST remain in use unchanged.
+- Screen mirroring operates exclusively through the **Megingiard System Service** (`megingiard_privd`) when the daemon is `RUNNING`, starting immediately without a system `MediaProjection` consent dialog.
+- The privileged direct path is transparent to all other mirror features (FR-M2 viewport, FR-M3 freeze, FR-M6 lock, FR-M7 touch projection, FR-M8 auto-start gating).
+- The privileged direct path uses direct `SurfaceControl` output by passing the app-owned target `Surface` (`GpuMotionSmoother.inputSurface` feeding `MasterSurfaceRegistry`) over Binder to the shell `app_process` mirror server (`DirectMirrorServer`).
+- DRM-protected video frames render as black on the privileged path (`SurfaceControl.createDisplay(name, secure=false)`) — the same limitation as `scrcpy`.
 
 ### FR-M10: Follow Touch Mode
 
 - Touch tracking (Follow Touch) is configured via a dropdown selection in the General section of the Screen Mirroring editor deck. The dropdown contains "Off" and all cutouts defined in the active layout as options. If a cutout is deleted, the selection automatically falls back to "Off".
 - When Follow Touch Mode is active for a cutout, that cutout's crop viewport MUST center on the spot last touched on the primary screen, using the source crop dimensions saved in the layout.
-- Activating Follow Touch Mode for a cutout restores the cutout's original crop coordinates when disabled, discarding any panning drift accumulated during tracking.
+- Activating Follow Touch Mode for a cutout applies transient crop overrides via `InteractiveCutoutController` and restores the cutout's original crop coordinates when disabled, discarding any panning drift accumulated during tracking.
 - A **Smoothing** setting MUST be available for each individual cutout in the Screen Mirroring cutout settings sub-page, rendered as a 4-stop discrete slider (Off, Light, Medium, Strong).
 - When Smoothing is enabled (non-Off stops) for a cutout, its crop viewport panning MUST glide smoothly to target coordinates using exponential easing (blending strength dictated by the slider position). When set to "Off", the panning MUST snap instantly.
 - By default, touch tracking and crop centering MUST be temporarily paused while any macro sequence is running (indicated by a non-empty list of active macro IDs in `MacroExecutor.runningMacroIds`), resuming automatically once the macro completes or stops.
@@ -132,11 +131,11 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 ### FR-M11: Multi-Cutout Screen Mirroring
 
 - Users MUST be able to define multiple cropped regions ("cutouts") of the primary screen and freely arrange them on the secondary screen.
-- Multi-cutout mode is supported in both standard MediaProjection and Megingiard System Service modes. Both modes utilize a single-surface duplication architecture where a single master capture stream is created, and individual cutouts are drawn via canvas transformations, avoiding device freezes and display token conflicts.
+- Multi-cutout mode utilizes a single-surface duplication architecture where a single master capture stream is created, and individual cutouts are drawn via canvas transformations, avoiding device freezes and display token conflicts.
 - The app always defaults to and operates in multi-cutout mode. Single viewport mode is deleted, as it is treated as a special case of multi-cutout mode containing only one cutout.
 - Defining source crop boundaries is done via the `CropSelectorOverlay` hosted on the primary display via `PrimaryOverlayManager`, which automatically appears when a cutout is selected in the layout editor.
 - Arranging cutout placements on the secondary display enforces boundary collisions (sliding collision clamping, no grid snapping) to prevent any Z-ordering overlaps.
-- Multi-viewport configurations (`mirrorCutouts`) and single-viewport zoom/pan settings (`mirrorSavedScale/X/Y`) are persisted completely independently in `PadLayout` (the latter preserved solely for backward compatibility and initial follow mode centering). New layouts start completely blank (with no default cutouts).
+- Multi-viewport configurations (`mirrorCutouts`) are persisted per layout in `PadLayout`. New layouts start completely blank (with no default cutouts).
 - The user MUST be able to delete the last remaining cutout, leaving an empty list (0 cutouts), which renders a blank mirrored screen. Deleting a selected cutout from the editor toolbar requires a two-step confirmation (the delete toolbar button label changes to "Confirm" on first tap and deletes on the second tap).
 - A maximum limit of 10 cutouts is enforced per layout. Attempting to add more than 10 cutouts will trigger a Toast notification ("Maximum of 10 cutouts allowed").
 - Newly created cutouts are checked for layout destination overlap collisions. If there is no collision-free spot available for the new cutout, the cutout is not created, and a Toast notification ("Not enough space for another cutout") is displayed.
@@ -161,8 +160,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M14: Mirror Refresh Rate (FPS) Limit
 
-- The frame rate (FPS) limit for the mirrored screens is persisted globally in DataStore and applied dynamically to the virtual display's destination surface.
-- While the underlying limiting capability and throttling layer (`ThrottledTextureView`) are fully functional, the layout-editor toolbar slider UI is currently hidden/removed.
+- The frame rate (FPS) limit for the mirrored screens is persisted per-layout in `PadLayout.mirrorMaxFps` and exposed via `ScreenCaptureManager.maxFps` to `GpuMotionSmoother`.
+- While the underlying limiting capability in `GpuMotionSmoother` is functional, the layout-editor toolbar slider UI is currently hidden/removed.
 
 ### FR-M15: Motion Smoothing / Temporal Blending
 
