@@ -94,9 +94,9 @@ class MacroPadHapticCallbackTest {
     fun `disabled device button with haptic enabled does not fire callback`() {
         val (captured, engine) = captureEngine()
         val button = centeredButton(PadAction.KeyboardKey(28, "Enter"), HapticStrength.LIGHT)
-        val disabledButton = engine.press(button, profile = enabledProfile.copy(enableKeyboard = false))
+        val consumed = engine.press(button, profile = enabledProfile.copy(enableKeyboard = false))
 
-        assertEquals("btn-test", disabledButton?.id)
+        assertTrue(consumed)
         assertTrue(captured.isEmpty())
     }
 

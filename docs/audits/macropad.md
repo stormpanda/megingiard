@@ -252,7 +252,7 @@
 - [x] **`[MP-02]`** — Extract shared 2D gamepad move/resize state holder for `MacroPadEditor` and `PadButtonEditDialog` *(Complexity: High, Risk: Low)*
 - [x] **`[MP-03]`** — Inline `PrivdGamepadInjector` into `GamepadInjector` and delete `PrivdGamepadInjector.kt` *(Complexity: Med, Risk: Low)*
 - [x] **`[MP-04]`** — Deduplicate `nextUniqueName`, `dpadArrowLabel`/`dirArrow`, `MouseActionItem`, `EditorColorTarget` typealiases, and `ActionCategory` methods *(Complexity: Low, Risk: Low)*
-- [ ] **`[MP-05]`** — Consolidate duplicate hit-testing in `PadSurface` and `MacroPadHitTestEngine.onPress` *(Complexity: Med, Risk: Low)*
+- [x] **`[MP-05]`** — Consolidate duplicate hit-testing in `PadSurface` and `MacroPadHitTestEngine.onPress` *(Complexity: Med, Risk: Low)*
 - [ ] **`[MP-06]`** — Remove write-only `lastTpPos` and redundant `coerceIn(0f, 1f)` calls in `MacroPadHitTestEngine` *(Complexity: Low, Risk: Low)*
 - [ ] **`[MP-07]`** — Simplify `Macro.randomized()` to a single-pass timestamp delay accumulator *(Complexity: Low, Risk: Low)*
 - [ ] **`[MP-08]`** — Remove dead per-profile device flags, `withSyncedDeviceFlags()`, `DisabledReason`, and disabled-button UI pipeline *(Complexity: High, Risk: Low)*

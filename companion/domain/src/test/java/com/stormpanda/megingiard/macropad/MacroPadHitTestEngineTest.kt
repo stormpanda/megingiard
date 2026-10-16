@@ -71,8 +71,8 @@ class MacroPadHitTestEngineTest {
 
     @Test
     fun `virtual touch trackpoint injects DOWN event at center initially`() {
-        val blocked = engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
-        assertNull(blocked)
+        val consumed = engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), enabledProfile, false)
+        assertTrue(consumed)
         assertEquals(1, PrivdClient.queueSizeForTest)
         assertTouch(TouchAction.DOWN, 540, 960)
     }
@@ -161,9 +161,13 @@ class MacroPadHitTestEngineTest {
 
     @Test
     fun `disabled touch profile blocks virtual touch trackpoint`() {
-        val blocked = engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), disabledTouchProfile, false)
-        assertNotNull(blocked)
-        assertEquals("btn-test", blocked?.id)
+        var capturedReason: DisabledReason? = null
+        val consumed =
+            engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), disabledTouchProfile, false) {
+                capturedReason = it
+            }
+        assertTrue(consumed)
+        assertEquals(DisabledReason.TOUCH, capturedReason)
         assertEquals(0, PrivdClient.queueSizeForTest)
     }
 
@@ -179,12 +183,12 @@ class MacroPadHitTestEngineTest {
     }
 
     @Test
-    fun `hitTest returns correct value when coordinates fall inside and outside button bounds`() {
+    fun `onPress returns true when coordinates fall inside button bounds and false outside`() {
         val button = centeredButton(PadAction.KeyboardKey(keycode = 1, label = "Test"))
-        assertTrue(engine.hitTest(500f, 500f, canvasW, canvasH, listOf(button), false))
-        assertTrue(engine.hitTest(480f, 520f, canvasW, canvasH, listOf(button), false))
-        assertFalse(engine.hitTest(400f, 500f, canvasW, canvasH, listOf(button), false))
-        assertFalse(engine.hitTest(500f, 540f, canvasW, canvasH, listOf(button), false))
+        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false))
+        assertTrue(engine.onPress(2L, 480f, 520f, canvasW, canvasH, listOf(button), enabledProfile, false))
+        assertFalse(engine.onPress(3L, 400f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false))
+        assertFalse(engine.onPress(4L, 500f, 540f, canvasW, canvasH, listOf(button), enabledProfile, false))
     }
 
     @Test

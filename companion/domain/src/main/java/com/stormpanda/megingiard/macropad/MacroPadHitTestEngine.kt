@@ -109,15 +109,16 @@ class MacroPadHitTestEngine(
     /**
      * Handle a Press event.
      *
-     * @param pointerId     unique pointer ID
-     * @param px            pointer X in canvas pixels
-     * @param py            pointer Y in canvas pixels
-     * @param canvasW       canvas width in pixels
-     * @param canvasH       canvas height in pixels
-     * @param buttons       buttons of the currently visible layout
-     * @param profile       active pad profile (for device-enabled checks)
-     * @param isPeekActive  true if ambient-peek mode is active
-     * @return the button that was hit (for device-disabled toast), or null
+     * @param pointerId         unique pointer ID
+     * @param px                pointer X in canvas pixels
+     * @param py                pointer Y in canvas pixels
+     * @param canvasW           canvas width in pixels
+     * @param canvasH           canvas height in pixels
+     * @param buttons           buttons of the currently visible layout
+     * @param profile           active pad profile (for device-enabled checks)
+     * @param isPeekActive      true if ambient-peek mode is active
+     * @param onDisabledReason  optional callback invoked when the hit button's device is disabled
+     * @return true if a button consumed the press, false otherwise
      */
     fun onPress(
         pointerId: Long,
@@ -128,12 +129,16 @@ class MacroPadHitTestEngine(
         buttons: List<PadButton>,
         profile: PadProfile,
         isPeekActive: Boolean,
-    ): PadButton? {
+        onDisabledReason: ((DisabledReason) -> Unit)? = null,
+    ): Boolean {
         val hitList = if (isPeekActive) buttons.filter { it.action is PadAction.BackgroundPeek } else buttons
-        val hitButton = hitList.firstOrNull { btn -> isPointInsideButton(btn, px, py, canvasW, canvasH) } ?: return null
+        val hitButton = hitList.firstOrNull { btn -> isPointInsideButton(btn, px, py, canvasW, canvasH) } ?: return false
 
-        // Check if the required device is disabled
-        if (isDeviceDisabled(hitButton.action, profile)) return hitButton
+        val disabledReason = deviceDisabledReason(hitButton.action, profile)
+        if (disabledReason != null) {
+            onDisabledReason?.invoke(disabledReason)
+            return true
+        }
 
         pointerMap[pointerId] = hitButton.id
         when {
@@ -171,22 +176,7 @@ class MacroPadHitTestEngine(
                 triggerHaptic(hitButton)
             }
         }
-        return null // null = no toast needed
-    }
-
-    /**
-     * Check whether a coordinate falls inside any active button bounds.
-     */
-    fun hitTest(
-        px: Float,
-        py: Float,
-        canvasW: Float,
-        canvasH: Float,
-        buttons: List<PadButton>,
-        isPeekActive: Boolean,
-    ): Boolean {
-        val hitList = if (isPeekActive) buttons.filter { it.action is PadAction.BackgroundPeek } else buttons
-        return hitList.any { btn -> isPointInsideButton(btn, px, py, canvasW, canvasH) }
+        return true
     }
 
     /**

@@ -518,37 +518,19 @@ internal fun PadSurface(
                                                     if (layout.isEmpty()) {
                                                         pointerStartPos = change.position
                                                     }
-                                                    val isHit =
-                                                        engine.hitTest(
+                                                    if (
+                                                        engine.onPress(
+                                                            id,
                                                             change.position.x,
                                                             change.position.y,
                                                             w,
                                                             h,
                                                             layout.buttons,
+                                                            profile,
                                                             isPeekActive,
+                                                            onDisabledActionFeedback,
                                                         )
-                                                    if (isHit) {
-                                                        val disabledBtn =
-                                                            engine.onPress(
-                                                                id,
-                                                                change.position.x,
-                                                                change.position.y,
-                                                                w,
-                                                                h,
-                                                                layout.buttons,
-                                                                profile,
-                                                                isPeekActive,
-                                                            )
-                                                        if (disabledBtn != null) {
-                                                            val reason =
-                                                                MacroPadHitTestEngine.deviceDisabledReason(
-                                                                    disabledBtn.action,
-                                                                    profile,
-                                                                )
-                                                            if (reason != null) {
-                                                                onDisabledActionFeedback(reason)
-                                                            }
-                                                        }
+                                                    ) {
                                                         change.consume()
                                                     } else if (isTouchProjectionActive) {
                                                         val nearEdge =
