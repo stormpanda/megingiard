@@ -16,6 +16,7 @@ import com.stormpanda.megingiard.AppStateManager
 import kotlinx.coroutines.launch
 
 private const val TAG = "PrimaryOverlayActivity"
+private const val STATE_WAS_FROZEN_FOR_MODAL = "wasFrozenForModal"
 
 /**
  * Translucent, edge-to-edge Activity hosted on the primary display (Display 0).
@@ -32,7 +33,7 @@ class PrimaryOverlayActivity : ComponentActivity() {
         val displayId = runCatching { display?.displayId }.getOrNull()
         AppLog.i(TAG, "onCreate: started on display=$displayId")
 
-        wasFrozenForModal = savedInstanceState?.getBoolean("wasFrozenForModal") ?: false
+        wasFrozenForModal = savedInstanceState?.getBoolean(STATE_WAS_FROZEN_FOR_MODAL) ?: false
         if (savedInstanceState == null) {
             wasFrozenForModal = syncPrimaryOverlayMirrorFreeze(AppStateManager.activePrimaryModal.value, wasFrozenForModal)
         }
@@ -93,7 +94,7 @@ class PrimaryOverlayActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putBoolean("wasFrozenForModal", wasFrozenForModal)
+        outState.putBoolean(STATE_WAS_FROZEN_FOR_MODAL, wasFrozenForModal)
     }
 
     override fun onDestroy() {
