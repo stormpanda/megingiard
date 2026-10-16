@@ -217,10 +217,6 @@ fun FocusTopLauncherScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        AppPaletteExtractor.init(context)
-    }
-
     val frozenHiddenSet = remember(allApps, selectedCategory, isLibraryOpen) { hiddenSet.toSet() }
 
     val availableAppsByPackage = remember(availableAndroidApps) { availableAndroidApps.associateBy { it.packageName } }

@@ -202,13 +202,9 @@ private fun CarouselPosterCard(
                 .graphicsLayer {
                     val pageCount = pagerState.pageCount
                     val rawOffset =
-                        try {
-                            if (pageCount > 0 && page in 0 until pageCount) {
-                                pagerState.getOffsetDistanceInPages(page)
-                            } else {
-                                0f
-                            }
-                        } catch (_: IllegalArgumentException) {
+                        if (pageCount > 0 && page in 0 until pageCount) {
+                            pagerState.getOffsetDistanceInPages(page)
+                        } else {
                             0f
                         }
                     val pageOffset = rawOffset.absoluteValue
