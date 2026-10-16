@@ -88,14 +88,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
-import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
-import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
-import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.ui.AppAlertDialog
-import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
@@ -555,141 +551,33 @@ fun FocusLibraryScreen(
                 modifier = Modifier.align(Alignment.BottomStart),
             ) {
                 Box {
-                    val currentSystemId = (selectedTab as? LibraryTab.RomSystem)?.systemId ?: focusedApp?.systemId
-                    val currentRomFolder =
-                        remember(currentSystemId, romFolders) {
-                            if (currentSystemId != null) romFolders.find { it.systemId == currentSystemId } else null
-                        }
-                    val isRetroArchSystem =
-                        remember(currentRomFolder) {
-                            if (currentRomFolder != null) {
-                                val systemDef = SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }
-                                systemDef?.emulatorId == EMULATOR_ID_RETROARCH
-                            } else {
-                                false
-                            }
-                        }
-                    val isSwitchSystem =
-                        remember(currentRomFolder) {
-                            currentRomFolder?.systemId == SYSTEM_ID_SWITCH
-                        }
                     val currentOnEditArtwork by rememberUpdatedState(onEditArtwork)
                     val actions =
                         remember(
                             focusedApp,
                             isCurrentHidden,
+                            selectedTab,
                             romFolders,
-                            isRetroArchSystem,
-                            isSwitchSystem,
-                            currentRomFolder,
                         ) {
-                            buildList {
-                                if (focusedApp != null) {
-                                    add(
-                                        ExpandableActionItem(
-                                            label = context.getString(R.string.gamefocus_option_edit),
-                                            iconSymbol = "palette",
-                                            onClick = {
-                                                currentOnEditArtwork(focusedApp)
-                                                onOptionsMenuExpandedChange(false)
-                                            },
-                                        ),
-                                    )
-                                    add(
-                                        ExpandableActionItem(
-                                            label =
-                                                if (isCurrentHidden) {
-                                                    context.getString(R.string.gamefocus_option_unhide)
-                                                } else {
-                                                    context.getString(R.string.gamefocus_option_hide)
-                                                },
-                                            iconSymbol = if (isCurrentHidden) "visibility" else "visibility_off",
-                                            onClick = {
-                                                onToggleHidden(focusedApp)
-                                                onOptionsMenuExpandedChange(false)
-                                            },
-                                        ),
-                                    )
-                                    if (!focusedApp.isRom) {
-                                        add(
-                                            ExpandableActionItem(
-                                                label = context.getString(R.string.gamefocus_option_app_info),
-                                                iconSymbol = "info",
-                                                onClick = {
-                                                    onOpenAppInfo(focusedApp)
-                                                    onOptionsMenuExpandedChange(false)
-                                                },
-                                            ),
-                                        )
-                                        add(
-                                            ExpandableActionItem(
-                                                label = context.getString(R.string.gamefocus_option_uninstall),
-                                                iconSymbol = "delete",
-                                                isDestructive = true,
-                                                onClick = {
-                                                    onUninstallApp(focusedApp)
-                                                    onOptionsMenuExpandedChange(false)
-                                                },
-                                            ),
-                                        )
-                                    }
-                                }
-                                add(
-                                    ExpandableActionItem(
-                                        label = context.getString(R.string.gamefocus_option_add_rom_folder),
-                                        iconSymbol = "create_new_folder",
-                                        onClick = {
-                                            onAddRomFolder()
-                                            onOptionsMenuExpandedChange(false)
-                                        },
-                                    ),
-                                )
-                                if (romFolders.isNotEmpty()) {
-                                    add(
-                                        ExpandableActionItem(
-                                            label = context.getString(R.string.gamefocus_option_manage_rom_folders),
-                                            iconSymbol = "folder",
-                                            onClick = {
-                                                onRemoveRomFolderDialogOpenChange(true)
-                                                onOptionsMenuExpandedChange(false)
-                                            },
-                                        ),
-                                    )
-                                }
-                                if (isRetroArchSystem && currentRomFolder != null) {
-                                    add(
-                                        ExpandableActionItem(
-                                            label = context.getString(R.string.gamefocus_option_change_core),
-                                            iconSymbol = "tune",
-                                            onClick = {
-                                                onChangeCore(currentRomFolder)
-                                                onOptionsMenuExpandedChange(false)
-                                            },
-                                        ),
-                                    )
-                                } else if (isSwitchSystem && currentRomFolder != null) {
-                                    add(
-                                        ExpandableActionItem(
-                                            label = context.getString(R.string.gamefocus_option_change_emulator),
-                                            iconSymbol = "tune",
-                                            onClick = {
-                                                onChangeCore(currentRomFolder)
-                                                onOptionsMenuExpandedChange(false)
-                                            },
-                                        ),
-                                    )
-                                }
-                                add(
-                                    ExpandableActionItem(
-                                        label = context.getString(R.string.gamefocus_manage_galleries_title),
-                                        iconSymbol = "view_carousel",
-                                        onClick = {
-                                            onOpenManageGalleries()
-                                            onOptionsMenuExpandedChange(false)
-                                        },
-                                    ),
-                                )
-                            }
+                            buildLibraryMenuActions(
+                                context = context,
+                                focusedApp = focusedApp,
+                                isHidden = isCurrentHidden,
+                                selectedTab = selectedTab,
+                                romFolders = romFolders,
+                                onEditArtwork = { currentOnEditArtwork(it) },
+                                onToggleHidden = onToggleHidden,
+                                onOpenAppInfo = onOpenAppInfo,
+                                onUninstallApp = onUninstallApp,
+                                onAddRomFolder = onAddRomFolder,
+                                onManageRomFolders = {
+                                    onRemoveRomFolderDialogSelectedIndexChange(0)
+                                    onRemoveRomFolderDialogOpenChange(true)
+                                },
+                                onChangeCore = onChangeCore,
+                                onOpenManageGalleries = onOpenManageGalleries,
+                                onDismissMenu = { onOptionsMenuExpandedChange(false) },
+                            )
                         }
                     val itemActionsCount =
                         if (focusedApp != null) {

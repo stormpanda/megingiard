@@ -1,90 +1,198 @@
 package com.stormpanda.megingiard.gamefocus
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.CustomRomFolder
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.LibraryTab
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 private const val TAG = "FocusMenuTest"
 
 class FocusMenuTest {
+    private val nativeApp =
+        InstalledAppInfo(
+            label = "Native Game",
+            packageName = "com.example.game",
+            activityName = "com.example.game.MainActivity",
+            isGame = true,
+            isRom = false,
+        )
+
+    private val retroArchRomApp =
+        InstalledAppInfo(
+            label = "Super Mario World",
+            packageName = "rom.snes.smw",
+            activityName = "",
+            isGame = true,
+            isRom = true,
+            systemId = "snes",
+        )
+
+    private val pcRomApp =
+        InstalledAppInfo(
+            label = "PC Game",
+            packageName = "rom.pc.game",
+            activityName = "",
+            isGame = true,
+            isRom = true,
+            systemId = "pc",
+        )
+
+    private val snesFolder =
+        CustomRomFolder(
+            uriString = "content://snes",
+            systemId = "snes",
+            systemName = "Super Nintendo",
+            folderPath = "/roms/snes",
+        )
+
+    private val pcFolder =
+        CustomRomFolder(
+            uriString = "content://pc",
+            systemId = "pc",
+            systemName = "PC",
+            folderPath = "/roms/pc",
+        )
+
     @Test
-    fun testGetLibraryMenuCountNativeAppWithRomFolders() {
-        AppLog.d(TAG, "Testing library menu count: native app with ROM folders")
-        assertEquals(7, getLibraryMenuCount(hasApp = true, isRom = false, hasRomFolders = true, isConfigurableRomSystem = false))
+    fun testBuildLibraryMenuActionsNativeAppWithRomFolders() {
+        AppLog.d(TAG, "Testing library menu actions: native app with ROM folders")
+        val actions =
+            buildLibraryMenuActions(
+                focusedApp = nativeApp,
+                selectedTab = LibraryTab.GAMES,
+                romFolders = listOf(snesFolder),
+            )
+        assertEquals(7, actions.size)
+        assertEquals("view_carousel", actions.last().iconSymbol)
     }
 
     @Test
-    fun testGetLibraryMenuCountNativeAppWithoutRomFolders() {
-        AppLog.d(TAG, "Testing library menu count: native app without ROM folders")
-        assertEquals(6, getLibraryMenuCount(hasApp = true, isRom = false, hasRomFolders = false, isConfigurableRomSystem = false))
+    fun testBuildLibraryMenuActionsNativeAppWithoutRomFolders() {
+        AppLog.d(TAG, "Testing library menu actions: native app without ROM folders")
+        val actions =
+            buildLibraryMenuActions(
+                focusedApp = nativeApp,
+                selectedTab = LibraryTab.GAMES,
+                romFolders = emptyList(),
+            )
+        assertEquals(6, actions.size)
     }
 
     @Test
-    fun testGetLibraryMenuCountRomAppRetroArchWithRomFolders() {
-        AppLog.d(TAG, "Testing library menu count: RetroArch ROM app with ROM folders")
-        assertEquals(6, getLibraryMenuCount(hasApp = true, isRom = true, hasRomFolders = true, isConfigurableRomSystem = true))
+    fun testBuildLibraryMenuActionsRomAppRetroArchWithRomFolders() {
+        AppLog.d(TAG, "Testing library menu actions: RetroArch ROM app with ROM folders")
+        val actions =
+            buildLibraryMenuActions(
+                focusedApp = retroArchRomApp,
+                selectedTab = LibraryTab.RomSystem("rom_snes", "snes", "SNES"),
+                romFolders = listOf(snesFolder),
+            )
+        assertEquals(6, actions.size)
     }
 
     @Test
-    fun testGetLibraryMenuCountRomAppRetroArchWithoutRomFolders() {
-        AppLog.d(TAG, "Testing library menu count: RetroArch ROM app without ROM folders")
-        assertEquals(5, getLibraryMenuCount(hasApp = true, isRom = true, hasRomFolders = false, isConfigurableRomSystem = true))
+    fun testBuildLibraryMenuActionsRomAppNonRetroArchWithRomFolders() {
+        AppLog.d(TAG, "Testing library menu actions: non-RetroArch ROM app with ROM folders")
+        val actions =
+            buildLibraryMenuActions(
+                focusedApp = pcRomApp,
+                selectedTab = LibraryTab.RomSystem("rom_pc", "pc", "PC"),
+                romFolders = listOf(pcFolder),
+            )
+        assertEquals(5, actions.size)
     }
 
     @Test
-    fun testGetLibraryMenuCountRomAppNonRetroArchWithRomFolders() {
-        AppLog.d(TAG, "Testing library menu count: non-RetroArch ROM app with ROM folders")
-        assertEquals(5, getLibraryMenuCount(hasApp = true, isRom = true, hasRomFolders = true, isConfigurableRomSystem = false))
+    fun testBuildLibraryMenuActionsRomAppNonRetroArchWithoutRomFolders() {
+        AppLog.d(TAG, "Testing library menu actions: non-RetroArch ROM app without ROM folders")
+        val actions =
+            buildLibraryMenuActions(
+                focusedApp = pcRomApp,
+                selectedTab = LibraryTab.GAMES,
+                romFolders = emptyList(),
+            )
+        assertEquals(4, actions.size)
     }
 
     @Test
-    fun testGetLibraryMenuCountRomAppNonRetroArchWithoutRomFolders() {
-        AppLog.d(TAG, "Testing library menu count: non-RetroArch ROM app without ROM folders")
-        assertEquals(4, getLibraryMenuCount(hasApp = true, isRom = true, hasRomFolders = false, isConfigurableRomSystem = false))
+    fun testBuildLibraryMenuActionsNoAppRetroArchWithRomFolders() {
+        AppLog.d(TAG, "Testing library menu actions: no app, RetroArch tab with ROM folders")
+        val actions =
+            buildLibraryMenuActions(
+                focusedApp = null,
+                selectedTab = LibraryTab.RomSystem("rom_snes", "snes", "SNES"),
+                romFolders = listOf(snesFolder),
+            )
+        assertEquals(4, actions.size)
     }
 
     @Test
-    fun testGetLibraryMenuCountNoAppRetroArchWithRomFolders() {
-        AppLog.d(TAG, "Testing library menu count: no app, RetroArch tab with ROM folders")
-        assertEquals(4, getLibraryMenuCount(hasApp = false, isRom = false, hasRomFolders = true, isConfigurableRomSystem = true))
+    fun testBuildLibraryMenuActionsNoAppNonRetroArchWithRomFolders() {
+        AppLog.d(TAG, "Testing library menu actions: no app with ROM folders")
+        val actions =
+            buildLibraryMenuActions(
+                focusedApp = null,
+                selectedTab = LibraryTab.GAMES,
+                romFolders = listOf(pcFolder),
+            )
+        assertEquals(3, actions.size)
     }
 
     @Test
-    fun testGetLibraryMenuCountNoAppRetroArchWithoutRomFolders() {
-        AppLog.d(TAG, "Testing library menu count: no app, RetroArch tab without ROM folders")
-        assertEquals(3, getLibraryMenuCount(hasApp = false, isRom = false, hasRomFolders = false, isConfigurableRomSystem = true))
+    fun testBuildLibraryMenuActionsNoAppWithoutRomFolders() {
+        AppLog.d(TAG, "Testing library menu actions: no app without ROM folders")
+        val actions =
+            buildLibraryMenuActions(
+                focusedApp = null,
+                selectedTab = LibraryTab.GAMES,
+                romFolders = emptyList(),
+            )
+        assertEquals(2, actions.size)
     }
 
     @Test
-    fun testGetLibraryMenuCountNoAppNonRetroArchWithRomFolders() {
-        AppLog.d(TAG, "Testing library menu count: no app with ROM folders")
-        assertEquals(3, getLibraryMenuCount(hasApp = false, isRom = false, hasRomFolders = true, isConfigurableRomSystem = false))
+    fun testBuildGalleryMenuActionsWithoutApp() {
+        AppLog.d(TAG, "Testing gallery menu actions: empty gallery shows only Manage Galleries")
+        var manageGalleriesOpened = false
+        val actions =
+            buildGalleryMenuActions(
+                currentApp = null,
+                isPaired = false,
+                onOpenManageGalleries = { manageGalleriesOpened = true },
+            )
+        assertEquals(1, actions.size)
+        actions.last().onClick()
+        assertTrue(manageGalleriesOpened)
     }
 
     @Test
-    fun testGetLibraryMenuCountNoAppNonRetroArchWithoutRomFolders() {
-        AppLog.d(TAG, "Testing library menu count: no app without ROM folders")
-        assertEquals(2, getLibraryMenuCount(hasApp = false, isRom = false, hasRomFolders = false, isConfigurableRomSystem = false))
+    fun testBuildGalleryMenuActionsUnpairedApp() {
+        AppLog.d(TAG, "Testing gallery menu actions: unpaired app")
+        val actions =
+            buildGalleryMenuActions(
+                currentApp = nativeApp,
+                isPaired = false,
+            )
+        assertEquals(5, actions.size)
+        assertEquals("view_carousel", actions.last().iconSymbol)
     }
 
     @Test
-    fun testGetGalleryMenuCountWithoutApp() {
-        AppLog.d(TAG, "Testing gallery menu count: empty gallery shows only Manage Galleries")
-        assertEquals(1, getGalleryMenuCount(hasApp = false, isPaired = false))
-        assertEquals(0, getGalleryManageGalleriesIndex(hasApp = false, isPaired = false))
-    }
-
-    @Test
-    fun testGetGalleryMenuCountUnpairedApp() {
-        AppLog.d(TAG, "Testing gallery menu count: unpaired app")
-        assertEquals(5, getGalleryMenuCount(hasApp = true, isPaired = false))
-        assertEquals(4, getGalleryManageGalleriesIndex(hasApp = true, isPaired = false))
-    }
-
-    @Test
-    fun testGetGalleryMenuCountPairedApp() {
-        AppLog.d(TAG, "Testing gallery menu count: paired app")
-        assertEquals(6, getGalleryMenuCount(hasApp = true, isPaired = true))
-        assertEquals(5, getGalleryManageGalleriesIndex(hasApp = true, isPaired = true))
+    fun testBuildGalleryMenuActionsPairedApp() {
+        AppLog.d(TAG, "Testing gallery menu actions: paired app")
+        var removedPkg: String? = null
+        val actions =
+            buildGalleryMenuActions(
+                currentApp = nativeApp,
+                isPaired = true,
+                onRemovePair = { removedPkg = it.packageName },
+            )
+        assertEquals(6, actions.size)
+        assertTrue(actions[4].isDestructive)
+        actions[4].onClick()
+        assertEquals(nativeApp.packageName, removedPkg)
     }
 }

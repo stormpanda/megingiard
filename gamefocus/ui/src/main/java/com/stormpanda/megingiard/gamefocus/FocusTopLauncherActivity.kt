@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.gamefocus
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.InputDevice
@@ -53,6 +54,7 @@ import com.stormpanda.megingiard.gamefocus.viewmodel.LauncherScrollDirection
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.settings.ThemeMode
+import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
@@ -67,52 +69,241 @@ import kotlinx.coroutines.launch
 private const val TAG = "FocusTopLauncherAct"
 private const val INITIAL_REPEAT_DELAY_MS = 220L
 private const val REPEAT_INTERVAL_MS = 70L
-private const val MAIN_MENU_UNPAIRED_ITEMS_COUNT = 4
-private const val MAIN_MENU_PAIRED_ITEMS_COUNT = 5
 private const val JOYSTICK_THRESHOLD = 0.5f
 private const val JOYSTICK_NEGATIVE_THRESHOLD = -0.5f
 
-internal fun getMainMenuCount(isPaired: Boolean): Int = if (isPaired) MAIN_MENU_PAIRED_ITEMS_COUNT else MAIN_MENU_UNPAIRED_ITEMS_COUNT
-
-/** Number of gallery-level (non-item) actions in the gallery Y menu: "Manage Galleries". */
-internal const val GALLERY_MANAGE_ACTIONS_COUNT = 1
-
-/** Total gallery Y menu size: item actions (only with a focused app) followed by "Manage Galleries". */
-internal fun getGalleryMenuCount(
-    hasApp: Boolean,
-    isPaired: Boolean,
-): Int = (if (hasApp) getMainMenuCount(isPaired) else 0) + GALLERY_MANAGE_ACTIONS_COUNT
-
-/** Index of "Manage Galleries" in the gallery Y menu (always the last item). */
-internal fun getGalleryManageGalleriesIndex(
-    hasApp: Boolean,
-    isPaired: Boolean,
-): Int = getGalleryMenuCount(hasApp, isPaired) - 1
-
 internal const val LIBRARY_APP_ACTIONS_COUNT = 4
 internal const val LIBRARY_ROM_ACTIONS_COUNT = 2
-internal const val LIBRARY_BASE_ACTIONS_COUNT = 1
 
-/** "Manage Galleries" is always the last Library menu item (index `getLibraryMenuCount(...) - 1`). */
-internal const val LIBRARY_MANAGE_GALLERIES_ACTIONS_COUNT = 1
+private fun Context?.resolveMenuString(resId: Int): String = this?.getString(resId) ?: ""
 
-internal fun getLibraryMenuCount(
-    hasApp: Boolean,
-    isRom: Boolean,
-    hasRomFolders: Boolean,
-    isConfigurableRomSystem: Boolean,
-): Int {
-    val appActionCount =
-        when {
-            !hasApp -> 0
-            isRom -> LIBRARY_ROM_ACTIONS_COUNT
-            else -> LIBRARY_APP_ACTIONS_COUNT
+internal fun buildGalleryMenuActions(
+    context: Context? = null,
+    currentApp: InstalledAppInfo?,
+    isFavorite: Boolean = false,
+    isHidden: Boolean = false,
+    isPaired: Boolean = false,
+    onToggleFavorite: (InstalledAppInfo) -> Unit = {},
+    onEditGame: (InstalledAppInfo) -> Unit = {},
+    onToggleHidden: (InstalledAppInfo) -> Unit = {},
+    onOpenPairingDialog: (InstalledAppInfo) -> Unit = {},
+    onRemovePair: (InstalledAppInfo) -> Unit = {},
+    onOpenManageGalleries: () -> Unit = {},
+    onDismissMenu: () -> Unit = {},
+): List<ExpandableActionItem> =
+    buildList {
+        if (currentApp != null) {
+            add(
+                ExpandableActionItem(
+                    label =
+                        if (isFavorite) {
+                            context.resolveMenuString(R.string.gamefocus_option_remove_favorite)
+                        } else {
+                            context.resolveMenuString(R.string.gamefocus_option_add_favorite)
+                        },
+                    iconSymbol = "star",
+                    onClick = {
+                        onToggleFavorite(currentApp)
+                        onDismissMenu()
+                    },
+                ),
+            )
+            add(
+                ExpandableActionItem(
+                    label = context.resolveMenuString(R.string.gamefocus_option_edit),
+                    iconSymbol = "palette",
+                    onClick = {
+                        onEditGame(currentApp)
+                        onDismissMenu()
+                    },
+                ),
+            )
+            add(
+                ExpandableActionItem(
+                    label =
+                        if (isHidden) {
+                            context.resolveMenuString(R.string.gamefocus_option_unhide)
+                        } else {
+                            context.resolveMenuString(R.string.gamefocus_option_hide)
+                        },
+                    iconSymbol = if (isHidden) "visibility" else "visibility_off",
+                    onClick = {
+                        onToggleHidden(currentApp)
+                        onDismissMenu()
+                    },
+                ),
+            )
+            add(
+                ExpandableActionItem(
+                    label =
+                        if (isPaired) {
+                            context.resolveMenuString(R.string.gamefocus_option_change_pair)
+                        } else {
+                            context.resolveMenuString(R.string.gamefocus_option_pair_bottom)
+                        },
+                    iconSymbol = "splitscreen",
+                    onClick = {
+                        onOpenPairingDialog(currentApp)
+                        onDismissMenu()
+                    },
+                ),
+            )
+            if (isPaired) {
+                add(
+                    ExpandableActionItem(
+                        label = context.resolveMenuString(R.string.gamefocus_option_remove_pair),
+                        iconSymbol = "delete",
+                        isDestructive = true,
+                        onClick = {
+                            onRemovePair(currentApp)
+                            onDismissMenu()
+                        },
+                    ),
+                )
+            }
         }
-    val romFolderActionCount =
-        LIBRARY_BASE_ACTIONS_COUNT +
-            (if (hasRomFolders) 1 else 0) +
-            (if (isConfigurableRomSystem) 1 else 0)
-    return appActionCount + romFolderActionCount + LIBRARY_MANAGE_GALLERIES_ACTIONS_COUNT
+        add(
+            ExpandableActionItem(
+                label = context.resolveMenuString(R.string.gamefocus_manage_galleries_title),
+                iconSymbol = "view_carousel",
+                onClick = {
+                    onOpenManageGalleries()
+                    onDismissMenu()
+                },
+            ),
+        )
+    }
+
+internal fun buildLibraryMenuActions(
+    context: Context? = null,
+    focusedApp: InstalledAppInfo?,
+    isHidden: Boolean = false,
+    selectedTab: LibraryTab = LibraryTab.GAMES,
+    romFolders: List<CustomRomFolder> = emptyList(),
+    onEditArtwork: (InstalledAppInfo) -> Unit = {},
+    onToggleHidden: (InstalledAppInfo) -> Unit = {},
+    onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
+    onUninstallApp: (InstalledAppInfo) -> Unit = {},
+    onAddRomFolder: () -> Unit = {},
+    onManageRomFolders: () -> Unit = {},
+    onChangeCore: (CustomRomFolder) -> Unit = {},
+    onOpenManageGalleries: () -> Unit = {},
+    onDismissMenu: () -> Unit = {},
+): List<ExpandableActionItem> {
+    val currentSystemId = (selectedTab as? LibraryTab.RomSystem)?.systemId ?: focusedApp?.systemId
+    val currentRomFolder = if (currentSystemId != null) romFolders.find { it.systemId == currentSystemId } else null
+    val isRetroArchSystem =
+        currentRomFolder != null &&
+            SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }?.emulatorId == EMULATOR_ID_RETROARCH
+    val isSwitchSystem = currentRomFolder?.systemId == SYSTEM_ID_SWITCH
+
+    return buildList {
+        if (focusedApp != null) {
+            add(
+                ExpandableActionItem(
+                    label = context.resolveMenuString(R.string.gamefocus_option_edit),
+                    iconSymbol = "palette",
+                    onClick = {
+                        onEditArtwork(focusedApp)
+                        onDismissMenu()
+                    },
+                ),
+            )
+            add(
+                ExpandableActionItem(
+                    label =
+                        if (isHidden) {
+                            context.resolveMenuString(R.string.gamefocus_option_unhide)
+                        } else {
+                            context.resolveMenuString(R.string.gamefocus_option_hide)
+                        },
+                    iconSymbol = if (isHidden) "visibility" else "visibility_off",
+                    onClick = {
+                        onToggleHidden(focusedApp)
+                        onDismissMenu()
+                    },
+                ),
+            )
+            if (!focusedApp.isRom) {
+                add(
+                    ExpandableActionItem(
+                        label = context.resolveMenuString(R.string.gamefocus_option_app_info),
+                        iconSymbol = "info",
+                        onClick = {
+                            onOpenAppInfo(focusedApp)
+                            onDismissMenu()
+                        },
+                    ),
+                )
+                add(
+                    ExpandableActionItem(
+                        label = context.resolveMenuString(R.string.gamefocus_option_uninstall),
+                        iconSymbol = "delete",
+                        isDestructive = true,
+                        onClick = {
+                            onUninstallApp(focusedApp)
+                            onDismissMenu()
+                        },
+                    ),
+                )
+            }
+        }
+        add(
+            ExpandableActionItem(
+                label = context.resolveMenuString(R.string.gamefocus_option_add_rom_folder),
+                iconSymbol = "create_new_folder",
+                onClick = {
+                    onAddRomFolder()
+                    onDismissMenu()
+                },
+            ),
+        )
+        if (romFolders.isNotEmpty()) {
+            add(
+                ExpandableActionItem(
+                    label = context.resolveMenuString(R.string.gamefocus_option_manage_rom_folders),
+                    iconSymbol = "folder",
+                    onClick = {
+                        onManageRomFolders()
+                        onDismissMenu()
+                    },
+                ),
+            )
+        }
+        if (isRetroArchSystem && currentRomFolder != null) {
+            add(
+                ExpandableActionItem(
+                    label = context.resolveMenuString(R.string.gamefocus_option_change_core),
+                    iconSymbol = "tune",
+                    onClick = {
+                        onChangeCore(currentRomFolder)
+                        onDismissMenu()
+                    },
+                ),
+            )
+        } else if (isSwitchSystem && currentRomFolder != null) {
+            add(
+                ExpandableActionItem(
+                    label = context.resolveMenuString(R.string.gamefocus_option_change_emulator),
+                    iconSymbol = "tune",
+                    onClick = {
+                        onChangeCore(currentRomFolder)
+                        onDismissMenu()
+                    },
+                ),
+            )
+        }
+        add(
+            ExpandableActionItem(
+                label = context.resolveMenuString(R.string.gamefocus_manage_galleries_title),
+                iconSymbol = "view_carousel",
+                onClick = {
+                    onOpenManageGalleries()
+                    onDismissMenu()
+                },
+            ),
+        )
+    }
 }
 
 class FocusTopLauncherActivity : ComponentActivity() {
@@ -583,27 +774,76 @@ class FocusTopLauncherActivity : ComponentActivity() {
         viewModel.stepRemoveRomFolderFocus(direction, folders.size)
     }
 
+    private fun currentGalleryMenuActions(): List<ExpandableActionItem> {
+        val targetApp = viewModel.focusedApp.value
+        val isPaired = targetApp != null && GameFocusPairManager.pairedApps.value.containsKey(targetApp.packageName)
+        return buildGalleryMenuActions(
+            context = this,
+            currentApp = targetApp,
+            isFavorite = targetApp != null && InstalledAppsManager.favorites.value.contains(targetApp.packageName),
+            isHidden = targetApp != null && InstalledAppsManager.hiddenApps.value.contains(targetApp.packageName),
+            isPaired = isPaired,
+            onToggleFavorite = { app -> InstalledAppsManager.toggleFavorite(this, app.packageName) },
+            onEditGame = { app -> viewModel.openEditGameOverlay(app) },
+            onToggleHidden = { app -> InstalledAppsManager.toggleHidden(this, app.packageName) },
+            onOpenPairingDialog = { app -> openPairingDialogForApp(app) },
+            onRemovePair = { app -> GameFocusPairManager.removePair(this, app.packageName) },
+            onOpenManageGalleries = {
+                AppLog.i(TAG, "Opening Manage Galleries overlay from gallery menu")
+                stopRepeat()
+                viewModel.setManageGalleriesOpen(true)
+            },
+            onDismissMenu = { viewModel.setMainOptionsMenuExpanded(false) },
+        )
+    }
+
+    private fun currentLibraryMenuActions(focusedLibraryApp: InstalledAppInfo?): List<ExpandableActionItem> =
+        buildLibraryMenuActions(
+            context = this,
+            focusedApp = focusedLibraryApp,
+            isHidden = focusedLibraryApp != null && InstalledAppsManager.hiddenApps.value.contains(focusedLibraryApp.packageName),
+            selectedTab = viewModel.librarySelectedTab.value,
+            romFolders = RomManager.romFolders.value,
+            onEditArtwork = { app -> viewModel.openEditGameOverlay(app) },
+            onToggleHidden = { app ->
+                AppLog.i(TAG, "Toggling hidden state for ${app.label}")
+                InstalledAppsManager.toggleHidden(this, app.packageName)
+            },
+            onOpenAppInfo = { app ->
+                AppLog.i(TAG, "Opening App Info for ${app.label}")
+                InstalledAppsManager.openAppInfo(this, app.packageName, display.displayId)
+            },
+            onUninstallApp = { app ->
+                AppLog.i(TAG, "Uninstalling app ${app.label}")
+                InstalledAppsManager.uninstallApp(this, app.packageName, display.displayId)
+            },
+            onAddRomFolder = {
+                AppLog.i(TAG, "Adding ROM folder via DocumentTreeLauncher")
+                openDocumentTreeLauncher.launch(null)
+            },
+            onManageRomFolders = {
+                AppLog.i(TAG, "Managing ROM folders")
+                viewModel.setRemoveRomFolderDialogSelectedIndex(0)
+                viewModel.setRemoveRomFolderDialogOpen(true)
+            },
+            onChangeCore = { folder ->
+                AppLog.i(TAG, "Changing core/emulator for folder ${folder.folderPath}")
+                openCoreChooserForFolder(folder)
+            },
+            onOpenManageGalleries = {
+                AppLog.i(TAG, "Opening Manage Galleries overlay from Library menu")
+                viewModel.setManageGalleriesOpen(true)
+            },
+            onDismissMenu = { viewModel.setLibraryOptionsMenuExpanded(false) },
+        )
+
     private fun stepDirectionalAction(direction: LauncherScrollDirection) {
         if (viewModel.isLibraryOptionsMenuExpanded.value) {
             val allApps = InstalledAppsManager.installedApps.value
             val currentTab = viewModel.librarySelectedTab.value
             val filteredApps = currentTab.filterApps(allApps)
             val focusedLibraryApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
-            val romFolders = RomManager.romFolders.value
-            val currentSystemId = (currentTab as? LibraryTab.RomSystem)?.systemId ?: focusedLibraryApp?.systemId
-            val currentRomFolder = if (currentSystemId != null) romFolders.find { it.systemId == currentSystemId } else null
-            val isRetroArchRomSystem =
-                currentRomFolder != null &&
-                    SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }?.emulatorId == EMULATOR_ID_RETROARCH
-            val isSwitchRomSystem = currentRomFolder?.systemId == SYSTEM_ID_SWITCH
-            val isConfigurableRomSystem = isRetroArchRomSystem || isSwitchRomSystem
-            val count =
-                getLibraryMenuCount(
-                    hasApp = focusedLibraryApp != null,
-                    isRom = focusedLibraryApp?.isRom == true,
-                    hasRomFolders = romFolders.isNotEmpty(),
-                    isConfigurableRomSystem = isConfigurableRomSystem,
-                )
+            val count = currentLibraryMenuActions(focusedLibraryApp).size
             when (direction) {
                 LauncherScrollDirection.UP -> viewModel.navigateLibraryMenuUp(count)
                 LauncherScrollDirection.DOWN -> viewModel.navigateLibraryMenuDown(count)
@@ -613,9 +853,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         if (viewModel.isMainOptionsMenuExpanded.value) {
-            val targetApp = viewModel.focusedApp.value
-            val isPaired = targetApp != null && GameFocusPairManager.pairedApps.value.containsKey(targetApp.packageName)
-            val count = getGalleryMenuCount(hasApp = targetApp != null, isPaired = isPaired)
+            val count = currentGalleryMenuActions().size
             when (direction) {
                 LauncherScrollDirection.UP -> viewModel.navigateMainMenuUp(count)
                 LauncherScrollDirection.DOWN -> viewModel.navigateMainMenuDown(count)
@@ -898,100 +1136,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     isConfirmKey(keyCode) -> {
                         val selectedIndex = viewModel.libraryMenuSelectedIndex.value
                         AppLog.i(TAG, "Library options menu confirmed at index $selectedIndex via gamepad A")
-                        val hasApp = focusedLibraryApp != null
-                        val isRom = focusedLibraryApp?.isRom == true
-                        val romFolders = RomManager.romFolders.value
-                        val hasRomFolders = romFolders.isNotEmpty()
-                        val currentSystemId = (currentTab as? LibraryTab.RomSystem)?.systemId ?: focusedLibraryApp?.systemId
-                        val currentRomFolder = if (currentSystemId != null) romFolders.find { it.systemId == currentSystemId } else null
-                        val isRetroArchRomSystem =
-                            currentRomFolder != null &&
-                                SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }?.emulatorId == EMULATOR_ID_RETROARCH
-                        val isSwitchRomSystem = currentRomFolder?.systemId == SYSTEM_ID_SWITCH
-                        val isConfigurableRomSystem = isRetroArchRomSystem || isSwitchRomSystem
-
-                        val libraryMenuCount =
-                            getLibraryMenuCount(
-                                hasApp = hasApp,
-                                isRom = isRom,
-                                hasRomFolders = hasRomFolders,
-                                isConfigurableRomSystem = isConfigurableRomSystem,
-                            )
-                        if (selectedIndex == libraryMenuCount - 1) {
-                            AppLog.i(TAG, "Opening Manage Galleries overlay from Library menu")
-                            viewModel.setLibraryOptionsMenuExpanded(false)
-                            viewModel.setManageGalleriesOpen(true)
-                            return true
-                        }
-                        val baseIndex = if (hasApp) (if (!isRom) LIBRARY_APP_ACTIONS_COUNT else LIBRARY_ROM_ACTIONS_COUNT) else 0
-                        if (hasApp && selectedIndex < baseIndex) {
-                            if (!isRom) {
-                                when (selectedIndex) {
-                                    0 -> {
-                                        viewModel.setLibraryOptionsMenuExpanded(false)
-                                        viewModel.openEditGameOverlay(focusedLibraryApp)
-                                    }
-
-                                    1 -> {
-                                        AppLog.i(TAG, "Toggling hidden state for ${focusedLibraryApp.label}")
-                                        InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
-                                    }
-
-                                    2 -> {
-                                        AppLog.i(TAG, "Opening App Info for ${focusedLibraryApp.label}")
-                                        InstalledAppsManager.openAppInfo(this, focusedLibraryApp.packageName, display.displayId)
-                                    }
-
-                                    3 -> {
-                                        AppLog.i(TAG, "Uninstalling app ${focusedLibraryApp.label}")
-                                        InstalledAppsManager.uninstallApp(this, focusedLibraryApp.packageName, display.displayId)
-                                        viewModel.setLibraryOptionsMenuExpanded(false)
-                                    }
-                                }
-                            } else {
-                                when (selectedIndex) {
-                                    0 -> {
-                                        viewModel.setLibraryOptionsMenuExpanded(false)
-                                        viewModel.openEditGameOverlay(focusedLibraryApp)
-                                    }
-
-                                    1 -> {
-                                        AppLog.i(TAG, "Toggling hidden state for ${focusedLibraryApp.label}")
-                                        InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
-                                    }
-                                }
-                            }
-                        } else {
-                            val systemIndex = selectedIndex - baseIndex
-                            when (systemIndex) {
-                                0 -> {
-                                    AppLog.i(TAG, "Adding ROM folder via DocumentTreeLauncher")
-                                    openDocumentTreeLauncher.launch(null)
-                                }
-
-                                1 -> {
-                                    if (hasRomFolders) {
-                                        AppLog.i(TAG, "Managing ROM folders")
-                                        viewModel.setRemoveRomFolderDialogSelectedIndex(0)
-                                        viewModel.setRemoveRomFolderDialogOpen(true)
-                                    } else if (isConfigurableRomSystem) {
-                                        currentRomFolder?.let { folder ->
-                                            AppLog.i(TAG, "Changing core/emulator for folder ${folder.folderPath}")
-                                            openCoreChooserForFolder(folder)
-                                        }
-                                    }
-                                }
-
-                                2 -> {
-                                    if (hasRomFolders && isConfigurableRomSystem) {
-                                        currentRomFolder?.let { folder ->
-                                            AppLog.i(TAG, "Changing core/emulator for folder ${folder.folderPath}")
-                                            openCoreChooserForFolder(folder)
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        currentLibraryMenuActions(focusedLibraryApp).getOrNull(selectedIndex)?.onClick?.invoke()
                         viewModel.setLibraryOptionsMenuExpanded(false)
                         true
                     }
@@ -1127,23 +1272,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 isConfirmKey(keyCode) -> {
                     val selectedIndex = viewModel.mainMenuSelectedIndex.value
                     AppLog.i(TAG, "Main options menu confirmed at index $selectedIndex via gamepad A for ${targetApp?.label}")
-                    val isTargetPaired =
-                        targetApp != null && GameFocusPairManager.pairedApps.value.containsKey(targetApp.packageName)
-                    val manageGalleriesIndex = getGalleryManageGalleriesIndex(hasApp = targetApp != null, isPaired = isTargetPaired)
-                    if (selectedIndex == manageGalleriesIndex) {
-                        AppLog.i(TAG, "Opening Manage Galleries overlay from gallery menu")
-                        stopRepeat()
-                        viewModel.setMainOptionsMenuExpanded(false)
-                        viewModel.setManageGalleriesOpen(true)
-                    } else if (targetApp != null) {
-                        when (selectedIndex) {
-                            0 -> InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
-                            1 -> viewModel.openEditGameOverlay(targetApp)
-                            2 -> InstalledAppsManager.toggleHidden(this, targetApp.packageName)
-                            3 -> openPairingDialogForApp(targetApp)
-                            4 -> GameFocusPairManager.removePair(this, targetApp.packageName)
-                        }
-                    }
+                    currentGalleryMenuActions().getOrNull(selectedIndex)?.onClick?.invoke()
                     viewModel.setMainOptionsMenuExpanded(false)
                     true
                 }

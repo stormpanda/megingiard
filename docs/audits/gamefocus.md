@@ -287,7 +287,7 @@
 - [x] **`[GF-09]`** — Delete dead `SteamGridDbClient.downloadImageToTempFile` and unused `FocusTopLauncherViewModel.isResumed` *(Complexity: Low, Risk: Low)*
 - [x] **`[GF-10]`** — Remove legacy `gamefocus_scraped_apps.txt` migration and on-read icon disk rewrite *(Complexity: Med, Risk: Low)*
 - [x] **`[GF-11]`** — Unify split-brain `lastTopApp`/`lastTopPackage` and `lastBottomApp`/`lastBottomPackage` in `GameFocusSessionTracker` *(Complexity: Med, Risk: Low)*
-- [ ] **`[GF-12]`** — Unify duplicated gallery & library menu builders and eliminate hardcoded integer index dispatch *(Complexity: High, Risk: Low)*
+- [x] **`[GF-12]`** — Unify duplicated gallery & library menu builders and eliminate hardcoded integer index dispatch *(Complexity: High, Risk: Low)*
 - [ ] **`[GF-13]`** — Deduplicate `libraryTabs` and `availableAndroidApps` computations (fixing unsorted pairing focus index bug) *(Complexity: Med, Risk: Low)*
 - [ ] **`[GF-14]`** — Consolidate mirrored metadata mutator chains across `InstalledAppsManager` and `RomManager` *(Complexity: High, Risk: Med)*
 - [ ] **`[GF-15]`** — Replace hand-rolled `Mutex.tryLock` + `AtomicBoolean` double-loop in `runScrapingPasses` with conflated `Channel` *(Complexity: Med, Risk: Low)*

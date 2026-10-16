@@ -98,7 +98,6 @@ import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.gamefocus.domain.GalleryConfig
 import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
 import com.stormpanda.megingiard.math.floorMod
-import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
@@ -895,88 +894,20 @@ fun FocusTopLauncherScreen(
                             val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
                             val actions =
                                 remember(currentApp, isCurrentFavorite, isCurrentHidden, isCurrentPaired) {
-                                    buildList {
-                                        if (currentApp != null) {
-                                            add(
-                                                ExpandableActionItem(
-                                                    label =
-                                                        if (isCurrentFavorite) {
-                                                            context.getString(R.string.gamefocus_option_remove_favorite)
-                                                        } else {
-                                                            context.getString(R.string.gamefocus_option_add_favorite)
-                                                        },
-                                                    iconSymbol = "star",
-                                                    onClick = {
-                                                        onToggleFavorite(currentApp)
-                                                        viewModel.setMainOptionsMenuExpanded(false)
-                                                    },
-                                                ),
-                                            )
-                                            add(
-                                                ExpandableActionItem(
-                                                    label = context.getString(R.string.gamefocus_option_edit),
-                                                    iconSymbol = "palette",
-                                                    onClick = {
-                                                        viewModel.openEditGameOverlay(currentApp)
-                                                        viewModel.setMainOptionsMenuExpanded(false)
-                                                    },
-                                                ),
-                                            )
-                                            add(
-                                                ExpandableActionItem(
-                                                    label =
-                                                        if (isCurrentHidden) {
-                                                            context.getString(R.string.gamefocus_option_unhide)
-                                                        } else {
-                                                            context.getString(R.string.gamefocus_option_hide)
-                                                        },
-                                                    iconSymbol = if (isCurrentHidden) "visibility" else "visibility_off",
-                                                    onClick = {
-                                                        onToggleHidden(currentApp)
-                                                        viewModel.setMainOptionsMenuExpanded(false)
-                                                    },
-                                                ),
-                                            )
-                                            add(
-                                                ExpandableActionItem(
-                                                    label =
-                                                        if (isCurrentPaired) {
-                                                            context.getString(R.string.gamefocus_option_change_pair)
-                                                        } else {
-                                                            context.getString(R.string.gamefocus_option_pair_bottom)
-                                                        },
-                                                    iconSymbol = "splitscreen",
-                                                    onClick = {
-                                                        onOpenPairingDialog(currentApp)
-                                                        viewModel.setMainOptionsMenuExpanded(false)
-                                                    },
-                                                ),
-                                            )
-                                            if (isCurrentPaired) {
-                                                add(
-                                                    ExpandableActionItem(
-                                                        label = context.getString(R.string.gamefocus_option_remove_pair),
-                                                        iconSymbol = "delete",
-                                                        isDestructive = true,
-                                                        onClick = {
-                                                            onRemovePair(currentApp)
-                                                            viewModel.setMainOptionsMenuExpanded(false)
-                                                        },
-                                                    ),
-                                                )
-                                            }
-                                        }
-                                        add(
-                                            ExpandableActionItem(
-                                                label = context.getString(R.string.gamefocus_manage_galleries_title),
-                                                iconSymbol = "view_carousel",
-                                                onClick = {
-                                                    viewModel.setManageGalleriesOpen(true)
-                                                    viewModel.setMainOptionsMenuExpanded(false)
-                                                },
-                                            ),
-                                        )
-                                    }
+                                    buildGalleryMenuActions(
+                                        context = context,
+                                        currentApp = currentApp,
+                                        isFavorite = isCurrentFavorite,
+                                        isHidden = isCurrentHidden,
+                                        isPaired = isCurrentPaired,
+                                        onToggleFavorite = onToggleFavorite,
+                                        onEditGame = viewModel::openEditGameOverlay,
+                                        onToggleHidden = onToggleHidden,
+                                        onOpenPairingDialog = onOpenPairingDialog,
+                                        onRemovePair = onRemovePair,
+                                        onOpenManageGalleries = { viewModel.setManageGalleriesOpen(true) },
+                                        onDismissMenu = { viewModel.setMainOptionsMenuExpanded(false) },
+                                    )
                                 }
                             ExpandableActionsMenu(
                                 isExpanded = isMainOptionsMenuExpanded,
