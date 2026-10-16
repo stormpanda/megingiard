@@ -2,10 +2,10 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.PrivdClient
-import com.stormpanda.megingiard.privd.PrivdGamepadInjector
 
 private const val TAG = "GamepadInjector"
 
+private const val JOYSTICK_RAW_MIN = -32768
 private const val JOYSTICK_DEFLECTION_MAX = 32767
 private const val JOYSTICK_DEFLECTION_MIN = -32767
 private const val JOYSTICK_DEFLECTION_CENTER = 0
@@ -14,6 +14,14 @@ private const val HAT_AXIS_Y = 1
 private const val HAT_DIR_POS = 1
 private const val HAT_DIR_NEG = -1
 private const val HAT_DIR_CENTER = 0
+
+private val VALID_JOYSTICK_AXES =
+    setOf(
+        GamepadKeycodes.ABS_X,
+        GamepadKeycodes.ABS_Y,
+        GamepadKeycodes.ABS_Z,
+        GamepadKeycodes.ABS_RZ,
+    )
 
 /**
  * Public facade for gamepad button injection via Privileged Mode merge.
@@ -25,6 +33,30 @@ object GamepadInjector {
     val isRunning: Boolean
         get() = PrivdClient.isConnected
 
+    /**
+     * Set to `true` by [PhysicalGamepadRecordingManager] while a physical recording session is
+     * active. All inject methods return early when this flag is set, preventing self-echo.
+     */
+    @Volatile internal var isRecordingActive: Boolean = false
+
+    private fun sendButtonDown(code: Int) {
+        if (isRecordingActive) {
+            AppLog.d(TAG, "buttonDown btnCode=$code suppressed (recording active)")
+            return
+        }
+        AppLog.d(TAG, "buttonDown btnCode=$code")
+        PrivdClient.send("GD $code\n")
+    }
+
+    private fun sendButtonUp(code: Int) {
+        if (isRecordingActive) {
+            AppLog.d(TAG, "buttonUp btnCode=$code suppressed (recording active)")
+            return
+        }
+        AppLog.d(TAG, "buttonUp btnCode=$code")
+        PrivdClient.send("GU $code\n")
+    }
+
     fun buttonDown(btnCode: Int) {
         if (!PrivdClient.isConnected) {
             AppLog.w(TAG, "buttonDown($btnCode) dropped: Privd not connected")
@@ -33,50 +65,50 @@ object GamepadInjector {
         when (btnCode) {
             GamepadKeycodes.BTN_DPAD_UP -> {
                 hat(HAT_AXIS_Y, HAT_DIR_NEG)
-                PrivdGamepadInjector.buttonDown(btnCode)
+                sendButtonDown(btnCode)
             }
 
             GamepadKeycodes.BTN_DPAD_DOWN -> {
                 hat(HAT_AXIS_Y, HAT_DIR_POS)
-                PrivdGamepadInjector.buttonDown(btnCode)
+                sendButtonDown(btnCode)
             }
 
             GamepadKeycodes.BTN_DPAD_LEFT -> {
                 hat(HAT_AXIS_X, HAT_DIR_NEG)
-                PrivdGamepadInjector.buttonDown(btnCode)
+                sendButtonDown(btnCode)
             }
 
             GamepadKeycodes.BTN_DPAD_RIGHT -> {
                 hat(HAT_AXIS_X, HAT_DIR_POS)
-                PrivdGamepadInjector.buttonDown(btnCode)
+                sendButtonDown(btnCode)
             }
 
             GamepadKeycodes.CODE_DPAD_UP_LEFT -> {
                 hat(HAT_AXIS_X, HAT_DIR_NEG)
                 hat(HAT_AXIS_Y, HAT_DIR_NEG)
-                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_UP)
-                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_LEFT)
+                sendButtonDown(GamepadKeycodes.BTN_DPAD_UP)
+                sendButtonDown(GamepadKeycodes.BTN_DPAD_LEFT)
             }
 
             GamepadKeycodes.CODE_DPAD_UP_RIGHT -> {
                 hat(HAT_AXIS_X, HAT_DIR_POS)
                 hat(HAT_AXIS_Y, HAT_DIR_NEG)
-                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_UP)
-                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
+                sendButtonDown(GamepadKeycodes.BTN_DPAD_UP)
+                sendButtonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
             }
 
             GamepadKeycodes.CODE_DPAD_DOWN_LEFT -> {
                 hat(HAT_AXIS_X, HAT_DIR_NEG)
                 hat(HAT_AXIS_Y, HAT_DIR_POS)
-                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_DOWN)
-                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_LEFT)
+                sendButtonDown(GamepadKeycodes.BTN_DPAD_DOWN)
+                sendButtonDown(GamepadKeycodes.BTN_DPAD_LEFT)
             }
 
             GamepadKeycodes.CODE_DPAD_DOWN_RIGHT -> {
                 hat(HAT_AXIS_X, HAT_DIR_POS)
                 hat(HAT_AXIS_Y, HAT_DIR_POS)
-                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_DOWN)
-                PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
+                sendButtonDown(GamepadKeycodes.BTN_DPAD_DOWN)
+                sendButtonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
             }
 
             GamepadKeycodes.CODE_LS_UP -> {
@@ -152,7 +184,7 @@ object GamepadInjector {
             }
 
             else -> {
-                PrivdGamepadInjector.buttonDown(btnCode)
+                sendButtonDown(btnCode)
             }
         }
     }
@@ -162,12 +194,12 @@ object GamepadInjector {
         when (btnCode) {
             GamepadKeycodes.BTN_DPAD_UP, GamepadKeycodes.BTN_DPAD_DOWN -> {
                 hat(HAT_AXIS_Y, HAT_DIR_CENTER)
-                PrivdGamepadInjector.buttonUp(btnCode)
+                sendButtonUp(btnCode)
             }
 
             GamepadKeycodes.BTN_DPAD_LEFT, GamepadKeycodes.BTN_DPAD_RIGHT -> {
                 hat(HAT_AXIS_X, HAT_DIR_CENTER)
-                PrivdGamepadInjector.buttonUp(btnCode)
+                sendButtonUp(btnCode)
             }
 
             GamepadKeycodes.CODE_DPAD_UP_LEFT,
@@ -177,10 +209,10 @@ object GamepadInjector {
             -> {
                 hat(HAT_AXIS_X, HAT_DIR_CENTER)
                 hat(HAT_AXIS_Y, HAT_DIR_CENTER)
-                PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_UP)
-                PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_DOWN)
-                PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_LEFT)
-                PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_RIGHT)
+                sendButtonUp(GamepadKeycodes.BTN_DPAD_UP)
+                sendButtonUp(GamepadKeycodes.BTN_DPAD_DOWN)
+                sendButtonUp(GamepadKeycodes.BTN_DPAD_LEFT)
+                sendButtonUp(GamepadKeycodes.BTN_DPAD_RIGHT)
             }
 
             GamepadKeycodes.CODE_LS_UP,
@@ -226,7 +258,7 @@ object GamepadInjector {
             }
 
             else -> {
-                PrivdGamepadInjector.buttonUp(btnCode)
+                sendButtonUp(btnCode)
             }
         }
     }
@@ -236,8 +268,11 @@ object GamepadInjector {
         axis: Int,
         value: Int,
     ) {
-        if (!PrivdClient.isConnected) return
-        PrivdGamepadInjector.hat(axis, value)
+        if (!PrivdClient.isConnected || isRecordingActive) return
+        require(axis in HAT_AXIS_X..HAT_AXIS_Y) { "axis must be 0 (X) or 1 (Y)" }
+        require(value in HAT_DIR_NEG..HAT_DIR_POS) { "value must be -1, 0, or +1" }
+        AppLog.d(TAG, "hat axis=$axis value=$value")
+        PrivdClient.send("HD $axis $value\n")
     }
 
     /**
@@ -250,7 +285,9 @@ object GamepadInjector {
         axisCode: Int,
         value: Int,
     ) {
-        if (!PrivdClient.isConnected) return
-        PrivdGamepadInjector.joystick(axisCode, value)
+        if (!PrivdClient.isConnected || isRecordingActive) return
+        require(axisCode in VALID_JOYSTICK_AXES) { "axisCode must be one of ABS_X(0), ABS_Y(1), ABS_Z(2), or ABS_RZ(5)" }
+        require(value in JOYSTICK_RAW_MIN..JOYSTICK_DEFLECTION_MAX) { "value must be in int16 range -32768..32767" }
+        PrivdClient.send("JS $axisCode $value\n")
     }
 }

@@ -227,7 +227,7 @@ All input events from MacroPad actions (keyboard, mouse, gamepad, and touch) are
 
 - **Mouse actions**: `MouseInjector` transmits relative move (`MM dx dy`), button state (`MB L|R|M|4|5 D|U`), and scroll wheel (`MW delta`) commands.
 - **Keyboard actions**: `KeyInjector` transmits keycode press and release commands (`KD <keycode>`, `KU <keycode>`).
-- **Gamepad actions**: `GamepadInjector` / `PrivdGamepadInjector` merges events directly into the physical controller's kernel evdev node (`g_gamepad_fd`).
+- **Gamepad actions**: `GamepadInjector` merges events (`GD`, `GU`, `HD`, `JS`) directly into the physical controller's kernel evdev node (`g_gamepad_fd`) over `PrivdClient`.
 
 ### State Management
 

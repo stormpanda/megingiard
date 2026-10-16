@@ -42,7 +42,7 @@
 | `BackgroundTouchpadSettingsEditor.kt` | In-deck sub-page (`LayoutTouchpadSubPageContent`) for configuring per-layout relative mouse touchpad settings. |
 | `LayoutSettingsEditor.kt` | In-deck sub-pages (`EditLayoutSubPageContent`, `NewLayoutSubPageContent`, `AutomaticLayoutSwitchingSubPageContent`) for layout appearance colors, names, invisible button defaults, visual reference anchor positioning/calibration, required match rate threshold slider, stream delay, and lost-anchor effects (`CutoutLostAnchorEffect`). |
 | `CopyDialogs.kt` | In-deck sub-pages (`CopyLayoutSubPageContent`, `CopyButtonSubPageContent`) for copying layouts and buttons across profiles/layouts. |
-| `GamepadInjector.kt` | Public facade delegating directly to `PrivdGamepadInjector` for hardware evdev merge |
+| `GamepadInjector.kt` | Public facade routing gamepad button, hat, and joystick commands (`GD`, `GU`, `HD`, `JS`) directly to `PrivdClient` for hardware evdev merge |
 | `GamepadKeycodes.kt` | Linux BTN\_\* + ABS\_\* constants + preset list |
 | `MouseInjector.kt` | Public facade routing relative mouse commands directly to `PrivdClient` |
 | `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions) routing to `PrivdClient` |

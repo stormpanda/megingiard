@@ -4,7 +4,6 @@ import android.os.SystemClock
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.EvdevEvent
 import com.stormpanda.megingiard.privd.PrivdClient
-import com.stormpanda.megingiard.privd.PrivdGamepadInjector
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,7 +51,7 @@ sealed interface GamepadRecordingState {
  * daemon's evdev subscription (`SUB GAMEPAD` / `UNSUB GAMEPAD`).
  *
  * **Recording flow:**
- * 1. [startRecording] — suppresses injection via [PrivdGamepadInjector.isRecordingActive],
+ * 1. [startRecording] — suppresses injection via [GamepadInjector.isRecordingActive],
  *    sends `SUB GAMEPAD\n` to the daemon, and launches a coroutine that collects
  *    [PrivdClient.evdevEvents].
  * 2. Evdev events are translated to [GamepadRecordingState.Recording] state updates;
@@ -115,7 +114,7 @@ object PhysicalGamepadRecordingManager {
         }
         AppLog.i(TAG, "startRecording()")
         resetInternalState()
-        PrivdGamepadInjector.isRecordingActive = true
+        GamepadInjector.isRecordingActive = true
         PrivdClient.send("SUB GAMEPAD\n")
         beginRecordingSession(startElapsedMs = SystemClock.elapsedRealtime())
 
@@ -144,7 +143,7 @@ object PhysicalGamepadRecordingManager {
         val steps = completeRecordingAt(stopElapsedMs = SystemClock.elapsedRealtime())
 
         PrivdClient.send("UNSUB GAMEPAD\n")
-        PrivdGamepadInjector.isRecordingActive = false
+        GamepadInjector.isRecordingActive = false
 
         AppLog.d(TAG, "finishRecording() done: ${steps.size} steps")
         _state.value = GamepadRecordingState.Done(steps)
@@ -158,7 +157,7 @@ object PhysicalGamepadRecordingManager {
         collectorJob?.cancel()
         collectorJob = null
         PrivdClient.send("UNSUB GAMEPAD\n")
-        PrivdGamepadInjector.isRecordingActive = false
+        GamepadInjector.isRecordingActive = false
         _state.value = GamepadRecordingState.Idle
     }
 
