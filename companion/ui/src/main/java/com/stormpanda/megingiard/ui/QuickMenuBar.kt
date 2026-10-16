@@ -87,14 +87,12 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsStateWithLifecycle()
     val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsStateWithLifecycle()
     val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsStateWithLifecycle()
-    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsStateWithLifecycle()
-    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
 
     val alpha = remember { Animatable(QM_BAR_ALPHA_VISIBLE) }
-    LaunchedEffect(isQuickMenuOpen, isFullscreenKeyboardActive, isFullscreenMouseActive, overlayFadeOut) {
+    LaunchedEffect(isQuickMenuOpen, overlayFadeOut) {
         AppLog.d(TAG, "QuickMenuBar: state changed isQuickMenuOpen=$isQuickMenuOpen")
-        if (overlayFadeOut && !isQuickMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive) {
+        if (overlayFadeOut && !isQuickMenuOpen) {
             alpha.snapTo(QM_BAR_ALPHA_VISIBLE)
             delay(QM_BAR_FADE_OUT_DELAY_MS)
             alpha.animateTo(QM_BAR_ALPHA_FADED, animationSpec = tween(QM_BAR_FADE_OUT_DURATION_MS))
@@ -149,32 +147,28 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
         )
 
         // Keyboard Bar tab (Left/Start)
-        if (!isFullscreenKeyboardActive) {
-            QuickMenuBarTab(
-                overlayAtBottom = overlayAtBottom,
-                colors = colors,
-                modifier =
-                    Modifier
-                        .align(
-                            if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart,
-                        ).padding(start = QuickMenuBarLayout.TAB_PADDING)
-                        .graphicsLayer(alpha = alpha.value * swipeAlpha),
-            )
-        }
+        QuickMenuBarTab(
+            overlayAtBottom = overlayAtBottom,
+            colors = colors,
+            modifier =
+                Modifier
+                    .align(
+                        if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart,
+                    ).padding(start = QuickMenuBarLayout.TAB_PADDING)
+                    .graphicsLayer(alpha = alpha.value * swipeAlpha),
+        )
 
         // Touchpad Bar tab (Right/End)
-        if (!isFullscreenMouseActive) {
-            QuickMenuBarTab(
-                overlayAtBottom = overlayAtBottom,
-                colors = colors,
-                modifier =
-                    Modifier
-                        .align(
-                            if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd,
-                        ).padding(end = QuickMenuBarLayout.TAB_PADDING)
-                        .graphicsLayer(alpha = alpha.value * swipeAlpha),
-            )
-        }
+        QuickMenuBarTab(
+            overlayAtBottom = overlayAtBottom,
+            colors = colors,
+            modifier =
+                Modifier
+                    .align(
+                        if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd,
+                    ).padding(end = QuickMenuBarLayout.TAB_PADDING)
+                    .graphicsLayer(alpha = alpha.value * swipeAlpha),
+        )
 
         // ─── Sliding gesture pills ───────────────────────────────────────────────
         QuickMenuSlidingPill(

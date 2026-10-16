@@ -269,7 +269,7 @@ None identified — Quick Menu and App Shell state transitions are event-driven 
 - [x] **`[QM-04]`** — Simplify screenshot button rendering and remove always-`true` flags in `QuickMenuMirrorCard` *(Complexity: Low, Risk: Low)*
 - [x] **`[QM-05]`** — Remove unreachable `isValidScreen` guard in `MainAppScreen` and double `closeQuickMenu()` call in `QuickMenu` *(Complexity: Low, Risk: Low)*
 - [x] **`[QM-06]`** — Remove unused `packageName` parameter from `FloatingBubbleOverlay` *(Complexity: Low, Risk: Low)*
-- [ ] **`[QM-07]`** — Remove redundant fullscreen keyboard/mouse visibility checks inside `QuickMenuBar` *(Complexity: Low, Risk: Low)*
+- [x] **`[QM-07]`** — Remove redundant fullscreen keyboard/mouse visibility checks inside `QuickMenuBar` *(Complexity: Low, Risk: Low)*
 - [ ] **`[QM-08]`** — Deduplicate mirror freeze state machine, gamepad routing, and Compose host setup across `PrimaryOverlayManager` and `PrimaryOverlayActivity` *(Complexity: High, Risk: Med)*
 - [ ] **`[QM-09]`** — Collapse 5 vestigial `PrimaryModalType` variants into `MACROPAD_EDITOR` and remove `isBackgroundSettingsActive` / `hasSuspendedPrimaryModal` *(Complexity: High, Risk: Low)*
 - [ ] **`[QM-10]`** — Remove duplicate `watchInjectorLifecycle` and `stopInjectors()` calls from `MacroPadScreen` *(Complexity: Low, Risk: Low)*
