@@ -75,15 +75,14 @@ object FloatingBubbleOverlay {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun show(
-        packageName: String,
         touchX: Float = -1f,
         touchY: Float = -1f,
     ) {
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            showOnMainThread(packageName, touchX, touchY)
+            showOnMainThread(touchX, touchY)
         } else {
             mainHandler.post {
-                showOnMainThread(packageName, touchX, touchY)
+                showOnMainThread(touchX, touchY)
             }
         }
     }
@@ -99,7 +98,6 @@ object FloatingBubbleOverlay {
     }
 
     private fun showOnMainThread(
-        packageName: String,
         touchX: Float = -1f,
         touchY: Float = -1f,
     ) {

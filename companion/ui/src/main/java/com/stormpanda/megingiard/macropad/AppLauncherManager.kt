@@ -50,7 +50,6 @@ object AppLauncherManager {
 
             // Display floating bubble overlay above the target application at pressed location
             FloatingBubbleOverlay.show(
-                packageName = packageName,
                 touchX = touchX,
                 touchY = touchY,
             )
