@@ -40,12 +40,18 @@ sealed interface TouchRecordingState {
         val totalRecordedSampleCount: Int = 0,
         val startElapsedRealtime: Long = 0L,
         val activePointers: List<TouchPointerState> = emptyList(),
-        val liveNormX: Float? = activePointers.firstOrNull()?.normX,
-        val liveNormY: Float? = activePointers.firstOrNull()?.normY,
-        val isTouchDown: Boolean = activePointers.isNotEmpty(),
-        val activePointersCount: Int = activePointers.size,
-        val activeTrailPoints: List<Pair<Float, Float>> = activePointers.flatMap { it.trail },
-    ) : TouchRecordingState
+    ) : TouchRecordingState {
+        val liveNormX: Float?
+            get() = activePointers.firstOrNull()?.normX
+        val liveNormY: Float?
+            get() = activePointers.firstOrNull()?.normY
+        val isTouchDown: Boolean
+            get() = activePointers.isNotEmpty()
+        val activePointersCount: Int
+            get() = activePointers.size
+        val activeTrailPoints: List<Pair<Float, Float>>
+            get() = activePointers.flatMap { it.trail }
+    }
 
     data class Done(
         val steps: List<MacroStep>,
@@ -239,17 +245,7 @@ object TouchRecordingManager {
     fun updateLivePointers(pointers: List<TouchPointerState>) =
         synchronized(recordingLock) {
             val current = _state.value as? TouchRecordingState.Recording ?: return
-            val primary = pointers.firstOrNull()
-            val allTrail = pointers.flatMap { it.trail }
-            _state.value =
-                current.copy(
-                    activePointers = pointers,
-                    liveNormX = primary?.normX,
-                    liveNormY = primary?.normY,
-                    isTouchDown = pointers.isNotEmpty(),
-                    activePointersCount = pointers.size,
-                    activeTrailPoints = allTrail,
-                )
+            _state.value = current.copy(activePointers = pointers)
         }
 
     /**
@@ -259,25 +255,17 @@ object TouchRecordingManager {
         normX: Float?,
         normY: Float?,
         isDown: Boolean,
-        activePointersCount: Int,
+        activePointersCount: Int = if (isDown && normX != null && normY != null) 1 else 0,
         activeTrailPoints: List<Pair<Float, Float>>,
     ) = synchronized(recordingLock) {
         val current = _state.value as? TouchRecordingState.Recording ?: return
         val pointers =
-            if (normX != null && normY != null && isDown) {
+            if (normX != null && normY != null && isDown && activePointersCount > 0) {
                 listOf(TouchPointerState(slot = 0, normX = normX, normY = normY, trail = activeTrailPoints))
             } else {
                 emptyList()
             }
-        _state.value =
-            current.copy(
-                activePointers = pointers,
-                liveNormX = normX,
-                liveNormY = normY,
-                isTouchDown = isDown,
-                activePointersCount = activePointersCount,
-                activeTrailPoints = activeTrailPoints,
-            )
+        _state.value = current.copy(activePointers = pointers)
     }
 
     /**
@@ -335,11 +323,6 @@ object TouchRecordingManager {
                 recordedGestureCount = recordedGestureSteps.size,
                 totalRecordedSampleCount = totalSamples,
                 activePointers = emptyList(),
-                isTouchDown = false,
-                activePointersCount = 0,
-                activeTrailPoints = emptyList(),
-                liveNormX = null,
-                liveNormY = null,
             )
     }
 
