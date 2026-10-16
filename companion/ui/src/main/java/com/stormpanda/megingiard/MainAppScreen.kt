@@ -78,7 +78,6 @@ import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.macropad.TouchRecordingSheet
 import com.stormpanda.megingiard.macropad.TouchRecordingState
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
-import com.stormpanda.megingiard.mirror.AnchorPositioningCoordinator
 import com.stormpanda.megingiard.mirror.AnchorPositioningSheet
 import com.stormpanda.megingiard.mirror.AnchorTestCoordinator
 import com.stormpanda.megingiard.mirror.AnchorTestingSheet
@@ -451,7 +450,7 @@ fun MainAppScreen() {
                     AnchorPositioningSheet(
                         layoutId = payload.layoutId,
                         onDone = {
-                            AnchorPositioningCoordinator.requestDone()
+                            AppStateManager.resumeSuspended()
                         },
                     )
                 }

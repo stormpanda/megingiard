@@ -22,7 +22,6 @@ class AnchorTestCoordinatorTest {
     @Before
     fun setUp() {
         AnchorTestCoordinator.stopTesting(resumeSuspended = false)
-        AnchorPositioningCoordinator.consumeDoneRequest()
     }
 
     @Test
@@ -68,16 +67,6 @@ class AnchorTestCoordinatorTest {
         assertTrue(state.targetPoints.isEmpty())
         assertEquals(0, state.matchedPointCount)
         assertEquals(0, state.totalPointCount)
-    }
-
-    @Test
-    fun `AnchorPositioningCoordinator requestDone and consumeDoneRequest roundtrip`() {
-        assertFalse(AnchorPositioningCoordinator.isDoneRequested.value)
-        AnchorPositioningCoordinator.requestDone()
-        assertTrue(AnchorPositioningCoordinator.isDoneRequested.value)
-        val consumed = AnchorPositioningCoordinator.consumeDoneRequest()
-        assertTrue(consumed)
-        assertFalse(AnchorPositioningCoordinator.isDoneRequested.value)
     }
 
     @Test

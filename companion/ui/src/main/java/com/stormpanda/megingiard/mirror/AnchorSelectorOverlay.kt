@@ -18,8 +18,6 @@ import androidx.compose.material.icons.rounded.FilterCenterFocus
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -51,10 +49,8 @@ import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.GamepadConfirmModal
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.isBackKey
-import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 private const val TAG = "AnchorSelectorOverlay"
@@ -98,20 +94,6 @@ fun AnchorSelectorOverlay(
     val firstItemFocusRequester = remember { FocusRequester() }
     val collapseButtonFocusRequester = remember { FocusRequester() }
     val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
-    val isDoneRequested by AnchorPositioningCoordinator.isDoneRequested.collectAsStateWithLifecycle()
-
-    LaunchedEffect(isDoneRequested) {
-        if (isDoneRequested) {
-            AnchorPositioningCoordinator.consumeDoneRequest()
-            showCalibratePrompt = true
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            AnchorPositioningCoordinator.consumeDoneRequest()
-        }
-    }
 
     RememberTopOverlayFocusEffect(
         initialTarget = { firstItemFocusRequester },
