@@ -4,6 +4,12 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.annotation.StringRes
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
+import com.stormpanda.megingiard.catalog.EmulatorOption
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_PC
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.media.SteamGridDbException
 
 private const val TAG = "GFEditGameSupport"
@@ -63,3 +69,74 @@ internal fun steamGridDbErrorMessageRes(error: Throwable?): Int =
         is SteamGridDbException.Unauthorized -> R.string.steamgriddb_error_unauthorized
         else -> R.string.steamgriddb_error_generic
     }
+
+/**
+ * Selectable option for a ROM game's emulator or RetroArch core in [GameFocusEditGameOverlay].
+ *
+ * @property overrideValue `null` for "Folder Default", or the explicit emulator package / RetroArch core filename.
+ * @property displayLabel Localized label shown on the `GamepadChoiceCard`.
+ */
+internal data class RomRunnerChoice(
+    val overrideValue: String?,
+    val displayLabel: String,
+)
+
+/**
+ * Builds the ordered list of selectable emulator or RetroArch core choices for [appInfo].
+ * Returns an empty list for non-ROM apps or unrecognized systems.
+ */
+internal fun buildRomRunnerChoices(
+    appInfo: InstalledAppInfo,
+    installedSwitchEmulators: List<EmulatorOption>,
+    installedPcEmulators: List<EmulatorOption>,
+    formatFolderDefault: (String) -> String,
+): List<RomRunnerChoice> {
+    if (!appInfo.isRom) return emptyList()
+    val systemDef = SUPPORTED_SYSTEMS.find { it.id == appInfo.systemId } ?: return emptyList()
+
+    return when (appInfo.systemId) {
+        SYSTEM_ID_SWITCH -> {
+            val defaultPkg = appInfo.defaultEmulatorPackage
+            val defaultDisplayName =
+                installedSwitchEmulators.find { it.packageName == defaultPkg }?.displayName
+                    ?: installedSwitchEmulators.firstOrNull()?.displayName
+                    ?: systemDef.displayName
+            buildList {
+                add(RomRunnerChoice(overrideValue = null, displayLabel = formatFolderDefault(defaultDisplayName)))
+                installedSwitchEmulators.forEach { option ->
+                    add(RomRunnerChoice(overrideValue = option.packageName, displayLabel = option.displayName))
+                }
+            }
+        }
+
+        SYSTEM_ID_PC -> {
+            val defaultPkg = appInfo.defaultEmulatorPackage
+            val defaultDisplayName =
+                installedPcEmulators.find { it.packageName == defaultPkg }?.displayName
+                    ?: installedPcEmulators.firstOrNull()?.displayName
+                    ?: systemDef.displayName
+            buildList {
+                add(RomRunnerChoice(overrideValue = null, displayLabel = formatFolderDefault(defaultDisplayName)))
+                installedPcEmulators.forEach { option ->
+                    add(RomRunnerChoice(overrideValue = option.packageName, displayLabel = option.displayName))
+                }
+            }
+        }
+
+        else -> {
+            if (systemDef.emulatorId != EMULATOR_ID_RETROARCH) return emptyList()
+            val defaultCore = appInfo.defaultRetroArchCore ?: systemDef.retroArchCore ?: return emptyList()
+            val allCores =
+                buildList {
+                    systemDef.retroArchCore?.let { add(it) }
+                    addAll(systemDef.retroArchCoreAlternatives)
+                }.distinct()
+            buildList {
+                add(RomRunnerChoice(overrideValue = null, displayLabel = formatFolderDefault(defaultCore)))
+                allCores.forEach { core ->
+                    add(RomRunnerChoice(overrideValue = core, displayLabel = core))
+                }
+            }
+        }
+    }
+}

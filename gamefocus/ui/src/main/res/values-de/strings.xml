@@ -122,6 +122,11 @@
     <string name="gamefocus_scraping_no_icons_found">Keine Symbole oder Logos für „%1$s“ auf SteamGridDB gefunden.</string>
     <string name="gamefocus_action_reset_display_name_title">Auf Standardnamen zurücksetzen</string>
     <string name="gamefocus_action_reset_display_name_desc">Ursprünglichen Titel wiederherstellen: %1$s</string>
+    <string name="gamefocus_field_rom_emulator_title">Emulator</string>
+    <string name="gamefocus_field_rom_emulator_desc">Wähle aus, welcher Emulator dieses Spiel startet, oder verwende den Ordner-Standard.</string>
+    <string name="gamefocus_field_rom_core_title">RetroArch-Core</string>
+    <string name="gamefocus_field_rom_core_desc">Wähle aus, welcher RetroArch-Core dieses Spiel startet, oder verwende den Ordner-Standard.</string>
+    <string name="gamefocus_rom_runner_folder_default">Ordner-Standard (%1$s)</string>
 
     <!-- Manage Galleries -->
     <string name="gamefocus_manage_galleries_title">Galerien verwalten</string>

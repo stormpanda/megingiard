@@ -122,6 +122,11 @@
     <string name="gamefocus_scraping_no_icons_found">No icons or logos found for \"%1$s\" on SteamGridDB.</string>
     <string name="gamefocus_action_reset_display_name_title">Reset to Default Name</string>
     <string name="gamefocus_action_reset_display_name_desc">Restore the original title: %1$s</string>
+    <string name="gamefocus_field_rom_emulator_title">Emulator</string>
+    <string name="gamefocus_field_rom_emulator_desc">Choose which emulator launches this game, or use the folder default.</string>
+    <string name="gamefocus_field_rom_core_title">RetroArch Core</string>
+    <string name="gamefocus_field_rom_core_desc">Choose which RetroArch core launches this game, or use the folder default.</string>
+    <string name="gamefocus_rom_runner_folder_default">Folder Default (%1$s)</string>
 
     <!-- Manage Galleries -->
     <string name="gamefocus_manage_galleries_title">Manage Galleries</string>

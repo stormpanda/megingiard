@@ -438,6 +438,8 @@ object RomManager {
                                     systemId = folder.systemId,
                                     retroArchCore = folder.retroArchCore,
                                     emulatorPackage = folder.emulatorPackage,
+                                    defaultRetroArchCore = folder.retroArchCore,
+                                    defaultEmulatorPackage = folder.emulatorPackage,
                                     defaultLabel = cleanedLabel,
                                 ),
                                 context,

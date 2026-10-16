@@ -45,6 +45,7 @@ private const val FILE_LAST_USED = "gamefocus_last_used.txt"
 private const val FILE_ARTWORK_OPTOUTS = "gamefocus_artwork_optouts.json"
 private const val FILE_SCRAPE_ATTEMPTS = "gamefocus_scrape_attempts.json"
 private const val FILE_APP_NAMES = "gamefocus_app_names.json"
+private const val FILE_ROM_OVERRIDES = "gamefocus_rom_overrides.json"
 private const val FILE_COVER_IMAGE_IDS = "gamefocus_cover_image_ids.json"
 private const val FILE_LIBRARY_ICON_IDS = "gamefocus_library_icon_ids.json"
 internal const val DIR_COVERS = "gamefocus_covers"
@@ -80,6 +81,9 @@ object InstalledAppsManager {
 
     /** Custom display names keyed by package name (Android apps and `rom.*` pseudo packages). */
     private val customAppNames = mutableMapOf<String, String>()
+
+    /** Explicit per-game emulator package or RetroArch core overrides keyed by `rom.*` pseudo package. */
+    private val customRomRunners = mutableMapOf<String, String>()
     private val coverImageIds = mutableMapOf<String, Int>()
     private val libraryIconRefs = mutableMapOf<String, LibraryIconRef>()
     private var artworkOptOuts = ArtworkOptOuts()
@@ -127,6 +131,7 @@ object InstalledAppsManager {
             artworkOptOuts = ArtworkOptOuts()
             scrapeAttempts = ScrapeAttempts()
             customAppNames.clear()
+            customRomRunners.clear()
             coverImageIds.clear()
             libraryIconRefs.clear()
             isMetadataLoaded = false
@@ -194,6 +199,11 @@ object InstalledAppsManager {
                     .onSuccess { customAppNames.putAll(it) }
                     .onFailure { AppLog.w(TAG, "Failed to decode $FILE_APP_NAMES: ${it.message}") }
             }
+            readAtomicText(context, FILE_ROM_OVERRIDES)?.let { text ->
+                runCatching { Json.decodeFromString<Map<String, String>>(text) }
+                    .onSuccess { customRomRunners.putAll(it) }
+                    .onFailure { AppLog.w(TAG, "Failed to decode $FILE_ROM_OVERRIDES: ${it.message}") }
+            }
             readAtomicText(context, FILE_COVER_IMAGE_IDS)?.let { text ->
                 runCatching { Json.decodeFromString<Map<String, Int>>(text) }
                     .onSuccess { coverImageIds.putAll(it) }
@@ -219,8 +229,9 @@ object InstalledAppsManager {
             _lastUsed.value = loadStringList(context, FILE_LAST_USED, MAX_RECENT_APPS)
             AppLog.d(
                 TAG,
-                "Loaded persisted metadata (names=${customAppNames.size}, covers=${coverImageIds.size}, " +
-                    "icons=${libraryIconRefs.size}, favorites=${_favorites.value.size}, hidden=${_hiddenApps.value.size})",
+                "Loaded persisted metadata (names=${customAppNames.size}, romOverrides=${customRomRunners.size}, " +
+                    "covers=${coverImageIds.size}, icons=${libraryIconRefs.size}, " +
+                    "favorites=${_favorites.value.size}, hidden=${_hiddenApps.value.size})",
             )
         }
     }
@@ -264,6 +275,32 @@ object InstalledAppsManager {
 
     /** Returns the user-defined display name for [packageName], or null if none is set. */
     internal fun getCustomLabel(packageName: String): String? = synchronized(stateLock) { customAppNames[packageName] }
+
+    /** Returns the per-game emulator package or RetroArch core override for [packageName], or null if inheriting folder default. */
+    fun getCustomRomRunner(packageName: String): String? = synchronized(stateLock) { customRomRunners[packageName] }
+
+    /**
+     * Sets or clears a per-game emulator package or RetroArch core override for a ROM [packageName].
+     * Passing `null` or a blank string removes the override and restores the folder default.
+     */
+    fun setCustomRomRunner(
+        context: Context,
+        packageName: String,
+        runnerOverride: String?,
+    ) {
+        ensureMetadataLoaded(context)
+        val normalized = runnerOverride?.trim()?.takeIf { it.isNotEmpty() }
+        synchronized(stateLock) {
+            if (normalized != null) {
+                customRomRunners[packageName] = normalized
+            } else {
+                customRomRunners.remove(packageName)
+            }
+        }
+        persistAtomicText(context, FILE_ROM_OVERRIDES) { Json.encodeToString(customRomRunners.toMap()) }
+        refreshAppMetadata(context, packageName)
+        AppLog.i(TAG, "Updated custom ROM runner for $packageName to '$normalized'")
+    }
 
     @VisibleForTesting
     internal suspend fun awaitPendingWritesForTesting() {
@@ -418,9 +455,31 @@ object InstalledAppsManager {
         val cachedLogoFile = logoFileFor(context, packageName)
         val hasLogo = cachedLogoFile.exists() && cachedLogoFile.length() > 0L
 
+        val defaultRetroArchCore = rawApp.defaultRetroArchCore ?: rawApp.retroArchCore
+        val defaultEmulatorPackage = rawApp.defaultEmulatorPackage ?: rawApp.emulatorPackage
+        val customRomRunner = if (rawApp.isRom) getCustomRomRunner(packageName) else null
+        val isMultiEmulatorSystem = rawApp.systemId == SYSTEM_ID_SWITCH || rawApp.systemId == SYSTEM_ID_PC
+        val effectiveRetroArchCore =
+            if (rawApp.isRom && !isMultiEmulatorSystem) {
+                customRomRunner ?: defaultRetroArchCore
+            } else {
+                defaultRetroArchCore
+            }
+        val effectiveEmulatorPackage =
+            if (rawApp.isRom && isMultiEmulatorSystem) {
+                customRomRunner ?: defaultEmulatorPackage
+            } else {
+                defaultEmulatorPackage
+            }
+
         return rawApp.copy(
             label = label,
             defaultLabel = defaultLabel,
+            retroArchCore = effectiveRetroArchCore,
+            emulatorPackage = effectiveEmulatorPackage,
+            defaultRetroArchCore = defaultRetroArchCore,
+            defaultEmulatorPackage = defaultEmulatorPackage,
+            customRomRunner = customRomRunner,
             coverPath = if (hasCover) cachedCoverFile.absolutePath else null,
             coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L,
             coverImageId = coverImageId,

@@ -71,7 +71,11 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.catalog.LibraryIconRef
+import com.stormpanda.megingiard.catalog.PcEmulators
 import com.stormpanda.megingiard.catalog.RomManager
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_PC
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
+import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusGalleryManager
 import com.stormpanda.megingiard.media.SteamGridDbClient
 import com.stormpanda.megingiard.media.SteamGridDbGame
@@ -235,18 +239,63 @@ private fun GameInfoDeckContent(
     val defaultTitle = appInfo.defaultLabel
     var editedTitle by remember(appInfo.packageName) { mutableStateOf(appInfo.label) }
     val normalizedTitle = editedTitle.trim()
-    val isChanged = normalizedTitle.isNotEmpty() && normalizedTitle != appInfo.label
+    val isTitleChanged = normalizedTitle.isNotEmpty() && normalizedTitle != appInfo.label
     val canResetToDefault = defaultTitle != null && (appInfo.label != defaultTitle || editedTitle != defaultTitle)
+
+    val isMultiEmulatorRom =
+        appInfo.isRom && (appInfo.systemId == SYSTEM_ID_SWITCH || appInfo.systemId == SYSTEM_ID_PC)
+    val runnerChoices =
+        remember(
+            appInfo.packageName,
+            appInfo.isRom,
+            appInfo.systemId,
+            appInfo.defaultEmulatorPackage,
+            appInfo.defaultRetroArchCore,
+        ) {
+            val installedSwitch =
+                if (appInfo.systemId == SYSTEM_ID_SWITCH) {
+                    SwitchEmulators.getInstalledEmulators(context)
+                } else {
+                    emptyList()
+                }
+            val installedPc =
+                if (appInfo.systemId == SYSTEM_ID_PC) {
+                    PcEmulators.getInstalledEmulators(context)
+                } else {
+                    emptyList()
+                }
+            buildRomRunnerChoices(
+                appInfo = appInfo,
+                installedSwitchEmulators = installedSwitch,
+                installedPcEmulators = installedPc,
+                formatFolderDefault = { defaultName ->
+                    context.getString(R.string.gamefocus_rom_runner_folder_default, defaultName)
+                },
+            )
+        }
+    var editedRomRunner by remember(appInfo.packageName) { mutableStateOf(appInfo.customRomRunner) }
+    val selectedRunnerIndex =
+        remember(runnerChoices, editedRomRunner) {
+            runnerChoices.indexOfFirst { it.overrideValue == editedRomRunner }.takeIf { it >= 0 } ?: 0
+        }
+    val isRunnerChanged =
+        appInfo.isRom && runnerChoices.isNotEmpty() && editedRomRunner != appInfo.customRomRunner
+    val isChanged = isTitleChanged || isRunnerChanged
 
     val promptState =
         rememberSaveExitPromptState(
             hasChanges = isChanged,
             onSave = {
-                if (isChanged) {
-                    if (normalizedTitle == defaultTitle) {
-                        InstalledAppsManager.resetAppLabel(context, appInfo.packageName)
-                    } else {
-                        InstalledAppsManager.updateAppLabel(context, appInfo.packageName, normalizedTitle)
+                if (isChanged && normalizedTitle.isNotEmpty()) {
+                    if (isTitleChanged) {
+                        if (normalizedTitle == defaultTitle) {
+                            InstalledAppsManager.resetAppLabel(context, appInfo.packageName)
+                        } else {
+                            InstalledAppsManager.updateAppLabel(context, appInfo.packageName, normalizedTitle)
+                        }
+                    }
+                    if (isRunnerChanged) {
+                        InstalledAppsManager.setCustomRomRunner(context, appInfo.packageName, editedRomRunner)
                     }
                     onDismiss()
                 }
@@ -276,6 +325,41 @@ private fun GameInfoDeckContent(
                     val restored = InstalledAppsManager.resetAppLabel(context, appInfo.packageName) ?: defaultTitle
                     editedTitle = restored
                     AppLog.i(TAG, "Display name reset to default for ${appInfo.packageName}")
+                },
+            )
+        }
+
+        if (runnerChoices.isNotEmpty()) {
+            val currentChoice = runnerChoices[selectedRunnerIndex]
+            GamepadChoiceCard(
+                title =
+                    stringResource(
+                        if (isMultiEmulatorRom) {
+                            R.string.gamefocus_field_rom_emulator_title
+                        } else {
+                            R.string.gamefocus_field_rom_core_title
+                        },
+                    ),
+                description =
+                    stringResource(
+                        if (isMultiEmulatorRom) {
+                            R.string.gamefocus_field_rom_emulator_desc
+                        } else {
+                            R.string.gamefocus_field_rom_core_desc
+                        },
+                    ),
+                selectedText = currentChoice.displayLabel,
+                icon = Icons.Rounded.Tune,
+                enabled = runnerChoices.size > 1,
+                onPrevious = {
+                    val prevIdx = (selectedRunnerIndex - 1 + runnerChoices.size) % runnerChoices.size
+                    editedRomRunner = runnerChoices[prevIdx].overrideValue
+                    AppLog.d(TAG, "Selected previous ROM runner for ${appInfo.packageName}: ${editedRomRunner ?: "default"}")
+                },
+                onNext = {
+                    val nextIdx = (selectedRunnerIndex + 1) % runnerChoices.size
+                    editedRomRunner = runnerChoices[nextIdx].overrideValue
+                    AppLog.d(TAG, "Selected next ROM runner for ${appInfo.packageName}: ${editedRomRunner ?: "default"}")
                 },
             )
         }

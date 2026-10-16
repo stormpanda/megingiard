@@ -122,6 +122,11 @@
     <string name="gamefocus_scraping_no_icons_found">在 SteamGridDB 上找不到「%1$s」的圖示或標誌。</string>
     <string name="gamefocus_action_reset_display_name_title">重設為預設名稱</string>
     <string name="gamefocus_action_reset_display_name_desc">還原原始名稱：%1$s</string>
+    <string name="gamefocus_field_rom_emulator_title">模擬器</string>
+    <string name="gamefocus_field_rom_emulator_desc">選擇啟動此遊戲的模擬器，或使用資料夾預設值。</string>
+    <string name="gamefocus_field_rom_core_title">RetroArch 核心</string>
+    <string name="gamefocus_field_rom_core_desc">選擇啟動此遊戲的 RetroArch 核心，或使用資料夾預設值。</string>
+    <string name="gamefocus_rom_runner_folder_default">資料夾預設（%1$s）</string>
 
     <!-- Manage Galleries -->
     <string name="gamefocus_manage_galleries_title">管理圖庫</string>
