@@ -20,7 +20,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
@@ -96,7 +95,6 @@ internal fun MacroStepEditSubPageContent(
     macroName: String,
     step: MacroStep?,
     stepIndex: Int?,
-    accentColor: Color,
     suggestedStartTimeMs: Long,
     initialShiftMode: ShiftMode,
     onConfirm: (MacroStep, ShiftMode) -> Unit,
@@ -106,6 +104,7 @@ internal fun MacroStepEditSubPageContent(
     onDelete: (() -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
+    val accentColor = colors.accent
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
 
     val initialType =

@@ -385,7 +385,6 @@ fun MacroPadEditor(
                                             ProfilesDeck(
                                                 profiles = profiles,
                                                 activeProfile = profile,
-                                                accentColor = colors.accent,
                                                 onSelectProfile = {
                                                     MacroPadState.setActiveProfileId(it)
                                                     AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
@@ -465,7 +464,6 @@ fun MacroPadEditor(
                                             LayoutsDeck(
                                                 profile = profile,
                                                 activeLayout = activeLayout,
-                                                accentColor = colors.accent,
                                                 onSelectLayout = {
                                                     MacroPadState.setActiveLayoutId(it)
                                                     AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
@@ -983,7 +981,6 @@ fun MacroPadEditor(
                                                     layout = currentDraft,
                                                     savedLayout = lay,
                                                     target = currentSubPage.target,
-                                                    accentColor = colors.accent,
                                                     onColorOptionChanged = { option ->
                                                         val updatedDraft = currentDraft.withColorOption(currentSubPage.target, option)
                                                         appearanceDraft = updatedDraft
@@ -1224,10 +1221,8 @@ fun MacroPadEditor(
                                                     ),
                                             ) {
                                                 CopyLayoutSubPageContent(
-                                                    title = stringResource(R.string.macropad_editor_copy_profile_select),
                                                     profiles = profiles,
                                                     excludeProfileId = profile.id,
-                                                    accentColor = colors.accent,
                                                     onSelect = { targetProfileId ->
                                                         val newLayoutId =
                                                             MacroPadState.copyLayoutToProfile(lay, profile.id, targetProfileId)
@@ -1507,7 +1502,6 @@ fun MacroPadEditor(
                                                 savedButton = savedButton,
                                                 activeLayout = activeLayout,
                                                 target = currentSubPage.target,
-                                                accentColor = colors.accent,
                                                 onColorOptionChanged = { option ->
                                                     val updatedDraft = effectiveButton.withColorOption(currentSubPage.target, option)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
@@ -1708,7 +1702,6 @@ fun MacroPadEditor(
                                         ) {
                                             VisualMousePicker(
                                                 currentAction = effectiveButton.action,
-                                                accentColor = colors.accent,
                                                 onSelectAction = { act ->
                                                     val updatedDraft = applyActionToDraftButton(effectiveButton, act)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
@@ -1751,7 +1744,6 @@ fun MacroPadEditor(
                                         ) {
                                             MirrorActionPickerSubPageContent(
                                                 currentAction = effectiveButton.action,
-                                                accentColor = colors.accent,
                                                 onSelectAction = { act ->
                                                     val updatedDraft = applyActionToDraftButton(effectiveButton, act)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
@@ -1794,7 +1786,6 @@ fun MacroPadEditor(
                                         ) {
                                             OverlayActionPickerSubPageContent(
                                                 currentAction = effectiveButton.action,
-                                                accentColor = colors.accent,
                                                 onSelectAction = { act ->
                                                     val updatedDraft = applyActionToDraftButton(effectiveButton, act)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
@@ -1837,7 +1828,6 @@ fun MacroPadEditor(
                                         ) {
                                             LayoutActionPickerSubPageContent(
                                                 currentAction = effectiveButton.action,
-                                                accentColor = colors.accent,
                                                 onSelectAction = { act ->
                                                     val updatedDraft = applyActionToDraftButton(effectiveButton, act)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
@@ -1883,10 +1873,8 @@ fun MacroPadEditor(
                                                 ),
                                         ) {
                                             CopyButtonSubPageContent(
-                                                title = stringResource(R.string.macropad_editor_copy_layout_select),
                                                 profiles = profiles,
                                                 excludeLayoutId = activeLayout?.id,
-                                                accentColor = colors.accent,
                                                 onSelect = { targetProfileId, targetLayoutId ->
                                                     MacroPadState.copyButtonToLayout(
                                                         currentSubPage.button,
@@ -1936,7 +1924,6 @@ fun MacroPadEditor(
                                         ) {
                                             MacroActionPickerSubPageContent(
                                                 currentAction = effectiveButton.action,
-                                                accentColor = colors.accent,
                                                 onSelectAction = { act ->
                                                     val updatedDraft = applyActionToDraftButton(effectiveButton, act)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
@@ -2146,7 +2133,6 @@ fun MacroPadEditor(
                                                     macroName = macro.name,
                                                     step = step,
                                                     stepIndex = currentSubPage.stepIndex,
-                                                    accentColor = colors.accent,
                                                     suggestedStartTimeMs = macro.steps.totalDurationMs(),
                                                     initialShiftMode = ShiftMode.END_DELTA,
                                                     onOpenKeyboardPicker = { kbStep ->
@@ -2340,7 +2326,6 @@ fun MacroPadEditor(
                                                 TextSequenceGeneratorSubPageContent(
                                                     macroName = macro.name,
                                                     suggestedStartTimeMs = macro.steps.totalDurationMs(),
-                                                    accentColor = colors.accent,
                                                     onGenerate = { generatedSteps ->
                                                         val updatedMacro = macro.copy(steps = macro.steps + generatedSteps)
                                                         MacroPadNavState.setMacroDraft(updatedMacro)
@@ -2388,7 +2373,6 @@ fun MacroPadEditor(
 private fun ProfilesDeck(
     profiles: List<PadProfile>,
     activeProfile: PadProfile,
-    accentColor: Color,
     onSelectProfile: (String) -> Unit,
     onNewProfile: () -> Unit,
     onEditProfile: () -> Unit,
@@ -2469,7 +2453,6 @@ private fun ProfilesDeck(
 private fun LayoutsDeck(
     profile: PadProfile,
     activeLayout: PadLayout?,
-    accentColor: Color,
     onSelectLayout: (String) -> Unit,
     onEditLayout: () -> Unit,
     onNewLayout: () -> Unit,

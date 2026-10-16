@@ -17,7 +17,6 @@ import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -139,7 +138,6 @@ private fun GenericActionGridPickerSubPageContent(
 @Composable
 internal fun MirrorActionPickerSubPageContent(
     currentAction: PadAction,
-    accentColor: Color,
     onSelectAction: (action: PadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -155,7 +153,6 @@ internal fun MirrorActionPickerSubPageContent(
 @Composable
 internal fun OverlayActionPickerSubPageContent(
     currentAction: PadAction,
-    accentColor: Color,
     onSelectAction: (action: PadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -171,7 +168,6 @@ internal fun OverlayActionPickerSubPageContent(
 @Composable
 internal fun LayoutActionPickerSubPageContent(
     currentAction: PadAction,
-    accentColor: Color,
     onSelectAction: (action: PadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -187,7 +183,6 @@ internal fun LayoutActionPickerSubPageContent(
 @Composable
 internal fun MacroActionPickerSubPageContent(
     currentAction: PadAction,
-    accentColor: Color,
     onSelectAction: (action: PadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {

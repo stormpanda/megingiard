@@ -541,7 +541,6 @@ internal fun LayoutColorSubPageContent(
     layout: PadLayout,
     savedLayout: PadLayout?,
     target: EditorColorTarget,
-    accentColor: Color,
     onColorOptionChanged: (ColorOption) -> Unit,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightLayout: PadLayout) -> Unit,
 ) {

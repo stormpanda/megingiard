@@ -951,7 +951,6 @@ internal fun ButtonColorSubPageContent(
     savedButton: PadButton?,
     activeLayout: PadLayout?,
     target: EditorColorTarget,
-    accentColor: Color,
     onColorOptionChanged: (ColorOption?) -> Unit,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightButton: PadButton) -> Unit,
 ) {

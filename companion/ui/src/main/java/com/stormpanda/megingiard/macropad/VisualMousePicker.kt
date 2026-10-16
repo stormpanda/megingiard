@@ -7,7 +7,6 @@ import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
@@ -65,7 +64,6 @@ private val MOUSE_ACTION_ITEMS =
 @Composable
 internal fun VisualMousePicker(
     currentAction: PadAction,
-    accentColor: Color,
     onSelectAction: (action: PadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
