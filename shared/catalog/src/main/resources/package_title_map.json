@@ -60,5 +60,8 @@
   "com.exagear": "ExaGear Windows Emulator",
   "com.winlator": "Winlator PC Emulator",
   "com.valvesoftware.steamlink": "Steam Link",
-  "com.moonlightstream.moonlight": "Moonlight Game Streaming"
+  "com.moonlightstream.moonlight": "Moonlight Game Streaming",
+  "app.gamenative": "GameNative",
+  "com.utkarshdalal.gamenative": "GameNative (Legacy)",
+  "com.droiddeck.launcher": "DroidDeck"
 }

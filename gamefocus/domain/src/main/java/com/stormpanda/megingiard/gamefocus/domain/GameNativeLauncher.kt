@@ -5,8 +5,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_GAMENATIVE
+import com.stormpanda.megingiard.catalog.PcEmulators
 import com.stormpanda.megingiard.catalog.RomLauncher
-import com.stormpanda.megingiard.session.GameNativeDetector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -16,7 +17,7 @@ private const val GAMENATIVE_EXTRA_APP_ID = "app_id"
 private const val GAMENATIVE_EXTRA_ROM = "ROM"
 
 class GameNativeLauncher : RomLauncher {
-    override val id: String = "gamenative"
+    override val id: String = EMULATOR_ID_GAMENATIVE
     override val displayName: String = "GameNative"
 
     override suspend fun launchGame(
@@ -27,18 +28,21 @@ class GameNativeLauncher : RomLauncher {
         retroArchCore: String?,
         romUri: String?,
     ): Boolean {
-        val packageName = getGameNativePackageName(context)
+        val packageName = resolveTargetPackage(context, retroArchCore)
         if (packageName == null) {
             AppLog.e(
                 TAG,
-                "GameNative is not installed (checked ${GameNativeDetector.supportedPackages.joinToString()})",
+                "No supported PC emulator is installed (checked ${PcEmulators.SUPPORTED_EMULATOR_OPTIONS.joinToString { it.packageName }})",
             )
             return false
         }
 
         // Try to parse steam app ID
         val appId = withContext(Dispatchers.IO) { parseSteamAppId(romPath) }
-        AppLog.i(TAG, "Launching GameNative with ROM path: $romPath, parsed appId: $appId on display $displayId")
+        AppLog.i(
+            TAG,
+            "Launching PC ROM '$romPath' (appId: $appId) with package '$packageName' on display $displayId",
+        )
 
         return try {
             val intent =
@@ -66,16 +70,17 @@ class GameNativeLauncher : RomLauncher {
         }
     }
 
-    private fun getGameNativePackageName(context: Context): String? {
-        val pm = context.packageManager
-        return GameNativeDetector.supportedPackages.firstOrNull { pkg ->
-            try {
-                pm.getPackageInfo(pkg, 0)
-                true
-            } catch (e: Exception) {
-                false
-            }
+    private fun resolveTargetPackage(
+        context: Context,
+        preferredPackage: String?,
+    ): String? {
+        val installed = PcEmulators.getInstalledEmulators(context, forceRefresh = true)
+        if (installed.isEmpty()) return null
+
+        if (preferredPackage != null && installed.any { it.packageName == preferredPackage }) {
+            return preferredPackage
         }
+        return installed.first().packageName
     }
 
     private fun parseSteamAppId(romPath: String): Int? {

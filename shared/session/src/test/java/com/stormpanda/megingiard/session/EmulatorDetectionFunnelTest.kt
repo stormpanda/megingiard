@@ -81,6 +81,7 @@ class EmulatorDetectionFunnelTest {
         assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("dev.eden.eden_emulator.nightly"))
         assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("dev.eden.eden_emulator.dualscreen.debug"))
         assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("app.gamenative"))
+        assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("com.droiddeck.launcher"))
     }
 
     @Test

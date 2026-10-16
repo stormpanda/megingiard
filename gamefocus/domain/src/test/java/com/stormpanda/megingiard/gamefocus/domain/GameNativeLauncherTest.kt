@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.gamefocus.domain
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
+import com.stormpanda.megingiard.catalog.PcEmulators
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -26,6 +27,7 @@ class GameNativeLauncherTest {
     @Before
     fun setUp() {
         context = RuntimeEnvironment.getApplication()
+        PcEmulators.invalidateCache()
         launcher = GameNativeLauncher()
     }
 
@@ -128,6 +130,36 @@ class GameNativeLauncherTest {
             assertNotNull(nextIntent)
             assertEquals(Intent.ACTION_MAIN, nextIntent.action)
             assertEquals(tempFile.absolutePath, nextIntent.getStringExtra("ROM"))
+
+            tempFile.delete()
+        }
+
+    @Test
+    fun testLaunchGameWithDroidDeckWhenPreferred() =
+        runTest {
+            val pkgGameNative = "app.gamenative"
+            val pkgDroidDeck = "com.droiddeck.launcher"
+            shadowOf(context.packageManager).installPackage(PackageInfo().apply { packageName = pkgGameNative })
+            shadowOf(context.packageManager).installPackage(PackageInfo().apply { packageName = pkgDroidDeck })
+
+            val tempFile = File(context.cacheDir, "367520.steam")
+            tempFile.writeText("")
+
+            val launched =
+                launcher.launchGame(
+                    context = context,
+                    romPath = tempFile.absolutePath,
+                    systemId = "pc",
+                    displayId = 0,
+                    retroArchCore = pkgDroidDeck,
+                )
+            assertTrue(launched)
+
+            val nextIntent = shadowOf(RuntimeEnvironment.getApplication()).nextStartedActivity
+            assertNotNull(nextIntent)
+            assertEquals("$pkgDroidDeck.LAUNCH_GAME", nextIntent.action)
+            assertEquals(367520, nextIntent.getIntExtra("app_id", -1))
+            assertEquals("$pkgDroidDeck.MainActivity", nextIntent.component?.className)
 
             tempFile.delete()
         }

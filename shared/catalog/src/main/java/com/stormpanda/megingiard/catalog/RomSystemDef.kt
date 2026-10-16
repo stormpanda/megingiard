@@ -8,6 +8,7 @@ const val EMULATOR_ID_RETROARCH = "retroarch"
 const val EMULATOR_ID_GAMENATIVE = "gamenative"
 const val EMULATOR_ID_YUZU = "yuzu"
 const val SYSTEM_ID_SWITCH = "switch"
+const val SYSTEM_ID_PC = "pc"
 
 /**
  * Definition of a gaming system supported for ROM browsing.
@@ -390,7 +391,7 @@ val SUPPORTED_SYSTEMS =
                 retroArchCore = "scummvm_libretro_android.so",
             ),
             RomSystemDef(
-                id = "pc",
+                id = SYSTEM_ID_PC,
                 displayName = "PC",
                 extensions = setOf("steam", "steamappid"),
                 emulatorId = EMULATOR_ID_GAMENATIVE,

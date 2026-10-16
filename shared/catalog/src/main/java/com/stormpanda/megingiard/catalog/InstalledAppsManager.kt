@@ -469,6 +469,7 @@ object InstalledAppsManager {
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
         SwitchEmulators.invalidateCache()
+        PcEmulators.invalidateCache()
         loadAppsJob?.cancel()
         loadAppsJob =
             scope.launch {

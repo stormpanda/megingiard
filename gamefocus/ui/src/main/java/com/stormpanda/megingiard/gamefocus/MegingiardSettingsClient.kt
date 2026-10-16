@@ -7,13 +7,13 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
 import com.stormpanda.megingiard.catalog.EMULATOR_ID_YUZU
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.PcEmulators
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.ipc.observeContentProvider
-import com.stormpanda.megingiard.session.GameNativeDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -194,7 +194,12 @@ object MegingiardSettingsClient {
                 }
 
                 else -> {
-                    GameNativeDetector.supportedPackages
+                    val pcPackages = PcEmulators.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }
+                    if (!emulatorPackage.isNullOrBlank()) {
+                        listOf(emulatorPackage) + pcPackages.filterNot { it == emulatorPackage }
+                    } else {
+                        pcPackages
+                    }
                 }
             }
         val pm = context.packageManager

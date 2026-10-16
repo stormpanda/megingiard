@@ -74,6 +74,8 @@ object EmulatorDetectionFunnel {
                         lastSession = null
                         _activeSession.value = null
                         _lastDetectedSession.value = null
+                        currentFocusedRomPath = null
+                        currentFocusedRomIdentifier = null
                     }
                 }
             }

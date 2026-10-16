@@ -368,4 +368,50 @@ class RomManagerTest {
             assertEquals(AddRomFolderResult.ErrorCode.FOLDER_INACCESSIBLE, errorResult.errorCode)
         }
     }
+
+    @Test
+    fun testAddRomFolder_pcWithoutEmulator_returnsNoPcEmulatorErrorCode() {
+        runBlocking {
+            PcEmulators.invalidateCache()
+            val tempDir =
+                File.createTempFile("pc_test_dir", "").apply {
+                    delete()
+                    mkdirs()
+                }
+            try {
+                File(tempDir, "Portal 2.steam").createNewFile()
+                val result = RomManager.addRomFolder(context, Uri.fromFile(tempDir))
+                assertTrue(result is AddRomFolderResult.Error)
+                val errorResult = result as AddRomFolderResult.Error
+                assertEquals(AddRomFolderResult.ErrorCode.NO_PC_EMULATOR, errorResult.errorCode)
+            } finally {
+                tempDir.deleteRecursively()
+            }
+        }
+    }
+
+    @Test
+    fun testAddRomFolder_pcWithSingleInstalledEmulator_autoAssignsDroidDeck() {
+        runBlocking {
+            PcEmulators.invalidateCache()
+            val pkgDroidDeck = "com.droiddeck.launcher"
+            shadowOf(context.packageManager).installPackage(PackageInfo().apply { packageName = pkgDroidDeck })
+
+            val tempDir =
+                File.createTempFile("pc_test_dir_droiddeck", "").apply {
+                    delete()
+                    mkdirs()
+                }
+            try {
+                File(tempDir, "Portal 2.steam").createNewFile()
+                val result = RomManager.addRomFolder(context, Uri.fromFile(tempDir))
+                assertTrue(result is AddRomFolderResult.Success)
+                val successResult = result as AddRomFolderResult.Success
+                assertEquals(SYSTEM_ID_PC, successResult.folder.systemId)
+                assertEquals(pkgDroidDeck, successResult.folder.emulatorPackage)
+            } finally {
+                tempDir.deleteRecursively()
+            }
+        }
+    }
 }

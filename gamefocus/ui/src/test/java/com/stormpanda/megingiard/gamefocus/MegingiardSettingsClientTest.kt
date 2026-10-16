@@ -4,7 +4,9 @@ import android.content.Context
 import android.content.pm.PackageInfo
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.PcEmulators
 import com.stormpanda.megingiard.catalog.RomManager
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_PC
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SwitchEmulators
 import kotlinx.coroutines.flow.first
@@ -124,6 +126,33 @@ class MegingiardSettingsClientTest {
                 context = context,
                 systemId = SYSTEM_ID_SWITCH,
                 emulatorPackage = "org.sudachi.sudachi_emu",
+            ),
+        )
+    }
+
+    @Test
+    fun testGetActualPackageName_pcRomResolvesInstalledAndPreferredEmulator() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val shadowPm = shadowOf(context.packageManager)
+
+        assertEquals(
+            PcEmulators.SUPPORTED_EMULATOR_OPTIONS.first().packageName,
+            MegingiardSettingsClient.getActualPackageName(context, SYSTEM_ID_PC),
+        )
+
+        shadowPm.installPackage(PackageInfo().apply { packageName = "com.droiddeck.launcher" })
+        shadowPm.installPackage(PackageInfo().apply { packageName = "app.gamenative" })
+        assertEquals(
+            "app.gamenative",
+            MegingiardSettingsClient.getActualPackageName(context, SYSTEM_ID_PC),
+        )
+
+        assertEquals(
+            "com.droiddeck.launcher",
+            MegingiardSettingsClient.getActualPackageName(
+                context = context,
+                systemId = SYSTEM_ID_PC,
+                emulatorPackage = "com.droiddeck.launcher",
             ),
         )
     }

@@ -37,8 +37,10 @@ import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.catalog.LibraryTab
+import com.stormpanda.megingiard.catalog.PcEmulators
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_PC
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusDefaultLauncherManager
@@ -196,6 +198,7 @@ internal fun buildLibraryMenuActions(
         currentRomFolder != null &&
             SUPPORTED_SYSTEMS.find { it.id == currentRomFolder.systemId }?.emulatorId == EMULATOR_ID_RETROARCH
     val isSwitchSystem = currentRomFolder?.systemId == SYSTEM_ID_SWITCH
+    val isPcSystem = currentRomFolder?.systemId == SYSTEM_ID_PC
 
     return buildList {
         if (focusedApp != null) {
@@ -281,7 +284,7 @@ internal fun buildLibraryMenuActions(
                     },
                 ),
             )
-        } else if (isSwitchSystem && currentRomFolder != null) {
+        } else if ((isSwitchSystem || isPcSystem) && currentRomFolder != null) {
             add(
                 ExpandableActionItem(
                     label = context.resolveMenuString(R.string.gamefocus_option_change_emulator),
@@ -324,15 +327,28 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 lifecycleScope.launch {
                     when (val result = RomManager.addRomFolder(this@FocusTopLauncherActivity, uri)) {
                         is AddRomFolderResult.Success -> {
-                            if (result.folder.systemId == SYSTEM_ID_SWITCH) {
-                                val emulators = SwitchEmulators.getInstalledEmulators(this@FocusTopLauncherActivity, forceRefresh = true)
-                                if (emulators.size > 1) {
-                                    openCoreChooserForFolder(result.folder)
+                            when (result.folder.systemId) {
+                                SYSTEM_ID_SWITCH -> {
+                                    val emulators =
+                                        SwitchEmulators.getInstalledEmulators(this@FocusTopLauncherActivity, forceRefresh = true)
+                                    if (emulators.size > 1) {
+                                        openCoreChooserForFolder(result.folder)
+                                    }
                                 }
-                            } else {
-                                val systemDef = SUPPORTED_SYSTEMS.find { it.id == result.folder.systemId }
-                                if (systemDef?.emulatorId == EMULATOR_ID_RETROARCH) {
-                                    openCoreChooserForFolder(result.folder)
+
+                                SYSTEM_ID_PC -> {
+                                    val emulators =
+                                        PcEmulators.getInstalledEmulators(this@FocusTopLauncherActivity, forceRefresh = true)
+                                    if (emulators.size > 1) {
+                                        openCoreChooserForFolder(result.folder)
+                                    }
+                                }
+
+                                else -> {
+                                    val systemDef = SUPPORTED_SYSTEMS.find { it.id == result.folder.systemId }
+                                    if (systemDef?.emulatorId == EMULATOR_ID_RETROARCH) {
+                                        openCoreChooserForFolder(result.folder)
+                                    }
                                 }
                             }
                         }
@@ -342,6 +358,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                 when (result.errorCode) {
                                     AddRomFolderResult.ErrorCode.NO_SWITCH_EMULATOR -> {
                                         getString(R.string.gamefocus_error_no_switch_emulator)
+                                    }
+
+                                    AddRomFolderResult.ErrorCode.NO_PC_EMULATOR -> {
+                                        getString(R.string.gamefocus_error_no_pc_emulator)
                                     }
 
                                     AddRomFolderResult.ErrorCode.FOLDER_INACCESSIBLE -> {
@@ -599,7 +619,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onAddRomFolder = { openDocumentTreeLauncher.launch(null) },
                             onRemoveRomFolder = { folder -> RomManager.removeRomFolder(this, folder) },
                             onConfirmNewlyAddedFolderCore = { folder, coreOrPackage ->
-                                if (folder.systemId == SYSTEM_ID_SWITCH) {
+                                if (folder.systemId == SYSTEM_ID_SWITCH || folder.systemId == SYSTEM_ID_PC) {
                                     RomManager.updateRomFolderEmulatorPackage(this, folder.uriString, coreOrPackage)
                                 } else {
                                     RomManager.updateRomFolderCore(this, folder.uriString, coreOrPackage)
@@ -732,32 +752,51 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 
     private fun openCoreChooserForFolder(folder: CustomRomFolder) {
-        if (folder.systemId == SYSTEM_ID_SWITCH) {
-            val emulators = SwitchEmulators.getInstalledEmulators(this, forceRefresh = true)
-            val selectedIdx = emulators.indexOfFirst { it.packageName == folder.emulatorPackage }.coerceAtLeast(0)
-            viewModel.setCoreChooserDialogSelectedIndex(selectedIdx)
-            viewModel.setNewlyAddedFolder(folder)
-        } else {
-            val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
-            val cores = listOf(null) + (systemDef?.retroArchCoreAlternatives ?: emptyList())
-            val selectedIdx = cores.indexOf(folder.retroArchCore).coerceAtLeast(0)
-            viewModel.setCoreChooserDialogSelectedIndex(selectedIdx)
-            viewModel.setNewlyAddedFolder(folder)
+        when (folder.systemId) {
+            SYSTEM_ID_SWITCH -> {
+                val emulators = SwitchEmulators.getInstalledEmulators(this, forceRefresh = true)
+                val selectedIdx = emulators.indexOfFirst { it.packageName == folder.emulatorPackage }.coerceAtLeast(0)
+                viewModel.setCoreChooserDialogSelectedIndex(selectedIdx)
+                viewModel.setNewlyAddedFolder(folder)
+            }
+
+            SYSTEM_ID_PC -> {
+                val emulators = PcEmulators.getInstalledEmulators(this, forceRefresh = true)
+                val selectedIdx = emulators.indexOfFirst { it.packageName == folder.emulatorPackage }.coerceAtLeast(0)
+                viewModel.setCoreChooserDialogSelectedIndex(selectedIdx)
+                viewModel.setNewlyAddedFolder(folder)
+            }
+
+            else -> {
+                val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
+                val cores = listOf(null) + (systemDef?.retroArchCoreAlternatives ?: emptyList())
+                val selectedIdx = cores.indexOf(folder.retroArchCore).coerceAtLeast(0)
+                viewModel.setCoreChooserDialogSelectedIndex(selectedIdx)
+                viewModel.setNewlyAddedFolder(folder)
+            }
         }
     }
 
     private fun stepCoreChooserFocus(direction: LauncherScrollDirection) {
         val folder = viewModel.newlyAddedFolder.value ?: return
         val count =
-            if (folder.systemId == SYSTEM_ID_SWITCH) {
-                SwitchEmulators.getInstalledEmulators(this).size
-            } else {
-                val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
-                val hasCores = systemDef != null && systemDef.emulatorId == EMULATOR_ID_RETROARCH
-                if (hasCores) {
-                    1 + (systemDef?.retroArchCoreAlternatives?.size ?: 0)
-                } else {
-                    0
+            when (folder.systemId) {
+                SYSTEM_ID_SWITCH -> {
+                    SwitchEmulators.getInstalledEmulators(this).size
+                }
+
+                SYSTEM_ID_PC -> {
+                    PcEmulators.getInstalledEmulators(this).size
+                }
+
+                else -> {
+                    val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
+                    val hasCores = systemDef != null && systemDef.emulatorId == EMULATOR_ID_RETROARCH
+                    if (hasCores) {
+                        1 + (systemDef?.retroArchCoreAlternatives?.size ?: 0)
+                    } else {
+                        0
+                    }
                 }
             }
         viewModel.stepCoreChooserFocus(direction, count)

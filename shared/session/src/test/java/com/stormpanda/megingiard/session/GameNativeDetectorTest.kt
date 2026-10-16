@@ -232,4 +232,63 @@ class GameNativeDetectorTest {
             RomManager.setRomAppsForTesting(emptyList())
         }
     }
+
+    @Test
+    fun parseSessionFromProcesses_droidDeckProtonMultiSegmentCmdline_skipsProtonAndResolvesGame() {
+        val procList =
+            """
+            PROC 4100 10210 com.droiddeck.launcher
+            PROC 4120 10210 /home/user/.local/share/Steam/ubuntu12_32/steam -gamepadui
+            PROC 4150 10210 C:\Program Files (x86)\Steam\steam.exe
+            PROC 4180 10210 C:\Program Files (x86)\Steam\GameOverlayUI.exe -pid 4200
+            PROC 4200 10210 /home/user/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=367520 -- "/home/user/.local/share/Steam/steamapps/common/Proton - Experimental/proton" waitforexitandrun "/home/user/.local/share/Steam/steamapps/common/Hollow Knight/hollow_knight.exe" -popupwindow
+            """.trimIndent()
+
+        val session = GameNativeDetector.parseSessionFromProcesses("com.droiddeck.launcher", procList)
+
+        assertNotNull(session)
+        assertEquals("com.droiddeck.launcher", session?.packageName)
+        assertEquals("pc", session?.systemId)
+        assertNull(session?.romPath)
+        assertEquals("Hollow Knight.steam", session?.romIdentifier)
+        assertEquals("Hollow Knight", session?.gameTitle)
+    }
+
+    @Test
+    fun parseSessionFromProcesses_droidDeckNativeLinuxGame_resolvesGameFromSteamappsCommon() {
+        val procList =
+            """
+            PROC 4100 10210 com.droiddeck.launcher
+            PROC 4120 10210 /home/user/.local/share/Steam/ubuntu12_32/steam -gamepadui
+            PROC 4210 10210 /home/user/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper/pressure-vessel/bin/pv-adverb -- /home/user/.local/share/Steam/steamapps/common/Celeste/Celeste.bin.x86_64
+            """.trimIndent()
+
+        val session = GameNativeDetector.parseSessionFromProcesses("com.droiddeck.launcher", procList)
+
+        assertNotNull(session)
+        assertEquals("com.droiddeck.launcher", session?.packageName)
+        assertEquals("pc", session?.systemId)
+        assertNull(session?.romPath)
+        assertEquals("Celeste.steam", session?.romIdentifier)
+        assertEquals("Celeste", session?.gameTitle)
+    }
+
+    @Test
+    fun parseSessionFromProcesses_droidDeckIdleBigPictureAndRuntimeHelpers_returnsNull() {
+        val procList =
+            """
+            PROC 4100 10210 com.droiddeck.launcher
+            PROC 4120 10210 /home/user/.local/share/Steam/ubuntu12_32/steam -gamepadui
+            PROC 4130 10210 /home/user/.local/share/Steam/ubuntu12_64/steamwebhelper -lang=en_US
+            PROC 4150 10210 C:\Program Files (x86)\Steam\steam.exe
+            PROC 4160 10210 C:\Program Files (x86)\Steam\GameOverlayUI.exe
+            PROC 4170 10210 C:\Program Files (x86)\Steam\steamerrorreporter64.exe
+            PROC 4180 10210 /home/user/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper/pressure-vessel/bin/pv-adverb
+            PROC 4190 10210 /home/user/.local/share/Steam/steamapps/common/Steamworks Shared/_CommonRedist/vcredist/2022/vc_redist.x64.exe
+            """.trimIndent()
+
+        val session = GameNativeDetector.parseSessionFromProcesses("com.droiddeck.launcher", procList)
+
+        assertNull(session)
+    }
 }
