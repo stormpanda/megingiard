@@ -1398,6 +1398,43 @@ internal object FocusImageCache {
         }
     }
 
+    internal fun loadOrGetAppIconBitmap(
+        context: Context,
+        appInfo: InstalledAppInfo,
+    ): Bitmap? {
+        val subDirName = if (appInfo.isRom) "gamefocus_logos" else "gamefocus_icons"
+        val fileDir = File(context.cacheDir, subDirName).apply { mkdirs() }
+        val iconFile = File(fileDir, "${appInfo.packageName}.png")
+        if (iconFile.exists() && iconFile.length() > 0) {
+            val startTime = System.currentTimeMillis()
+            val sampled = decodeSampledIcon(iconFile)
+            if (sampled != null) {
+                val elapsed = System.currentTimeMillis() - startTime
+                AppLog.d(TAG, "Loaded disk-cached ${if (appInfo.isRom) "logo" else "icon"} PNG for ${appInfo.label} in ${elapsed}ms")
+                // Normalize ICO containers, and rewrite oversized (>256KB) ROM logos as downsampled thumbnails
+                if (sampled.wasIcoContainer || (appInfo.isRom && iconFile.length() > MAX_ICON_DISK_BYTES)) {
+                    rewriteIconThumbnail(iconFile, sampled.bitmap, appInfo.label)
+                }
+                return sampled.bitmap
+            }
+        }
+
+        val iconDrawable = getAppIcon(context, appInfo.packageName, appInfo.activityName) ?: return null
+        val startTime = System.currentTimeMillis()
+        val androidBmp = iconDrawable.toAndroidBitmap() ?: return null
+        val elapsed = System.currentTimeMillis() - startTime
+        AppLog.d(TAG, "Converted app icon for ${appInfo.label} in ${elapsed}ms")
+
+        try {
+            FileOutputStream(iconFile).use { out ->
+                androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to cache icon PNG for ${appInfo.label}: ${e.message}")
+        }
+        return androidBmp
+    }
+
     suspend fun getIconBitmapAsync(
         context: Context,
         appInfo: InstalledAppInfo,
@@ -1413,62 +1450,21 @@ internal object FocusImageCache {
         evictStaleIconVersions(appInfo, cacheKey)
 
         return withContext(Dispatchers.IO) {
-            val subDirName = if (appInfo.isRom) "gamefocus_logos" else "gamefocus_icons"
-            val fileDir = File(context.cacheDir, subDirName).apply { mkdirs() }
-            val iconFile = File(fileDir, "${appInfo.packageName}.png")
-            if (iconFile.exists() && iconFile.length() > 0) {
-                val startTime = System.currentTimeMillis()
-                val sampled = decodeSampledIcon(iconFile)
-                val diskBitmap = sampled?.bitmap?.asImageBitmap()
-
-                if (sampled != null && diskBitmap != null) {
-                    val elapsed = System.currentTimeMillis() - startTime
-                    AppLog.d(TAG, "Loaded disk-cached ${if (appInfo.isRom) "logo" else "icon"} PNG for ${appInfo.label} in ${elapsed}ms")
-                    iconCache.put(cacheKey, diskBitmap)
-
-                    // Normalize ICO containers, and rewrite oversized (>256KB) ROM logos as downsampled thumbnails
-                    if (sampled.wasIcoContainer || (appInfo.isRom && iconFile.length() > MAX_ICON_DISK_BYTES)) {
-                        rewriteIconThumbnail(iconFile, sampled.bitmap, appInfo.label)
-                    }
-
-                    return@withContext diskBitmap
-                }
-            }
-
-            val iconDrawable = getAppIcon(context, appInfo.packageName, appInfo.activityName)
-            if (iconDrawable == null) {
-                missingIconKeys.add(cacheKey)
-                return@withContext null
-            }
-
-            val startTime = System.currentTimeMillis()
-            val androidBmp = iconDrawable.toAndroidBitmap()
+            val androidBmp = loadOrGetAppIconBitmap(context, appInfo)
             if (androidBmp == null) {
                 missingIconKeys.add(cacheKey)
                 return@withContext null
             }
-
-            val elapsed = System.currentTimeMillis() - startTime
-            AppLog.d(TAG, "Converted app icon for ${appInfo.label} in ${elapsed}ms")
-
             val imageBitmap = androidBmp.asImageBitmap()
             iconCache.put(cacheKey, imageBitmap)
-
-            try {
-                FileOutputStream(iconFile).use { out ->
-                    androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
-                }
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to cache icon PNG for ${appInfo.label}: ${e.message}")
-            }
             imageBitmap
         }
     }
 
     private fun Drawable.toAndroidBitmap(): Bitmap? =
         try {
-            val w = intrinsicWidth.coerceIn(1, 128)
-            val h = intrinsicHeight.coerceIn(1, 128)
+            val w = if (intrinsicWidth > 0) intrinsicWidth.coerceAtMost(128) else 128
+            val h = if (intrinsicHeight > 0) intrinsicHeight.coerceAtMost(128) else 128
             val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             setBounds(0, 0, w, h)

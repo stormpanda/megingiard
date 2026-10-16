@@ -3,8 +3,6 @@ package com.stormpanda.megingiard.gamefocus
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.drawable.Drawable
 import android.util.LruCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -243,35 +241,7 @@ object AppPaletteExtractor {
             if (bitmap == null) {
                 val context = appContext
                 if (context != null) {
-                    val file =
-                        if (appInfo.isRom) {
-                            val logosDir = File(context.cacheDir, "gamefocus_logos")
-                            File(logosDir, "${appInfo.packageName}.png")
-                        } else {
-                            val iconsDir = File(context.cacheDir, "gamefocus_icons")
-                            File(iconsDir, "${appInfo.packageName}.png")
-                        }
-                    if (file.exists() && file.length() > 0) {
-                        try {
-                            val options =
-                                BitmapFactory.Options().apply {
-                                    inSampleSize = 4 // Downsample 4x for fast decoding & memory efficiency
-                                }
-                            bitmap = BitmapFactory.decodeFile(file.absolutePath, options)
-                        } catch (_: Exception) {
-                            // Ignore
-                        }
-                    }
-                }
-            }
-
-            if (bitmap == null) {
-                val context = appContext
-                if (context != null) {
-                    val iconDrawable = FocusImageCache.getAppIcon(context, appInfo.packageName, appInfo.activityName)
-                    if (iconDrawable != null) {
-                        bitmap = iconDrawable.toAndroidBitmap()
-                    }
+                    bitmap = FocusImageCache.loadOrGetAppIconBitmap(context, appInfo)
                 }
             }
 
@@ -337,17 +307,4 @@ object AppPaletteExtractor {
             isExtracted = false,
         )
     }
-
-    private fun Drawable.toAndroidBitmap(): Bitmap? =
-        try {
-            val w = if (intrinsicWidth > 0) intrinsicWidth.coerceAtMost(128) else 128
-            val h = if (intrinsicHeight > 0) intrinsicHeight.coerceAtMost(128) else 128
-            val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            setBounds(0, 0, w, h)
-            draw(canvas)
-            bitmap
-        } catch (e: Exception) {
-            null
-        }
 }
