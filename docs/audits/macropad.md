@@ -254,7 +254,7 @@
 - [x] **`[MP-04]`** — Deduplicate `nextUniqueName`, `dpadArrowLabel`/`dirArrow`, `MouseActionItem`, `EditorColorTarget` typealiases, and `ActionCategory` methods *(Complexity: Low, Risk: Low)*
 - [x] **`[MP-05]`** — Consolidate duplicate hit-testing in `PadSurface` and `MacroPadHitTestEngine.onPress` *(Complexity: Med, Risk: Low)*
 - [x] **`[MP-06]`** — Remove write-only `lastTpPos` and redundant `coerceIn(0f, 1f)` calls in `MacroPadHitTestEngine` *(Complexity: Low, Risk: Low)*
-- [ ] **`[MP-07]`** — Simplify `Macro.randomized()` to a single-pass timestamp delay accumulator *(Complexity: Low, Risk: Low)*
+- [x] **`[MP-07]`** — Simplify `Macro.randomized()` to a single-pass timestamp delay accumulator *(Complexity: Low, Risk: Low)*
 - [ ] **`[MP-08]`** — Remove dead per-profile device flags, `withSyncedDeviceFlags()`, `DisabledReason`, and disabled-button UI pipeline *(Complexity: High, Risk: Low)*
 - [ ] **`[MP-09]`** — Delete dead `AmbientPreviewManager` singleton and unreachable preview branches in `MacroPadEditor` and `PadCanvas` *(Complexity: Med, Risk: Low)*
 - [ ] **`[MP-10]`** — Remove dead `MacroTimelineEditor` undo/redo stacks, `_appearanceDraft`, `calibrationRevision`, `onSaveColor`, and unwired `filled` toggle *(Complexity: Med, Risk: Low)*

@@ -261,54 +261,37 @@ val Macro.hasKeyboardSteps: Boolean
  * using [random], if timing randomization is enabled.
  */
 fun Macro.randomized(random: Random = Random): Macro {
-    if (!randomizeTimingEnabled) return this
+    if (!randomizeTimingEnabled || steps.isEmpty()) return this
     val maxOffset = randomizeTimingRangeMs.toLong()
+    val randomizedSteps = steps.toMutableList()
 
-    // Sort steps by original startTimeMs to compute chronological delay propagation.
-    val sortedWithIndex =
-        steps
-            .mapIndexed { index, step -> Triple(index, step.startTimeMs, step) }
-            .sortedBy { it.second }
+    var currentTimestamp = Long.MIN_VALUE
+    var cumulativeDelay = 0L
+    var currentTimestampDelay = 0L
 
-    // Map of original index to the new randomized step
-    val randomizedMap = mutableMapOf<Int, MacroStep>()
-
-    // Track the (originalStartTime, offsetDuration) of processed steps to compute cumulative delays.
-    val processedDelays = mutableListOf<Pair<Long, Long>>()
-
-    for ((index, originalStart, step) in sortedWithIndex) {
-        val cumulativeDelay =
-            processedDelays
-                .filter { it.first < originalStart }
-                .sumOf { it.second }
-
+    for ((index, step) in steps.withIndex().sortedBy { it.value.startTimeMs }) {
+        if (step.startTimeMs != currentTimestamp) {
+            cumulativeDelay += currentTimestampDelay
+            currentTimestampDelay = 0L
+            currentTimestamp = step.startTimeMs
+        }
         val isExcluded =
-            when (step) {
-                is MacroStep.JoystickMove,
-                is MacroStep.JoystickPath,
-                is MacroStep.TouchPath,
-                -> true
-
-                else -> false
-            }
-
+            step is MacroStep.JoystickMove ||
+                step is MacroStep.JoystickPath ||
+                step is MacroStep.TouchPath
         val offsetDuration =
-            if (!isExcluded && maxOffset > 0) {
-                random.nextLong(0, maxOffset + 1)
+            if (!isExcluded && maxOffset > 0L) {
+                random.nextLong(0L, maxOffset + 1L)
             } else {
                 0L
             }
-
-        val newStep =
+        randomizedSteps[index] =
             step.withTiming(
-                newStartTimeMs = originalStart + cumulativeDelay,
+                newStartTimeMs = step.startTimeMs + cumulativeDelay,
                 newDurationMs = step.durationMs + offsetDuration,
             )
-
-        randomizedMap[index] = newStep
-        processedDelays.add(Pair(originalStart, offsetDuration))
+        currentTimestampDelay += offsetDuration
     }
 
-    val randomizedSteps = List(steps.size) { index -> randomizedMap[index]!! }
     return copy(steps = randomizedSteps)
 }
