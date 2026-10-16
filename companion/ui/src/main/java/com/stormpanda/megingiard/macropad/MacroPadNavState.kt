@@ -25,9 +25,6 @@ internal object MacroPadNavState {
     private val _macroTimelineFocusStepIndex = MutableStateFlow<Int?>(null)
     val macroTimelineFocusStepIndex: StateFlow<Int?> = _macroTimelineFocusStepIndex.asStateFlow()
 
-    private val _appearanceDraft = MutableStateFlow<PadLayout?>(null)
-    val appearanceDraft: StateFlow<PadLayout?> = _appearanceDraft.asStateFlow()
-
     private val _savedFocusKeysByDepth = MutableStateFlow<Map<Int, Any>>(emptyMap())
     val savedFocusKeysByDepth: StateFlow<Map<Int, Any>> = _savedFocusKeysByDepth.asStateFlow()
 
@@ -63,10 +60,6 @@ internal object MacroPadNavState {
         _macroTimelineFocusStepIndex.value = index
     }
 
-    fun setAppearanceDraft(layout: PadLayout?) {
-        _appearanceDraft.value = layout
-    }
-
     fun recordFocusedKey(
         depth: Int,
         key: Any,
@@ -90,7 +83,6 @@ internal object MacroPadNavState {
         _selectedSection.value = EditorSection.QUICK_ACTIONS
         _subPageStack.value = emptyList()
         _macroTimelineFocusStepIndex.value = null
-        _appearanceDraft.value = null
         _savedFocusKeysByDepth.value = emptyMap()
     }
 

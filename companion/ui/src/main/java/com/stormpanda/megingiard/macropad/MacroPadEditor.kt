@@ -1866,8 +1866,6 @@ fun MacroPadEditor(
                                             ChooseIconSubPageContent(
                                                 selectedIcon = parentDraftButton?.iconName,
                                                 accentColor = colors.accent,
-                                                filled = true,
-                                                onFilledChange = {},
                                                 onSelect = { icon ->
                                                     val cur = buttonDraft ?: parentDraftButton
                                                     val updated = cur?.copy(iconName = icon)

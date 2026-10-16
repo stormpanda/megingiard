@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.FormatPaint
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,7 +36,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
-import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
@@ -65,8 +63,6 @@ private val IP_GRID_4_ROWS_HEIGHT = (IP_ICON_CELL_SIZE * 4) + (IP_GRID_SPACING *
 internal fun ChooseIconSubPageContent(
     selectedIcon: String?,
     accentColor: Color,
-    filled: Boolean,
-    onFilledChange: (Boolean) -> Unit,
     onSelect: (String?) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -83,15 +79,6 @@ internal fun ChooseIconSubPageContent(
         onValueChange = { query = it },
         icon = Icons.Rounded.Search,
         modifier = Modifier.firstDeckItem(),
-    )
-
-    // ── Filled variant toggle ──────────────────────────────────────────────
-    GamepadToggleCard(
-        title = stringResource(R.string.macropad_icon_picker_filled),
-        description = stringResource(R.string.macropad_icon_picker_filled_desc),
-        checked = filled,
-        icon = Icons.Rounded.FormatPaint,
-        onCheckedChange = onFilledChange,
     )
 
     // ── Current selection card (only visible when an icon is pending) ────────
@@ -118,7 +105,6 @@ internal fun ChooseIconSubPageContent(
                         name = currentIcon,
                         size = IP_PREVIEW_ICON_SIZE,
                         tint = accentColor,
-                        filled = filled,
                     )
                 }
             },
@@ -182,7 +168,6 @@ internal fun ChooseIconSubPageContent(
                                 name = name,
                                 size = IP_ICON_SIZE,
                                 tint = if (isSelected) accentColor else colors.onSurface,
-                                filled = filled,
                             )
                             Text(
                                 text = name,

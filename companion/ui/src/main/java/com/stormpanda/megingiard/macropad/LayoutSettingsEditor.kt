@@ -331,7 +331,6 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
     val context = LocalContext.current
     val autoTuneState by VisualAutoTuneCoordinator.uiState.collectAsStateWithLifecycle()
     val isCalibrating = autoTuneState.isCalibrating
-    var calibrationRevision by remember { mutableIntStateOf(0) }
 
     if (isCalibrating) {
         GamepadActionCard(
@@ -406,7 +405,6 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                 itemKey = "layout_${layout.id}_calibrate_anchor",
                 onClick = {
                     VisualAutoTuneCoordinator.startLayoutAnchorCalibration(context, layout) { updatedLayout, _ ->
-                        calibrationRevision++
                         onUpdateLayout(updatedLayout)
                     }
                 },
@@ -526,7 +524,6 @@ internal fun AutomaticLayoutSwitchingSubPageContent(
                     isDestructive = true,
                     itemKey = "layout_${layout.id}_remove_anchor",
                     onConfirm = {
-                        calibrationRevision++
                         onUpdateLayout(
                             layout.copy(
                                 visualAnchor = layout.visualAnchor.copy(enabled = false, signature = null),

@@ -25,7 +25,6 @@ class MacroPadNavStateTest {
     fun `default state is QUICK_ACTIONS with empty stack`() {
         assertNav(EditorSection.QUICK_ACTIONS)
         assertEquals(null, MacroPadNavState.macroTimelineFocusStepIndex.value)
-        assertEquals(null, MacroPadNavState.appearanceDraft.value)
     }
 
     @Test

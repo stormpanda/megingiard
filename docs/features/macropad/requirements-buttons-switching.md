@@ -32,12 +32,7 @@
   - In the **button list** (`MacroPadEditor`, `ButtonsDeck`): the icon is shown at 18 dp in the indicator box instead of the two-character label abbreviation.
 - When `iconName` is `null`, the existing label rendering is used unchanged; the label field is still stored and used in the editor button list.
 - When the action type is `ScrollWheel`, `TrackpointMove`, or `BackgroundPeek`, `iconName` is forced to `null` (these action types have fixed rendering and do not support icons).
-- Icon selection opens `IconPickerDialog`, a full-screen overlay with three zones:
-  1. **Header** — Cancel (text button) | title | ✓ confirm (icon button).
-  2. **Search row** — `AppTextField` + Filled checkbox.
-  3. **Selection row** (only visible when an icon is pending) — preview box (48 dp) + icon name + "Currently selected" subtext + 🗑 delete button.
-     Tapping a grid icon sets a local `pendingIcon` state (does **not** close the dialog). The user confirms with ✓ or clears via 🗑. Cancel discards any pending change.
-     The icon grid is a `LazyVerticalGrid` (5 columns) of all available icons. The list (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`) is auto-generated from the font — see _Icon Name List Generation_ in the Technical Implementation section.
+- Icon selection opens `ChooseIconSubPageContent` (`IconPickerDialog.kt`), an in-deck sub-page with a search field, a current-selection two-step clear card (when an icon is selected), and a 5-column `LazyVerticalGrid` of all available icons (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`).
 - The `iconName` field defaults to `null`, so existing saved profiles load without any migration.
 - No runtime reflection or Proguard keep-rules are required.
 

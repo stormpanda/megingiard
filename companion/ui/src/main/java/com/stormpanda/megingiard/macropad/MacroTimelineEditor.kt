@@ -44,9 +44,6 @@ import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 
 private const val TAG = "MacroTimelineEditor"
 
-private const val MTE_DEFAULT_TOUCH_DURATION_MS = 100L
-private const val MTE_UNDO_STACK_MAX = 50
-
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun MacroTimelineSubPageContent(
@@ -64,8 +61,6 @@ internal fun MacroTimelineSubPageContent(
 
     var localName by remember(macro) { mutableStateOf(macro.name) }
     var steps by remember(macro) { mutableStateOf(macro.steps) }
-    var undoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
-    var redoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var loopEnabled by remember(macro) { mutableStateOf(macro.loopEnabled) }
     var loopPauseMs by remember(macro) { mutableIntStateOf(macro.loopPauseMs) }
     var randomizeTimingEnabled by remember(macro) { mutableStateOf(macro.randomizeTimingEnabled) }
@@ -115,12 +110,6 @@ internal fun MacroTimelineSubPageContent(
         MacroPadNavState.setStack(updatedStack)
     }
 
-    fun pushUndo(previous: List<MacroStep>) {
-        val bounded = (undoStack + listOf(previous)).takeLast(MTE_UNDO_STACK_MAX)
-        undoStack = bounded
-        redoStack = emptyList()
-    }
-
     fun startGamepadRecording() {
         AppLog.i(
             TAG,
@@ -164,7 +153,6 @@ internal fun MacroTimelineSubPageContent(
         }
         val nextStart = steps.totalDurationMs()
         val shiftedSteps = recorded.steps.offsetBy(nextStart)
-        pushUndo(steps)
         val newSteps = steps + shiftedSteps
         steps = newSteps
         val updated = currentMacro.copy(steps = newSteps)
@@ -190,7 +178,6 @@ internal fun MacroTimelineSubPageContent(
         if (recorded.steps.isNotEmpty()) {
             val nextStart = steps.totalDurationMs()
             val shiftedSteps = recorded.steps.offsetBy(nextStart)
-            pushUndo(steps)
             val newSteps = steps + shiftedSteps
             steps = newSteps
             val updated = currentMacro.copy(steps = newSteps)

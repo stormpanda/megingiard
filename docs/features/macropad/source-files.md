@@ -47,7 +47,7 @@
 | `../keyboard/KeyInjector.kt` | Shared key injection facade (reused for `KeyboardKey` actions) routing to `PrivdClient` |
 | `MaterialIconRegistry.kt` | `searchIcons(query): List<String>` — filters `ALL_ROUNDED_ICON_NAMES` for the `IconPickerDialog` search field (reflection-based `resolve()` removed) |
 | `MaterialSymbols.kt` | `MaterialSymbolsFamily` (variable font, FILL=1) + `MaterialSymbol(name, size, tint)` composable — renders snake_case icon names via font ligatures |
-| `IconPickerDialog.kt` | Full-screen icon picker (3-zone layout: header with ✓, search + filled toggle, selection row with preview/name/🗑); `LazyVerticalGrid` (5 columns), `pendingIcon` local state; called from `PadButtonEditDialog` |
+| `IconPickerDialog.kt` | In-deck icon picker (`ChooseIconSubPageContent`): search card, current-selection two-step clear card, and 5-column `LazyVerticalGrid` of Material Symbols icons |
 | `RoundedIconNames.kt` | Auto-generated list of ~4 154 sorted snake_case icon name strings extracted from the font's GSUB table (regenerated via `scripts/generate_icon_names.py`) |
 | `AutoSwitchCoordinator.kt` | Domain singleton coordinating active profile transitions when foreground packages change, filtering out self-exclusion packages, and matching active profile mappings. |
 | `MegingiardAccessibilityService.kt` | Event-driven accessibility service in `:companion:ui` that captures foreground window focus transitions and forwards package changes to the domain-level coordinator. |
