@@ -1,17 +1,19 @@
 package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
+import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 private const val TAG = "RetroArchLplParser"
 
-private val EXT_SNES = setOf("sfc", "smc", "fig")
+private val EXT_SNES = setOf("sfc", "smc", "snes", "fig")
 private val EXT_N64 = setOf("n64", "z64", "v64")
-private val EXT_GBC = setOf("gb", "gbc")
+private val EXT_GB = setOf("gb", "gbc")
 private val EXT_NES = setOf("nes", "fds")
-private val EXT_PS1 = setOf("pbp", "chd", "cue")
+private val EXT_PS1 = setOf("pbp", "chd", "cue", "bin")
 private val EXT_GENESIS = setOf("md", "gen", "smd")
 
 @Serializable
@@ -90,19 +92,85 @@ object RetroArchLplParser {
         corePath: String?,
         coreName: String?,
     ): String {
-        val ext = path?.substringAfterLast('.', "")?.lowercase() ?: ""
-        val core = (coreName ?: corePath ?: "").lowercase()
+        val ext = path?.substringAfterLast('.', "")?.lowercase().orEmpty()
+        val coreFileName =
+            corePath
+                ?.substringAfterLast('/')
+                ?.substringAfterLast('\\')
+                ?.lowercase()
+                .orEmpty()
+        val retroArchSystems = SUPPORTED_SYSTEMS.filter { it.emulatorId == EMULATOR_ID_RETROARCH }
 
-        return when {
-            ext in EXT_SNES || core.contains("snes") || core.contains("bsnes") -> "snes"
-            ext in EXT_N64 || core.contains("mupen") || core.contains("n64") -> "n64"
-            ext == "gba" || core.contains("mgba") || core.contains("vba") -> "gba"
-            ext in EXT_GBC || core.contains("gambatte") -> "gbc"
-            ext in EXT_NES || core.contains("fceu") || core.contains("nestopia") -> "nes"
-            ext in EXT_PS1 && (core.contains("pcsx") || core.contains("beetle_psx")) -> "ps1"
-            ext in EXT_GENESIS || core.contains("genesis") || core.contains("picodrive") -> "genesis"
-            ext == "nds" || core.contains("melonds") || core.contains("drastic") -> "nds"
-            else -> "retroarch"
+        if (coreFileName.isNotEmpty()) {
+            if (ext.isNotEmpty()) {
+                val exactCoreAndExtMatch =
+                    retroArchSystems.firstOrNull { sys ->
+                        ext in sys.extensions &&
+                            (
+                                sys.retroArchCore.equals(coreFileName, ignoreCase = true) ||
+                                    sys.retroArchCoreAlternatives.any { it.equals(coreFileName, ignoreCase = true) }
+                            )
+                    }
+                if (exactCoreAndExtMatch != null) {
+                    return exactCoreAndExtMatch.id
+                }
+            }
+            val exactCoreMatch =
+                retroArchSystems.firstOrNull { sys ->
+                    sys.retroArchCore.equals(coreFileName, ignoreCase = true) ||
+                        sys.retroArchCoreAlternatives.any { it.equals(coreFileName, ignoreCase = true) }
+                }
+            if (exactCoreMatch != null) {
+                return exactCoreMatch.id
+            }
         }
+
+        val combinedCore = "${coreName.orEmpty()} ${corePath.orEmpty()}".lowercase()
+
+        when {
+            ext in EXT_SNES || combinedCore.contains("snes") || combinedCore.contains("bsnes") -> return "snes"
+
+            ext in EXT_N64 || combinedCore.contains("mupen") || combinedCore.contains("n64") -> return "n64"
+
+            ext == "gba" || combinedCore.contains("mgba") || combinedCore.contains("vba") || combinedCore.contains("gpsp") -> return "gba"
+
+            ext in EXT_GB ||
+                combinedCore.contains("gambatte") ||
+                combinedCore.contains("sameboy") ||
+                combinedCore.contains("gearboy") -> return "gb"
+
+            ext in EXT_NES ||
+                combinedCore.contains("fceu") ||
+                combinedCore.contains("nestopia") ||
+                combinedCore.contains("mesen") -> return "nes"
+
+            ext in EXT_PS1 &&
+                (
+                    combinedCore.contains("pcsx") ||
+                        combinedCore.contains("beetle_psx") ||
+                        combinedCore.contains("beetle psx") ||
+                        combinedCore.contains("mednafen_psx") ||
+                        combinedCore.contains("swanstation")
+                ) -> return "ps1"
+
+            ext in EXT_GENESIS ||
+                combinedCore.contains("genesis") ||
+                combinedCore.contains("picodrive") ||
+                combinedCore.contains("blastem") -> return "genesis"
+
+            ext == "nds" ||
+                combinedCore.contains("melonds") ||
+                combinedCore.contains("desmume") ||
+                combinedCore.contains("drastic") -> return "nds"
+        }
+
+        if (ext.isNotEmpty()) {
+            val matchingByExt = retroArchSystems.filter { ext in it.extensions }
+            if (matchingByExt.size == 1) {
+                return matchingByExt.first().id
+            }
+        }
+
+        return EMULATOR_ID_RETROARCH
     }
 }

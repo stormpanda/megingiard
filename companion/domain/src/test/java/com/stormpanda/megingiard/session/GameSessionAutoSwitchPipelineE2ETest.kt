@@ -158,7 +158,7 @@ class GameSessionAutoSwitchPipelineE2ETest {
             assertNotNull("Expected active game session detected for RetroArch", session)
             assertEquals("com.retroarch", session?.packageName)
             assertEquals("Castlevania - Symphony of the Night (USA)", session?.gameTitle)
-            assertEquals("retroarch", session?.systemId)
+            assertEquals("ps1", session?.systemId)
             assertEquals("/storage/emulated/0/ROMs/PS1/Castlevania.chd", session?.romPath)
             assertEquals("Castlevania.chd", session?.romIdentifier)
 

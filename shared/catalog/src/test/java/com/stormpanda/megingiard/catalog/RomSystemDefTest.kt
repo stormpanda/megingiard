@@ -42,6 +42,6 @@ class RomSystemDefTest {
 
         assertEquals(EMULATOR_ID_RETROARCH, systemMap["snes"]?.emulatorId)
         assertEquals(EMULATOR_ID_YUZU, systemMap["switch"]?.emulatorId)
-        assertEquals(EMULATOR_ID_GAMENATIVE, systemMap["pc"]?.emulatorId)
+        assertEquals(EMULATOR_ID_PC, systemMap["pc"]?.emulatorId)
     }
 }

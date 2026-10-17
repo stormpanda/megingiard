@@ -45,13 +45,13 @@ Megingiard is structured as a **Feature-First Modular Architecture** split acros
 
 2. **App Domain Modules (Feature Logic)**
    - **`:companion:domain`** — Companion business logic, device managers, input injection facades (Touchpad, MacroPad, Keyboard, Mirror, Privd).
-   - **`:gamefocus:domain`** — Standalone launcher domain logic and ROM launcher implementations (`RetroArchLauncher`, `GameNativeLauncher`).
+   - **`:gamefocus:domain`** — Standalone launcher domain logic and ROM launcher implementations (`RetroArchLauncher`, `PcLauncher`, `SwitchLauncher`).
 
 3. **Shared UI, Domain & Core Modules**
    - **`:shared:ui`** — App-wide design system tokens, themes (`AppColors`, `AppTheme`), Gamepad Design System suite (`GamepadCards`, `GamepadFormInputs`, `GamepadDialogControls`, `GamepadLayoutContainers`, `GamepadScaffold`, `GamepadColorPickers`, `GamepadDialogs`, `GamepadTokens`), modal dialogs (`AppModalDialog`), overlay modifiers, button glyphs (`GamePadButton`), and Material Symbol font resources.
    - **`:shared:catalog`** — Installed app index, ROM file scanning, system definitions (`InstalledAppsManager`, `RomManager`, `DisplayDetector`, `RomLauncherRegistry`).
    - **`:shared:media`** — External artwork fetchers, HTTP clients, and caching layers (`SteamGridDbClient`).
-   - **`:shared:session`** — Active game detection engines (`EmulatorDetectionFunnel`, `GameNativeDetector`, `RetroArchDetector`, `Pcsx2AndroidDetector`, `YuzuDetector`, `PpssppDetector`).
+   - **`:shared:session`** — Active game detection engines (`EmulatorDetectionFunnel`, `PcEmulatorDetector`, `RetroArchDetector`, `Pcsx2AndroidDetector`, `YuzuDetector`, `PpssppDetector`).
    - **`:shared:core`** — Pure JVM/Kotlin data models, serializable schemas, logging facade (`AppLog`), constants, and math helpers (`ViewportMath`).
 
 4. **Auxiliary Standalone Modules**

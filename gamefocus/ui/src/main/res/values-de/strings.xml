@@ -73,7 +73,9 @@
     <string name="gamefocus_option_change_emulator">Emulator ändern</string>
     <string name="gamefocus_dialog_select_emulator_title">Emulator auswählen</string>
     <string name="gamefocus_dialog_select_emulator_label">Switch-Emulator auswählen:</string>
+    <string name="gamefocus_dialog_select_pc_emulator_label">PC-Emulator auswählen:</string>
     <string name="gamefocus_error_no_switch_emulator">Kein Nintendo-Switch-Emulator (z. B. Eden) ist installiert. Bitte installiere einen Emulator, bevor du diesen Ordner hinzufügst.</string>
+    <string name="gamefocus_error_no_pc_emulator">Kein PC-Emulator (z. B. GameNative oder DroidDeck) ist installiert. Bitte installiere einen Emulator, bevor du diesen Ordner hinzufügst.</string>
     <string name="gamefocus_error_folder_inaccessible">Ordner existiert nicht oder ist nicht zugänglich.</string>
     <string name="gamefocus_error_unknown_system">In diesem Ordner konnte kein Spielsystem automatisch erkannt werden.</string>
     <string name="gamefocus_error_duplicate_folder">Dieser Ordner wurde bereits hinzugefügt.</string>
@@ -120,6 +122,11 @@
     <string name="gamefocus_scraping_no_icons_found">Keine Symbole oder Logos für „%1$s“ auf SteamGridDB gefunden.</string>
     <string name="gamefocus_action_reset_display_name_title">Auf Standardnamen zurücksetzen</string>
     <string name="gamefocus_action_reset_display_name_desc">Ursprünglichen Titel wiederherstellen: %1$s</string>
+    <string name="gamefocus_field_rom_emulator_title">Emulator</string>
+    <string name="gamefocus_field_rom_emulator_desc">Wähle aus, welcher Emulator dieses Spiel startet, oder verwende den Ordner-Standard.</string>
+    <string name="gamefocus_field_rom_core_title">RetroArch-Core</string>
+    <string name="gamefocus_field_rom_core_desc">Wähle aus, welcher RetroArch-Core dieses Spiel startet, oder verwende den Ordner-Standard.</string>
+    <string name="gamefocus_rom_runner_folder_default">Ordner-Standard (%1$s)</string>
 
     <!-- Manage Galleries -->
     <string name="gamefocus_manage_galleries_title">Galerien verwalten</string>

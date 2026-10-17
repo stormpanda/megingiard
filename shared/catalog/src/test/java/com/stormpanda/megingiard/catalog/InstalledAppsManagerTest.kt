@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.catalog
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import kotlinx.coroutines.runBlocking
@@ -17,6 +18,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.ByteArrayOutputStream
@@ -519,6 +521,98 @@ class InstalledAppsManagerTest {
         val updated = InstalledAppsManager.installedAndroidAppsForTesting().single()
         assertEquals(logoFile.lastModified(), updated.logoLastModified)
         logoFile.delete()
+    }
+
+    @Test
+    fun testSetCustomRomRunner_multiEmulatorAndRetroArch_persistsAndInheritsFolderDefaultWhenCleared() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val pcRom =
+            InstalledAppInfo(
+                packageName = "rom.pc.portal_123",
+                activityName = "",
+                label = "Portal",
+                defaultLabel = "Portal",
+                isGame = true,
+                isRom = true,
+                systemId = SYSTEM_ID_PC,
+                emulatorPackage = "app.gamenative",
+                defaultEmulatorPackage = "app.gamenative",
+            )
+        val snesRom =
+            InstalledAppInfo(
+                packageName = PKG_ROM,
+                activityName = "",
+                label = "Super Mario World",
+                defaultLabel = "Super Mario World",
+                isGame = true,
+                isRom = true,
+                systemId = "snes",
+                retroArchCore = "bsnes_libretro_android.so",
+                defaultRetroArchCore = "bsnes_libretro_android.so",
+            )
+        RomManager.setRomAppsForTesting(
+            listOf(
+                InstalledAppsManager.enrichAppInfo(pcRom, context),
+                InstalledAppsManager.enrichAppInfo(snesRom, context),
+            ),
+        )
+
+        InstalledAppsManager.setCustomRomRunner(context, "rom.pc.portal_123", "com.droiddeck.launcher")
+        InstalledAppsManager.setCustomRomRunner(context, PKG_ROM, "snes9x_libretro_android.so")
+
+        val updatedPc = RomManager.romApps.value.first { it.packageName == "rom.pc.portal_123" }
+        assertEquals("com.droiddeck.launcher", updatedPc.emulatorPackage)
+        assertEquals("app.gamenative", updatedPc.defaultEmulatorPackage)
+        assertEquals("com.droiddeck.launcher", updatedPc.customRomRunner)
+        assertTrue(updatedPc.hasCustomRomRunner)
+
+        val updatedSnes = RomManager.romApps.value.first { it.packageName == PKG_ROM }
+        assertEquals("snes9x_libretro_android.so", updatedSnes.retroArchCore)
+        assertEquals("bsnes_libretro_android.so", updatedSnes.defaultRetroArchCore)
+        assertEquals("snes9x_libretro_android.so", updatedSnes.customRomRunner)
+        assertTrue(updatedSnes.hasCustomRomRunner)
+
+        runBlocking { InstalledAppsManager.awaitPendingWritesForTesting() }
+        InstalledAppsManager.resetForTesting()
+        InstalledAppsManager.reloadPersistedMetadataForTesting(context)
+
+        assertEquals("com.droiddeck.launcher", InstalledAppsManager.getCustomRomRunner("rom.pc.portal_123"))
+        assertEquals("snes9x_libretro_android.so", InstalledAppsManager.getCustomRomRunner(PKG_ROM))
+
+        // Clear override -> restores folder default
+        InstalledAppsManager.setCustomRomRunner(context, "rom.pc.portal_123", null)
+        val restoredPc = RomManager.romApps.value.first { it.packageName == "rom.pc.portal_123" }
+        assertEquals("app.gamenative", restoredPc.emulatorPackage)
+        assertNull(restoredPc.customRomRunner)
+        assertFalse(restoredPc.hasCustomRomRunner)
+
+        runBlocking { InstalledAppsManager.awaitPendingWritesForTesting() }
+        RomManager.setRomAppsForTesting(emptyList())
+    }
+
+    @Test
+    fun testInstalledEmulatorRegistry_cachesAndInvalidates() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val shadowPm = shadowOf(context.packageManager)
+        PcEmulators.invalidateCache()
+
+        assertTrue(PcEmulators.getInstalledEmulators(context).isEmpty())
+
+        shadowPm.installPackage(
+            PackageInfo().apply {
+                packageName = "com.droiddeck.launcher"
+            },
+        )
+        // Cached result is returned when forceRefresh is false
+        assertTrue(PcEmulators.getInstalledEmulators(context, forceRefresh = false).isEmpty())
+
+        // forceRefresh discovers newly installed package
+        val refreshed = PcEmulators.getInstalledEmulators(context, forceRefresh = true)
+        assertEquals(listOf("com.droiddeck.launcher"), refreshed.map { it.packageName })
+
+        // invalidateCache clears cache
+        PcEmulators.invalidateCache()
+        assertEquals(listOf("com.droiddeck.launcher"), PcEmulators.getInstalledEmulators(context).map { it.packageName })
     }
 
     private fun seedApp() =

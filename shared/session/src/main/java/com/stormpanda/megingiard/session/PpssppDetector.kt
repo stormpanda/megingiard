@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.PpssppEmulators
 import com.stormpanda.megingiard.catalog.SafPathResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,13 +19,7 @@ private const val MIN_WORD_LEN_FOR_MATCH = 3
  */
 object PpssppDetector : EmulatorDetector {
     override val supportedPackages: Set<String> =
-        setOf(
-            "org.ppsspp.ppsspp",
-            "org.ppsspp.ppssppgold",
-            "org.ppsspp.ppsspp.debug",
-            "org.ppsspp.ppssppgold.debug",
-            "org.ppsspp.ppssppdev",
-        )
+        PpssppEmulators.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }.toSet()
 
     override val systemId: String = "psp"
 
@@ -43,8 +38,14 @@ object PpssppDetector : EmulatorDetector {
             val wsSession = PpssppWebSocketClient.queryActiveSession(packageName, port = webSocketPort)
             if (wsSession != null) {
                 val iniResolvedPath = readRecentPathFromIni(packageName, wsSession.gameTitle)
-                val finalRomPath = iniResolvedPath?.takeIf { it.startsWith("/") && File(it).exists() }
-                val finalRomIdentifier = iniResolvedPath?.let { File(it).name } ?: wsSession.romIdentifier
+                val finalRomPath =
+                    iniResolvedPath?.takeIf { it.startsWith("/") && File(it).exists() }
+                        ?: focusedRomPath?.takeIf { it.startsWith("/") && File(it).exists() }
+                val finalRomIdentifier =
+                    iniResolvedPath?.let { File(it).name }
+                        ?: focusedRomIdentifier
+                        ?: finalRomPath?.let { File(it).name }
+                        ?: wsSession.romIdentifier
                 val resolvedSession =
                     wsSession.copy(
                         romPath = finalRomPath,

@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.gamefocus.domain
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
+import com.stormpanda.megingiard.catalog.PcEmulators
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -19,20 +20,21 @@ import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
-class GameNativeLauncherTest {
+class PcLauncherTest {
     private lateinit var context: Context
-    private lateinit var launcher: GameNativeLauncher
+    private lateinit var launcher: PcLauncher
 
     @Before
     fun setUp() {
         context = RuntimeEnvironment.getApplication()
-        launcher = GameNativeLauncher()
+        PcEmulators.invalidateCache()
+        launcher = PcLauncher()
     }
 
     @Test
     fun testLauncherMetadata() {
-        assertEquals("gamenative", launcher.id)
-        assertEquals("GameNative", launcher.displayName)
+        assertEquals("pc", launcher.id)
+        assertEquals("PC", launcher.displayName)
     }
 
     @Test
@@ -131,4 +133,45 @@ class GameNativeLauncherTest {
 
             tempFile.delete()
         }
+
+    @Test
+    fun testLaunchGameWithDroidDeckWhenPreferred() =
+        runTest {
+            val pkgGameNative = "app.gamenative"
+            val pkgDroidDeck = "com.droiddeck.launcher"
+            shadowOf(context.packageManager).installPackage(PackageInfo().apply { packageName = pkgGameNative })
+            shadowOf(context.packageManager).installPackage(PackageInfo().apply { packageName = pkgDroidDeck })
+
+            val tempFile = File(context.cacheDir, "367520.steam")
+            tempFile.writeText("")
+
+            val launched =
+                launcher.launchGame(
+                    context = context,
+                    romPath = tempFile.absolutePath,
+                    systemId = "pc",
+                    displayId = 0,
+                    retroArchCore = pkgDroidDeck,
+                )
+            assertTrue(launched)
+
+            val nextIntent = shadowOf(RuntimeEnvironment.getApplication()).nextStartedActivity
+            assertNotNull(nextIntent)
+            assertEquals("$pkgDroidDeck.LAUNCH_GAME", nextIntent.action)
+            assertEquals(367520, nextIntent.getIntExtra("app_id", -1))
+            assertEquals("$pkgDroidDeck.MainActivity", nextIntent.component?.className)
+
+            tempFile.delete()
+        }
+
+    @Test
+    fun testParseSteamAppIdFromSafUriWhenPosixFileDoesNotExist() {
+        val appId =
+            launcher.parseSteamAppId(
+                context = context,
+                romPath = "/storage/6914-318F/Steam/1145360.steam",
+                romUri = "content://com.android.externalstorage.documents/tree/6914-318F%3ASteam/document/6914-318F%3ASteam%2F1145360.steam",
+            )
+        assertEquals(1145360, appId)
+    }
 }

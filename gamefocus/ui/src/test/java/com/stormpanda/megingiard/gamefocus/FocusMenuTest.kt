@@ -102,7 +102,7 @@ class FocusMenuTest {
                 selectedTab = LibraryTab.RomSystem("rom_pc", "pc", "PC"),
                 romFolders = listOf(pcFolder),
             )
-        assertEquals(5, actions.size)
+        assertEquals(6, actions.size)
     }
 
     @Test

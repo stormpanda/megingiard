@@ -73,7 +73,9 @@
     <string name="gamefocus_option_change_emulator">變更模擬器</string>
     <string name="gamefocus_dialog_select_emulator_title">選擇模擬器</string>
     <string name="gamefocus_dialog_select_emulator_label">選擇 Switch 模擬器：</string>
+    <string name="gamefocus_dialog_select_pc_emulator_label">選擇 PC 模擬器：</string>
     <string name="gamefocus_error_no_switch_emulator">未安裝支援的 Nintendo Switch 模擬器（例如 Eden）。請在新增此資料夾前先安裝模擬器。</string>
+    <string name="gamefocus_error_no_pc_emulator">未安裝支援的 PC 模擬器（例如 GameNative 或 DroidDeck）。請在新增此資料夾前先安裝模擬器。</string>
     <string name="gamefocus_error_folder_inaccessible">資料夾不存在或無法存取。</string>
     <string name="gamefocus_error_unknown_system">無法在此資料夾中自動識別任何遊戲系統。</string>
     <string name="gamefocus_error_duplicate_folder">此資料夾已新增過。</string>
@@ -120,6 +122,11 @@
     <string name="gamefocus_scraping_no_icons_found">在 SteamGridDB 上找不到「%1$s」的圖示或標誌。</string>
     <string name="gamefocus_action_reset_display_name_title">重設為預設名稱</string>
     <string name="gamefocus_action_reset_display_name_desc">還原原始名稱：%1$s</string>
+    <string name="gamefocus_field_rom_emulator_title">模擬器</string>
+    <string name="gamefocus_field_rom_emulator_desc">選擇啟動此遊戲的模擬器，或使用資料夾預設值。</string>
+    <string name="gamefocus_field_rom_core_title">RetroArch 核心</string>
+    <string name="gamefocus_field_rom_core_desc">選擇啟動此遊戲的 RetroArch 核心，或使用資料夾預設值。</string>
+    <string name="gamefocus_rom_runner_folder_default">資料夾預設（%1$s）</string>
 
     <!-- Manage Galleries -->
     <string name="gamefocus_manage_galleries_title">管理圖庫</string>

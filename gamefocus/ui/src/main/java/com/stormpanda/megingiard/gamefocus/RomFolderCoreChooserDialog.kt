@@ -19,9 +19,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
+import com.stormpanda.megingiard.catalog.InstalledEmulatorRegistry
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
-import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
@@ -50,9 +50,14 @@ fun RomFolderCoreChooserDialog(
     val context = LocalContext.current
     val appColors = LocalAppColors.current
     val isSwitchSystem = remember(folder.systemId) { folder.systemId == SYSTEM_ID_SWITCH }
-    val switchEmulators =
-        remember(isSwitchSystem) {
-            if (isSwitchSystem) SwitchEmulators.getInstalledEmulators(context) else emptyList()
+    val emulatorRegistry = remember(folder.systemId) { InstalledEmulatorRegistry.forSystem(folder.systemId) }
+    val isMultiEmulatorSystem = emulatorRegistry != null
+    val emulatorOptions =
+        remember(emulatorRegistry) {
+            emulatorRegistry
+                ?.getInstalledEmulators(context)
+                ?.map { it.packageName to it.displayName }
+                ?: emptyList()
         }
     val systemDef =
         remember(folder.systemId) {
@@ -69,10 +74,10 @@ fun RomFolderCoreChooserDialog(
 
     LaunchedEffect(confirmTrigger) {
         if (confirmTrigger > 0) {
-            if (isSwitchSystem) {
-                val safeIdx = selectedIndex.coerceIn(0, switchEmulators.lastIndex.coerceAtLeast(0))
-                val chosen = switchEmulators.getOrNull(safeIdx)?.packageName
-                AppLog.i(TAG, "Confirming Switch emulator selection via trigger: index=$safeIdx, package='$chosen'")
+            if (isMultiEmulatorSystem) {
+                val safeIdx = selectedIndex.coerceIn(0, emulatorOptions.lastIndex.coerceAtLeast(0))
+                val chosen = emulatorOptions.getOrNull(safeIdx)?.first
+                AppLog.i(TAG, "Confirming emulator selection via trigger: system=${folder.systemId}, index=$safeIdx, package='$chosen'")
                 onConfirm(chosen)
             } else {
                 val safeIdx = selectedIndex.coerceIn(0, cores.lastIndex.coerceAtLeast(0))
@@ -94,7 +99,7 @@ fun RomFolderCoreChooserDialog(
         Text(
             text =
                 stringResource(
-                    if (isSwitchSystem) {
+                    if (isMultiEmulatorSystem) {
                         R.string.gamefocus_dialog_select_emulator_title
                     } else {
                         R.string.gamefocus_dialog_system_recognized_title
@@ -112,9 +117,16 @@ fun RomFolderCoreChooserDialog(
             modifier = Modifier.padding(bottom = DIALOG_SPACING),
         )
 
-        if (isSwitchSystem) {
+        if (isMultiEmulatorSystem) {
             Text(
-                text = stringResource(R.string.gamefocus_dialog_select_emulator_label),
+                text =
+                    stringResource(
+                        if (isSwitchSystem) {
+                            R.string.gamefocus_dialog_select_emulator_label
+                        } else {
+                            R.string.gamefocus_dialog_select_pc_emulator_label
+                        },
+                    ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = appColors.onSurface,
                 modifier = Modifier.padding(bottom = DIALOG_TITLE_PADDING_BOTTOM),
@@ -122,9 +134,9 @@ fun RomFolderCoreChooserDialog(
 
             VerticalRollingCarousel(
                 selectedIndex = selectedIndex,
-                items = switchEmulators,
+                items = emulatorOptions,
                 onSelectedIndexChange = onSelectedIndexChange,
-                labelProvider = { it.displayName },
+                labelProvider = { it.second },
                 visibleItemsCount = CAROUSEL_VISIBLE_ITEMS_COUNT,
                 modifier =
                     Modifier
@@ -144,12 +156,12 @@ fun RomFolderCoreChooserDialog(
                     text = stringResource(R.string.gamefocus_dialog_core_save),
                     onClick = {
                         val selectedEmulator =
-                            switchEmulators.getOrNull(selectedIndex.coerceIn(0, switchEmulators.lastIndex.coerceAtLeast(0)))
+                            emulatorOptions.getOrNull(selectedIndex.coerceIn(0, emulatorOptions.lastIndex.coerceAtLeast(0)))
                         AppLog.i(
                             TAG,
-                            "User confirmed Switch emulator assignment: '${selectedEmulator?.packageName}' for folder ${folder.folderPath}",
+                            "User confirmed emulator assignment: '${selectedEmulator?.first}' for folder ${folder.folderPath}",
                         )
-                        onConfirm(selectedEmulator?.packageName)
+                        onConfirm(selectedEmulator?.first)
                     },
                 )
                 Spacer(modifier = Modifier.width(DIALOG_INNER_SPACING))
@@ -157,7 +169,7 @@ fun RomFolderCoreChooserDialog(
                     button = GamePadButton.BUTTON_B,
                     text = stringResource(R.string.gamefocus_dialog_cancel),
                     onClick = {
-                        AppLog.d(TAG, "User cancelled Switch emulator assignment dialog")
+                        AppLog.d(TAG, "User cancelled emulator assignment dialog")
                         onDismiss()
                     },
                 )

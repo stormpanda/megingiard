@@ -1,19 +1,18 @@
 package com.stormpanda.megingiard.catalog
 
-import android.content.Context
-import android.content.pm.PackageManager
-import com.stormpanda.megingiard.AppLog
-
 private const val TAG = "SwitchEmulators"
 
 data class SwitchEmulatorOption(
-    val packageName: String,
-    val displayName: String,
+    override val packageName: String,
+    override val displayName: String,
     val logBrand: String = "yuzu",
-)
+) : EmulatorOption
 
-object SwitchEmulators {
-    val SUPPORTED_EMULATOR_OPTIONS: List<SwitchEmulatorOption> =
+object SwitchEmulators : InstalledEmulatorRegistry<SwitchEmulatorOption>(
+    logTag = TAG,
+    systemLabel = "Switch",
+) {
+    override val SUPPORTED_EMULATOR_OPTIONS: List<SwitchEmulatorOption> =
         listOf(
             SwitchEmulatorOption("dev.eden.eden_emulator.dualscreen", "Eden DS", "eden"),
             SwitchEmulatorOption("dev.eden.eden_emulator.dualscreen.debug", "Eden DS (Debug)", "eden"),
@@ -37,34 +36,4 @@ object SwitchEmulators {
 
     fun getLogBrand(packageName: String): String =
         SUPPORTED_EMULATOR_OPTIONS.firstOrNull { it.packageName == packageName }?.logBrand ?: "yuzu"
-
-    @Volatile
-    private var cachedInstalled: List<SwitchEmulatorOption>? = null
-
-    fun invalidateCache() {
-        cachedInstalled = null
-    }
-
-    fun getInstalledEmulators(
-        context: Context,
-        forceRefresh: Boolean = false,
-    ): List<SwitchEmulatorOption> {
-        val cached = cachedInstalled
-        if (!forceRefresh && cached != null) {
-            return cached
-        }
-        val pm = context.packageManager
-        val installed =
-            SUPPORTED_EMULATOR_OPTIONS.filter { option ->
-                try {
-                    pm.getPackageInfo(option.packageName, PackageManager.PackageInfoFlags.of(0))
-                    true
-                } catch (e: PackageManager.NameNotFoundException) {
-                    false
-                }
-            }
-        AppLog.d(TAG, "Discovered ${installed.size} installed Switch emulators: ${installed.map { it.packageName }}")
-        cachedInstalled = installed
-        return installed
-    }
 }

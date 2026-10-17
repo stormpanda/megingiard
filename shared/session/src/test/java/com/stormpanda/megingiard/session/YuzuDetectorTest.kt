@@ -1,6 +1,9 @@
 package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.RomManager
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_PC
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -262,4 +265,63 @@ class YuzuDetectorTest {
             assertEquals("01001B300B9BE000", session?.titleId)
             assertEquals("eden", session?.coreOrBackend)
         }
+
+    @Test
+    fun parseSessionFromLog_correlatesWithRomManagerSwitchRomAndIgnoresNonSwitchRoms() {
+        val pcRom =
+            InstalledAppInfo(
+                packageName = "rom:pc:Celeste",
+                activityName = "",
+                label = "Celeste",
+                isRom = true,
+                romPath = "/storage/emulated/0/ROMs/pc/Celeste.steam",
+                systemId = SYSTEM_ID_PC,
+            )
+        val switchRom =
+            InstalledAppInfo(
+                packageName = "rom:switch:Celeste",
+                activityName = "",
+                label = "Celeste",
+                isRom = true,
+                romPath = "/storage/emulated/0/ROMs/switch/Celeste [01002B00028F6000].nsp",
+                systemId = SYSTEM_ID_SWITCH,
+            )
+        RomManager.setRomAppsForTesting(listOf(pcRom, switchRom))
+        try {
+            val logSample =
+                """
+                [   4.649822] Core <Info> core/core.cpp:Load:402: Loading Celeste (01002B00028F6000) ...
+                """.trimIndent()
+
+            val session = YuzuDetector.parseSessionFromLog("dev.eden.eden_emulator", logSample)
+            assertNotNull(session)
+            assertEquals("/storage/emulated/0/ROMs/switch/Celeste [01002B00028F6000].nsp", session?.romPath)
+            assertEquals("Celeste [01002B00028F6000].nsp", session?.romIdentifier)
+            assertEquals("Celeste", session?.gameTitle)
+            assertEquals("01002B00028F6000", session?.titleId)
+        } finally {
+            RomManager.setRomAppsForTesting(emptyList())
+        }
+    }
+
+    @Test
+    fun parseSessionFromLog_usesFocusedRomPathWhenUnindexedInRomManager() {
+        val logSample =
+            """
+            [   4.649822] Core <Info> core/core.cpp:Load:402: Loading Hollow Knight (0100633007D48000) ...
+            """.trimIndent()
+
+        val session =
+            YuzuDetector.parseSessionFromLog(
+                packageName = "org.citron.citron_emu",
+                logContent = logSample,
+                focusedRomPath = "/storage/emulated/0/ROMs/switch/Hollow Knight.nsp",
+                focusedRomIdentifier = "Hollow Knight.nsp",
+            )
+        assertNotNull(session)
+        assertEquals("/storage/emulated/0/ROMs/switch/Hollow Knight.nsp", session?.romPath)
+        assertEquals("Hollow Knight.nsp", session?.romIdentifier)
+        assertEquals("Hollow Knight", session?.gameTitle)
+        assertEquals("0100633007D48000", session?.titleId)
+    }
 }

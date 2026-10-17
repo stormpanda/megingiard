@@ -4,16 +4,13 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
-import com.stormpanda.megingiard.catalog.EMULATOR_ID_YUZU
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.InstalledEmulatorRegistry
+import com.stormpanda.megingiard.catalog.RetroArchEmulators
 import com.stormpanda.megingiard.catalog.RomManager
-import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
-import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.ipc.observeContentProvider
-import com.stormpanda.megingiard.session.GameNativeDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -176,35 +173,23 @@ object MegingiardSettingsClient {
         systemId: String?,
         emulatorPackage: String? = null,
     ): String {
-        if (systemId == null) return "com.retroarch.aarch64"
-        val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }
-        val candidates =
-            when (systemDef?.emulatorId) {
-                EMULATOR_ID_RETROARCH, null -> {
-                    listOf("com.retroarch.aarch64", "com.retroarch")
-                }
-
-                EMULATOR_ID_YUZU -> {
-                    val switchPackages = SwitchEmulators.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }
-                    if (!emulatorPackage.isNullOrBlank()) {
-                        listOf(emulatorPackage) + switchPackages.filterNot { it == emulatorPackage }
-                    } else {
-                        switchPackages
-                    }
-                }
-
-                else -> {
-                    GameNativeDetector.supportedPackages
-                }
+        val defaultRetroArchPkg = RetroArchEmulators.SUPPORTED_EMULATOR_OPTIONS.first().packageName
+        if (systemId == null) return defaultRetroArchPkg
+        val registry = InstalledEmulatorRegistry.forSystem(systemId)
+        if (registry != null) {
+            val installedPackages = registry.getInstalledEmulators(context).map { it.packageName }
+            val preferred = emulatorPackage?.takeIf { it.isNotBlank() }
+            if (preferred != null && preferred in installedPackages) {
+                return preferred
             }
-        val pm = context.packageManager
-        return candidates.firstOrNull { pkg ->
-            try {
-                pm.getPackageInfo(pkg, 0)
-                true
-            } catch (_: Exception) {
-                false
-            }
-        } ?: candidates.first()
+            return installedPackages.firstOrNull()
+                ?: preferred
+                ?: registry.SUPPORTED_EMULATOR_OPTIONS.first().packageName
+        }
+        return RetroArchEmulators
+            .getInstalledEmulators(context)
+            .firstOrNull()
+            ?.packageName
+            ?: defaultRetroArchPkg
     }
 }

@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.Pcsx2Emulators
 import com.stormpanda.megingiard.catalog.SafPathResolver
 
 private const val TAG = "Pcsx2AndroidDetector"
@@ -11,12 +12,7 @@ private const val TAG = "Pcsx2AndroidDetector"
  */
 object Pcsx2AndroidDetector : EmulatorDetector {
     override val supportedPackages: Set<String> =
-        setOf(
-            "com.armsx2",
-            "com.armsx2.debug",
-            "xyz.aethersx2.android",
-            "net.nethersx2.android",
-        )
+        Pcsx2Emulators.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }.toSet()
 
     override val systemId: String = "ps2"
 

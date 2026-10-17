@@ -30,8 +30,18 @@ data class InstalledAppInfo(
     val libraryIconOptedOut: Boolean = false,
     /** Last modified timestamp of the cached ROM logo file for cache-busting and reactive updates. */
     val logoLastModified: Long = 0L,
+    /** Folder-level RetroArch core before any per-game override is applied. */
+    val defaultRetroArchCore: String? = null,
+    /** Folder-level standalone emulator package before any per-game override is applied. */
+    val defaultEmulatorPackage: String? = null,
+    /** Explicit per-game emulator package or RetroArch core override, or null when using folder defaults. */
+    val customRomRunner: String? = null,
 ) {
     /** True when the user has overridden [defaultLabel] with a custom display name. */
     val hasCustomLabel: Boolean
         get() = defaultLabel != null && label != defaultLabel
+
+    /** True when the user has overridden the folder's default emulator or RetroArch core for this ROM. */
+    val hasCustomRomRunner: Boolean
+        get() = customRomRunner != null
 }

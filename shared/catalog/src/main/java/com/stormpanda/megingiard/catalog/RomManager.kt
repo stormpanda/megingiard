@@ -50,6 +50,7 @@ sealed class AddRomFolderResult {
         UNKNOWN_SYSTEM,
         DUPLICATE_FOLDER,
         NO_SWITCH_EMULATOR,
+        NO_PC_EMULATOR,
     }
 }
 
@@ -244,18 +245,24 @@ object RomManager {
             }
 
             val defaultEmulatorPackage =
-                if (systemId == SYSTEM_ID_SWITCH) {
-                    val installed = SwitchEmulators.getInstalledEmulators(context, forceRefresh = true)
+                InstalledEmulatorRegistry.forSystem(systemId)?.let { registry ->
+                    val installed = registry.getInstalledEmulators(context, forceRefresh = true)
                     if (installed.isEmpty()) {
-                        AppLog.w(TAG, "No supported Switch emulator is installed")
-                        return@withContext AddRomFolderResult.Error(
-                            "No supported Nintendo Switch emulator (e.g. Eden) is installed.",
-                            AddRomFolderResult.ErrorCode.NO_SWITCH_EMULATOR,
-                        )
+                        return@withContext if (systemId == SYSTEM_ID_SWITCH) {
+                            AppLog.w(TAG, "No supported Switch emulator is installed")
+                            AddRomFolderResult.Error(
+                                "No supported Nintendo Switch emulator (e.g. Eden) is installed.",
+                                AddRomFolderResult.ErrorCode.NO_SWITCH_EMULATOR,
+                            )
+                        } else {
+                            AppLog.w(TAG, "No supported PC emulator is installed")
+                            AddRomFolderResult.Error(
+                                "No supported PC emulator (e.g. GameNative or DroidDeck) is installed.",
+                                AddRomFolderResult.ErrorCode.NO_PC_EMULATOR,
+                            )
+                        }
                     }
                     if (installed.size == 1) installed.first().packageName else null
-                } else {
-                    null
                 }
 
             val newFolder =
@@ -376,7 +383,7 @@ object RomManager {
                     val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId } ?: continue
 
                     val files = collectRomFilesRecursively(documentFile)
-                    val isConsoleSystem = folder.systemId != "pc"
+                    val isConsoleSystem = folder.systemId != SYSTEM_ID_PC
                     val isSwitchSystem = folder.systemId == SYSTEM_ID_SWITCH
                     for (file in files) {
                         if (file.isDirectory) continue
@@ -421,6 +428,8 @@ object RomManager {
                                     systemId = folder.systemId,
                                     retroArchCore = folder.retroArchCore,
                                     emulatorPackage = folder.emulatorPackage,
+                                    defaultRetroArchCore = folder.retroArchCore,
+                                    defaultEmulatorPackage = folder.emulatorPackage,
                                     defaultLabel = cleanedLabel,
                                 ),
                                 context,

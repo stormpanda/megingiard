@@ -4,8 +4,8 @@ import android.app.ActivityOptions
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.RetroArchEmulators
 import com.stormpanda.megingiard.catalog.RomLauncher
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.catalog.SafPathResolver
@@ -18,7 +18,6 @@ private const val RETROARCH_MAIN_ACTIVITY = "com.retroarch.browser.retroactivity
 private const val RETROARCH_EXTRA_ROM = "ROM"
 private const val RETROARCH_EXTRA_LIBRETRO = "LIBRETRO"
 private const val RETROARCH_EXTRA_CONFIGFILE = "CONFIGFILE"
-private val RETROARCH_PACKAGES = listOf("com.retroarch.aarch64", "com.retroarch")
 
 class RetroArchLauncher : RomLauncher {
     override val id: String = "retroarch"
@@ -34,7 +33,10 @@ class RetroArchLauncher : RomLauncher {
     ): Boolean {
         val packageName = getRetroArchPackageName(context)
         if (packageName == null) {
-            AppLog.e(TAG, "RetroArch is not installed (checked com.retroarch.aarch64 and com.retroarch)")
+            AppLog.e(
+                TAG,
+                "RetroArch is not installed (checked ${RetroArchEmulators.SUPPORTED_EMULATOR_OPTIONS.joinToString { it.packageName }})",
+            )
             return false
         }
 
@@ -73,6 +75,14 @@ class RetroArchLauncher : RomLauncher {
         }
     }
 
+    /**
+     * Resolves the `retroarch.cfg` path to pass in `CONFIGFILE`.
+     *
+     * Checks both `<root>/Android/data/<pkg>/files/retroarch.cfg` and `<root>/RetroArch/retroarch.cfg`
+     * across all mounted storage volumes. Because Android 11+ scoped storage blocks unprivileged
+     * `File.exists()` checks inside another app's `/Android/data/<pkg>/` directory, falls back to the
+     * primary volume's `Android/data/<pkg>/files/retroarch.cfg` when no readable config file is found.
+     */
     private fun resolveConfigFile(packageName: String): String? {
         val relativeSubPaths =
             listOf(
@@ -87,15 +97,9 @@ class RetroArchLauncher : RomLauncher {
             ?: candidatePaths.firstOrNull()
     }
 
-    private fun getRetroArchPackageName(context: Context): String? {
-        val pm = context.packageManager
-        return RETROARCH_PACKAGES.firstOrNull { pkg ->
-            try {
-                pm.getPackageInfo(pkg, 0)
-                true
-            } catch (e: PackageManager.NameNotFoundException) {
-                false
-            }
-        }
-    }
+    private fun getRetroArchPackageName(context: Context): String? =
+        RetroArchEmulators
+            .getInstalledEmulators(context, forceRefresh = true)
+            .firstOrNull()
+            ?.packageName
 }

@@ -70,6 +70,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
+import com.stormpanda.megingiard.catalog.InstalledEmulatorRegistry
 import com.stormpanda.megingiard.catalog.LibraryIconRef
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusGalleryManager
@@ -235,18 +236,57 @@ private fun GameInfoDeckContent(
     val defaultTitle = appInfo.defaultLabel
     var editedTitle by remember(appInfo.packageName) { mutableStateOf(appInfo.label) }
     val normalizedTitle = editedTitle.trim()
-    val isChanged = normalizedTitle.isNotEmpty() && normalizedTitle != appInfo.label
+    val isTitleChanged = normalizedTitle.isNotEmpty() && normalizedTitle != appInfo.label
     val canResetToDefault = defaultTitle != null && (appInfo.label != defaultTitle || editedTitle != defaultTitle)
+
+    val isMultiEmulatorRom =
+        appInfo.isRom && InstalledEmulatorRegistry.isMultiEmulatorSystem(appInfo.systemId)
+    val runnerChoices =
+        remember(
+            appInfo.packageName,
+            appInfo.isRom,
+            appInfo.systemId,
+            appInfo.defaultEmulatorPackage,
+            appInfo.defaultRetroArchCore,
+        ) {
+            val installedEmulators =
+                InstalledEmulatorRegistry
+                    .forSystem(appInfo.systemId)
+                    ?.getInstalledEmulators(context)
+                    .orEmpty()
+            buildRomRunnerChoices(
+                appInfo = appInfo,
+                installedEmulators = installedEmulators,
+                formatFolderDefault = { defaultName ->
+                    context.getString(R.string.gamefocus_rom_runner_folder_default, defaultName)
+                },
+            )
+        }
+    var editedRomRunner by remember(appInfo.packageName) { mutableStateOf(appInfo.customRomRunner) }
+    val selectedRunnerIndex =
+        remember(runnerChoices, editedRomRunner) {
+            runnerChoices.indexOfFirst { it.overrideValue == editedRomRunner }.takeIf { it >= 0 } ?: 0
+        }
+    val effectiveRunnerOverride = runnerChoices.getOrNull(selectedRunnerIndex)?.overrideValue
+    val isRunnerChanged =
+        appInfo.isRom && runnerChoices.isNotEmpty() && effectiveRunnerOverride != appInfo.customRomRunner
+    val isChanged = isTitleChanged || isRunnerChanged
+    val canSave = isChanged && normalizedTitle.isNotEmpty()
 
     val promptState =
         rememberSaveExitPromptState(
-            hasChanges = isChanged,
+            hasChanges = canSave,
             onSave = {
-                if (isChanged) {
-                    if (normalizedTitle == defaultTitle) {
-                        InstalledAppsManager.resetAppLabel(context, appInfo.packageName)
-                    } else {
-                        InstalledAppsManager.updateAppLabel(context, appInfo.packageName, normalizedTitle)
+                if (canSave) {
+                    if (isTitleChanged) {
+                        if (normalizedTitle == defaultTitle) {
+                            InstalledAppsManager.resetAppLabel(context, appInfo.packageName)
+                        } else {
+                            InstalledAppsManager.updateAppLabel(context, appInfo.packageName, normalizedTitle)
+                        }
+                    }
+                    if (isRunnerChanged) {
+                        InstalledAppsManager.setCustomRomRunner(context, appInfo.packageName, effectiveRunnerOverride)
                     }
                     onDismiss()
                 }
@@ -280,13 +320,48 @@ private fun GameInfoDeckContent(
             )
         }
 
+        if (runnerChoices.isNotEmpty()) {
+            val currentChoice = runnerChoices[selectedRunnerIndex]
+            GamepadChoiceCard(
+                title =
+                    stringResource(
+                        if (isMultiEmulatorRom) {
+                            R.string.gamefocus_field_rom_emulator_title
+                        } else {
+                            R.string.gamefocus_field_rom_core_title
+                        },
+                    ),
+                description =
+                    stringResource(
+                        if (isMultiEmulatorRom) {
+                            R.string.gamefocus_field_rom_emulator_desc
+                        } else {
+                            R.string.gamefocus_field_rom_core_desc
+                        },
+                    ),
+                selectedText = currentChoice.displayLabel,
+                icon = Icons.Rounded.Tune,
+                enabled = runnerChoices.size > 1,
+                onPrevious = {
+                    val prevIdx = (selectedRunnerIndex - 1 + runnerChoices.size) % runnerChoices.size
+                    editedRomRunner = runnerChoices[prevIdx].overrideValue
+                    AppLog.d(TAG, "Selected previous ROM runner for ${appInfo.packageName}: ${editedRomRunner ?: "default"}")
+                },
+                onNext = {
+                    val nextIdx = (selectedRunnerIndex + 1) % runnerChoices.size
+                    editedRomRunner = runnerChoices[nextIdx].overrideValue
+                    AppLog.d(TAG, "Selected next ROM runner for ${appInfo.packageName}: ${editedRomRunner ?: "default"}")
+                },
+            )
+        }
+
         GamepadSaveExitActionRow(
             title = stringResource(R.string.gamefocus_action_save_game_info_title),
             description = stringResource(R.string.gamefocus_action_save_game_info_desc),
-            pulseOnChanges = isChanged,
+            pulseOnChanges = canSave,
             saveActionText = stringResource(SharedUiR.string.gamepad_action_save),
             saveIcon = Icons.Rounded.Save,
-            enabled = isChanged,
+            enabled = canSave,
             showExitPrompt = promptState.showExitPrompt,
             onDismissPrompt = promptState.dismissPrompt,
             saveFocusRequester = promptState.focusRequester,
