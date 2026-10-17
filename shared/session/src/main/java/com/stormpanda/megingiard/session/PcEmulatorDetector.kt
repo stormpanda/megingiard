@@ -6,7 +6,7 @@ import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_PC
 import java.io.File
 
-private const val TAG = "GameNativeDetector"
+private const val TAG = "PcEmulatorDetector"
 private const val PROC_SPLIT_LIMIT = 4
 private const val PROC_INDEX_UID = 2
 private const val PROC_INDEX_CMDLINE = 3
@@ -146,10 +146,10 @@ private val SHIPPING_SUFFIXES =
     )
 
 /**
- * Detector implementation for GameNative instances.
+ * Detector implementation for PC/Steam emulators (`PcEmulators`: GameNative and DroidDeck).
  * Traverses running processes to resolve active PC/Steam game.
  */
-object GameNativeDetector : EmulatorDetector {
+object PcEmulatorDetector : EmulatorDetector {
     private data class GameProcessCandidate(
         val folderName: String,
         val binaryName: String,
@@ -176,7 +176,7 @@ object GameNativeDetector : EmulatorDetector {
             }
         }
 
-        AppLog.d(TAG, "No GameNative session could be resolved for $packageName")
+        AppLog.d(TAG, "No PC emulator session could be resolved for $packageName")
         return null
     }
 
@@ -211,6 +211,7 @@ object GameNativeDetector : EmulatorDetector {
 
         var bestSession: ActiveGameSession? = null
         var hasRomManagerMatch = false
+        val romApps = RomManager.romApps.value.filter { it.systemId == SYSTEM_ID_PC }
 
         for (line in lines) {
             if (line.startsWith("PROC ")) {
@@ -226,8 +227,7 @@ object GameNativeDetector : EmulatorDetector {
                         val rawExeBaseName = exeName.substringBeforeLast('.', missingDelimiterValue = exeName)
                         val cleanedExeBaseName = cleanExeName(exeName)
 
-                        // Match against RomManager
-                        val romApps = RomManager.romApps.value
+                        // Match against PC ROMs in RomManager
                         val matchedApp =
                             romApps.firstOrNull { app ->
                                 val file = app.romPath?.let { File(it) }

@@ -278,15 +278,17 @@ private fun GameInfoDeckContent(
         remember(runnerChoices, editedRomRunner) {
             runnerChoices.indexOfFirst { it.overrideValue == editedRomRunner }.takeIf { it >= 0 } ?: 0
         }
+    val effectiveRunnerOverride = runnerChoices.getOrNull(selectedRunnerIndex)?.overrideValue
     val isRunnerChanged =
-        appInfo.isRom && runnerChoices.isNotEmpty() && editedRomRunner != appInfo.customRomRunner
+        appInfo.isRom && runnerChoices.isNotEmpty() && effectiveRunnerOverride != appInfo.customRomRunner
     val isChanged = isTitleChanged || isRunnerChanged
+    val canSave = isChanged && normalizedTitle.isNotEmpty()
 
     val promptState =
         rememberSaveExitPromptState(
-            hasChanges = isChanged,
+            hasChanges = canSave,
             onSave = {
-                if (isChanged && normalizedTitle.isNotEmpty()) {
+                if (canSave) {
                     if (isTitleChanged) {
                         if (normalizedTitle == defaultTitle) {
                             InstalledAppsManager.resetAppLabel(context, appInfo.packageName)
@@ -295,7 +297,7 @@ private fun GameInfoDeckContent(
                         }
                     }
                     if (isRunnerChanged) {
-                        InstalledAppsManager.setCustomRomRunner(context, appInfo.packageName, editedRomRunner)
+                        InstalledAppsManager.setCustomRomRunner(context, appInfo.packageName, effectiveRunnerOverride)
                     }
                     onDismiss()
                 }
@@ -367,10 +369,10 @@ private fun GameInfoDeckContent(
         GamepadSaveExitActionRow(
             title = stringResource(R.string.gamefocus_action_save_game_info_title),
             description = stringResource(R.string.gamefocus_action_save_game_info_desc),
-            pulseOnChanges = isChanged,
+            pulseOnChanges = canSave,
             saveActionText = stringResource(SharedUiR.string.gamepad_action_save),
             saveIcon = Icons.Rounded.Save,
-            enabled = isChanged,
+            enabled = canSave,
             showExitPrompt = promptState.showExitPrompt,
             onDismissPrompt = promptState.dismissPrompt,
             saveFocusRequester = promptState.focusRequester,

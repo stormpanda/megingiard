@@ -3,6 +3,6 @@ import com.stormpanda.megingiard.catalog.RomLauncherRegistry
 
 fun initGameFocusLaunchers() {
     RomLauncherRegistry.register(RetroArchLauncher())
-    RomLauncherRegistry.register(GameNativeLauncher())
+    RomLauncherRegistry.register(PcLauncher())
     RomLauncherRegistry.register(SwitchLauncher())
 }

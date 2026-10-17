@@ -157,7 +157,7 @@ Applies to **every** change that affects behaviour, interface, or architecture â
 | `:companion:ui` | Companion app UI (`com.stormpanda.megingiard`): Activities, ViewModels, Composables, Presentations |
 | `:companion:domain` | Companion business logic, device managers, injection facades (Touchpad, MacroPad, Keyboard, Mirror, Privd) |
 | `:gamefocus:ui` | Launcher app (`com.stormpanda.megingiard.gamefocus`): poster browsing, SteamGridDB artwork, theme sync |
-| `:gamefocus:domain` | Launcher logic, ROM launchers (`RetroArchLauncher`, `GameNativeLauncher`) |
+| `:gamefocus:domain` | Launcher logic, ROM launchers (`RetroArchLauncher`, `PcLauncher`) |
 | `:shared:ui` | Design system (`AppColors`, `AppTheme`), `AppModalDialog`, overlay modifiers, `GamePadButton`, Material Symbols |
 | `:shared:catalog` | App index, ROM scanning (`InstalledAppsManager`, `RomManager`, `DisplayDetector`, `RomLauncherRegistry`) |
 | `:shared:media` | Artwork fetchers, HTTP, caches (`SteamGridDbClient`) |

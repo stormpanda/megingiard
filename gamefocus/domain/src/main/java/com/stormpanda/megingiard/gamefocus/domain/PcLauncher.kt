@@ -5,20 +5,20 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.catalog.EMULATOR_ID_GAMENATIVE
+import com.stormpanda.megingiard.catalog.EMULATOR_ID_PC
 import com.stormpanda.megingiard.catalog.PcEmulators
 import com.stormpanda.megingiard.catalog.RomLauncher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-private const val TAG = "GameNativeLauncher"
-private const val GAMENATIVE_EXTRA_APP_ID = "app_id"
-private const val GAMENATIVE_EXTRA_ROM = "ROM"
+private const val TAG = "PcLauncher"
+private const val PC_EXTRA_APP_ID = "app_id"
+private const val PC_EXTRA_ROM = "ROM"
 
-class GameNativeLauncher : RomLauncher {
-    override val id: String = EMULATOR_ID_GAMENATIVE
-    override val displayName: String = "GameNative"
+class PcLauncher : RomLauncher {
+    override val id: String = EMULATOR_ID_PC
+    override val displayName: String = "PC"
 
     override suspend fun launchGame(
         context: Context,
@@ -50,11 +50,11 @@ class GameNativeLauncher : RomLauncher {
                     component = ComponentName(packageName, "$packageName.MainActivity")
                     if (appId != null) {
                         action = "$packageName.LAUNCH_GAME"
-                        putExtra(GAMENATIVE_EXTRA_APP_ID, appId)
+                        putExtra(PC_EXTRA_APP_ID, appId)
                     } else {
                         action = Intent.ACTION_MAIN
                         addCategory(Intent.CATEGORY_LAUNCHER)
-                        putExtra(GAMENATIVE_EXTRA_ROM, romPath)
+                        putExtra(PC_EXTRA_ROM, romPath)
                     }
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
                 }
@@ -65,7 +65,7 @@ class GameNativeLauncher : RomLauncher {
             context.startActivity(intent, options.toBundle())
             true
         } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to launch GameNative: ${e.message}", e)
+            AppLog.e(TAG, "Failed to launch PC game in $packageName: ${e.message}", e)
             false
         }
     }

@@ -2,12 +2,15 @@ package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.RomManager
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_PC
+import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-class GameNativeDetectorTest {
+class PcEmulatorDetectorTest {
     @Test
     fun parseSessionFromProcesses_validGame_returnsCorrectSession() {
         val procList =
@@ -18,7 +21,7 @@ class GameNativeDetectorTest {
             PROC 30101 10142 C:\Program Files (x86)\Steam\steamapps\common\Baba Is You\Baba Is You.exe
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+        val session = PcEmulatorDetector.parseSessionFromProcesses("app.gamenative", procList)
 
         assertNotNull(session)
         assertEquals("app.gamenative", session?.packageName)
@@ -38,7 +41,7 @@ class GameNativeDetectorTest {
             PROC 30101 10142 Z:/home/sandbox/steamapps/common/BALL x PIT/BALLxPIT.exe
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+        val session = PcEmulatorDetector.parseSessionFromProcesses("app.gamenative", procList)
 
         assertNotNull(session)
         assertEquals("app.gamenative", session?.packageName)
@@ -58,7 +61,7 @@ class GameNativeDetectorTest {
             PROC 30022 10142 C:\windows\system32\winedevice.exe
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+        val session = PcEmulatorDetector.parseSessionFromProcesses("app.gamenative", procList)
 
         assertNull(session)
     }
@@ -70,27 +73,27 @@ class GameNativeDetectorTest {
             PROC 30101 10142 C:\Program Files (x86)\Steam\steamapps\common\Baba Is You\Baba Is You.exe
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+        val session = PcEmulatorDetector.parseSessionFromProcesses("app.gamenative", procList)
 
         assertNull(session)
     }
 
     @Test
     fun detectActiveSession_unsupportedPackage_returnsNull() =
-        kotlinx.coroutines.test.runTest {
-            assertNull(GameNativeDetector.detectActiveSession("com.unsupported.pkg"))
+        runTest {
+            assertNull(PcEmulatorDetector.detectActiveSession("com.unsupported.pkg"))
         }
 
     @Test
     fun detectActiveSession_supportedPackage_readsProcessesAndResolves() =
-        kotlinx.coroutines.test.runTest {
+        runTest {
             ProcessCmdlineProvider.runningProcessesProvider = {
                 """
                 PROC 29091 10142 app.gamenative
                 PROC 30101 10142 C:\Steam\steamapps\common\Celeste\Celeste.exe
                 """.trimIndent()
             }
-            val session = GameNativeDetector.detectActiveSession("app.gamenative")
+            val session = PcEmulatorDetector.detectActiveSession("app.gamenative")
             assertNotNull(session)
             assertEquals("Celeste", session?.gameTitle)
             assertEquals("pc", session?.systemId)
@@ -114,7 +117,7 @@ class GameNativeDetectorTest {
             PROC 29828 10120 A:\Boltgun\Binaries\Win64\Boltgun-Win64-Shipping.exe
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+        val session = PcEmulatorDetector.parseSessionFromProcesses("app.gamenative", procList)
 
         assertNotNull(session)
         assertEquals("app.gamenative", session?.packageName)
@@ -132,7 +135,7 @@ class GameNativeDetectorTest {
             PROC 30101 10142 "C:\Program Files (x86)\Steam\steamapps\common\Hollow Knight\hollow_knight.exe" -popupwindow -screen-fullscreen 1
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+        val session = PcEmulatorDetector.parseSessionFromProcesses("app.gamenative", procList)
 
         assertNotNull(session)
         assertEquals("app.gamenative", session?.packageName)
@@ -150,7 +153,7 @@ class GameNativeDetectorTest {
             PROC 30101 10142 A:\Binaries\Win64\Boltgun-Win64-Shipping.exe
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+        val session = PcEmulatorDetector.parseSessionFromProcesses("app.gamenative", procList)
 
         assertNotNull(session)
         assertEquals("app.gamenative", session?.packageName)
@@ -168,7 +171,7 @@ class GameNativeDetectorTest {
             PROC 30101 10142 C:\Games\Witcher 3\bin\x64\witcher3.exe
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+        val session = PcEmulatorDetector.parseSessionFromProcesses("app.gamenative", procList)
 
         assertNotNull(session)
         assertEquals("app.gamenative", session?.packageName)
@@ -187,7 +190,7 @@ class GameNativeDetectorTest {
                 label = "20 Minutes Till Dawn",
                 isRom = true,
                 romPath = "/storage/emulated/0/ROMs/steam/20 Minutes Till Dawn.steam",
-                systemId = "pc",
+                systemId = SYSTEM_ID_PC,
             )
         RomManager.setRomAppsForTesting(listOf(app))
         try {
@@ -198,13 +201,13 @@ class GameNativeDetectorTest {
                 """.trimIndent()
 
             // When no focused ROM is provided and direct match fails, falls back to folderName
-            val standaloneSession = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+            val standaloneSession = PcEmulatorDetector.parseSessionFromProcesses("app.gamenative", procList)
             assertNotNull(standaloneSession)
             assertEquals("20MinuteTillDawn.steam", standaloneSession?.romIdentifier)
 
             // When focused ROM context is provided, correlates cleanly to the focused ROM in RomManager
             val correlatedSession =
-                GameNativeDetector.parseSessionFromProcesses(
+                PcEmulatorDetector.parseSessionFromProcesses(
                     packageName = "app.gamenative",
                     procList = procList,
                     focusedRomPath = "/storage/emulated/0/ROMs/steam/20 Minutes Till Dawn.steam",
@@ -219,7 +222,7 @@ class GameNativeDetectorTest {
 
             // Case-insensitive identifier matching also correlates successfully
             val caseInsensitiveSession =
-                GameNativeDetector.parseSessionFromProcesses(
+                PcEmulatorDetector.parseSessionFromProcesses(
                     packageName = "app.gamenative",
                     procList = procList,
                     focusedRomPath = null,
@@ -228,6 +231,38 @@ class GameNativeDetectorTest {
             assertNotNull(caseInsensitiveSession)
             assertEquals("/storage/emulated/0/ROMs/steam/20 Minutes Till Dawn.steam", caseInsensitiveSession?.romPath)
             assertEquals("20 Minutes Till Dawn.steam", caseInsensitiveSession?.romIdentifier)
+        } finally {
+            RomManager.setRomAppsForTesting(emptyList())
+        }
+    }
+
+    @Test
+    fun parseSessionFromProcesses_ignoresNonPcRomWithSameTitleInRomManager() {
+        val switchRom =
+            InstalledAppInfo(
+                packageName = "rom:switch:Celeste",
+                activityName = "",
+                label = "Celeste",
+                isRom = true,
+                romPath = "/storage/emulated/0/ROMs/switch/Celeste [01002B00028F6000].nsp",
+                systemId = SYSTEM_ID_SWITCH,
+            )
+        RomManager.setRomAppsForTesting(listOf(switchRom))
+        try {
+            val procList =
+                """
+                PROC 4100 10210 com.droiddeck.launcher
+                PROC 4210 10210 /home/user/.local/share/Steam/steamapps/common/Celeste/Celeste.bin.x86_64
+                """.trimIndent()
+
+            val session = PcEmulatorDetector.parseSessionFromProcesses("com.droiddeck.launcher", procList)
+
+            assertNotNull(session)
+            assertEquals("com.droiddeck.launcher", session?.packageName)
+            assertEquals(SYSTEM_ID_PC, session?.systemId)
+            assertNull(session?.romPath)
+            assertEquals("Celeste.steam", session?.romIdentifier)
+            assertEquals("Celeste", session?.gameTitle)
         } finally {
             RomManager.setRomAppsForTesting(emptyList())
         }
@@ -244,7 +279,7 @@ class GameNativeDetectorTest {
             PROC 4200 10210 /home/user/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=367520 -- "/home/user/.local/share/Steam/steamapps/common/Proton - Experimental/proton" waitforexitandrun "/home/user/.local/share/Steam/steamapps/common/Hollow Knight/hollow_knight.exe" -popupwindow
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromProcesses("com.droiddeck.launcher", procList)
+        val session = PcEmulatorDetector.parseSessionFromProcesses("com.droiddeck.launcher", procList)
 
         assertNotNull(session)
         assertEquals("com.droiddeck.launcher", session?.packageName)
@@ -263,7 +298,7 @@ class GameNativeDetectorTest {
             PROC 4210 10210 /home/user/.local/share/Steam/steamapps/common/SteamLinuxRuntime_sniper/pressure-vessel/bin/pv-adverb -- /home/user/.local/share/Steam/steamapps/common/Celeste/Celeste.bin.x86_64
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromProcesses("com.droiddeck.launcher", procList)
+        val session = PcEmulatorDetector.parseSessionFromProcesses("com.droiddeck.launcher", procList)
 
         assertNotNull(session)
         assertEquals("com.droiddeck.launcher", session?.packageName)
@@ -287,7 +322,7 @@ class GameNativeDetectorTest {
             PROC 4190 10210 /home/user/.local/share/Steam/steamapps/common/Steamworks Shared/_CommonRedist/vcredist/2022/vc_redist.x64.exe
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromProcesses("com.droiddeck.launcher", procList)
+        val session = PcEmulatorDetector.parseSessionFromProcesses("com.droiddeck.launcher", procList)
 
         assertNull(session)
     }

@@ -93,7 +93,7 @@ object EmulatorDetectionFunnel {
     private val registeredDetectors: List<EmulatorDetector> =
         listOf(
             RetroArchDetector,
-            GameNativeDetector,
+            PcEmulatorDetector,
             Pcsx2AndroidDetector,
             YuzuDetector,
             PpssppDetector,

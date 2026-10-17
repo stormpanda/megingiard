@@ -5,7 +5,7 @@ import com.stormpanda.megingiard.AppLog
 private const val TAG = "RomSystemDef"
 
 const val EMULATOR_ID_RETROARCH = "retroarch"
-const val EMULATOR_ID_GAMENATIVE = "gamenative"
+const val EMULATOR_ID_PC = "pc"
 const val EMULATOR_ID_YUZU = "yuzu"
 const val SYSTEM_ID_SWITCH = "switch"
 const val SYSTEM_ID_PC = "pc"
@@ -394,7 +394,7 @@ val SUPPORTED_SYSTEMS =
                 id = SYSTEM_ID_PC,
                 displayName = "PC",
                 extensions = setOf("steam", "steamappid"),
-                emulatorId = EMULATOR_ID_GAMENATIVE,
+                emulatorId = EMULATOR_ID_PC,
             ),
             RomSystemDef(
                 id = SYSTEM_ID_SWITCH,

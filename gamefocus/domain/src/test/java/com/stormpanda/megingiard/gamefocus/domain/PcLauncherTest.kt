@@ -20,21 +20,21 @@ import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
-class GameNativeLauncherTest {
+class PcLauncherTest {
     private lateinit var context: Context
-    private lateinit var launcher: GameNativeLauncher
+    private lateinit var launcher: PcLauncher
 
     @Before
     fun setUp() {
         context = RuntimeEnvironment.getApplication()
         PcEmulators.invalidateCache()
-        launcher = GameNativeLauncher()
+        launcher = PcLauncher()
     }
 
     @Test
     fun testLauncherMetadata() {
-        assertEquals("gamenative", launcher.id)
-        assertEquals("GameNative", launcher.displayName)
+        assertEquals("pc", launcher.id)
+        assertEquals("PC", launcher.displayName)
     }
 
     @Test
