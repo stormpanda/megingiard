@@ -679,6 +679,10 @@ data class ProfileAssociation(
  * @param isDefault        Whether this is a restorable default profile.
  * @param association      Optional profile association config.
  */
+private const val RETROARCH_WILDCARD_SYSTEM_ID = "retroarch"
+private val SWITCH_TITLE_ID_IN_BRACKETS_REGEX = Regex("""\[([A-Fa-f0-9]{16})]""")
+private val BARE_SWITCH_TITLE_ID_REGEX = Regex("""^[A-Fa-f0-9]{16}$""")
+
 @Serializable(with = PadProfileSerializer::class)
 data class PadProfile(
     val id: String,
@@ -701,7 +705,13 @@ data class PadProfile(
         if (!packageMatches) return false
 
         val romFileName = focusedRomPath?.substringAfterLast('/')?.substringAfterLast('\\')
-        val systemMatches = assoc.systemId == null || systemId == null || assoc.systemId.equals(systemId, ignoreCase = true)
+        val systemMatches =
+            assoc.systemId == null ||
+                systemId == null ||
+                assoc.systemId.equals(systemId, ignoreCase = true) ||
+                assoc.systemId.equals(RETROARCH_WILDCARD_SYSTEM_ID, ignoreCase = true) ||
+                systemId.equals(RETROARCH_WILDCARD_SYSTEM_ID, ignoreCase = true)
+        val assocSwitchTitleId = assoc.romFileName?.extractSwitchTitleId()
         val romMatches =
             assoc.romFileName == null ||
                 (isActiveProfile && focusedRomPath == null) || (
@@ -712,11 +722,24 @@ data class PadProfile(
                                     .substringBeforeLast(
                                         '.',
                                     ).equals(romFileName.substringBeforeLast('.'), ignoreCase = true) ||
-                                assoc.romFileName.normalizeRomName() == romFileName.normalizeRomName()
+                                assoc.romFileName.normalizeRomName() == romFileName.normalizeRomName() ||
+                                (assocSwitchTitleId != null && assocSwitchTitleId == romFileName.extractSwitchTitleId())
                         )
                 )
         return systemMatches && romMatches
     }
+}
+
+private fun String.extractSwitchTitleId(): String? {
+    val bare = substringBeforeLast('.')
+    if (BARE_SWITCH_TITLE_ID_REGEX.matches(bare)) {
+        return bare.uppercase()
+    }
+    return SWITCH_TITLE_ID_IN_BRACKETS_REGEX
+        .find(this)
+        ?.groupValues
+        ?.get(1)
+        ?.uppercase()
 }
 
 private fun String.normalizeRomName(): String =

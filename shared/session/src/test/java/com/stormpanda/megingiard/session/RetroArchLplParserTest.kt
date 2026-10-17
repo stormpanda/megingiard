@@ -73,7 +73,7 @@ class RetroArchLplParserTest {
 
         assertNotNull(session)
         assertEquals("Super Mario Land 3", session?.gameTitle)
-        assertEquals("gbc", session?.systemId)
+        assertEquals("gb", session?.systemId)
         assertEquals("/storage/emulated/0/ROMs/GBC/Super Mario Land 3.gb", session?.romPath)
         assertEquals("Nintendo - Game Boy / Color (Gambatte)", session?.coreOrBackend)
     }
@@ -84,6 +84,23 @@ class RetroArchLplParserTest {
         assertEquals("n64", RetroArchLplParser.resolveSystemId("/roms/mario.z64", null, "Mupen64Plus"))
         assertEquals("gba", RetroArchLplParser.resolveSystemId("/roms/pokemon.gba", null, "mGBA"))
         assertEquals("nes", RetroArchLplParser.resolveSystemId("/roms/mario.nes", null, "Nestopia"))
+        assertEquals(
+            "ps1",
+            RetroArchLplParser.resolveSystemId(
+                "/roms/Castlevania.chd",
+                "/data/data/com.retroarch/cores/mednafen_psx_hw_libretro_android.so",
+                "Sony - PlayStation (Beetle PSX HW)",
+            ),
+        )
+        assertEquals(
+            "saturn",
+            RetroArchLplParser.resolveSystemId(
+                "/roms/PanzerDragoon.chd",
+                "/data/data/com.retroarch/cores/beetle_saturn_libretro_android.so",
+                "Sega - Saturn (Beetle Saturn)",
+            ),
+        )
+        assertEquals("dreamcast", RetroArchLplParser.resolveSystemId("/roms/SonicAdventure.gdi", null, null))
         assertEquals("retroarch", RetroArchLplParser.resolveSystemId("/roms/game.unknown", null, "custom_core"))
     }
 

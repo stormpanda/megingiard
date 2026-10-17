@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.RetroArchEmulators
 import com.stormpanda.megingiard.catalog.SafPathResolver
 
 private const val TAG = "RetroArchDetector"
@@ -11,14 +12,7 @@ private const val TAG = "RetroArchDetector"
  */
 object RetroArchDetector : EmulatorDetector {
     override val supportedPackages: Set<String> =
-        setOf(
-            "com.retroarch",
-            "com.retroarch.aarch64",
-            "com.retroarch.ra32",
-            "org.retroarch",
-            "org.retroarch.aarch64",
-            "org.retroarch.ra32",
-        )
+        RetroArchEmulators.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }.toSet()
 
     override val systemId: String = "retroarch"
 

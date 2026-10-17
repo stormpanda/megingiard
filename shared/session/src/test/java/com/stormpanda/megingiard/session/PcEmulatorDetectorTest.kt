@@ -287,6 +287,8 @@ class PcEmulatorDetectorTest {
         assertNull(session?.romPath)
         assertEquals("Hollow Knight.steam", session?.romIdentifier)
         assertEquals("Hollow Knight", session?.gameTitle)
+        assertEquals("DroidDeck", session?.coreOrBackend)
+        assertEquals("367520", session?.titleId)
     }
 
     @Test
@@ -306,6 +308,7 @@ class PcEmulatorDetectorTest {
         assertNull(session?.romPath)
         assertEquals("Celeste.steam", session?.romIdentifier)
         assertEquals("Celeste", session?.gameTitle)
+        assertEquals("DroidDeck", session?.coreOrBackend)
     }
 
     @Test
@@ -325,5 +328,54 @@ class PcEmulatorDetectorTest {
         val session = PcEmulatorDetector.parseSessionFromProcesses("com.droiddeck.launcher", procList)
 
         assertNull(session)
+    }
+
+    @Test
+    fun parseSessionFromProcesses_steamAppIdMatchesNumericSteamRomInRomManager() {
+        val numericSteamRom =
+            InstalledAppInfo(
+                packageName = "rom:pc:367520",
+                activityName = "",
+                label = "Hollow Knight (Custom Label)",
+                isRom = true,
+                romPath = "/storage/emulated/0/ROMs/pc/367520.steam",
+                systemId = SYSTEM_ID_PC,
+            )
+        RomManager.setRomAppsForTesting(listOf(numericSteamRom))
+        try {
+            val procList =
+                """
+                PROC 4100 10210 com.droiddeck.launcher
+                PROC 4200 10210 /home/user/.local/share/Steam/ubuntu12_32/reaper SteamLaunch AppId=367520 -- "/home/user/.local/share/Steam/steamapps/common/Proton - Experimental/proton" waitforexitandrun "/home/user/.local/share/Steam/steamapps/common/Hollow_Knight_Dir/hk.exe"
+                """.trimIndent()
+
+            val session = PcEmulatorDetector.parseSessionFromProcesses("com.droiddeck.launcher", procList)
+
+            assertNotNull(session)
+            assertEquals("/storage/emulated/0/ROMs/pc/367520.steam", session?.romPath)
+            assertEquals("367520.steam", session?.romIdentifier)
+            assertEquals("Hollow Knight (Custom Label)", session?.gameTitle)
+            assertEquals("367520", session?.titleId)
+            assertEquals("DroidDeck", session?.coreOrBackend)
+        } finally {
+            RomManager.setRomAppsForTesting(emptyList())
+        }
+    }
+
+    @Test
+    fun parseSessionFromProcesses_steamappsCommonPreferredOverSubsequentGenericDriveProcess() {
+        val procList =
+            """
+            PROC 29091 10142 app.gamenative
+            PROC 30101 10142 C:\Program Files (x86)\Steam\steamapps\common\Celeste\Celeste.exe
+            PROC 30250 10142 C:\Temp\SubprocessHelper\helper_tool.exe
+            """.trimIndent()
+
+        val session = PcEmulatorDetector.parseSessionFromProcesses("app.gamenative", procList)
+
+        assertNotNull(session)
+        assertEquals("Celeste", session?.gameTitle)
+        assertEquals("Celeste.steam", session?.romIdentifier)
+        assertEquals("GameNative", session?.coreOrBackend)
     }
 }

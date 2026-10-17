@@ -19,11 +19,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
-import com.stormpanda.megingiard.catalog.PcEmulators
+import com.stormpanda.megingiard.catalog.InstalledEmulatorRegistry
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
-import com.stormpanda.megingiard.catalog.SYSTEM_ID_PC
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
-import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
@@ -52,23 +50,14 @@ fun RomFolderCoreChooserDialog(
     val context = LocalContext.current
     val appColors = LocalAppColors.current
     val isSwitchSystem = remember(folder.systemId) { folder.systemId == SYSTEM_ID_SWITCH }
-    val isPcSystem = remember(folder.systemId) { folder.systemId == SYSTEM_ID_PC }
-    val isMultiEmulatorSystem = isSwitchSystem || isPcSystem
+    val emulatorRegistry = remember(folder.systemId) { InstalledEmulatorRegistry.forSystem(folder.systemId) }
+    val isMultiEmulatorSystem = emulatorRegistry != null
     val emulatorOptions =
-        remember(isSwitchSystem, isPcSystem) {
-            when {
-                isSwitchSystem -> {
-                    SwitchEmulators.getInstalledEmulators(context).map { it.packageName to it.displayName }
-                }
-
-                isPcSystem -> {
-                    PcEmulators.getInstalledEmulators(context).map { it.packageName to it.displayName }
-                }
-
-                else -> {
-                    emptyList()
-                }
-            }
+        remember(emulatorRegistry) {
+            emulatorRegistry
+                ?.getInstalledEmulators(context)
+                ?.map { it.packageName to it.displayName }
+                ?: emptyList()
         }
     val systemDef =
         remember(folder.systemId) {

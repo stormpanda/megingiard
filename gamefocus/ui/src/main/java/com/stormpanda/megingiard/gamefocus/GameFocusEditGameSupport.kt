@@ -94,49 +94,37 @@ internal fun buildRomRunnerChoices(
     if (!appInfo.isRom) return emptyList()
     val systemDef = SUPPORTED_SYSTEMS.find { it.id == appInfo.systemId } ?: return emptyList()
 
-    return when (appInfo.systemId) {
-        SYSTEM_ID_SWITCH -> {
-            val defaultPkg = appInfo.defaultEmulatorPackage
-            val defaultDisplayName =
-                installedSwitchEmulators.find { it.packageName == defaultPkg }?.displayName
-                    ?: installedSwitchEmulators.firstOrNull()?.displayName
-                    ?: systemDef.displayName
-            buildList {
-                add(RomRunnerChoice(overrideValue = null, displayLabel = formatFolderDefault(defaultDisplayName)))
-                installedSwitchEmulators.forEach { option ->
-                    add(RomRunnerChoice(overrideValue = option.packageName, displayLabel = option.displayName))
-                }
+    val installedEmulators =
+        when (appInfo.systemId) {
+            SYSTEM_ID_SWITCH -> installedSwitchEmulators
+            SYSTEM_ID_PC -> installedPcEmulators
+            else -> null
+        }
+    if (installedEmulators != null) {
+        val defaultPkg = appInfo.defaultEmulatorPackage
+        val defaultDisplayName =
+            installedEmulators.find { it.packageName == defaultPkg }?.displayName
+                ?: installedEmulators.firstOrNull()?.displayName
+                ?: systemDef.displayName
+        return buildList {
+            add(RomRunnerChoice(overrideValue = null, displayLabel = formatFolderDefault(defaultDisplayName)))
+            installedEmulators.forEach { option ->
+                add(RomRunnerChoice(overrideValue = option.packageName, displayLabel = option.displayName))
             }
         }
+    }
 
-        SYSTEM_ID_PC -> {
-            val defaultPkg = appInfo.defaultEmulatorPackage
-            val defaultDisplayName =
-                installedPcEmulators.find { it.packageName == defaultPkg }?.displayName
-                    ?: installedPcEmulators.firstOrNull()?.displayName
-                    ?: systemDef.displayName
-            buildList {
-                add(RomRunnerChoice(overrideValue = null, displayLabel = formatFolderDefault(defaultDisplayName)))
-                installedPcEmulators.forEach { option ->
-                    add(RomRunnerChoice(overrideValue = option.packageName, displayLabel = option.displayName))
-                }
-            }
-        }
-
-        else -> {
-            if (systemDef.emulatorId != EMULATOR_ID_RETROARCH) return emptyList()
-            val defaultCore = appInfo.defaultRetroArchCore ?: systemDef.retroArchCore ?: return emptyList()
-            val allCores =
-                buildList {
-                    systemDef.retroArchCore?.let { add(it) }
-                    addAll(systemDef.retroArchCoreAlternatives)
-                }.distinct()
-            buildList {
-                add(RomRunnerChoice(overrideValue = null, displayLabel = formatFolderDefault(defaultCore)))
-                allCores.forEach { core ->
-                    add(RomRunnerChoice(overrideValue = core, displayLabel = core))
-                }
-            }
+    if (systemDef.emulatorId != EMULATOR_ID_RETROARCH) return emptyList()
+    val defaultCore = appInfo.defaultRetroArchCore ?: systemDef.retroArchCore ?: return emptyList()
+    val allCores =
+        buildList {
+            systemDef.retroArchCore?.let { add(it) }
+            addAll(systemDef.retroArchCoreAlternatives)
+        }.distinct()
+    return buildList {
+        add(RomRunnerChoice(overrideValue = null, displayLabel = formatFolderDefault(defaultCore)))
+        allCores.forEach { core ->
+            add(RomRunnerChoice(overrideValue = core, displayLabel = core))
         }
     }
 }

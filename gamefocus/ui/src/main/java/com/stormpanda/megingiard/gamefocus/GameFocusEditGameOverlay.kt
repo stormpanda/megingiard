@@ -70,6 +70,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
+import com.stormpanda.megingiard.catalog.InstalledEmulatorRegistry
 import com.stormpanda.megingiard.catalog.LibraryIconRef
 import com.stormpanda.megingiard.catalog.PcEmulators
 import com.stormpanda.megingiard.catalog.RomManager
@@ -243,7 +244,7 @@ private fun GameInfoDeckContent(
     val canResetToDefault = defaultTitle != null && (appInfo.label != defaultTitle || editedTitle != defaultTitle)
 
     val isMultiEmulatorRom =
-        appInfo.isRom && (appInfo.systemId == SYSTEM_ID_SWITCH || appInfo.systemId == SYSTEM_ID_PC)
+        appInfo.isRom && InstalledEmulatorRegistry.isMultiEmulatorSystem(appInfo.systemId)
     val runnerChoices =
         remember(
             appInfo.packageName,

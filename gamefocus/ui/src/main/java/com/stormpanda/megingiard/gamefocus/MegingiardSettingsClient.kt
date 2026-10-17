@@ -1,16 +1,14 @@
 package com.stormpanda.megingiard.gamefocus
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
-import com.stormpanda.megingiard.catalog.EMULATOR_ID_YUZU
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
-import com.stormpanda.megingiard.catalog.PcEmulators
+import com.stormpanda.megingiard.catalog.InstalledEmulatorRegistry
+import com.stormpanda.megingiard.catalog.RetroArchEmulators
 import com.stormpanda.megingiard.catalog.RomManager
-import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
-import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.ipc.observeContentProvider
@@ -176,36 +174,24 @@ object MegingiardSettingsClient {
         systemId: String?,
         emulatorPackage: String? = null,
     ): String {
-        if (systemId == null) return "com.retroarch.aarch64"
-        val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }
+        val defaultRetroArchPkg = RetroArchEmulators.SUPPORTED_EMULATOR_OPTIONS.first().packageName
+        if (systemId == null) return defaultRetroArchPkg
+        val registry = InstalledEmulatorRegistry.forSystem(systemId)
         val candidates =
-            when (systemDef?.emulatorId) {
-                EMULATOR_ID_RETROARCH, null -> {
-                    listOf("com.retroarch.aarch64", "com.retroarch")
+            if (registry != null) {
+                val supportedPackages = registry.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }
+                if (!emulatorPackage.isNullOrBlank()) {
+                    listOf(emulatorPackage) + supportedPackages.filterNot { it == emulatorPackage }
+                } else {
+                    supportedPackages
                 }
-
-                EMULATOR_ID_YUZU -> {
-                    val switchPackages = SwitchEmulators.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }
-                    if (!emulatorPackage.isNullOrBlank()) {
-                        listOf(emulatorPackage) + switchPackages.filterNot { it == emulatorPackage }
-                    } else {
-                        switchPackages
-                    }
-                }
-
-                else -> {
-                    val pcPackages = PcEmulators.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }
-                    if (!emulatorPackage.isNullOrBlank()) {
-                        listOf(emulatorPackage) + pcPackages.filterNot { it == emulatorPackage }
-                    } else {
-                        pcPackages
-                    }
-                }
+            } else {
+                RetroArchEmulators.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }
             }
         val pm = context.packageManager
         return candidates.firstOrNull { pkg ->
             try {
-                pm.getPackageInfo(pkg, 0)
+                pm.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0))
                 true
             } catch (_: Exception) {
                 false

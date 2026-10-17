@@ -72,10 +72,38 @@ class EmulatorDetectionFunnelTest {
         }
 
     @Test
+    fun onPackageForeground_doesNotReuseLastDetectedSession_whenDifferentFocusedRomProvided() =
+        runTest {
+            val previousSession =
+                ActiveGameSession(
+                    packageName = "com.droiddeck.launcher",
+                    romPath = "/roms/pc/Celeste.steam",
+                    romIdentifier = "Celeste.steam",
+                    gameTitle = "Celeste",
+                    systemId = "pc",
+                )
+            EmulatorDetectionFunnel.setActiveSessionForTesting(previousSession)
+            EmulatorDetectionFunnel.clearSession()
+
+            val restored =
+                EmulatorDetectionFunnel.onPackageForeground(
+                    packageName = "com.droiddeck.launcher",
+                    focusedRomPath = "/roms/pc/Hollow Knight.steam",
+                    focusedRomIdentifier = "Hollow Knight.steam",
+                )
+            assertNull(restored)
+            assertNull(EmulatorDetectionFunnel.activeSession.value)
+            assertEquals("/roms/pc/Hollow Knight.steam", EmulatorDetectionFunnel.getFocusedRomPathForTesting())
+            assertEquals("Hollow Knight.steam", EmulatorDetectionFunnel.getFocusedRomIdentifierForTesting())
+        }
+
+    @Test
     fun isRegisteredEmulator_knownEmulators_returnsTrue() {
         assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("com.retroarch"))
+        assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("com.retroarch.ra32"))
         assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("org.ppsspp.ppsspp"))
         assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("xyz.aethersx2.android"))
+        assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("net.nethersx2.android"))
         assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("org.yuzu.yuzu_emu"))
         assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("dev.eden.eden_emulator"))
         assertTrue(EmulatorDetectionFunnel.isRegisteredEmulator("dev.eden.eden_emulator.nightly"))

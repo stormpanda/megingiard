@@ -100,4 +100,29 @@ class PadProfileMatchesTest {
         assertEquals(null, parsed.association?.systemId)
         assertEquals(null, parsed.association?.romFileName)
     }
+
+    @Test
+    fun matches_switchBracketedRomFileNameAndBareTitleId_returnsTrue() {
+        val hoverCreatedProfile =
+            testProfile(
+                name = "Celeste (Switch)",
+                packageName = "dev.eden.eden_emulator",
+                romFileName = "Celeste [01002B00028F6000].nsp",
+                systemId = "switch",
+            )
+        assertTrue(hoverCreatedProfile.matches("dev.eden.eden_emulator", "01002B00028F6000", "switch"))
+        assertFalse(hoverCreatedProfile.matches("dev.eden.eden_emulator", "0100633007D48000", "switch"))
+    }
+
+    @Test
+    fun matches_retroArchWildcardSystemId_matchesResolvedSpecificSystemId() {
+        val legacyRetroArchProfile =
+            testProfile(
+                name = "Castlevania SotN",
+                packageName = "com.retroarch",
+                romFileName = "Castlevania.chd",
+                systemId = "retroarch",
+            )
+        assertTrue(legacyRetroArchProfile.matches("com.retroarch", "/roms/PS1/Castlevania.chd", "ps1"))
+    }
 }

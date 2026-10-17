@@ -245,34 +245,24 @@ object RomManager {
             }
 
             val defaultEmulatorPackage =
-                when (systemId) {
-                    SYSTEM_ID_SWITCH -> {
-                        val installed = SwitchEmulators.getInstalledEmulators(context, forceRefresh = true)
-                        if (installed.isEmpty()) {
+                InstalledEmulatorRegistry.forSystem(systemId)?.let { registry ->
+                    val installed = registry.getInstalledEmulators(context, forceRefresh = true)
+                    if (installed.isEmpty()) {
+                        return@withContext if (systemId == SYSTEM_ID_SWITCH) {
                             AppLog.w(TAG, "No supported Switch emulator is installed")
-                            return@withContext AddRomFolderResult.Error(
+                            AddRomFolderResult.Error(
                                 "No supported Nintendo Switch emulator (e.g. Eden) is installed.",
                                 AddRomFolderResult.ErrorCode.NO_SWITCH_EMULATOR,
                             )
-                        }
-                        if (installed.size == 1) installed.first().packageName else null
-                    }
-
-                    SYSTEM_ID_PC -> {
-                        val installed = PcEmulators.getInstalledEmulators(context, forceRefresh = true)
-                        if (installed.isEmpty()) {
+                        } else {
                             AppLog.w(TAG, "No supported PC emulator is installed")
-                            return@withContext AddRomFolderResult.Error(
+                            AddRomFolderResult.Error(
                                 "No supported PC emulator (e.g. GameNative or DroidDeck) is installed.",
                                 AddRomFolderResult.ErrorCode.NO_PC_EMULATOR,
                             )
                         }
-                        if (installed.size == 1) installed.first().packageName else null
                     }
-
-                    else -> {
-                        null
-                    }
+                    if (installed.size == 1) installed.first().packageName else null
                 }
 
             val newFolder =

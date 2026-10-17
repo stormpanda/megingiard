@@ -145,6 +145,12 @@ private val SHIPPING_SUFFIXES =
         "_shipping",
     )
 
+private const val RANK_GENERIC_CANDIDATE = 0
+private const val RANK_STEAMAPPS_CANDIDATE = 1
+private const val RANK_ROM_MATCH = 2
+private const val RANK_ROM_AND_STEAMAPPS_MATCH = 3
+private val STEAM_APP_ID_REGEX = Regex("""\b(?:Steam)?AppId=(\d+)\b""", RegexOption.IGNORE_CASE)
+
 /**
  * Detector implementation for PC/Steam emulators (`PcEmulators`: GameNative and DroidDeck).
  * Traverses running processes to resolve active PC/Steam game.
@@ -153,6 +159,7 @@ object PcEmulatorDetector : EmulatorDetector {
     private data class GameProcessCandidate(
         val folderName: String,
         val binaryName: String,
+        val isSteamappsCommon: Boolean,
     )
 
     override val supportedPackages: Set<String> =
@@ -188,7 +195,7 @@ object PcEmulatorDetector : EmulatorDetector {
     ): ActiveGameSession? {
         val lines = procList.split('\n')
 
-        // Find the UID of the target package (e.g. app.gamenative)
+        // Find the UID of the target package (e.g. app.gamenative or com.droiddeck.launcher)
         var targetUid: String? = null
         for (line in lines) {
             if (line.startsWith("PROC ")) {
@@ -209,8 +216,26 @@ object PcEmulatorDetector : EmulatorDetector {
             return null
         }
 
+        var detectedSteamAppId: String? = null
+        for (line in lines) {
+            if (line.startsWith("PROC ")) {
+                val parts = line.split(' ', limit = PROC_SPLIT_LIMIT)
+                if (parts.size >= PROC_SPLIT_LIMIT && parts[PROC_INDEX_UID] == targetUid) {
+                    val cmdline = parts[PROC_INDEX_CMDLINE].trim()
+                    val match = STEAM_APP_ID_REGEX.find(cmdline)
+                    if (match != null) {
+                        detectedSteamAppId = match.groupValues[1]
+                    }
+                }
+            }
+        }
+
+        val backendName =
+            PcEmulators.SUPPORTED_EMULATOR_OPTIONS
+                .firstOrNull { it.packageName == packageName }
+                ?.displayName
         var bestSession: ActiveGameSession? = null
-        var hasRomManagerMatch = false
+        var bestCandidateRank = -1
         val romApps = RomManager.romApps.value.filter { it.systemId == SYSTEM_ID_PC }
 
         for (line in lines) {
@@ -234,7 +259,8 @@ object PcEmulatorDetector : EmulatorDetector {
                                 app.label.equals(folderName, ignoreCase = true) ||
                                     file?.nameWithoutExtension?.contains(folderName, ignoreCase = true) == true ||
                                     app.label.equals(rawExeBaseName, ignoreCase = true) ||
-                                    app.label.equals(cleanedExeBaseName, ignoreCase = true)
+                                    app.label.equals(cleanedExeBaseName, ignoreCase = true) ||
+                                    (detectedSteamAppId != null && file?.nameWithoutExtension == detectedSteamAppId)
                             } ?: run {
                                 // If direct name matching fails (e.g. dev folder typo), check if a focused ROM was launched
                                 if (focusedRomPath != null || focusedRomIdentifier != null) {
@@ -268,6 +294,8 @@ object PcEmulatorDetector : EmulatorDetector {
                                     romPath = matchPath,
                                     romIdentifier = matchIdentifier,
                                     gameTitle = matchedApp.label,
+                                    coreOrBackend = backendName,
+                                    titleId = detectedSteamAppId,
                                 )
                             } else if (focusedRomPath != null || focusedRomIdentifier != null) {
                                 val matchPath = focusedRomPath?.takeIf { it.startsWith("/") }
@@ -282,6 +310,8 @@ object PcEmulatorDetector : EmulatorDetector {
                                     romPath = matchPath,
                                     romIdentifier = matchIdentifier,
                                     gameTitle = matchTitle,
+                                    coreOrBackend = backendName,
+                                    titleId = detectedSteamAppId,
                                 )
                             } else {
                                 ActiveGameSession(
@@ -290,14 +320,21 @@ object PcEmulatorDetector : EmulatorDetector {
                                     romPath = null,
                                     romIdentifier = "$folderName$STEAM_SUFFIX",
                                     gameTitle = folderName,
+                                    coreOrBackend = backendName,
+                                    titleId = detectedSteamAppId,
                                 )
                             }
 
-                        if (matchedApp != null) {
+                        val candidateRank =
+                            when {
+                                matchedApp != null && candidate.isSteamappsCommon -> RANK_ROM_AND_STEAMAPPS_MATCH
+                                matchedApp != null -> RANK_ROM_MATCH
+                                candidate.isSteamappsCommon -> RANK_STEAMAPPS_CANDIDATE
+                                else -> RANK_GENERIC_CANDIDATE
+                            }
+                        if (candidateRank >= bestCandidateRank) {
                             bestSession = session
-                            hasRomManagerMatch = true
-                        } else if (!hasRomManagerMatch) {
-                            bestSession = session
+                            bestCandidateRank = candidateRank
                         }
                     }
                 }
@@ -361,7 +398,11 @@ object PcEmulatorDetector : EmulatorDetector {
             return null
         }
         val folderName = extractDriveGameFolder(normalizedExe) ?: cleanExeName(exeName)
-        return GameProcessCandidate(folderName = folderName, binaryName = exeName)
+        return GameProcessCandidate(
+            folderName = folderName,
+            binaryName = exeName,
+            isSteamappsCommon = false,
+        )
     }
 
     private fun extractSteamappsCommonCandidate(normalizedCmd: String): GameProcessCandidate? {
@@ -389,7 +430,11 @@ object PcEmulatorDetector : EmulatorDetector {
                 val relativeExePath = segment.substring(0, exeIndex + EXE_EXT_LEN).trim().removeSurrounding("\"")
                 val exeName = relativeExePath.substringAfterLast('\\').trim().removeSurrounding("\"")
                 if (exeName.isNotEmpty() && !isSystemBinary(exeName, relativeExePath)) {
-                    return GameProcessCandidate(folderName = rawFolder, binaryName = exeName)
+                    return GameProcessCandidate(
+                        folderName = rawFolder,
+                        binaryName = exeName,
+                        isSteamappsCommon = true,
+                    )
                 }
                 continue
             }
@@ -401,7 +446,11 @@ object PcEmulatorDetector : EmulatorDetector {
                 linuxBinary.lowercase() !in LINUX_WRAPPER_BINARIES &&
                 !isSystemBinary(linuxBinary, cleanedSegment)
             ) {
-                return GameProcessCandidate(folderName = rawFolder, binaryName = linuxBinary)
+                return GameProcessCandidate(
+                    folderName = rawFolder,
+                    binaryName = linuxBinary,
+                    isSteamappsCommon = true,
+                )
             }
         }
         return null

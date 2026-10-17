@@ -163,4 +163,15 @@ class PcLauncherTest {
 
             tempFile.delete()
         }
+
+    @Test
+    fun testParseSteamAppIdFromSafUriWhenPosixFileDoesNotExist() {
+        val appId =
+            launcher.parseSteamAppId(
+                context = context,
+                romPath = "/storage/6914-318F/Steam/1145360.steam",
+                romUri = "content://com.android.externalstorage.documents/tree/6914-318F%3ASteam/document/6914-318F%3ASteam%2F1145360.steam",
+            )
+        assertEquals(1145360, appId)
+    }
 }

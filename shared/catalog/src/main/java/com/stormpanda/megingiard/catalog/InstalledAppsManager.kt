@@ -458,7 +458,7 @@ object InstalledAppsManager {
         val defaultRetroArchCore = rawApp.defaultRetroArchCore ?: rawApp.retroArchCore
         val defaultEmulatorPackage = rawApp.defaultEmulatorPackage ?: rawApp.emulatorPackage
         val customRomRunner = if (rawApp.isRom) getCustomRomRunner(packageName) else null
-        val isMultiEmulatorSystem = rawApp.systemId == SYSTEM_ID_SWITCH || rawApp.systemId == SYSTEM_ID_PC
+        val isMultiEmulatorSystem = InstalledEmulatorRegistry.isMultiEmulatorSystem(rawApp.systemId)
         val effectiveRetroArchCore =
             if (rawApp.isRom && !isMultiEmulatorSystem) {
                 customRomRunner ?: defaultRetroArchCore
@@ -527,8 +527,7 @@ object InstalledAppsManager {
 
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
-        SwitchEmulators.invalidateCache()
-        PcEmulators.invalidateCache()
+        InstalledEmulatorRegistry.invalidateAllCaches()
         loadAppsJob?.cancel()
         loadAppsJob =
             scope.launch {

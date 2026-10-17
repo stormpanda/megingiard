@@ -5,6 +5,7 @@ import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SafPathResolver
 import com.stormpanda.megingiard.catalog.SwitchEmulators
+import java.io.File
 import java.util.Locale
 
 private const val TAG = "YuzuDetector"
@@ -43,7 +44,13 @@ object YuzuDetector : EmulatorDetector {
         for (path in logPaths) {
             val logContent = ProcessCmdlineProvider.readTextFile(path)
             if (!logContent.isNullOrBlank()) {
-                val session = parseSessionFromLog(packageName, logContent)
+                val session =
+                    parseSessionFromLog(
+                        packageName = packageName,
+                        logContent = logContent,
+                        focusedRomPath = focusedRomPath,
+                        focusedRomIdentifier = focusedRomIdentifier,
+                    )
                 if (session != null) {
                     AppLog.i(TAG, "Resolved session via log file '$path': ${session.gameTitle} (${session.systemId})")
                     return session
@@ -58,6 +65,8 @@ object YuzuDetector : EmulatorDetector {
     internal fun parseSessionFromLog(
         packageName: String,
         logContent: String,
+        focusedRomPath: String? = null,
+        focusedRomIdentifier: String? = null,
     ): ActiveGameSession? {
         val lines = logContent.lineSequence()
 
@@ -121,20 +130,67 @@ object YuzuDetector : EmulatorDetector {
             return null
         }
 
-        val knownTitle =
-            lastGameTitle ?: lastTitleId?.let { id ->
-                RomManager.romApps.value
-                    .firstOrNull { app ->
-                        app.romPath?.contains(id, ignoreCase = true) == true
-                    }?.label
+        val switchRomApps = RomManager.romApps.value.filter { it.systemId == SYSTEM_ID_SWITCH }
+        val matchedApp =
+            switchRomApps.firstOrNull { app ->
+                val matchesTitleId =
+                    lastTitleId != null && app.romPath?.contains(lastTitleId, ignoreCase = true) == true
+                val matchesTitle =
+                    lastGameTitle != null &&
+                        (
+                            app.label.equals(lastGameTitle, ignoreCase = true) ||
+                                app.defaultLabel?.equals(lastGameTitle, ignoreCase = true) == true ||
+                                app.romPath?.let { File(it).nameWithoutExtension.equals(lastGameTitle, ignoreCase = true) } == true
+                        )
+                matchesTitleId || matchesTitle
+            } ?: run {
+                if (focusedRomPath != null || focusedRomIdentifier != null) {
+                    switchRomApps.firstOrNull { app ->
+                        app.romPath?.equals(focusedRomPath, ignoreCase = true) == true ||
+                            (
+                                focusedRomIdentifier != null &&
+                                    (
+                                        app.romPath?.endsWith("/$focusedRomIdentifier", ignoreCase = true) == true ||
+                                            app.romPath.equals(focusedRomIdentifier, ignoreCase = true) ||
+                                            app.label.equals(
+                                                focusedRomIdentifier.substringBeforeLast('.'),
+                                                ignoreCase = true,
+                                            )
+                                    )
+                            )
+                    }
+                } else {
+                    null
+                }
             }
 
-        val resolvedTitle = knownTitle ?: "Switch Game (${lastTitleId ?: ""})".trim()
-        val resolvedRomIdentifier = lastTitleId ?: knownTitle
+        val resolvedRomPath: String?
+        val resolvedRomIdentifier: String?
+        val resolvedTitle: String
+
+        if (matchedApp != null) {
+            resolvedRomPath = matchedApp.romPath?.takeIf { it.startsWith("/") }
+            resolvedRomIdentifier =
+                matchedApp.romPath?.let { File(it).name } ?: (focusedRomIdentifier ?: lastTitleId ?: matchedApp.label)
+            resolvedTitle = lastGameTitle ?: matchedApp.label
+        } else if (focusedRomPath != null || focusedRomIdentifier != null) {
+            resolvedRomPath = focusedRomPath?.takeIf { it.startsWith("/") }
+            resolvedRomIdentifier =
+                focusedRomIdentifier ?: focusedRomPath?.let { File(it).name } ?: lastTitleId ?: lastGameTitle
+            resolvedTitle =
+                lastGameTitle
+                    ?: focusedRomIdentifier?.substringBeforeLast('.')
+                    ?: focusedRomPath?.let { File(it).nameWithoutExtension }
+                    ?: "Switch Game (${lastTitleId ?: ""})".trim()
+        } else {
+            resolvedRomPath = null
+            resolvedTitle = lastGameTitle ?: "Switch Game (${lastTitleId ?: ""})".trim()
+            resolvedRomIdentifier = lastTitleId ?: lastGameTitle
+        }
 
         return ActiveGameSession(
             packageName = packageName,
-            romPath = null,
+            romPath = resolvedRomPath,
             gameTitle = resolvedTitle,
             systemId = systemId,
             romIdentifier = resolvedRomIdentifier,

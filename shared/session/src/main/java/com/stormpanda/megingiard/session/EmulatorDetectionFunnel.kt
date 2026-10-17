@@ -23,6 +23,7 @@ object EmulatorDetectionFunnel {
         val packageName: String,
         val detector: EmulatorDetector,
         val initialSession: ActiveGameSession?,
+        val hasConfirmedLiveSession: Boolean,
         val sequence: Long,
     )
 
@@ -47,6 +48,7 @@ object EmulatorDetectionFunnel {
             foregroundTarget.collectLatest { target ->
                 if (target == null) return@collectLatest
                 var lastSession = target.initialSession
+                var confirmedLive = target.hasConfirmedLiveSession
                 while (true) {
                     delay(POLLING_DELAY_MS)
                     val currentSession =
@@ -57,6 +59,7 @@ object EmulatorDetectionFunnel {
                         )
                     if (foregroundTarget.value != target) return@collectLatest
                     if (currentSession != null) {
+                        confirmedLive = true
                         if (currentSession != lastSession) {
                             AppLog.i(
                                 TAG,
@@ -74,8 +77,10 @@ object EmulatorDetectionFunnel {
                         lastSession = null
                         _activeSession.value = null
                         _lastDetectedSession.value = null
-                        currentFocusedRomPath = null
-                        currentFocusedRomIdentifier = null
+                        if (confirmedLive) {
+                            currentFocusedRomPath = null
+                            currentFocusedRomIdentifier = null
+                        }
                     }
                 }
             }
@@ -89,6 +94,10 @@ object EmulatorDetectionFunnel {
         currentFocusedRomPath = path
         currentFocusedRomIdentifier = identifier
     }
+
+    internal fun getFocusedRomPathForTesting(): String? = currentFocusedRomPath
+
+    internal fun getFocusedRomIdentifierForTesting(): String? = currentFocusedRomIdentifier
 
     private val registeredDetectors: List<EmulatorDetector> =
         listOf(
@@ -137,10 +146,13 @@ object EmulatorDetectionFunnel {
         val effectiveSession =
             initialSession ?: run {
                 val last = _lastDetectedSession.value
-                if (last != null && last.packageName == packageName) {
+                if (last != null && last.packageName == packageName && isCompatibleWithFocusedRom(last, effectiveRomPath, effectiveRomId)) {
                     AppLog.i(TAG, "onPackageForeground: reusing last detected session for $packageName (${last.gameTitle})")
                     last
                 } else {
+                    if (last != null && last.packageName == packageName) {
+                        _lastDetectedSession.value = null
+                    }
                     null
                 }
             }
@@ -149,8 +161,31 @@ object EmulatorDetectionFunnel {
         if (effectiveSession != null) {
             _lastDetectedSession.value = effectiveSession
         }
-        foregroundTarget.value = ForegroundTarget(packageName, detector, effectiveSession, ++targetSequence)
+        foregroundTarget.value =
+            ForegroundTarget(
+                packageName = packageName,
+                detector = detector,
+                initialSession = effectiveSession,
+                hasConfirmedLiveSession = initialSession != null,
+                sequence = ++targetSequence,
+            )
         return effectiveSession
+    }
+
+    private fun isCompatibleWithFocusedRom(
+        session: ActiveGameSession,
+        effectiveRomPath: String?,
+        effectiveRomId: String?,
+    ): Boolean {
+        if (effectiveRomPath == null && effectiveRomId == null) return true
+        val pathMatches =
+            effectiveRomPath != null &&
+                session.romPath != null &&
+                session.romPath.equals(effectiveRomPath, ignoreCase = true)
+        val idMatches =
+            effectiveRomId != null &&
+                session.romIdentifier.equals(effectiveRomId, ignoreCase = true)
+        return pathMatches || idMatches
     }
 
     /**
