@@ -72,11 +72,7 @@ import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.catalog.InstalledEmulatorRegistry
 import com.stormpanda.megingiard.catalog.LibraryIconRef
-import com.stormpanda.megingiard.catalog.PcEmulators
 import com.stormpanda.megingiard.catalog.RomManager
-import com.stormpanda.megingiard.catalog.SYSTEM_ID_PC
-import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
-import com.stormpanda.megingiard.catalog.SwitchEmulators
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusGalleryManager
 import com.stormpanda.megingiard.media.SteamGridDbClient
 import com.stormpanda.megingiard.media.SteamGridDbGame
@@ -253,22 +249,14 @@ private fun GameInfoDeckContent(
             appInfo.defaultEmulatorPackage,
             appInfo.defaultRetroArchCore,
         ) {
-            val installedSwitch =
-                if (appInfo.systemId == SYSTEM_ID_SWITCH) {
-                    SwitchEmulators.getInstalledEmulators(context)
-                } else {
-                    emptyList()
-                }
-            val installedPc =
-                if (appInfo.systemId == SYSTEM_ID_PC) {
-                    PcEmulators.getInstalledEmulators(context)
-                } else {
-                    emptyList()
-                }
+            val installedEmulators =
+                InstalledEmulatorRegistry
+                    .forSystem(appInfo.systemId)
+                    ?.getInstalledEmulators(context)
+                    .orEmpty()
             buildRomRunnerChoices(
                 appInfo = appInfo,
-                installedSwitchEmulators = installedSwitch,
-                installedPcEmulators = installedPc,
+                installedEmulators = installedEmulators,
                 formatFolderDefault = { defaultName ->
                     context.getString(R.string.gamefocus_rom_runner_folder_default, defaultName)
                 },

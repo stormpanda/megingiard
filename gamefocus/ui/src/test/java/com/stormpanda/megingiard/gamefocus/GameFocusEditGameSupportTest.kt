@@ -66,8 +66,7 @@ class GameFocusEditGameSupportTest {
         val choices =
             buildRomRunnerChoices(
                 appInfo = androidApp,
-                installedSwitchEmulators = emptyList(),
-                installedPcEmulators = emptyList(),
+                installedEmulators = emptyList(),
                 formatFolderDefault = { "Folder Default ($it)" },
             )
         assertTrue(choices.isEmpty())
@@ -93,8 +92,7 @@ class GameFocusEditGameSupportTest {
         val choices =
             buildRomRunnerChoices(
                 appInfo = pcRom,
-                installedSwitchEmulators = emptyList(),
-                installedPcEmulators = installedPc,
+                installedEmulators = installedPc,
                 formatFolderDefault = { "Folder Default ($it)" },
             )
         assertEquals(3, choices.size)
@@ -124,8 +122,7 @@ class GameFocusEditGameSupportTest {
         val choices =
             buildRomRunnerChoices(
                 appInfo = switchRom,
-                installedSwitchEmulators = installedSwitch,
-                installedPcEmulators = emptyList(),
+                installedEmulators = installedSwitch,
                 formatFolderDefault = { "Folder Default ($it)" },
             )
         assertEquals(3, choices.size)
@@ -149,8 +146,7 @@ class GameFocusEditGameSupportTest {
         val choices =
             buildRomRunnerChoices(
                 appInfo = snesRom,
-                installedSwitchEmulators = emptyList(),
-                installedPcEmulators = emptyList(),
+                installedEmulators = emptyList(),
                 formatFolderDefault = { "Folder Default ($it)" },
             )
         assertEquals(5, choices.size)

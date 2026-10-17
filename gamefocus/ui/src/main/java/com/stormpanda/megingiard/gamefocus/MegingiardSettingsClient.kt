@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.gamefocus
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import com.stormpanda.megingiard.AppLog
@@ -177,25 +176,20 @@ object MegingiardSettingsClient {
         val defaultRetroArchPkg = RetroArchEmulators.SUPPORTED_EMULATOR_OPTIONS.first().packageName
         if (systemId == null) return defaultRetroArchPkg
         val registry = InstalledEmulatorRegistry.forSystem(systemId)
-        val candidates =
-            if (registry != null) {
-                val supportedPackages = registry.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }
-                if (!emulatorPackage.isNullOrBlank()) {
-                    listOf(emulatorPackage) + supportedPackages.filterNot { it == emulatorPackage }
-                } else {
-                    supportedPackages
-                }
-            } else {
-                RetroArchEmulators.SUPPORTED_EMULATOR_OPTIONS.map { it.packageName }
+        if (registry != null) {
+            val installedPackages = registry.getInstalledEmulators(context).map { it.packageName }
+            val preferred = emulatorPackage?.takeIf { it.isNotBlank() }
+            if (preferred != null && preferred in installedPackages) {
+                return preferred
             }
-        val pm = context.packageManager
-        return candidates.firstOrNull { pkg ->
-            try {
-                pm.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0))
-                true
-            } catch (_: Exception) {
-                false
-            }
-        } ?: candidates.first()
+            return installedPackages.firstOrNull()
+                ?: preferred
+                ?: registry.SUPPORTED_EMULATOR_OPTIONS.first().packageName
+        }
+        return RetroArchEmulators
+            .getInstalledEmulators(context)
+            .firstOrNull()
+            ?.packageName
+            ?: defaultRetroArchPkg
     }
 }

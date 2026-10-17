@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageInfo
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.InstalledEmulatorRegistry
 import com.stormpanda.megingiard.catalog.PcEmulators
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SYSTEM_ID_PC
@@ -11,8 +12,10 @@ import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.catalog.SwitchEmulators
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -27,6 +30,16 @@ private const val TEST_SECONDARY_COLOR = 0xFF0000FF.toInt()
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class MegingiardSettingsClientTest {
+    @Before
+    fun setUp() {
+        InstalledEmulatorRegistry.invalidateAllCaches()
+    }
+
+    @After
+    fun tearDown() {
+        InstalledEmulatorRegistry.invalidateAllCaches()
+    }
+
     @Test
     fun testObserveSteamGridDbApiToken_returnsFlow() =
         runTest {
@@ -114,6 +127,7 @@ class MegingiardSettingsClientTest {
         // Install Sudachi and Citron; without preferred package, picks first installed in SUPPORTED_EMULATOR_OPTIONS order
         shadowPm.installPackage(PackageInfo().apply { packageName = "org.sudachi.sudachi_emu" })
         shadowPm.installPackage(PackageInfo().apply { packageName = "org.citron.citron_emu" })
+        SwitchEmulators.invalidateCache()
         assertEquals(
             "org.citron.citron_emu",
             MegingiardSettingsClient.getActualPackageName(context, SYSTEM_ID_SWITCH),
@@ -142,6 +156,7 @@ class MegingiardSettingsClientTest {
 
         shadowPm.installPackage(PackageInfo().apply { packageName = "com.droiddeck.launcher" })
         shadowPm.installPackage(PackageInfo().apply { packageName = "app.gamenative" })
+        PcEmulators.invalidateCache()
         assertEquals(
             "app.gamenative",
             MegingiardSettingsClient.getActualPackageName(context, SYSTEM_ID_PC),

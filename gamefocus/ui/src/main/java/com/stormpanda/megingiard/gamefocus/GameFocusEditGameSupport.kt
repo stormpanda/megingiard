@@ -7,9 +7,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.EMULATOR_ID_RETROARCH
 import com.stormpanda.megingiard.catalog.EmulatorOption
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.InstalledEmulatorRegistry
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
-import com.stormpanda.megingiard.catalog.SYSTEM_ID_PC
-import com.stormpanda.megingiard.catalog.SYSTEM_ID_SWITCH
 import com.stormpanda.megingiard.media.SteamGridDbException
 
 private const val TAG = "GFEditGameSupport"
@@ -87,20 +86,13 @@ internal data class RomRunnerChoice(
  */
 internal fun buildRomRunnerChoices(
     appInfo: InstalledAppInfo,
-    installedSwitchEmulators: List<EmulatorOption>,
-    installedPcEmulators: List<EmulatorOption>,
+    installedEmulators: List<EmulatorOption> = emptyList(),
     formatFolderDefault: (String) -> String,
 ): List<RomRunnerChoice> {
     if (!appInfo.isRom) return emptyList()
     val systemDef = SUPPORTED_SYSTEMS.find { it.id == appInfo.systemId } ?: return emptyList()
 
-    val installedEmulators =
-        when (appInfo.systemId) {
-            SYSTEM_ID_SWITCH -> installedSwitchEmulators
-            SYSTEM_ID_PC -> installedPcEmulators
-            else -> null
-        }
-    if (installedEmulators != null) {
+    if (InstalledEmulatorRegistry.isMultiEmulatorSystem(appInfo.systemId)) {
         val defaultPkg = appInfo.defaultEmulatorPackage
         val defaultDisplayName =
             installedEmulators.find { it.packageName == defaultPkg }?.displayName

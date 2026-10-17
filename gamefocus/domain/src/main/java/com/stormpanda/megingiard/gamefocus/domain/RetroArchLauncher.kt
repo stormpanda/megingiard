@@ -75,6 +75,14 @@ class RetroArchLauncher : RomLauncher {
         }
     }
 
+    /**
+     * Resolves the `retroarch.cfg` path to pass in `CONFIGFILE`.
+     *
+     * Checks both `<root>/Android/data/<pkg>/files/retroarch.cfg` and `<root>/RetroArch/retroarch.cfg`
+     * across all mounted storage volumes. Because Android 11+ scoped storage blocks unprivileged
+     * `File.exists()` checks inside another app's `/Android/data/<pkg>/` directory, falls back to the
+     * primary volume's `Android/data/<pkg>/files/retroarch.cfg` when no readable config file is found.
+     */
     private fun resolveConfigFile(packageName: String): String? {
         val relativeSubPaths =
             listOf(
