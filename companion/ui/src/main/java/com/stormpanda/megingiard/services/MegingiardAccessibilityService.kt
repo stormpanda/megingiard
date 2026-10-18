@@ -81,6 +81,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         instance = this
         AppLog.i(TAG, "onServiceConnected: Megingiard Accessibility Service is active")
         AppStateManager.setAccessibilityActive(true)
+        seedPrimaryDisplayForegroundPackage()
 
         serviceScope.launch(Dispatchers.IO) {
             if (PrivdManager.state.value != PrivdState.RUNNING) {
@@ -100,6 +101,23 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     AutoKeyboardFocusCoordinator.reset()
                 }
             }
+        }
+    }
+
+    private fun seedPrimaryDisplayForegroundPackage() {
+        try {
+            val primaryWindows = windowsOnAllDisplays.get(Display.DEFAULT_DISPLAY) ?: return
+            for (window in primaryWindows) {
+                if (window.type != AccessibilityWindowInfo.TYPE_APPLICATION) continue
+                val pkg = window.root?.packageName?.toString()
+                if (!pkg.isNullOrBlank()) {
+                    AppLog.i(TAG, "seedPrimaryDisplayForegroundPackage: discovered initial primary window package=$pkg")
+                    AutoSwitchCoordinator.onPackageChanged(pkg)
+                    break
+                }
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "seedPrimaryDisplayForegroundPackage failed: ${e.message}")
         }
     }
 

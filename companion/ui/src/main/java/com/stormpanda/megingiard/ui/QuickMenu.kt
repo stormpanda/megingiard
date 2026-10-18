@@ -146,6 +146,10 @@ fun QuickMenu(
                     onDismiss()
                 },
                 onToggleFreeze = ScreenCaptureManager::toggleFrozen,
+                onOpenGameInspector = {
+                    AppStateManager.setGameInspectorActive(true)
+                    onDismiss()
+                },
                 onTakeTopScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP) },
                 onTakeBottomScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTTOM) },
                 onTakeBothScreenshot = { ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH) },
@@ -334,6 +338,11 @@ private fun QuickMenuHelpModal(
             icon = Icons.Rounded.Pause,
             label = stringResource(R.string.help_quickmenu_freeze_label),
             description = stringResource(R.string.help_quickmenu_freeze_desc),
+        )
+        HelpEntry(
+            symbolName = "layers",
+            label = stringResource(R.string.help_quickmenu_inspect_label),
+            description = stringResource(R.string.help_quickmenu_inspect_desc),
         )
         HelpEntry(
             symbolName = "splitscreen_bottom",

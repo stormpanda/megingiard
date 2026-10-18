@@ -74,6 +74,7 @@ the universal "go back" mechanism throughout the app.
     - **Freeze / Unfreeze** icon button: toggles `ScreenCaptureManager.toggleFrozen()`. Shows a Play
       icon when frozen (to resume/unfreeze), and a Pause icon when capturing/active (to freeze). Tinted
       with `colors.accent` when frozen. Disabled when not capturing or when in Companion Hub.
+    - **Inspect UI** icon button: opens the Universal Graphics UI & Shader Inspector (`AppStateManager.setGameInspectorActive(true)`) on the bottom screen (`CompanionSurfaceMode.GAME_INSPECTOR`). Uses Material Symbol `layers` with label "Inspect UI". Disabled when in Companion Hub.
   - **Take Screenshot Card (Right Card):**
     - Headline: "TAKE SCREENSHOT" (`R.string.quick_menu_take_screenshot`). All three screenshot buttons are unconditionally enabled.
     - **Top Screenshot** icon button: captures Display 0 (Top Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP)`. Uses Material Symbol `splitscreen_bottom` (inverted per layout orientation convention) with label "Top". Automatically triggers a one-shot capture prompt if neither mirroring nor Privileged Mode is active.

@@ -60,6 +60,8 @@ $entries
 val nativeBinaries = listOf(
     "megingiard_privd_arm64",
     "megingiard_mirror.dex",
+    "megingiard_gfx_inject_arm64",
+    "libVkLayer_MegingiardInspector.so",
 )
 val assetsDir = rootProject.file("companion/ui/src/main/assets")
 val generatedHashesDir = layout.buildDirectory.dir("generated/source/nativeBinaryHashes/kotlin")

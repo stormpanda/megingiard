@@ -40,6 +40,7 @@
 | `docs/features/config/FEATURE.md` | Config Export/Import (`.mgrd` backup, profile sharing) |
 | `docs/features/gamefocus/FEATURE.md` | Game Focus launcher variant — split, see its doc map |
 | `docs/features/help/FEATURE.md` | In-App Help (HelpModal infrastructure & content) |
+| `docs/features/inspector/FEATURE.md` | Universal Graphics UI & Shader Inspector |
 | `docs/features/integration-api/FEATURE.md` | Integration API (clients, state sharing, profile query) |
 | `docs/features/keyboard/FEATURE.md` | Virtual Keyboard |
 | `docs/features/log-report/FEATURE.md` | Log Report Export |

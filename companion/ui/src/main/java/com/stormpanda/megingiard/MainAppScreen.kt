@@ -67,6 +67,7 @@ import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
+import com.stormpanda.megingiard.inspector.GameInspectorScreen
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.GamepadRecordingState
 import com.stormpanda.megingiard.macropad.HapticStrength
@@ -126,11 +127,13 @@ fun MainAppScreen() {
 
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsStateWithLifecycle()
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsStateWithLifecycle()
+    val isGameInspectorActive by AppStateManager.isGameInspectorActive.collectAsStateWithLifecycle()
     val isEditorActive by AppStateManager.isEditorActive.collectAsStateWithLifecycle()
 
     val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
-    val isGesturesEnabled = !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive
+    val isGesturesEnabled =
+        !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isGameInspectorActive && !isViewportEditActive
 
     val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsStateWithLifecycle()
     val showEmptyCutoutsDialog by AppStateManager.showEmptyCutoutsDialog.collectAsStateWithLifecycle()
@@ -392,6 +395,16 @@ fun MainAppScreen() {
                 modifier = Modifier.fillMaxSize(),
             ) {
                 KeyboardScreen(
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            AnimatedVisibility(
+                visible = isGameInspectorActive,
+                enter = modalEnter,
+                exit = modalExit,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                GameInspectorScreen(
                     modifier = Modifier.fillMaxSize(),
                 )
             }

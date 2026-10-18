@@ -51,6 +51,7 @@ private const val PM_DISABLED_LABEL_ALPHA = 0.4f
 private const val SYMBOL_SPLITSCREEN_BOTTOM = "splitscreen_bottom"
 private const val SYMBOL_SPLITSCREEN_TOP = "splitscreen_top"
 private const val SYMBOL_SPLITSCREEN = "splitscreen"
+private const val SYMBOL_LAYERS = "layers"
 
 private val PM_PANEL_SHAPE = RoundedCornerShape(PM_PANEL_CORNER)
 
@@ -64,6 +65,7 @@ internal fun MirrorControlCard(
     onStart: () -> Unit,
     onStop: () -> Unit,
     onToggleFreeze: () -> Unit,
+    onOpenGameInspector: () -> Unit = {},
     onTakeTopScreenshot: () -> Unit,
     onTakeBottomScreenshot: () -> Unit,
     onTakeBothScreenshot: () -> Unit,
@@ -121,6 +123,16 @@ internal fun MirrorControlCard(
                     enabled = isPauseEnabled,
                     colors = colors,
                     onClick = onToggleFreeze,
+                    modifier = Modifier.weight(1f),
+                )
+                MirrorControlIconButton(
+                    symbolName = SYMBOL_LAYERS,
+                    contentDescription = stringResource(R.string.cd_inspect_game),
+                    label = stringResource(R.string.quick_menu_inspect_game),
+                    tint = colors.onControlOverlay,
+                    enabled = isStartStopEnabled,
+                    colors = colors,
+                    onClick = onOpenGameInspector,
                     modifier = Modifier.weight(1f),
                 )
             }

@@ -9,4 +9,5 @@ enum class CompanionSurfaceMode {
     MACROPAD,
     KEYBOARD,
     TOUCHPAD,
+    GAME_INSPECTOR,
 }

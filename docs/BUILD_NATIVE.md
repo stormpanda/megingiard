@@ -10,9 +10,11 @@ The pre-built binaries live in `companion/ui/src/main/assets/`. They are checked
 
 The checked-in asset binaries are part of the trusted runtime surface. Whenever a native C source file changes, rebuild the matching asset immediately from the workspace root:
 
-| Source file                                    | Output asset                                          | Build script                          |
-| ---------------------------------------------- | ----------------------------------------------------- | ------------------------------------- |
-| `companion/ui/src/main/cpp/megingiard_privd.c` | `companion/ui/src/main/assets/megingiard_privd_arm64` | `./scripts/build_megingiard_privd.sh` |
+| Source file                                        | Output asset                                                      | Build script                              |
+| -------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------- |
+| `companion/ui/src/main/cpp/megingiard_privd.c`     | `companion/ui/src/main/assets/megingiard_privd_arm64`             | `./scripts/build_megingiard_privd.sh`     |
+| `companion/ui/src/main/cpp/megingiard_gfx_inject.c`| `companion/ui/src/main/assets/megingiard_gfx_inject_arm64`        | `./scripts/build_megingiard_gfx_inspector.sh` |
+| `companion/ui/src/main/cpp/megingiard_gfx_layer.c` | `companion/ui/src/main/assets/libVkLayer_MegingiardInspector.so`  | `./scripts/build_megingiard_gfx_inspector.sh` |
 
 The agent workflow in [AGENTS.md](../AGENTS.md#3-checklist-for-every-change) mirrors this policy. If a script fails, fix the source error before proceeding.
 
@@ -26,6 +28,8 @@ Megingiard treats native helpers and the privileged mirror DEX as pinned assets.
 
 - `megingiard_privd_arm64`
 - `megingiard_mirror.dex`
+- `megingiard_gfx_inject_arm64`
+- `libVkLayer_MegingiardInspector.so`
 
 At runtime, `BinaryIntegrity.verify()` fails closed if an asset is missing from the generated map or if its SHA-256 does not match. This protects both local `filesDir` deployment and ADB-Wireless bootstrap from accidentally or maliciously swapped asset bytes.
 
@@ -41,13 +45,13 @@ The `megingiard_privd` daemon uses a per-install HMAC key generated on the devic
 
 `companion/ui/src/main/cpp/megingiard_privd.c`
 
-The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug; current protocol `PRIVD_VERSION = 17`). It provides:
+The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug; current protocol `PRIVD_VERSION = 18`). It provides:
 1. Multi-touch injection (`D`/`M`/`U`) and touchscreen event observation (`SUB TOUCH`) via `/dev/input/event6` (AYN Thor touchscreen).
 2. Mouse event injection (`MM`/`MB`/`MW`) via `/dev/uinput`.
 3. Keyboard key injection (`KB_START`/`KB_STOP`/`KD`/`KU`) via `/dev/uinput`.
 4. Gamepad input injection (`GD`/`GU`/`HD`/`JS`) and physical gamepad observation (`SUB GAMEPAD`) via `/dev/input/event*`.
 5. Display screenshot capture (`SCREENSHOT [<display_id>] <path>`) via `/system/bin/screencap`.
-6. Privileged text file reading (`READ_FILE <path>`) and process listing (`LIST_PROCESSES`) from `/proc` for active game detection.
+6. Privileged text file reading (`READ_FILE <path>`), process listing (`LIST_PROCESSES`), and strictly whitelisted graphics-inspector helper execution (`EXEC_SHELL <cmd>`) for active game detection and Universal Graphics Inspector staging.
 7. Low-latency lifecycle control (`PING`/`VERSION`/`QUIT`) and privileged DEX spawning (`MIRROR START_DIRECT`/`MIRROR STOP`).
 
 ### Prerequisites

@@ -408,6 +408,7 @@ object AppStateManager {
     val isViewportEditActive: StateFlow<Boolean> = isPrimaryModalActive(PrimaryModalType.MIRROR_VIEWPORT_EDITOR)
     val isFullscreenKeyboardActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.KEYBOARD)
     val isFullscreenMouseActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.TOUCHPAD)
+    val isGameInspectorActive: StateFlow<Boolean> = isCompanionSurfaceActive(CompanionSurfaceMode.GAME_INSPECTOR)
 
     fun openQuickMenu() {
         if (OnboardingWizardManager.isWizardActive.value || _isPrivdSetupWizardActive.value) {
@@ -775,6 +776,19 @@ object AppStateManager {
             if (_companionSurfaceMode.value == CompanionSurfaceMode.TOUCHPAD) {
                 _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
             }
+        }
+    }
+
+    fun setGameInspectorActive(active: Boolean) {
+        if (active && (OnboardingWizardManager.isWizardActive.value || _isPrivdSetupWizardActive.value)) {
+            AppLog.w(TAG, "setGameInspectorActive suppressed while wizard is active")
+            return
+        }
+        AppLog.i(TAG, "setGameInspectorActive($active)")
+        if (active) {
+            _companionSurfaceMode.value = CompanionSurfaceMode.GAME_INSPECTOR
+        } else if (_companionSurfaceMode.value == CompanionSurfaceMode.GAME_INSPECTOR) {
+            _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
         }
     }
 

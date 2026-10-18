@@ -412,6 +412,23 @@ object PrivdClient {
         return result
     }
 
+    suspend fun executeShellCommand(command: String): String? {
+        val sanitized = command.replace('\n', ' ').replace('\r', ' ').trim()
+        val result =
+            executeMultiLineRpc(
+                command = "EXEC_SHELL $sanitized\n",
+                timeoutMs = READ_FILE_TIMEOUT_MS,
+                rpc =
+                    PendingRpc.MultiLine(
+                        beginMarker = "SHELL_BEGIN",
+                        endMarker = "SHELL_END",
+                        errorPrefix = "SHELL_ERR",
+                    ),
+            )
+        AppLog.i(TAG, "executeShellCommand('$sanitized') fetched ${result?.length ?: 0} bytes")
+        return result
+    }
+
     fun subscribeTouch() {
         AppLog.d(TAG, "subscribeTouch() -> sending 'SUB TOUCH\\n'")
         send("SUB TOUCH\n")

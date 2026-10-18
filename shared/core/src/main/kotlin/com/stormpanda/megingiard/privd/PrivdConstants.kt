@@ -9,11 +9,16 @@ object PrivdConstants {
      * Incrementing this value triggers automatic binary re-push and reconnection
      * dialogs across app upgrades and downgrades.
      */
-    const val PRIVD_VERSION = 17
+    const val PRIVD_VERSION = 18
 
     const val DAEMON_BASE_NAME = "megingiard_privd"
     const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
     const val MIRROR_DEX_ASSET_NAME = "megingiard_mirror.dex"
+    const val GFX_INJECT_ASSET_NAME = "megingiard_gfx_inject_arm64"
+    const val GFX_LAYER_ASSET_NAME = "libVkLayer_MegingiardInspector.so"
+    const val GFX_INJECT_REMOTE_PATH = "/data/local/tmp/megingiard_gfx_inject_arm64"
+    const val GFX_LAYER_REMOTE_PATH = "/data/local/tmp/libVkLayer_MegingiardInspector.so"
+    const val GFX_LAYER_NAME = "VK_LAYER_MEGINGIARD_INSPECTOR"
 
     const val PORT_RELEASE_START = 51234
     const val PORT_DEBUG_START = 51244

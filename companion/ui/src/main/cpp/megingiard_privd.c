@@ -65,7 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 17
+#define PRIVD_VERSION 18
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
@@ -1055,6 +1055,62 @@ static void handle_list_processes(int client_fd) {
     pthread_mutex_unlock(&g_send_mutex);
 }
 
+static int is_allowed_shell_cmd(const char *cmd) {
+    if (!cmd || cmd[0] == '\0') return 0;
+    for (const char *p = cmd; *p != '\0'; p++) {
+        if (*p == '\n' || *p == '\r' || *p == '`' || *p == '$') {
+            return 0;
+        }
+    }
+    if (strncmp(cmd, "/data/local/tmp/megingiard_", 27) == 0) return 1;
+    if (strncmp(cmd, "cp \"/data/", 10) == 0) return 1;
+    if (strncmp(cmd, "chmod 755 /data/local/tmp/megingiard_", 37) == 0) return 1;
+    if (strncmp(cmd, "chmod 644 /data/local/tmp/libVkLayer_", 37) == 0) return 1;
+    if (strncmp(cmd, "run-as ", 7) == 0) return 1;
+    if (strncmp(cmd, "settings put global enable_gpu_debug_layers ", 44) == 0) return 1;
+    if (strncmp(cmd, "settings put global gpu_debug_", 30) == 0) return 1;
+    if (strncmp(cmd, "settings delete global gpu_debug_", 33) == 0) return 1;
+    if (strncmp(cmd, "setprop debug.vulkan.layers ", 28) == 0) return 1;
+    return 0;
+}
+
+static void handle_exec_shell(int client_fd, const char *cmd) {
+    pthread_mutex_lock(&g_send_mutex);
+    if (!is_allowed_shell_cmd(cmd)) {
+        (void)write(client_fd, "SHELL_ERR FORBIDDEN_CMD\n", 24);
+        pthread_mutex_unlock(&g_send_mutex);
+        return;
+    }
+
+    char full_cmd[480];
+    snprintf(full_cmd, sizeof(full_cmd), "%s 2>&1", cmd);
+    FILE *fp = popen(full_cmd, "r");
+    if (!fp) {
+        (void)write(client_fd, "SHELL_ERR POPEN_FAILED\n", 23);
+        pthread_mutex_unlock(&g_send_mutex);
+        return;
+    }
+
+    const size_t MAX_SHELL_BYTES = 128 * 1024;
+    (void)write(client_fd, "SHELL_BEGIN\n", 12);
+    char buf[1024];
+    size_t total_read = 0;
+    while (total_read < MAX_SHELL_BYTES) {
+        size_t to_read = sizeof(buf);
+        if (total_read + to_read > MAX_SHELL_BYTES) {
+            to_read = MAX_SHELL_BYTES - total_read;
+        }
+        size_t n = fread(buf, 1, to_read, fp);
+        if (n == 0) break;
+        (void)write(client_fd, buf, n);
+        total_read += n;
+    }
+    pclose(fp);
+
+    (void)write(client_fd, "\nSHELL_END\n", 11);
+    pthread_mutex_unlock(&g_send_mutex);
+}
+
 /*
  * Handles a single client connection.
  * Returns 0 on normal disconnect, 1 if the client requested QUIT.
@@ -1264,6 +1320,18 @@ static int serve_client(int client_fd) {
 
         if (strncmp(line, "LIST_PROCESSES", 14) == 0) {
             handle_list_processes(client_fd);
+            continue;
+        }
+
+        if (strncmp(line, "EXEC_SHELL ", 11) == 0) {
+            char *p = line + 11;
+            size_t len = strlen(p);
+            while (len > 0 && (p[len - 1] == '\n' || p[len - 1] == '\r')) {
+                p[len - 1] = '\0';
+                len--;
+            }
+            while (*p == ' ') p++;
+            handle_exec_shell(client_fd, p);
             continue;
         }
 
