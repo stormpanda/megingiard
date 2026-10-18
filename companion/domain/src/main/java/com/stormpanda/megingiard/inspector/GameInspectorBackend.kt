@@ -50,6 +50,16 @@ private val CONTAINER_RUNTIME_DAEMON_EXES =
         "crashpad_handler.exe",
     )
 
+private val WINE_LOADER_BINARIES =
+    setOf(
+        "wine",
+        "wine64",
+        "wine-preloader",
+        "wine64-preloader",
+        "box64",
+        "fex-emu",
+    )
+
 /**
  * Resolved process and graphics API metadata for a running target game/emulator.
  *
@@ -110,6 +120,9 @@ object PrivdGameInspectorBackend : GameInspectorBackend {
     @Volatile
     private var activeFallbackPid: Int = 0
 
+    @Volatile
+    private var activePackageName: String? = null
+
     override fun isPrivdRunning(): Boolean = PrivdManager.state.value == PrivdState.RUNNING
 
     override suspend fun resolveTopDisplayForegroundPackage(): String? {
@@ -126,6 +139,7 @@ object PrivdGameInspectorBackend : GameInspectorBackend {
     override suspend fun findTargetProcess(packageName: String): TargetProcessInfo? {
         val rawProcesses = PrivdClient.getRunningProcesses() ?: return null
         val (primaryPid, fallbackPid) = parseTargetPidsForPackage(rawProcesses, packageName) ?: return null
+        activePackageName = packageName
         activeTargetPid = primaryPid
         activeFallbackPid = fallbackPid ?: 0
 
@@ -149,8 +163,8 @@ object PrivdGameInspectorBackend : GameInspectorBackend {
         context: Context,
         target: TargetProcessInfo,
     ): Boolean {
+        activePackageName = target.packageName
         activeTargetPid = target.pid
-        activeFallbackPid = target.fallbackPid ?: 0
         if (!stageInspectorBinaries(context)) {
             AppLog.e(TAG, "ensureAgentAttached: failed to stage graphics inspector binaries")
             return false
@@ -161,14 +175,20 @@ object PrivdGameInspectorBackend : GameInspectorBackend {
         PrivdClient.executeShellCommand(runAsCmd)
 
         val primaryAttached = attachSinglePid(target.pid)
+        if (primaryAttached) {
+            activeFallbackPid = 0
+            return true
+        }
+
+        val fallbackPid = target.fallbackPid
         val fallbackAttached =
-            if (target.fallbackPid != null && target.fallbackPid != target.pid) {
-                attachSinglePid(target.fallbackPid)
+            if (fallbackPid != null && fallbackPid != target.pid) {
+                attachSinglePid(fallbackPid)
             } else {
                 false
             }
-
-        return primaryAttached || fallbackAttached
+        activeFallbackPid = if (fallbackAttached && fallbackPid != null) fallbackPid else 0
+        return fallbackAttached
     }
 
     override suspend fun setVulkanStartupLayerArmed(
@@ -201,7 +221,7 @@ object PrivdGameInspectorBackend : GameInspectorBackend {
 
     override suspend fun querySnapshot(taggedUiIds: Set<String>): GraphicsInspectorSnapshot? =
         withContext(Dispatchers.IO) {
-            val primarySnap =
+            var primarySnap =
                 if (activeTargetPid > 0) {
                     sendInspectorRpc(
                         GameInspectorProtocol.formatListCommand(),
@@ -212,8 +232,36 @@ object PrivdGameInspectorBackend : GameInspectorBackend {
                     null
                 }
 
+            if (primarySnap == null) {
+                val pkg = activePackageName
+                if (!pkg.isNullOrBlank() && isPrivdRunning()) {
+                    val rawProcesses = PrivdClient.getRunningProcesses()
+                    val resolvedPids = rawProcesses?.let { parseTargetPidsForPackage(it, pkg) }
+                    val newPrimaryPid = resolvedPids?.first ?: 0
+                    if (newPrimaryPid > 0 && newPrimaryPid != activeTargetPid) {
+                        AppLog.i(
+                            TAG,
+                            "querySnapshot: target pid changed from $activeTargetPid to $newPrimaryPid for $pkg; re-attaching",
+                        )
+                        activeTargetPid = newPrimaryPid
+                        if (attachSinglePid(newPrimaryPid)) {
+                            activeFallbackPid = 0
+                            primarySnap =
+                                sendInspectorRpc(
+                                    GameInspectorProtocol.formatListCommand(),
+                                    multiLine = true,
+                                    targetPid = activeTargetPid,
+                                )?.let { GameInspectorProtocol.parseSnapshot(it, taggedUiIds) }
+                        }
+                    }
+                }
+            }
+
             val fallbackSnap =
-                if (activeFallbackPid > 0 && activeFallbackPid != activeTargetPid) {
+                if (primarySnap == null &&
+                    activeFallbackPid > 0 &&
+                    activeFallbackPid != activeTargetPid
+                ) {
                     sendInspectorRpc(
                         GameInspectorProtocol.formatListCommand(),
                         multiLine = true,
@@ -255,39 +303,36 @@ object PrivdGameInspectorBackend : GameInspectorBackend {
         withContext(Dispatchers.IO) {
             val cmd = GameInspectorProtocol.formatSetCommand(nodeId, enabled)
             val primaryOk = sendInspectorRpc(cmd, multiLine = false, targetPid = activeTargetPid) == "OK"
-            val fallbackOk =
-                if (activeFallbackPid > 0 && activeFallbackPid != activeTargetPid) {
-                    sendInspectorRpc(cmd, multiLine = false, targetPid = activeFallbackPid) == "OK"
-                } else {
-                    false
-                }
-            primaryOk || fallbackOk
+            if (primaryOk) return@withContext true
+            if (activeFallbackPid > 0 && activeFallbackPid != activeTargetPid) {
+                sendInspectorRpc(cmd, multiLine = false, targetPid = activeFallbackPid) == "OK"
+            } else {
+                false
+            }
         }
 
     override suspend fun setAllNodesEnabled(enabled: Boolean): Boolean =
         withContext(Dispatchers.IO) {
             val cmd = GameInspectorProtocol.formatSetAllCommand(enabled)
             val primaryOk = sendInspectorRpc(cmd, multiLine = false, targetPid = activeTargetPid) == "OK"
-            val fallbackOk =
-                if (activeFallbackPid > 0 && activeFallbackPid != activeTargetPid) {
-                    sendInspectorRpc(cmd, multiLine = false, targetPid = activeFallbackPid) == "OK"
-                } else {
-                    false
-                }
-            primaryOk || fallbackOk
+            if (primaryOk) return@withContext true
+            if (activeFallbackPid > 0 && activeFallbackPid != activeTargetPid) {
+                sendInspectorRpc(cmd, multiLine = false, targetPid = activeFallbackPid) == "OK"
+            } else {
+                false
+            }
         }
 
     override suspend fun invertAllNodes(): Boolean =
         withContext(Dispatchers.IO) {
             val cmd = GameInspectorProtocol.formatInvertCommand()
             val primaryOk = sendInspectorRpc(cmd, multiLine = false, targetPid = activeTargetPid) == "OK"
-            val fallbackOk =
-                if (activeFallbackPid > 0 && activeFallbackPid != activeTargetPid) {
-                    sendInspectorRpc(cmd, multiLine = false, targetPid = activeFallbackPid) == "OK"
-                } else {
-                    false
-                }
-            primaryOk || fallbackOk
+            if (primaryOk) return@withContext true
+            if (activeFallbackPid > 0 && activeFallbackPid != activeTargetPid) {
+                sendInspectorRpc(cmd, multiLine = false, targetPid = activeFallbackPid) == "OK"
+            } else {
+                false
+            }
         }
 
     internal fun parseTopDisplayPackageFromDumpsys(rawDumpsys: String): String? {
@@ -374,31 +419,48 @@ object PrivdGameInspectorBackend : GameInspectorBackend {
     }
 
     internal fun extractContainerExeName(cmdline: String): String? {
-        var searchFrom = 0
-        while (searchFrom < cmdline.length) {
-            val idx = cmdline.indexOf(EXE_EXTENSION, startIndex = searchFrom, ignoreCase = true)
-            if (idx < 0) return null
-            val endIdx = idx + EXE_EXTENSION.length
-            val validBoundary =
-                endIdx == cmdline.length ||
-                    cmdline[endIdx].isWhitespace() ||
-                    cmdline[endIdx] == '"'
-            if (validBoundary) {
-                val prefix = cmdline.substring(0, endIdx)
-                val base =
-                    prefix
-                        .substringAfterLast('\\')
-                        .substringAfterLast('/')
-                        .substringAfterLast('"')
-                        .trim()
-                        .lowercase()
-                if (base.length > EXE_EXTENSION.length && base.endsWith(EXE_EXTENSION)) {
-                    return base
-                }
+        val trimmed = cmdline.trimStart()
+        if (trimmed.isEmpty()) return null
+        val firstToken =
+            trimmed
+                .substringBefore(' ')
+                .substringAfterLast('/')
+                .substringAfterLast('\\')
+                .trim('"')
+                .lowercase()
+        val effectiveCmd =
+            if (firstToken in WINE_LOADER_BINARIES) {
+                trimmed.substringAfter(' ', "").trimStart()
+            } else {
+                trimmed
             }
-            searchFrom = endIdx
+        if (effectiveCmd.isEmpty()) return null
+
+        val idx = effectiveCmd.indexOf(EXE_EXTENSION, startIndex = 0, ignoreCase = true)
+        if (idx < 0) return null
+        val endIdx = idx + EXE_EXTENSION.length
+        val validBoundary =
+            endIdx == effectiveCmd.length ||
+                effectiveCmd[endIdx].isWhitespace() ||
+                effectiveCmd[endIdx] == '"'
+        if (!validBoundary) return null
+
+        val prefix = effectiveCmd.substring(0, endIdx).trim()
+        if (prefix.contains(" /") || prefix.contains(" -")) {
+            return null
         }
-        return null
+        val base =
+            prefix
+                .substringAfterLast('\\')
+                .substringAfterLast('/')
+                .substringAfterLast('"')
+                .trim()
+                .lowercase()
+        return if (base.length > EXE_EXTENSION.length && base.endsWith(EXE_EXTENSION)) {
+            base
+        } else {
+            null
+        }
     }
 
     internal fun detectGraphicsApiFromMaps(mapsText: String): GraphicsApi {

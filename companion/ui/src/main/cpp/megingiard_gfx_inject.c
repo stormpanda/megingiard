@@ -61,15 +61,17 @@
  * or runs inside a Linux/glibc container without Android's /system/bin/linker64.
  * ========================================================================= */
 
-#define CAVE_MAGIC      0x4D47524443415645ULL /* "MGRDCAVE" */
-#define CAVE_MAX_NODES  40
-#define CAVE_CMD_STATES 8
+#define CAVE_MAGIC_V1   0x4D47524443415645ULL /* "MGRDCAVE" */
+#define CAVE_MAGIC_V2   0x4D47524443415632ULL /* "MGRDCAV2" */
+#define CAVE_MAGIC      0x4D47524443415633ULL /* "MGRDCAV3" */
+#define CAVE_MAX_NODES  128
+#define CAVE_CMD_STATES 16
 
 typedef struct {
     uint64_t handle;     /* +0x00 */
     uint32_t draws;      /* +0x08 */
     uint16_t category;   /* +0x0C: 1=RENDER_PASS, 2=PIPELINE */
-    uint16_t enabled;    /* +0x0E: 1=enabled, 0=disabled */
+    uint16_t enabled;    /* +0x0E: bit0=allow, bits1..3=mask3, bit8=tag, bits9..15=idle */
 } CaveNode;              /* 16 bytes */
 
 typedef struct {
@@ -79,30 +81,32 @@ typedef struct {
 } CaveCmdState;           /* 24 bytes */
 
 typedef struct {
-    uint64_t magic;                       /* +0x000 */
-    uint32_t api;                         /* +0x008: 2=VULKAN */
-    uint32_t node_count;                  /* +0x00C */
-    uint64_t frame_counter;               /* +0x010 */
-    uint64_t last_active_rp;              /* +0x018 */
-    uint64_t last_active_pipe;            /* +0x020 */
-    uint64_t real_CmdBeginRenderPass;     /* +0x028 */
-    uint64_t real_CmdBeginRenderPass2;    /* +0x030 */
-    uint64_t real_CmdEndRenderPass;       /* +0x038 */
-    uint64_t real_CmdEndRenderPass2;      /* +0x040 */
-    uint64_t real_CmdBeginRendering;      /* +0x048 */
-    uint64_t real_CmdEndRendering;        /* +0x050 */
-    uint64_t real_CmdBindPipeline;        /* +0x058 */
-    uint64_t real_CmdDraw;                /* +0x060 */
-    uint64_t real_CmdDrawIndexed;         /* +0x068 */
-    uint64_t real_CmdDrawIndirect;        /* +0x070 */
-    uint64_t real_CmdDrawIndexedIndirect; /* +0x078 */
-    uint64_t real_CmdDispatch;            /* +0x080 */
-    uint64_t real_QueueSubmit;            /* +0x088 */
-    uint64_t real_QueueSubmit2;           /* +0x090 */
-    uint64_t real_QueuePresentKHR;        /* +0x098 */
-    CaveCmdState cmd_states[CAVE_CMD_STATES]; /* +0x0A0 (8 * 24 = 0xC0 bytes) */
-    CaveNode nodes[CAVE_MAX_NODES];       /* +0x160 (40 * 16 = 0x280 bytes) */
-} MemCaveState;                           /* Total = 0x3E0 (992 bytes) */
+    uint64_t magic;                             /* +0x000 */
+    uint32_t api;                               /* +0x008: low byte 2=VULKAN, byte +0x00B=cmd_ring_idx */
+    uint32_t node_count;                        /* +0x00C */
+    uint64_t frame_counter;                     /* +0x010 */
+    uint64_t last_active_rp;                    /* +0x018 */
+    uint64_t last_active_pipe;                  /* +0x020 */
+    uint64_t real_CmdBeginRenderPass;           /* +0x028 */
+    uint64_t real_CmdBeginRenderPass2;          /* +0x030 */
+    uint64_t real_CmdEndRenderPass;             /* +0x038 */
+    uint64_t real_CmdEndRenderPass2;            /* +0x040 */
+    uint64_t real_CmdBeginRendering;            /* +0x048 */
+    uint64_t real_CmdEndRendering;              /* +0x050 */
+    uint64_t real_CmdBindPipeline;              /* +0x058 */
+    uint64_t real_CmdDraw;                      /* +0x060 */
+    uint64_t real_CmdDrawIndexed;               /* +0x068 */
+    uint64_t real_CmdDrawIndirect;              /* +0x070 */
+    uint64_t real_CmdDrawIndexedIndirect;       /* +0x078 */
+    uint64_t real_CmdDispatch;                  /* +0x080 */
+    uint64_t real_QueueSubmit;                  /* +0x088 */
+    uint64_t real_QueueSubmit2;                 /* +0x090 */
+    uint64_t real_QueuePresentKHR;              /* +0x098 */
+    uint64_t real_CmdDrawIndirectCount;         /* +0x0A0 */
+    uint64_t real_CmdDrawIndexedIndirectCount;  /* +0x0A8 */
+    CaveCmdState cmd_states[CAVE_CMD_STATES];   /* +0x0B0 (16 * 24 = 0x180 bytes) */
+    CaveNode nodes[CAVE_MAX_NODES];             /* +0x230 (128 * 16 = 0x800 bytes) */
+} MemCaveState;                                 /* Total = 0xA30 (2608 bytes) */
 
 _Static_assert(sizeof(CaveNode) == 16, "CaveNode size");
 _Static_assert(offsetof(MemCaveState, node_count) == 0x0C, "node_count offset");
@@ -111,8 +115,10 @@ _Static_assert(offsetof(MemCaveState, last_active_rp) == 0x18, "last_active_rp o
 _Static_assert(offsetof(MemCaveState, last_active_pipe) == 0x20, "last_active_pipe offset");
 _Static_assert(offsetof(MemCaveState, real_CmdBeginRenderPass) == 0x28, "real_CmdBeginRenderPass offset");
 _Static_assert(offsetof(MemCaveState, real_QueuePresentKHR) == 0x98, "real_QueuePresentKHR offset");
-_Static_assert(offsetof(MemCaveState, cmd_states) == 0xA0, "cmd_states offset");
-_Static_assert(offsetof(MemCaveState, nodes) == 0x160, "nodes offset");
+_Static_assert(offsetof(MemCaveState, real_CmdDrawIndirectCount) == 0xA0, "real_CmdDrawIndirectCount offset");
+_Static_assert(offsetof(MemCaveState, real_CmdDrawIndexedIndirectCount) == 0xA8, "real_CmdDrawIndexedIndirectCount offset");
+_Static_assert(offsetof(MemCaveState, cmd_states) == 0xB0, "cmd_states offset");
+_Static_assert(offsetof(MemCaveState, nodes) == 0x230, "nodes offset");
 
 /*
  * Self-contained position-independent ARM64 hook templates copied into an unused
@@ -136,6 +142,8 @@ extern const uint8_t cave_hook_CmdDispatch[];
 extern const uint8_t cave_hook_QueueSubmit[];
 extern const uint8_t cave_hook_QueueSubmit2[];
 extern const uint8_t cave_hook_QueuePresentKHR[];
+extern const uint8_t cave_hook_CmdDrawIndirectCount[];
+extern const uint8_t cave_hook_CmdDrawIndexedIndirectCount[];
 extern const uint8_t cave_code_end[];
 
 __asm__(
@@ -147,8 +155,8 @@ __asm__(
 
     /* cave_get_cmd_state: x9 = state_ptr, x0 = cmd_buf -> x14 = &cmd_states[i] */
     "cave_get_cmd_state:\n"
-    "    add x14, x9, #0xA0\n"
-    "    mov w15, #8\n"
+    "    add x14, x9, #0xB0\n"
+    "    mov w15, #16\n"
     "1:\n"
     "    ldr x13, [x14, #0]\n"
     "    cmp x13, x0\n"
@@ -156,47 +164,72 @@ __asm__(
     "    add x14, x14, #24\n"
     "    subs w15, w15, #1\n"
     "    b.ne 1b\n"
-    "    add x14, x9, #0xA0\n"
-    "    mov w15, #8\n"
+    "    add x14, x9, #0xB0\n"
+    "    mov w15, #16\n"
     "2:\n"
     "    ldr x13, [x14, #0]\n"
     "    cbz x13, 3f\n"
     "    add x14, x14, #24\n"
     "    subs w15, w15, #1\n"
     "    b.ne 2b\n"
-    "    lsr x13, x0, #4\n"
-    "    and x13, x13, #7\n"
+    "    ldrb w13, [x9, #0x0B]\n"
+    "    add w15, w13, #1\n"
+    "    and w15, w15, #15\n"
+    "    strb w15, [x9, #0x0B]\n"
+    "    and x13, x13, #15\n"
     "    mov x15, #24\n"
     "    mul x13, x13, x15\n"
-    "    add x14, x9, #0xA0\n"
+    "    add x14, x9, #0xB0\n"
     "    add x14, x14, x13\n"
     "3:\n"
     "    str x0, [x14, #0]\n"
+    "    str xzr, [x14, #8]\n"
+    "    str xzr, [x14, #16]\n"
     "4:\n"
     "    ret\n"
 
-    /* cave_find_or_add_node: x9 = state_ptr, x10 = handle, w11 = cat, w12 = inc_draw -> w12 = enabled */
+    /* cave_find_or_add_node: x9 = state_ptr, x10 = handle, w11 = cat, w12 = inc_draw -> w12 = allow_draw (0/1) */
     "cave_find_or_add_node:\n"
     "    cbz x10, 5f\n"
-    "    add x14, x9, #0x160\n"
-    "    mov w15, #40\n"
+    "    add x14, x9, #0x230\n"
+    "    mov w15, #128\n"
     "1:\n"
     "    ldr x13, [x14, #0]\n"
     "    cmp x13, x10\n"
     "    b.eq 3f\n"
-    "    cbz x13, 2f\n"
     "    add x14, x14, #16\n"
     "    subs w15, w15, #1\n"
     "    b.ne 1b\n"
+    "    add x14, x9, #0x230\n"
+    "    mov w15, #128\n"
+    "6:\n"
+    "    ldr x13, [x14, #0]\n"
+    "    cbz x13, 2f\n"
+    "    add x14, x14, #16\n"
+    "    subs w15, w15, #1\n"
+    "    b.ne 6b\n"
+    "    add x14, x9, #0x230\n"
+    "    mov w15, #128\n"
+    "7:\n"
+    "    ldr w13, [x14, #8]\n"
+    "    cbnz w13, 8f\n"
+    "    ldrh w13, [x14, #14]\n"
+    "    tbnz w13, #0, 2f\n"
+    "8:\n"
+    "    add x14, x14, #16\n"
+    "    subs w15, w15, #1\n"
+    "    b.ne 7b\n"
     "    mov w12, #1\n"
     "    ret\n"
     "2:\n"
     "    str x10, [x14, #0]\n"
     "    str wzr, [x14, #8]\n"
     "    strh w11, [x14, #12]\n"
-    "    mov w13, #1\n"
+    "    mov w13, #0x010F\n"
     "    strh w13, [x14, #14]\n"
     "    ldr w13, [x9, #0x0C]\n"
+    "    cmp w13, #128\n"
+    "    b.hs 3f\n"
     "    add w13, w13, #1\n"
     "    str w13, [x9, #0x0C]\n"
     "3:\n"
@@ -206,6 +239,7 @@ __asm__(
     "    str w13, [x14, #8]\n"
     "4:\n"
     "    ldrh w12, [x14, #14]\n"
+    "    and w12, w12, #1\n"
     "    ret\n"
     "5:\n"
     "    mov w12, #1\n"
@@ -224,9 +258,6 @@ __asm__(
     "    bl cave_get_cmd_state\n"
     "    str x10, [x14, #8]\n"
     "    str x10, [x9, #0x18]\n"
-    "    mov w11, #1\n"
-    "    mov w12, #0\n"
-    "    bl cave_find_or_add_node\n"
     "    ldp x29, x30, [sp], #16\n"
     "    ret\n"
 
@@ -236,6 +267,7 @@ __asm__(
     "    ldr x9, cave_code_start\n"
     "    bl cave_get_cmd_state\n"
     "    str xzr, [x14, #8]\n"
+    "    str xzr, [x9, #0x18]\n"
     "    ldp x29, x30, [sp], #16\n"
     "    ret\n"
 
@@ -313,22 +345,31 @@ __asm__(
     "    ldr x9, cave_code_start\n"
     "    mov x10, #0\n"
     "    cbz x1, 1f\n"
-    "    ldr x10, [x1, #28]\n"
+    "    ldur x10, [x1, #28]\n"
+    "    ldr w11, [x1, #16]\n"
+    "    eor x10, x10, x11, lsl #32\n"
     "    ldr w11, [x1, #44]\n"
     "    eor x10, x10, x11, lsl #48\n"
+    "    cbz w11, 2f\n"
+    "    ldr x13, [x1, #48]\n"
+    "    cbz x13, 2f\n"
+    "    ldr x14, [x13, #24]\n"
+    "    eor x10, x10, x14, lsl #16\n"
+    "    ldr x14, [x13, #44]\n"
+    "    eor x10, x10, x14, lsl #40\n"
+    "2:\n"
     "    ldr x12, [x1, #56]\n"
-    "    cmp x12, #0\n"
-    "    cset x12, ne\n"
-    "    eor x10, x10, x12, lsl #56\n"
+    "    cbz x12, 3f\n"
+    "    ldr x14, [x12, #44]\n"
+    "    add x14, x14, #1\n"
+    "    eor x10, x10, x14, lsl #36\n"
+    "3:\n"
     "    movz x12, #0xD900, lsl #48\n"
     "    orr x10, x10, x12\n"
     "1:\n"
     "    bl cave_get_cmd_state\n"
     "    str x10, [x14, #8]\n"
     "    str x10, [x9, #0x18]\n"
-    "    mov w11, #1\n"
-    "    mov w12, #0\n"
-    "    bl cave_find_or_add_node\n"
     "    ldp x29, x30, [sp], #16\n"
     "    ldr x16, [x9, #0x48]\n"
     "    br x16\n"
@@ -347,13 +388,11 @@ __asm__(
     "    hint #34\n"
     "    stp x29, x30, [sp, #-16]!\n"
     "    ldr x9, cave_code_start\n"
+    "    cbnz w1, 1f\n"
     "    bl cave_get_cmd_state\n"
     "    str x2, [x14, #16]\n"
     "    str x2, [x9, #0x20]\n"
-    "    mov x10, x2\n"
-    "    mov w11, #2\n"
-    "    mov w12, #0\n"
-    "    bl cave_find_or_add_node\n"
+    "1:\n"
     "    ldp x29, x30, [sp], #16\n"
     "    ldr x16, [x9, #0x58]\n"
     "    br x16\n"
@@ -405,13 +444,9 @@ __asm__(
     ".global cave_hook_CmdDispatch\n"
     "cave_hook_CmdDispatch:\n"
     "    hint #34\n"
-    "    stp x29, x30, [sp, #-16]!\n"
-    "    bl cave_check_draw_allowed\n"
-    "    ldp x29, x30, [sp], #16\n"
-    "    cbz w12, 1f\n"
+    "    ldr x9, cave_code_start\n"
     "    ldr x16, [x9, #0x80]\n"
     "    br x16\n"
-    "1:  ret\n"
 
     ".global cave_hook_QueueSubmit\n"
     "cave_hook_QueueSubmit:\n"
@@ -442,6 +477,28 @@ __asm__(
     "    str x10, [x9, #0x10]\n"
     "    ldr x16, [x9, #0x98]\n"
     "    br x16\n"
+
+    ".global cave_hook_CmdDrawIndirectCount\n"
+    "cave_hook_CmdDrawIndirectCount:\n"
+    "    hint #34\n"
+    "    stp x29, x30, [sp, #-16]!\n"
+    "    bl cave_check_draw_allowed\n"
+    "    ldp x29, x30, [sp], #16\n"
+    "    cbz w12, 1f\n"
+    "    ldr x16, [x9, #0xA0]\n"
+    "    br x16\n"
+    "1:  ret\n"
+
+    ".global cave_hook_CmdDrawIndexedIndirectCount\n"
+    "cave_hook_CmdDrawIndexedIndirectCount:\n"
+    "    hint #34\n"
+    "    stp x29, x30, [sp, #-16]!\n"
+    "    bl cave_check_draw_allowed\n"
+    "    ldp x29, x30, [sp], #16\n"
+    "    cbz w12, 1f\n"
+    "    ldr x16, [x9, #0xA8]\n"
+    "    br x16\n"
+    "1:  ret\n"
 
     ".balign 8\n"
     ".global cave_code_end\n"
@@ -783,12 +840,29 @@ static int decode_remote_vk_dispatch_offset(int mem_fd, uintptr_t fn_addr) {
 
 static int is_remote_page_resident(int pagemap_fd, uintptr_t vaddr) {
     if (pagemap_fd < 0) return 1;
-    uint64_t entry = 0;
-    off64_t off = (off64_t)((vaddr / 4096ULL) * sizeof(uint64_t));
-    if (pread64(pagemap_fd, &entry, sizeof(entry), off) != (ssize_t)sizeof(entry)) {
-        return 0;
+    static int cached_fd = -1;
+    static uintptr_t cached_base_vpn = ~(uintptr_t)0;
+    static uint64_t cached_entries[512];
+    static size_t cached_count = 0;
+
+    uintptr_t vpn = vaddr / 4096ULL;
+    if (pagemap_fd != cached_fd || vpn < cached_base_vpn || vpn >= cached_base_vpn + cached_count) {
+        uintptr_t base_vpn = vpn & ~511ULL;
+        off64_t off = (off64_t)(base_vpn * sizeof(uint64_t));
+        ssize_t n = pread64(pagemap_fd, cached_entries, sizeof(cached_entries), off);
+        if (n < (ssize_t)sizeof(uint64_t)) {
+            cached_fd = -1;
+            cached_count = 0;
+            return 0;
+        }
+        cached_fd = pagemap_fd;
+        cached_base_vpn = base_vpn;
+        cached_count = (size_t)n / sizeof(uint64_t);
+        if (vpn < cached_base_vpn || vpn >= cached_base_vpn + cached_count) {
+            return 0;
+        }
     }
-    return ((entry >> 63) & 1ULL) != 0;
+    return ((cached_entries[vpn - cached_base_vpn] >> 63) & 1ULL) != 0;
 }
 
 typedef struct {
@@ -833,7 +907,7 @@ static void get_cave_state_file_path(pid_t pid, char *out, size_t out_sz) {
     snprintf(out, out_sz, "/data/local/tmp/megingiard_gfx_cave_%d.state", (int)pid);
 }
 
-static int inject_via_proc_mem(pid_t pid) {
+static int inject_via_proc_mem_internal(pid_t pid, int quiet) {
     char maps_path[64], mem_path[64], pagemap_path[64];
     snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", (int)pid);
     snprintf(mem_path, sizeof(mem_path), "/proc/%d/mem", (int)pid);
@@ -841,7 +915,7 @@ static int inject_via_proc_mem(pid_t pid) {
 
     int mem_fd = open(mem_path, O_RDWR);
     if (mem_fd < 0) {
-        printf("INJECT_ERR PROC_MEM_OPEN errno=%d\n", errno);
+        if (!quiet) printf("INJECT_ERR PROC_MEM_OPEN errno=%d\n", errno);
         return 1;
     }
     int pagemap_fd = open(pagemap_path, O_RDONLY);
@@ -850,7 +924,7 @@ static int inject_via_proc_mem(pid_t pid) {
     if (!fp) {
         if (pagemap_fd >= 0) close(pagemap_fd);
         close(mem_fd);
-        printf("INJECT_ERR MAPS_OPEN\n");
+        if (!quiet) printf("INJECT_ERR MAPS_OPEN\n");
         return 1;
     }
 
@@ -918,7 +992,7 @@ static int inject_via_proc_mem(pid_t pid) {
             if (state_cave_addr == 0 && (end - start) >= 4096 && strstr(path, ".so") != NULL) {
                 state_cave_addr = find_zero_cave(mem_fd, start, end, sizeof(MemCaveState));
             }
-            /* Only scan anonymous/heap mappings (path[0] != '/') for live dispatch tables */
+            /* Scan anonymous/heap mappings (path[0] != '/') for live dispatch tables */
             if (path[0] != '/' &&
                 strstr(path, "[stack") == NULL &&
                 (end - start) <= (256ULL << 20) &&
@@ -936,7 +1010,7 @@ static int inject_via_proc_mem(pid_t pid) {
         free(rw_ranges);
         if (pagemap_fd >= 0) close(pagemap_fd);
         close(mem_fd);
-        printf("INJECT_ERR NO_VULKAN_LOADER\n");
+        if (!quiet) printf("INJECT_ERR NO_VULKAN_LOADER\n");
         return 1;
     }
 
@@ -950,26 +1024,28 @@ static int inject_via_proc_mem(pid_t pid) {
     get_cave_state_file_path(pid, state_file, sizeof(state_file));
     MemCaveState prev_cave;
     memset(&prev_cave, 0, sizeof(prev_cave));
+    uintptr_t prev_state_addr = 0;
     uintptr_t prev_code_addr = 0;
     int has_prev_cave = 0;
     FILE *sf = fopen(state_file, "r");
     if (sf) {
         unsigned long existing_state = 0, existing_code = 0;
         if (fscanf(sf, "%lx %lx", &existing_state, &existing_code) == 2 && existing_state != 0) {
-            if (pread64(mem_fd, &prev_cave, sizeof(prev_cave), (off64_t)existing_state) == (ssize_t)sizeof(prev_cave) &&
-                prev_cave.magic == CAVE_MAGIC) {
-                if (prev_cave.node_count > 0 &&
+            ssize_t hdr_rd = pread64(mem_fd, &prev_cave, 0xA0, (off64_t)existing_state);
+            if (hdr_rd == 0xA0 && prev_cave.magic == CAVE_MAGIC) {
+                if (pread64(mem_fd, &prev_cave, sizeof(prev_cave), (off64_t)existing_state) == (ssize_t)sizeof(prev_cave) &&
                     is_in_ranges(prev_cave.real_CmdDraw, target_code_ranges, target_code_count)) {
                     fclose(sf);
                     free(all_exec_ranges);
                     free(rw_ranges);
                     if (pagemap_fd >= 0) close(pagemap_fd);
                     close(mem_fd);
-                    printf("INJECT_OK handle=0x%lx\n", existing_state);
+                    if (!quiet) printf("INJECT_OK handle=0x%lx\n", existing_state);
                     return 0;
                 }
-                state_cave_addr = (uintptr_t)existing_state;
-                code_cave_addr = (uintptr_t)existing_code;
+            } else if (hdr_rd == 0xA0 &&
+                       (prev_cave.magic == CAVE_MAGIC_V1 || prev_cave.magic == CAVE_MAGIC_V2)) {
+                prev_state_addr = (uintptr_t)existing_state;
                 prev_code_addr = (uintptr_t)existing_code;
                 has_prev_cave = 1;
             }
@@ -982,55 +1058,20 @@ static int inject_via_proc_mem(pid_t pid) {
         free(rw_ranges);
         if (pagemap_fd >= 0) close(pagemap_fd);
         close(mem_fd);
-        printf("INJECT_ERR NO_CAVE_SPACE state=0x%lx code=0x%lx\n",
-                (unsigned long)state_cave_addr, (unsigned long)code_cave_addr);
+        if (!quiet) {
+            printf("INJECT_ERR NO_CAVE_SPACE state=0x%lx code=0x%lx\n",
+                    (unsigned long)state_cave_addr, (unsigned long)code_cave_addr);
+        }
         return 1;
     }
 
-    /* If a previous cave was installed, unpatch its hooks first so we can cleanly inspect or re-hook */
-    if (has_prev_cave && prev_code_addr != 0) {
-        #define PREV_HOOK_ADDR(sym) (prev_code_addr + (uintptr_t)((sym) - cave_code_start))
-        struct {
-            uint64_t real_fn;
-            uint64_t hook_fn;
-        } prev_pairs[15] = {
-            { prev_cave.real_CmdBeginRenderPass,     PREV_HOOK_ADDR(cave_hook_CmdBeginRenderPass) },
-            { prev_cave.real_CmdBeginRenderPass2,    PREV_HOOK_ADDR(cave_hook_CmdBeginRenderPass2) },
-            { prev_cave.real_CmdEndRenderPass,       PREV_HOOK_ADDR(cave_hook_CmdEndRenderPass) },
-            { prev_cave.real_CmdEndRenderPass2,      PREV_HOOK_ADDR(cave_hook_CmdEndRenderPass2) },
-            { prev_cave.real_CmdBeginRendering,      PREV_HOOK_ADDR(cave_hook_CmdBeginRendering) },
-            { prev_cave.real_CmdEndRendering,        PREV_HOOK_ADDR(cave_hook_CmdEndRendering) },
-            { prev_cave.real_CmdBindPipeline,        PREV_HOOK_ADDR(cave_hook_CmdBindPipeline) },
-            { prev_cave.real_CmdDraw,                PREV_HOOK_ADDR(cave_hook_CmdDraw) },
-            { prev_cave.real_CmdDrawIndexed,         PREV_HOOK_ADDR(cave_hook_CmdDrawIndexed) },
-            { prev_cave.real_CmdDrawIndirect,        PREV_HOOK_ADDR(cave_hook_CmdDrawIndirect) },
-            { prev_cave.real_CmdDrawIndexedIndirect, PREV_HOOK_ADDR(cave_hook_CmdDrawIndexedIndirect) },
-            { prev_cave.real_CmdDispatch,            PREV_HOOK_ADDR(cave_hook_CmdDispatch) },
-            { prev_cave.real_QueueSubmit,            PREV_HOOK_ADDR(cave_hook_QueueSubmit) },
-            { prev_cave.real_QueueSubmit2,           PREV_HOOK_ADDR(cave_hook_QueueSubmit2) },
-            { prev_cave.real_QueuePresentKHR,        PREV_HOOK_ADDR(cave_hook_QueuePresentKHR) },
-        };
-        #undef PREV_HOOK_ADDR
-        for (int r = rw_count - 1; r >= 0; r--) {
-            for (uintptr_t page = rw_ranges[r].start; page < rw_ranges[r].end; page += 4096) {
-                if (!is_remote_page_resident(pagemap_fd, page)) continue;
-                if (pread64(mem_fd, page_buf, 4096, (off64_t)page) != 4096) continue;
-                for (size_t off = 0; off < 4096; off += 8) {
-                    uintptr_t slot_addr = page + off;
-                    if (slot_addr >= state_cave_addr && slot_addr < state_cave_addr + sizeof(MemCaveState)) {
-                        continue;
-                    }
-                    uint64_t val = *(uint64_t *)(page_buf + off);
-                    for (int k = 0; k < 15; k++) {
-                        if (prev_pairs[k].real_fn != 0 && val == prev_pairs[k].hook_fn) {
-                            (void)pwrite64(mem_fd, &prev_pairs[k].real_fn, sizeof(uint64_t), (off64_t)slot_addr);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    }
+    /* Read the entire 4096-byte executable page containing any previous code cave BEFORE overwriting */
+    uintptr_t old_code_page = (prev_code_addr != 0 ? prev_code_addr : code_cave_addr) & ~0xFFFULL;
+    uint32_t old_page_insns[1024];
+    memset(old_page_insns, 0, sizeof(old_page_insns));
+    int has_old_page = (old_code_page != 0 &&
+                        pread64(mem_fd, old_page_insns, sizeof(old_page_insns), (off64_t)old_code_page) ==
+                            (ssize_t)sizeof(old_page_insns));
 
     int off_begin_rp  = decode_remote_vk_dispatch_offset(mem_fd, remote_lookup_dyn_symbol(mem_fd, vk_loader_base, "vkCmdBeginRenderPass"));
     int off_begin_rp2 = decode_remote_vk_dispatch_offset(mem_fd, remote_lookup_dyn_symbol(mem_fd, vk_loader_base, "vkCmdBeginRenderPass2"));
@@ -1047,6 +1088,10 @@ static int inject_via_proc_mem(pid_t pid) {
     int off_draw_idx  = decode_remote_vk_dispatch_offset(mem_fd, remote_lookup_dyn_symbol(mem_fd, vk_loader_base, "vkCmdDrawIndexed"));
     int off_draw_ind  = decode_remote_vk_dispatch_offset(mem_fd, remote_lookup_dyn_symbol(mem_fd, vk_loader_base, "vkCmdDrawIndirect"));
     int off_draw_idx_ind = decode_remote_vk_dispatch_offset(mem_fd, remote_lookup_dyn_symbol(mem_fd, vk_loader_base, "vkCmdDrawIndexedIndirect"));
+    int off_draw_ind_cnt = decode_remote_vk_dispatch_offset(mem_fd, remote_lookup_dyn_symbol(mem_fd, vk_loader_base, "vkCmdDrawIndirectCount"));
+    int off_draw_ind_cnt_khr = decode_remote_vk_dispatch_offset(mem_fd, remote_lookup_dyn_symbol(mem_fd, vk_loader_base, "vkCmdDrawIndirectCountKHR"));
+    int off_draw_idx_ind_cnt = decode_remote_vk_dispatch_offset(mem_fd, remote_lookup_dyn_symbol(mem_fd, vk_loader_base, "vkCmdDrawIndexedIndirectCount"));
+    int off_draw_idx_ind_cnt_khr = decode_remote_vk_dispatch_offset(mem_fd, remote_lookup_dyn_symbol(mem_fd, vk_loader_base, "vkCmdDrawIndexedIndirectCountKHR"));
     int off_dispatch  = decode_remote_vk_dispatch_offset(mem_fd, remote_lookup_dyn_symbol(mem_fd, vk_loader_base, "vkCmdDispatch"));
     int off_qsubmit   = decode_remote_vk_dispatch_offset(mem_fd, remote_lookup_dyn_symbol(mem_fd, vk_loader_base, "vkQueueSubmit"));
     int off_qsubmit2  = decode_remote_vk_dispatch_offset(mem_fd, remote_lookup_dyn_symbol(mem_fd, vk_loader_base, "vkQueueSubmit2"));
@@ -1058,8 +1103,10 @@ static int inject_via_proc_mem(pid_t pid) {
         free(rw_ranges);
         if (pagemap_fd >= 0) close(pagemap_fd);
         close(mem_fd);
-        printf("INJECT_ERR VK_OFFSET_DECODE draw=%d idx=%d bind=%d\n",
-                off_draw, off_draw_idx, off_bind_pipe);
+        if (!quiet) {
+            printf("INJECT_ERR VK_OFFSET_DECODE draw=%d idx=%d bind=%d\n",
+                    off_draw, off_draw_idx, off_bind_pipe);
+        }
         return 1;
     }
 
@@ -1069,6 +1116,27 @@ static int inject_via_proc_mem(pid_t pid) {
     cave_state.api = 2; /* VULKAN */
 
     int found_table = 0;
+
+    if (has_prev_cave && is_in_ranges(prev_cave.real_CmdDraw, target_code_ranges, target_code_count)) {
+        cave_state.real_CmdBeginRenderPass = prev_cave.real_CmdBeginRenderPass;
+        cave_state.real_CmdBeginRenderPass2 = prev_cave.real_CmdBeginRenderPass2;
+        cave_state.real_CmdEndRenderPass = prev_cave.real_CmdEndRenderPass;
+        cave_state.real_CmdEndRenderPass2 = prev_cave.real_CmdEndRenderPass2;
+        cave_state.real_CmdBeginRendering = prev_cave.real_CmdBeginRendering;
+        cave_state.real_CmdEndRendering = prev_cave.real_CmdEndRendering;
+        cave_state.real_CmdBindPipeline = prev_cave.real_CmdBindPipeline;
+        cave_state.real_CmdDraw = prev_cave.real_CmdDraw;
+        cave_state.real_CmdDrawIndexed = prev_cave.real_CmdDrawIndexed;
+        cave_state.real_CmdDrawIndirect = prev_cave.real_CmdDrawIndirect;
+        cave_state.real_CmdDrawIndexedIndirect = prev_cave.real_CmdDrawIndexedIndirect;
+        cave_state.real_CmdDispatch = prev_cave.real_CmdDispatch;
+        cave_state.real_QueueSubmit = prev_cave.real_QueueSubmit;
+        cave_state.real_QueueSubmit2 = prev_cave.real_QueueSubmit2;
+        cave_state.real_QueuePresentKHR = prev_cave.real_QueuePresentKHR;
+        cave_state.real_CmdDrawIndirectCount = prev_cave.real_CmdDrawIndirectCount;
+        cave_state.real_CmdDrawIndexedIndirectCount = prev_cave.real_CmdDrawIndexedIndirectCount;
+        found_table = 1;
+    }
 
     /* Pass 1: Look for canonical Khronos loader magic (0x10ADED040410ADED) at table base +0x0 */
     for (int require_magic = 1; require_magic >= 0 && !found_table; require_magic--) {
@@ -1130,6 +1198,14 @@ static int inject_via_proc_mem(pid_t pid) {
                     }
                     cave_state.real_CmdDrawIndirect = READ_VERIFIED_SLOT(off_draw_ind);
                     cave_state.real_CmdDrawIndexedIndirect = READ_VERIFIED_SLOT(off_draw_idx_ind);
+                    cave_state.real_CmdDrawIndirectCount = READ_VERIFIED_SLOT(off_draw_ind_cnt);
+                    if (cave_state.real_CmdDrawIndirectCount == 0) {
+                        cave_state.real_CmdDrawIndirectCount = READ_VERIFIED_SLOT(off_draw_ind_cnt_khr);
+                    }
+                    cave_state.real_CmdDrawIndexedIndirectCount = READ_VERIFIED_SLOT(off_draw_idx_ind_cnt);
+                    if (cave_state.real_CmdDrawIndexedIndirectCount == 0) {
+                        cave_state.real_CmdDrawIndexedIndirectCount = READ_VERIFIED_SLOT(off_draw_idx_ind_cnt_khr);
+                    }
                     cave_state.real_CmdDispatch = READ_VERIFIED_SLOT(off_dispatch);
                     cave_state.real_QueueSubmit = READ_VERIFIED_SLOT(off_qsubmit);
                     cave_state.real_QueueSubmit2 = READ_VERIFIED_SLOT(off_qsubmit2);
@@ -1152,7 +1228,7 @@ static int inject_via_proc_mem(pid_t pid) {
         free(rw_ranges);
         if (pagemap_fd >= 0) close(pagemap_fd);
         close(mem_fd);
-        printf("INJECT_ERR NO_LIVE_VK_DEVICE rw_count=%d icd_count=%d\n", rw_count, icd_exec_count);
+        if (!quiet) printf("INJECT_ERR NO_LIVE_VK_DEVICE rw_count=%d icd_count=%d\n", rw_count, icd_exec_count);
         return 1;
     }
 
@@ -1175,7 +1251,7 @@ static int inject_via_proc_mem(pid_t pid) {
         free(rw_ranges);
         if (pagemap_fd >= 0) close(pagemap_fd);
         close(mem_fd);
-        printf("INJECT_ERR CAVE_WRITE_FAILED errno=%d\n", errno);
+        if (!quiet) printf("INJECT_ERR CAVE_WRITE_FAILED errno=%d\n", errno);
         return 1;
     }
     free(code_buf);
@@ -1184,22 +1260,24 @@ static int inject_via_proc_mem(pid_t pid) {
     struct {
         uint64_t real_fn;
         uint64_t hook_fn;
-    } hook_pairs[15] = {
-        { cave_state.real_CmdBeginRenderPass,     CAVE_HOOK_ADDR(cave_hook_CmdBeginRenderPass) },
-        { cave_state.real_CmdBeginRenderPass2,    CAVE_HOOK_ADDR(cave_hook_CmdBeginRenderPass2) },
-        { cave_state.real_CmdEndRenderPass,       CAVE_HOOK_ADDR(cave_hook_CmdEndRenderPass) },
-        { cave_state.real_CmdEndRenderPass2,      CAVE_HOOK_ADDR(cave_hook_CmdEndRenderPass2) },
-        { cave_state.real_CmdBeginRendering,      CAVE_HOOK_ADDR(cave_hook_CmdBeginRendering) },
-        { cave_state.real_CmdEndRendering,        CAVE_HOOK_ADDR(cave_hook_CmdEndRendering) },
-        { cave_state.real_CmdBindPipeline,        CAVE_HOOK_ADDR(cave_hook_CmdBindPipeline) },
-        { cave_state.real_CmdDraw,                CAVE_HOOK_ADDR(cave_hook_CmdDraw) },
-        { cave_state.real_CmdDrawIndexed,         CAVE_HOOK_ADDR(cave_hook_CmdDrawIndexed) },
-        { cave_state.real_CmdDrawIndirect,        CAVE_HOOK_ADDR(cave_hook_CmdDrawIndirect) },
-        { cave_state.real_CmdDrawIndexedIndirect, CAVE_HOOK_ADDR(cave_hook_CmdDrawIndexedIndirect) },
-        { cave_state.real_CmdDispatch,            CAVE_HOOK_ADDR(cave_hook_CmdDispatch) },
-        { cave_state.real_QueueSubmit,            CAVE_HOOK_ADDR(cave_hook_QueueSubmit) },
-        { cave_state.real_QueueSubmit2,           CAVE_HOOK_ADDR(cave_hook_QueueSubmit2) },
-        { cave_state.real_QueuePresentKHR,        CAVE_HOOK_ADDR(cave_hook_QueuePresentKHR) },
+    } hook_pairs[17] = {
+        { cave_state.real_CmdBeginRenderPass,          CAVE_HOOK_ADDR(cave_hook_CmdBeginRenderPass) },
+        { cave_state.real_CmdBeginRenderPass2,         CAVE_HOOK_ADDR(cave_hook_CmdBeginRenderPass2) },
+        { cave_state.real_CmdEndRenderPass,            CAVE_HOOK_ADDR(cave_hook_CmdEndRenderPass) },
+        { cave_state.real_CmdEndRenderPass2,           CAVE_HOOK_ADDR(cave_hook_CmdEndRenderPass2) },
+        { cave_state.real_CmdBeginRendering,           CAVE_HOOK_ADDR(cave_hook_CmdBeginRendering) },
+        { cave_state.real_CmdEndRendering,             CAVE_HOOK_ADDR(cave_hook_CmdEndRendering) },
+        { cave_state.real_CmdBindPipeline,             CAVE_HOOK_ADDR(cave_hook_CmdBindPipeline) },
+        { cave_state.real_CmdDraw,                     CAVE_HOOK_ADDR(cave_hook_CmdDraw) },
+        { cave_state.real_CmdDrawIndexed,              CAVE_HOOK_ADDR(cave_hook_CmdDrawIndexed) },
+        { cave_state.real_CmdDrawIndirect,             CAVE_HOOK_ADDR(cave_hook_CmdDrawIndirect) },
+        { cave_state.real_CmdDrawIndexedIndirect,      CAVE_HOOK_ADDR(cave_hook_CmdDrawIndexedIndirect) },
+        { cave_state.real_CmdDispatch,                 CAVE_HOOK_ADDR(cave_hook_CmdDispatch) },
+        { cave_state.real_QueueSubmit,                 CAVE_HOOK_ADDR(cave_hook_QueueSubmit) },
+        { cave_state.real_QueueSubmit2,                CAVE_HOOK_ADDR(cave_hook_QueueSubmit2) },
+        { cave_state.real_QueuePresentKHR,             CAVE_HOOK_ADDR(cave_hook_QueuePresentKHR) },
+        { cave_state.real_CmdDrawIndirectCount,        CAVE_HOOK_ADDR(cave_hook_CmdDrawIndirectCount) },
+        { cave_state.real_CmdDrawIndexedIndirectCount, CAVE_HOOK_ADDR(cave_hook_CmdDrawIndexedIndirectCount) },
     };
     #undef CAVE_HOOK_ADDR
 
@@ -1209,6 +1287,36 @@ static int inject_via_proc_mem(pid_t pid) {
             if (!is_remote_page_resident(pagemap_fd, page)) continue;
             if (pread64(mem_fd, page_buf, 4096, (off64_t)page) != 4096) continue;
 
+            if (has_old_page) {
+                for (size_t off = 0; off < 4096; off += 8) {
+                    uintptr_t slot_addr = page + off;
+                    if (slot_addr >= state_cave_addr && slot_addr < state_cave_addr + sizeof(MemCaveState)) {
+                        continue;
+                    }
+                    uint64_t val = *(uint64_t *)(page_buf + off);
+                    if (val >= old_code_page && val < old_code_page + 4096 && ((val & 3u) == 0)) {
+                        size_t idx = (size_t)(val - old_code_page) / 4u;
+                        if (idx < 1024 && old_page_insns[idx] == 0xD503245Fu) {
+                            for (size_t step = 0; step < 32 && (idx + step) < 1024; step++) {
+                                uint32_t insn = old_page_insns[idx + step];
+                                if ((insn & 0xFFC003FFu) == 0xF9400130u) {
+                                    size_t field_off = (size_t)((insn >> 10) & 0xFFFu) * 8u;
+                                    if (field_off >= 0x28u && field_off <= 0xA8u) {
+                                        uint64_t orig_fn = *(uint64_t *)((uint8_t *)&cave_state + field_off);
+                                        if (orig_fn != 0) {
+                                            *(uint64_t *)(page_buf + off) = orig_fn;
+                                            (void)pwrite64(mem_fd, &orig_fn, sizeof(uint64_t), (off64_t)slot_addr);
+                                        }
+                                    }
+                                    break;
+                                }
+                                if (insn == 0xD61F0200u || insn == 0xD65F03C0u) break;
+                            }
+                        }
+                    }
+                }
+            }
+
             for (size_t off = 0; off < 4096; off += 8) {
                 uintptr_t slot_addr = page + off;
                 if (slot_addr >= state_cave_addr && slot_addr < state_cave_addr + sizeof(MemCaveState)) {
@@ -1216,7 +1324,7 @@ static int inject_via_proc_mem(pid_t pid) {
                 }
                 uint64_t val = *(uint64_t *)(page_buf + off);
                 int match_k = -1;
-                for (int k = 0; k < 15; k++) {
+                for (int k = 0; k < 17; k++) {
                     if (hook_pairs[k].real_fn != 0 && val == hook_pairs[k].real_fn) {
                         match_k = k;
                         break;
@@ -1224,21 +1332,21 @@ static int inject_via_proc_mem(pid_t pid) {
                 }
                 if (match_k < 0) continue;
 
-                /* Verify at least 2 sibling Vulkan pointers exist in the same page */
+                /* Verify at least 1 sibling Vulkan pointer exists in the same page */
                 int siblings = 0;
                 for (size_t s = 0; s < 4096; s += 8) {
                     if (s == off) continue;
                     uint64_t sval = *(uint64_t *)(page_buf + s);
-                    for (int k = 0; k < 15; k++) {
+                    for (int k = 0; k < 17; k++) {
                         if (hook_pairs[k].real_fn != 0 &&
                             (sval == hook_pairs[k].real_fn || sval == hook_pairs[k].hook_fn)) {
                             siblings++;
                             break;
                         }
                     }
-                    if (siblings >= 2) break;
+                    if (siblings >= 1) break;
                 }
-                if (siblings >= 2) {
+                if (siblings >= 1) {
                     uint64_t new_val = hook_pairs[match_k].hook_fn;
                     if (pwrite64(mem_fd, &new_val, sizeof(new_val), (off64_t)slot_addr) == (ssize_t)sizeof(new_val)) {
                         *(uint64_t *)(page_buf + off) = new_val;
@@ -1249,13 +1357,19 @@ static int inject_via_proc_mem(pid_t pid) {
         }
     }
 
+    if ((prev_cave.magic == CAVE_MAGIC_V1 || prev_cave.magic == CAVE_MAGIC_V2) &&
+        prev_state_addr != 0 && prev_state_addr != state_cave_addr) {
+        uint64_t zero_magic = 0;
+        (void)pwrite64(mem_fd, &zero_magic, sizeof(zero_magic), (off64_t)prev_state_addr);
+    }
+
     free(all_exec_ranges);
     free(rw_ranges);
     if (pagemap_fd >= 0) close(pagemap_fd);
     close(mem_fd);
 
     if (patched_slots == 0) {
-        fprintf(stderr, "INJECT_ERR NO_SLOTS_PATCHED\n");
+        if (!quiet) fprintf(stderr, "INJECT_ERR NO_SLOTS_PATCHED\n");
         return 1;
     }
 
@@ -1266,8 +1380,41 @@ static int inject_via_proc_mem(pid_t pid) {
         (void)chmod(state_file, 0666);
     }
 
-    printf("INJECT_OK handle=0x%lx patched=%d\n", (unsigned long)state_cave_addr, patched_slots);
+    if (!quiet) printf("INJECT_OK handle=0x%lx patched=%d\n", (unsigned long)state_cave_addr, patched_slots);
     return 0;
+}
+
+static int inject_via_proc_mem(pid_t pid) {
+    return inject_via_proc_mem_internal(pid, 0);
+}
+
+static uint16_t unpack_cave_node_mask(uint16_t raw) {
+    if ((raw & 0x0100u) != 0u) {
+        return (uint16_t)((raw >> 1) & 0x7u);
+    }
+    return raw ? 0x7u : 0x0u;
+}
+
+static uint16_t pack_cave_node_state(uint16_t mask3, uint16_t idle_polls) {
+    uint16_t m = (uint16_t)(mask3 & 0x7u);
+    uint16_t idle = (uint16_t)(idle_polls & 0x7Fu);
+    uint16_t allow_draw = (m == 0x7u) ? 1u : 0u;
+    return (uint16_t)(0x0100u | (idle << 9) | (m << 1) | allow_draw);
+}
+
+static uint16_t pack_cave_node_mask(uint16_t mask3) {
+    return pack_cave_node_state(mask3, 0u);
+}
+
+typedef struct {
+    uint64_t handles[CAVE_MAX_NODES];
+    uint32_t prev_draws[CAVE_MAX_NODES];
+    uint32_t last_delta[CAVE_MAX_NODES];
+    uint16_t idle_streak[CAVE_MAX_NODES];
+} CavePollTracker;
+
+static void get_cave_poll_tracker_path(pid_t pid, char *out, size_t out_sz) {
+    snprintf(out, out_sz, "/data/local/tmp/megingiard_gfx_cave_%d.prev", (int)pid);
 }
 
 static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
@@ -1287,8 +1434,24 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
     if (mem_fd < 0) return -1;
 
     MemCaveState state;
-    if (pread64(mem_fd, &state, sizeof(state), (off64_t)state_addr) != (ssize_t)sizeof(state) ||
-        state.magic != CAVE_MAGIC) {
+    memset(&state, 0, sizeof(state));
+    ssize_t rd = pread64(mem_fd, &state, sizeof(state), (off64_t)state_addr);
+    if (rd >= 0xA0 && (state.magic == CAVE_MAGIC_V1 || state.magic == CAVE_MAGIC_V2)) {
+        close(mem_fd);
+        if (inject_via_proc_mem_internal(pid, 1) != 0) {
+            return -1;
+        }
+        usleep(120000);
+        sf = fopen(state_file, "r");
+        if (!sf) return -1;
+        scanned = fscanf(sf, "%lx %lx", &state_addr, &code_addr);
+        fclose(sf);
+        if (scanned < 1 || state_addr == 0) return -1;
+        mem_fd = open(mem_path, O_RDWR);
+        if (mem_fd < 0) return -1;
+        rd = pread64(mem_fd, &state, sizeof(state), (off64_t)state_addr);
+    }
+    if (rd != (ssize_t)sizeof(state) || state.magic != CAVE_MAGIC) {
         close(mem_fd);
         return -1;
     }
@@ -1301,29 +1464,95 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
     }
 
     if (strcmp(cmd, "LIST") == 0) {
-        close(mem_fd);
+        char tracker_path[128];
+        get_cave_poll_tracker_path(pid, tracker_path, sizeof(tracker_path));
+        CavePollTracker tracker;
+        memset(&tracker, 0, sizeof(tracker));
+        FILE *tf = fopen(tracker_path, "rb");
+        if (tf) {
+            (void)fread(&tracker, 1, sizeof(tracker), tf);
+            fclose(tf);
+        }
+
+        uint32_t deltas[CAVE_MAX_NODES];
+        uint64_t total_delta = 0;
+        for (uint32_t i = 0; i < CAVE_MAX_NODES; i++) {
+            const CaveNode *n = &state.nodes[i];
+            if (n->handle == 0) {
+                deltas[i] = 0;
+                tracker.handles[i] = 0;
+                tracker.prev_draws[i] = 0;
+                tracker.last_delta[i] = 0;
+                tracker.idle_streak[i] = 0;
+                continue;
+            }
+            if (tracker.handles[i] != n->handle) {
+                tracker.handles[i] = n->handle;
+                tracker.prev_draws[i] = 0;
+                tracker.last_delta[i] = n->draws > 0 ? n->draws : 1u;
+                tracker.idle_streak[i] = 0;
+            }
+            uint32_t d = (n->draws >= tracker.prev_draws[i]) ? (n->draws - tracker.prev_draws[i]) : n->draws;
+            deltas[i] = d;
+            total_delta += d;
+        }
+
         printf("API|VULKAN\n");
-        uint32_t count = state.node_count;
-        if (count > CAVE_MAX_NODES) count = CAVE_MAX_NODES;
-        for (uint32_t i = 0; i < count; i++) {
+        for (uint32_t i = 0; i < CAVE_MAX_NODES; i++) {
             const CaveNode *n = &state.nodes[i];
             if (n->handle == 0) continue;
+            off64_t node_off = (off64_t)(state_addr + offsetof(MemCaveState, nodes) + (size_t)i * sizeof(CaveNode));
             unsigned long long h = (unsigned long long)n->handle;
             unsigned long long h32 = h & 0xFFFFFFFFULL;
-            unsigned int draws = (unsigned int)n->draws;
-            unsigned int en = n->enabled ? 1u : 0u;
+            uint16_t mask3 = unpack_cave_node_mask(n->enabled);
+
+            if (total_delta > 0) {
+                tracker.prev_draws[i] = n->draws;
+                if (deltas[i] > 0) {
+                    tracker.last_delta[i] = deltas[i];
+                    tracker.idle_streak[i] = 0;
+                } else {
+                    tracker.idle_streak[i]++;
+                    tracker.last_delta[i] = 0;
+                    if (mask3 == 0x7u && tracker.idle_streak[i] >= 5u) {
+                        CaveNode empty_node;
+                        memset(&empty_node, 0, sizeof(empty_node));
+                        (void)pwrite64(mem_fd, &empty_node, sizeof(empty_node), node_off);
+                        tracker.handles[i] = 0;
+                        tracker.prev_draws[i] = 0;
+                        tracker.last_delta[i] = 0;
+                        tracker.idle_streak[i] = 0;
+                        continue;
+                    }
+                }
+            }
+
+            unsigned int draws = (unsigned int)tracker.last_delta[i];
             if (n->category == 1) {
+                unsigned int rp_en = (mask3 & 1u) ? 1u : 0u;
                 printf("NODE|RP_0x%llx|RENDER_PASS|VULKAN|%08llX|Active|%u|%u|Vulkan RenderPass (0x%llx)\n",
-                       h, h32, draws, en, h);
+                       h, h32, draws, rp_en, h);
             } else if (n->category == 2) {
+                unsigned int pipe_en = (mask3 & 1u) ? 1u : 0u;
+                unsigned int vs_en = (mask3 & 2u) ? 1u : 0u;
+                unsigned int fs_en = (mask3 & 4u) ? 1u : 0u;
                 printf("NODE|PIPE_0x%llx|PIPELINE|VULKAN|%08llX|Active|%u|%u|Vulkan Pipeline (0x%llx)\n",
-                       h, h32, draws, en, h);
+                       h, h32, draws, pipe_en, h);
                 printf("NODE|VS_SYNTH_0x%llx|VERTEX_SHADER|VULKAN|%08llX|Active|%u|%u|Vertex Shader (Pipeline 0x%llx)\n",
-                       h, h32, draws, en, h);
+                       h, h32, draws, vs_en, h);
                 printf("NODE|FS_SYNTH_0x%llx|FRAGMENT_SHADER|VULKAN|%08llX|Active|%u|%u|Fragment Shader (Pipeline 0x%llx)\n",
-                       h, h32, draws, en, h);
+                       h, h32, draws, fs_en, h);
             }
         }
+
+        FILE *out_tf = fopen(tracker_path, "wb");
+        if (out_tf) {
+            (void)fwrite(&tracker, 1, sizeof(tracker), out_tf);
+            fclose(out_tf);
+            (void)chmod(tracker_path, 0666);
+        }
+
+        close(mem_fd);
         printf("END\n");
         return 0;
     }
@@ -1333,13 +1562,28 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
         uint16_t en = (uint16_t)(atoi(argv[5]) != 0 ? 1u : 0u);
         const char *hex_part = strstr(node_id, "0x");
         uint64_t target_handle = hex_part ? strtoull(hex_part, NULL, 16) : 0;
-        uint32_t count = state.node_count;
-        if (count > CAVE_MAX_NODES) count = CAVE_MAX_NODES;
-        for (uint32_t i = 0; i < count; i++) {
+        for (uint32_t i = 0; i < CAVE_MAX_NODES; i++) {
             if (state.nodes[i].handle == target_handle && target_handle != 0) {
+                uint16_t mask3 = unpack_cave_node_mask(state.nodes[i].enabled);
+                if (state.nodes[i].category == 1) {
+                    mask3 = en ? 0x7u : 0x0u;
+                } else {
+                    uint16_t bit = 1u;
+                    if (strncmp(node_id, "VS_SYNTH_", 9) == 0) {
+                        bit = 2u;
+                    } else if (strncmp(node_id, "FS_SYNTH_", 9) == 0) {
+                        bit = 4u;
+                    }
+                    if (en) {
+                        mask3 |= bit;
+                    } else {
+                        mask3 &= (uint16_t)~bit;
+                    }
+                }
+                uint16_t packed = pack_cave_node_mask(mask3);
                 off64_t en_off = (off64_t)(state_addr + offsetof(MemCaveState, nodes) +
                                            (size_t)i * sizeof(CaveNode) + offsetof(CaveNode, enabled));
-                (void)pwrite64(mem_fd, &en, sizeof(en), en_off);
+                (void)pwrite64(mem_fd, &packed, sizeof(packed), en_off);
             }
         }
         close(mem_fd);
@@ -1349,13 +1593,12 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
 
     if (strcmp(cmd, "SET_ALL") == 0 && argc >= 5) {
         uint16_t en = (uint16_t)(atoi(argv[4]) != 0 ? 1u : 0u);
-        uint32_t count = state.node_count;
-        if (count > CAVE_MAX_NODES) count = CAVE_MAX_NODES;
-        for (uint32_t i = 0; i < count; i++) {
+        uint16_t packed = pack_cave_node_mask(en ? 0x7u : 0x0u);
+        for (uint32_t i = 0; i < CAVE_MAX_NODES; i++) {
             if (state.nodes[i].handle != 0) {
                 off64_t en_off = (off64_t)(state_addr + offsetof(MemCaveState, nodes) +
                                            (size_t)i * sizeof(CaveNode) + offsetof(CaveNode, enabled));
-                (void)pwrite64(mem_fd, &en, sizeof(en), en_off);
+                (void)pwrite64(mem_fd, &packed, sizeof(packed), en_off);
             }
         }
         close(mem_fd);
@@ -1364,14 +1607,18 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
     }
 
     if (strcmp(cmd, "INVERT") == 0) {
-        uint32_t count = state.node_count;
-        if (count > CAVE_MAX_NODES) count = CAVE_MAX_NODES;
-        for (uint32_t i = 0; i < count; i++) {
+        for (uint32_t i = 0; i < CAVE_MAX_NODES; i++) {
             if (state.nodes[i].handle != 0) {
-                uint16_t en = state.nodes[i].enabled ? 0u : 1u;
+                uint16_t mask3 = unpack_cave_node_mask(state.nodes[i].enabled);
+                if (state.nodes[i].category == 1) {
+                    mask3 = (mask3 & 1u) ? 0x0u : 0x7u;
+                } else {
+                    mask3 = (uint16_t)((~mask3) & 0x7u);
+                }
+                uint16_t packed = pack_cave_node_mask(mask3);
                 off64_t en_off = (off64_t)(state_addr + offsetof(MemCaveState, nodes) +
                                            (size_t)i * sizeof(CaveNode) + offsetof(CaveNode, enabled));
-                (void)pwrite64(mem_fd, &en, sizeof(en), en_off);
+                (void)pwrite64(mem_fd, &packed, sizeof(packed), en_off);
             }
         }
         close(mem_fd);

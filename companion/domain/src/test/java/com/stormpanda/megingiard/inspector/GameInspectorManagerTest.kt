@@ -142,6 +142,8 @@ class GameInspectorManagerTest {
             PROC 26230 10129 C:\Program Files (x86)\Steam\steam.exe -silent
             PROC 29251 10129 S:\steamapps\common\Castlevania Belmont's Curse\Castlevania Belmont's Curse.exe
             PROC 29268 10129 S:\steamapps\common\Castlevania Belmont's Curse\UnityCrashHandler64.exe --attach 29251
+            PROC 30100 10129 reaper SteamLaunch AppId=4231820 -- /root/proton waitforexitandrun /root/Castlevania Belmont's Curse.exe
+            PROC 30101 10129 python3 /root/proton waitforexitandrun /root/Castlevania Belmont's Curse.exe
             """.trimIndent()
 
         val targetPids =
@@ -154,6 +156,11 @@ class GameInspectorManagerTest {
             "castlevania belmont's curse.exe",
             PrivdGameInspectorBackend.extractContainerExeName(
                 "S:\\steamapps\\common\\Castlevania Belmont's Curse\\Castlevania Belmont's Curse.exe",
+            ),
+        )
+        assertNull(
+            PrivdGameInspectorBackend.extractContainerExeName(
+                "python3 /root/proton waitforexitandrun /root/Castlevania Belmont's Curse.exe",
             ),
         )
     }
@@ -182,12 +189,20 @@ class GameInspectorManagerTest {
         }
 
     @Test
-    fun `refreshNodesLive updates nodes while attached`() =
+    fun `refreshNodesLive updates nodes while attached and reconciles stale backend toggle state`() =
         runTest {
             GameInspectorManager.requestScan(context, "org.ppsspp.ppsspp")
             GameInspectorManager.confirmWarningAndAttach(context)
             assertEquals(3, GameInspectorManager.uiState.value.nodes.size)
 
+            GameInspectorManager.setNodeEnabled("vk_pass_1", false)
+            assertFalse(
+                GameInspectorManager.uiState.value.nodes[0]
+                    .enabled,
+            )
+
+            // Simulate a stale LIST snapshot from the backend reporting vk_pass_1 as still enabled
+            fakeBackend.nodes[0] = fakeBackend.nodes[0].copy(enabled = true)
             fakeBackend.nodes.add(
                 GameLayerNode(
                     id = "vk_pass_new",
@@ -202,6 +217,12 @@ class GameInspectorManagerTest {
             )
             GameInspectorManager.refreshNodesLive()
             assertEquals(4, GameInspectorManager.uiState.value.nodes.size)
+            // UI state must NOT flip back to true, and backend must be healed back to false
+            assertFalse(
+                GameInspectorManager.uiState.value.nodes[0]
+                    .enabled,
+            )
+            assertFalse(fakeBackend.nodes[0].enabled)
         }
 
     private class FakeGameInspectorBackend : GameInspectorBackend {

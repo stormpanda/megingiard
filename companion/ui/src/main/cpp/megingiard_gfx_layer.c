@@ -2049,7 +2049,9 @@ static void handle_client_command(int client_fd, const char *cmd) {
     }
 
     if (strcmp(cmd, "LIST") == 0) {
-        if (g_node_count == 0) {
+        static int g_rescanned_on_list = 0;
+        if (g_node_count == 0 && !g_rescanned_on_list) {
+            g_rescanned_on_list = 1;
             scan_and_patch_loaded_modules();
         }
         pthread_mutex_lock(&g_mutex);

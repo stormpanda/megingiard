@@ -12,6 +12,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "GameInspectorManager"
 
@@ -36,6 +40,10 @@ object GameInspectorManager {
     private val confirmedPackages = mutableSetOf<String>()
     private val taggedUiNodeIds = mutableSetOf<String>()
     private val preHuntNodeStates = mutableMapOf<String, Boolean>()
+    private val desiredNodeStates = ConcurrentHashMap<String, Boolean>()
+    private val mutationGeneration = AtomicLong(0L)
+    private val activeMutationCount = AtomicInteger(0)
+    private val liveRefreshInFlight = AtomicBoolean(false)
 
     private val _uiState = MutableStateFlow(GameInspectorUiState())
     val uiState: StateFlow<GameInspectorUiState> = _uiState.asStateFlow()
@@ -168,6 +176,7 @@ object GameInspectorManager {
             return
         }
         scope.launch {
+            val genBefore = mutationGeneration.get()
             val snapshot = backend.querySnapshot(taggedUiNodeIds.toSet())
             if (snapshot == null) {
                 AppLog.w(TAG, "refreshNodes: agent unreachable")
@@ -178,7 +187,11 @@ object GameInspectorManager {
                     )
                 }
             } else {
-                AppLog.d(TAG, "refreshNodes: loaded ${snapshot.nodes.size} nodes (api=${snapshot.detectedApi})")
+                val reconciledNodes = reconcileNodesWithDesiredState(snapshot.nodes)
+                if (activeMutationCount.get() > 0 || mutationGeneration.get() != genBefore) {
+                    return@launch
+                }
+                AppLog.d(TAG, "refreshNodes: loaded ${reconciledNodes.size} nodes (api=${snapshot.detectedApi})")
                 _uiState.update {
                     it.copy(
                         detectedApi =
@@ -187,7 +200,7 @@ object GameInspectorManager {
                             } else {
                                 it.detectedApi
                             },
-                        nodes = snapshot.nodes,
+                        nodes = reconciledNodes,
                     )
                 }
             }
@@ -200,24 +213,65 @@ object GameInspectorManager {
      */
     fun refreshNodesLive() {
         if (_uiState.value.phase != InspectorConnectionPhase.ATTACHED) return
+        if (activeMutationCount.get() > 0) return
+        if (!liveRefreshInFlight.compareAndSet(false, true)) return
         scope.launch {
-            val snapshot = backend.querySnapshot(taggedUiNodeIds.toSet()) ?: return@launch
-            _uiState.update { cur ->
-                if (cur.phase != InspectorConnectionPhase.ATTACHED) {
-                    cur
+            try {
+                val genBefore = mutationGeneration.get()
+                val snapshot = backend.querySnapshot(taggedUiNodeIds.toSet()) ?: return@launch
+                if (activeMutationCount.get() > 0 || mutationGeneration.get() != genBefore) {
+                    return@launch
+                }
+                val reconciledNodes = reconcileNodesWithDesiredState(snapshot.nodes)
+                _uiState.update { cur ->
+                    if (cur.phase != InspectorConnectionPhase.ATTACHED ||
+                        activeMutationCount.get() > 0 ||
+                        mutationGeneration.get() != genBefore
+                    ) {
+                        cur
+                    } else {
+                        cur.copy(
+                            detectedApi =
+                                if (snapshot.detectedApi != GraphicsApi.UNKNOWN) {
+                                    snapshot.detectedApi
+                                } else {
+                                    cur.detectedApi
+                                },
+                            nodes = reconciledNodes,
+                        )
+                    }
+                }
+            } finally {
+                liveRefreshInFlight.set(false)
+            }
+        }
+    }
+
+    private fun reconcileNodesWithDesiredState(rawNodes: List<GameLayerNode>): List<GameLayerNode> {
+        val mismatched = mutableListOf<Pair<String, Boolean>>()
+        val result =
+            rawNodes.map { node ->
+                val desired = desiredNodeStates[node.id]
+                if (desired == null) {
+                    desiredNodeStates[node.id] = node.enabled
+                    node
+                } else if (node.enabled != desired) {
+                    mismatched.add(node.id to desired)
+                    node.copy(enabled = desired)
                 } else {
-                    cur.copy(
-                        detectedApi =
-                            if (snapshot.detectedApi != GraphicsApi.UNKNOWN) {
-                                snapshot.detectedApi
-                            } else {
-                                cur.detectedApi
-                            },
-                        nodes = snapshot.nodes,
-                    )
+                    node
+                }
+            }
+        if (mismatched.isNotEmpty()) {
+            scope.launch {
+                for ((nodeId, desired) in mismatched) {
+                    if (desiredNodeStates[nodeId] == desired) {
+                        backend.setNodeEnabled(nodeId, desired)
+                    }
                 }
             }
         }
+        return result
     }
 
     fun setNodeEnabled(
@@ -225,6 +279,8 @@ object GameInspectorManager {
         enabled: Boolean,
     ) {
         AppLog.d(TAG, "setNodeEnabled($nodeId, $enabled)")
+        desiredNodeStates[nodeId] = enabled
+        mutationGeneration.incrementAndGet()
         _uiState.update { state ->
             state.copy(
                 nodes =
@@ -233,36 +289,60 @@ object GameInspectorManager {
                     },
             )
         }
+        activeMutationCount.incrementAndGet()
         scope.launch {
-            backend.setNodeEnabled(nodeId, enabled)
+            try {
+                backend.setNodeEnabled(nodeId, enabled)
+            } finally {
+                activeMutationCount.decrementAndGet()
+            }
         }
     }
 
     fun setAllNodesEnabled(enabled: Boolean) {
         AppLog.d(TAG, "setAllNodesEnabled($enabled)")
+        mutationGeneration.incrementAndGet()
         _uiState.update { state ->
+            state.nodes.forEach { desiredNodeStates[it.id] = enabled }
             state.copy(
                 nodes = state.nodes.map { it.copy(enabled = enabled) },
                 huntMode = HuntModeState(),
             )
         }
         preHuntNodeStates.clear()
+        activeMutationCount.incrementAndGet()
         scope.launch {
-            backend.setAllNodesEnabled(enabled)
+            try {
+                backend.setAllNodesEnabled(enabled)
+            } finally {
+                activeMutationCount.decrementAndGet()
+            }
         }
     }
 
     fun invertAllNodes() {
         AppLog.d(TAG, "invertAllNodes()")
+        mutationGeneration.incrementAndGet()
         _uiState.update { state ->
+            val updatedNodes =
+                state.nodes.map { node ->
+                    val inverted = !node.enabled
+                    desiredNodeStates[node.id] = inverted
+                    node.copy(enabled = inverted)
+                }
             state.copy(
-                nodes = state.nodes.map { it.copy(enabled = !it.enabled) },
+                nodes = updatedNodes,
                 huntMode = HuntModeState(),
             )
         }
         preHuntNodeStates.clear()
+        activeMutationCount.incrementAndGet()
         scope.launch {
-            backend.invertAllNodes()
+            try {
+                backend.invertAllNodes()
+            } finally {
+                activeMutationCount.decrementAndGet()
+            }
         }
     }
 
@@ -321,6 +401,8 @@ object GameInspectorManager {
         preHuntNodeStates.clear()
         val firstNode = visible[0]
         preHuntNodeStates[firstNode.id] = firstNode.enabled
+        desiredNodeStates[firstNode.id] = false
+        mutationGeneration.incrementAndGet()
         AppLog.i(TAG, "startHuntMode: solo-disabling index=0 id=${firstNode.id}")
         _uiState.update { state ->
             state.copy(
@@ -336,8 +418,13 @@ object GameInspectorManager {
                     ),
             )
         }
+        activeMutationCount.incrementAndGet()
         scope.launch {
-            backend.setNodeEnabled(firstNode.id, false)
+            try {
+                backend.setNodeEnabled(firstNode.id, false)
+            } finally {
+                activeMutationCount.decrementAndGet()
+            }
         }
     }
 
@@ -348,6 +435,10 @@ object GameInspectorManager {
         val previousEnabled = if (huntedId != null) preHuntNodeStates[huntedId] else null
         AppLog.i(TAG, "stopHuntMode(restoreCurrent=$restoreCurrent): huntedId=$huntedId")
         preHuntNodeStates.clear()
+        mutationGeneration.incrementAndGet()
+        if (restoreCurrent && huntedId != null && previousEnabled != null) {
+            desiredNodeStates[huntedId] = previousEnabled
+        }
 
         _uiState.update { state ->
             state.copy(
@@ -363,8 +454,13 @@ object GameInspectorManager {
             )
         }
         if (restoreCurrent && huntedId != null && previousEnabled != null) {
+            activeMutationCount.incrementAndGet()
             scope.launch {
-                backend.setNodeEnabled(huntedId, previousEnabled)
+                try {
+                    backend.setNodeEnabled(huntedId, previousEnabled)
+                } finally {
+                    activeMutationCount.decrementAndGet()
+                }
             }
         }
     }
@@ -399,6 +495,11 @@ object GameInspectorManager {
                 nextNode.enabled
             }
         preHuntNodeStates[nextNode.id] = nextOriginalState
+        if (prevId != null && prevId != nextNode.id) {
+            desiredNodeStates[prevId] = prevRestoreState
+        }
+        desiredNodeStates[nextNode.id] = false
+        mutationGeneration.incrementAndGet()
 
         AppLog.d(TAG, "stepHuntByDelta($delta): restoring $prevId=$prevRestoreState, solo-disabling index=$nextIndex id=${nextNode.id}")
         _uiState.update { cur ->
@@ -419,11 +520,16 @@ object GameInspectorManager {
                     ),
             )
         }
+        activeMutationCount.incrementAndGet()
         scope.launch {
-            if (prevId != null && prevId != nextNode.id) {
-                backend.setNodeEnabled(prevId, prevRestoreState)
+            try {
+                if (prevId != null && prevId != nextNode.id) {
+                    backend.setNodeEnabled(prevId, prevRestoreState)
+                }
+                backend.setNodeEnabled(nextNode.id, false)
+            } finally {
+                activeMutationCount.decrementAndGet()
             }
-            backend.setNodeEnabled(nextNode.id, false)
         }
     }
 
@@ -527,6 +633,9 @@ object GameInspectorManager {
                 return@launch
             }
 
+            desiredNodeStates.clear()
+            snapshot.nodes.forEach { desiredNodeStates[it.id] = it.enabled }
+
             val effectiveApi =
                 if (snapshot.detectedApi != GraphicsApi.UNKNOWN) {
                     snapshot.detectedApi
@@ -565,6 +674,10 @@ object GameInspectorManager {
         confirmedPackages.clear()
         taggedUiNodeIds.clear()
         preHuntNodeStates.clear()
+        desiredNodeStates.clear()
+        mutationGeneration.set(0L)
+        activeMutationCount.set(0)
+        liveRefreshInFlight.set(false)
         _uiState.value = GameInspectorUiState()
     }
 }
