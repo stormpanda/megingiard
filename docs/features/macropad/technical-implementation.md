@@ -260,9 +260,10 @@ Individual screens and overlays (`MacroPadScreen`, `MacroPadEditor`, `QuickMenu`
 
 ### Hit Testing
 
-In use mode, all button hit testing (including `TrackpointMove` buttons) uses an **axis-aligned bounding box** check (`MacroPadHitTestEngine.isPointInsideButton`) performed once per pointer-down inside `MacroPadHitTestEngine.onPress()`, which returns `true` when a button consumes the press. The bounding box is centred at `(btn.posX * w, btn.posY * h)` with dimensions derived from `btn.widthDp` and `btn.heightDp` scaled by display density.
-
-AABB hit detection is conservative for circular buttons (slightly over-accepts at corners) but this is acceptable for a game-pad-style UI.
+In use mode, button hit testing (`MacroPadHitTestEngine.isPointInsideButton`) is performed once per pointer-down inside `MacroPadHitTestEngine.onPress()`, which returns `true` when a button consumes the press. First, the pointer is checked against the button's axis-aligned bounding box centred at `(btn.posX * w, btn.posY * h)` with dimensions derived from `btn.widthDp` and `btn.heightDp` scaled by display density. When inside the bounding box, the pointer is normalized to `[0f, 1f] × [0f, 1f]` and tested against the button's actual shape geometry via `ButtonShapeGeometry.isNormalizedPointInside` (`:shared:core`):
+- `SQUARE` and `ICON_ONLY` accept the full bounding box.
+- `ROUNDED_SQUARE` (25% corner radius) and `CIRCLE` (50% corner radius — circle when 1:1, stadium/pill when rectangular, and always circular for `TrackpointMove`) test exact rounded-corner / circle containment.
+- Polygonal shapes (`HEXAGON_1`, `HEXAGON_2`, `PENTAGON_1`, `PENTAGON_2`, `OCTAGON`, `DIAMOND`, `TRIANGLE_UP`, `TRIANGLE_DOWN`, `TRIANGLE_LEFT`, `TRIANGLE_RIGHT`) test exact convex-polygon containment against the same normalized vertices used by `PadButtonFace` in `:companion:ui`, preventing empty bounding-box corners from stealing taps in honeycomb or D-pad cluster layouts.
 
 ### Pad Canvas Sizing & Plain Background
 

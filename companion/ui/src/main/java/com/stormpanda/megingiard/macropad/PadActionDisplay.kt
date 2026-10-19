@@ -368,7 +368,18 @@ internal fun GridMode.labelResId(): Int =
 internal fun ButtonShape.labelResId(): Int =
     when (this) {
         ButtonShape.SQUARE -> R.string.macropad_editor_shape_square
+        ButtonShape.ROUNDED_SQUARE -> R.string.macropad_editor_shape_rounded_square
         ButtonShape.CIRCLE -> R.string.macropad_editor_shape_circle
+        ButtonShape.HEXAGON_1 -> R.string.macropad_editor_shape_hexagon_1
+        ButtonShape.HEXAGON_2 -> R.string.macropad_editor_shape_hexagon_2
+        ButtonShape.PENTAGON_1 -> R.string.macropad_editor_shape_pentagon_1
+        ButtonShape.PENTAGON_2 -> R.string.macropad_editor_shape_pentagon_2
+        ButtonShape.OCTAGON -> R.string.macropad_editor_shape_octagon
+        ButtonShape.DIAMOND -> R.string.macropad_editor_shape_diamond
+        ButtonShape.TRIANGLE_UP -> R.string.macropad_editor_shape_triangle_up
+        ButtonShape.TRIANGLE_DOWN -> R.string.macropad_editor_shape_triangle_down
+        ButtonShape.TRIANGLE_LEFT -> R.string.macropad_editor_shape_triangle_left
+        ButtonShape.TRIANGLE_RIGHT -> R.string.macropad_editor_shape_triangle_right
         ButtonShape.ICON_ONLY -> R.string.macropad_editor_shape_icon_only
     }
 

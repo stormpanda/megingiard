@@ -3,6 +3,8 @@ package com.stormpanda.megingiard.macropad
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -10,17 +12,107 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.ui.AppPalettes
 import kotlin.math.sqrt
 
 private val PBF_BACKING_COLOR = AppPalettes.padButtonBacking
 private val PBF_BORDER_WIDTH = 1.dp
+
+internal val PBF_SQUARE_RADIUS = 4.dp
+internal val PBF_SQUARE_SHAPE = RoundedCornerShape(PBF_SQUARE_RADIUS)
+private const val PBF_ROUNDED_SQUARE_PERCENT = 25
+internal val PBF_ROUNDED_SQUARE_SHAPE = RoundedCornerShape(percent = PBF_ROUNDED_SQUARE_PERCENT)
+private const val PBF_PILL_PERCENT = 50
+internal val PBF_PILL_SHAPE = RoundedCornerShape(percent = PBF_PILL_PERCENT)
+
+private class PolygonButtonShape(
+    private val vertices: List<NormalizedPoint>,
+) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline {
+        val path =
+            Path().apply {
+                if (vertices.isNotEmpty()) {
+                    moveTo(vertices[0].x * size.width, vertices[0].y * size.height)
+                    for (i in 1 until vertices.size) {
+                        lineTo(vertices[i].x * size.width, vertices[i].y * size.height)
+                    }
+                    close()
+                }
+            }
+        return Outline.Generic(path)
+    }
+
+    override fun equals(other: Any?): Boolean = this === other || (other is PolygonButtonShape && vertices == other.vertices)
+
+    override fun hashCode(): Int = vertices.hashCode()
+}
+
+private val PBF_POLYGON_SHAPES: Map<ButtonShape, Shape> =
+    ButtonShape.entries
+        .mapNotNull { shape ->
+            ButtonShapeGeometry.verticesFor(shape)?.let { vertices ->
+                shape to PolygonButtonShape(vertices)
+            }
+        }.toMap()
+
+/**
+ * Resolves the Compose [Shape] for a [PadButton] given its [buttonShape], dimensions, and trackpoint state.
+ */
+internal fun resolvePadButtonShape(
+    buttonShape: ButtonShape,
+    widthDp: Float,
+    heightDp: Float,
+    isTrackpoint: Boolean = false,
+): Shape {
+    if (isTrackpoint) return CircleShape
+    return when (buttonShape) {
+        ButtonShape.SQUARE,
+        ButtonShape.ICON_ONLY,
+        -> PBF_SQUARE_SHAPE
+
+        ButtonShape.ROUNDED_SQUARE -> PBF_ROUNDED_SQUARE_SHAPE
+
+        ButtonShape.CIRCLE -> if (widthDp == heightDp) CircleShape else PBF_PILL_SHAPE
+
+        ButtonShape.HEXAGON_1,
+        ButtonShape.HEXAGON_2,
+        ButtonShape.PENTAGON_1,
+        ButtonShape.PENTAGON_2,
+        ButtonShape.OCTAGON,
+        ButtonShape.DIAMOND,
+        ButtonShape.TRIANGLE_UP,
+        ButtonShape.TRIANGLE_DOWN,
+        ButtonShape.TRIANGLE_LEFT,
+        ButtonShape.TRIANGLE_RIGHT,
+        -> PBF_POLYGON_SHAPES[buttonShape] ?: PBF_SQUARE_SHAPE
+    }
+}
+
+/**
+ * Resolves the 1:1 preview [Shape] for a [ButtonShape] in editor preview badges.
+ */
+internal fun resolvePadButtonPreviewShape(buttonShape: ButtonShape): Shape =
+    resolvePadButtonShape(
+        buttonShape = buttonShape,
+        widthDp = MP_BUTTON_BASE_UNIT_DP,
+        heightDp = MP_BUTTON_BASE_UNIT_DP,
+        isTrackpoint = false,
+    )
 
 @Composable
 internal fun PadButtonFace(

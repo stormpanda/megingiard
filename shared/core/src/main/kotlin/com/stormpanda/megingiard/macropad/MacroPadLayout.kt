@@ -16,7 +16,23 @@ import com.stormpanda.megingiard.macropad.MouseButton as MouseBtnEnum
 // Shape enums
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum class ButtonShape { SQUARE, CIRCLE, ICON_ONLY }
+@Serializable
+enum class ButtonShape {
+    SQUARE,
+    ROUNDED_SQUARE,
+    CIRCLE,
+    HEXAGON_1,
+    HEXAGON_2,
+    PENTAGON_1,
+    PENTAGON_2,
+    OCTAGON,
+    DIAMOND,
+    TRIANGLE_UP,
+    TRIANGLE_DOWN,
+    TRIANGLE_LEFT,
+    TRIANGLE_RIGHT,
+    ICON_ONLY,
+}
 
 const val MP_BUTTON_BASE_UNIT_DP = 60f
 const val MP_BUTTON_MIN_SIZE_DP = 30f

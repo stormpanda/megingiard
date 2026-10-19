@@ -26,7 +26,7 @@
 | `MacroPadMediaRepository.kt` | Singleton encapsulating filesystem and bitmap storage operations (`loadScaledBitmap`, `saveLayerImage`, `deleteLayerImage`, `duplicateLayerImage` parameterized by `LayerImageKind`) on `Dispatchers.IO` |
 | `PadCanvas.kt` | Bottom-screen live editor pad canvas and shared image layer renderer (`LayoutLayerBitmaps`, `rememberLayoutLayerBitmaps`, `LayoutImageLayer`, `drawAdjustedBitmap`): button drag/resize handles, smart alignment guides overlay, snap grid overlay, inward-pointing highlight triangles when locked, and floating `ButtonDimensionHud` |
 | `MacroPadButton.kt` | Use-mode button composable and animated macro execution indicators (breathing content, pulsing background, and `ICON_ONLY` sonar ripples) |
-| `PadButtonFace.kt` | Shared button face visual renderer (`PadButtonFace`, `PadButtonContent`) across use mode, editor canvas, and button deck previews |
+| `PadButtonFace.kt` | Shared button face visual renderer (`PadButtonFace`) and Compose shape resolvers (`resolvePadButtonShape`, `resolvePadButtonPreviewShape`) across use mode, editor canvas, and button editor color previews |
 | `PadButtonEditDialog.kt` | In-deck button create/edit sub-page (`EditButtonSubPageContent`), `ButtonColorSubPageContent`, and `ColorPreviewInfoBox` |
 | `PadActionPicker.kt` | Action category selector card and dispatcher to action-specific sub-pickers in the button editor |
 | `PadActionDisplay.kt` | Action type enums (`ActionGroup`, `ActionCategory`), string mappings, and localized gamepad button formatting/label templates |
@@ -62,7 +62,8 @@
 | File | Responsibility |
 | --- | --- |
 | `MacroPadState.kt` (`:companion:domain`) | Singleton state: profiles, active profile, active layout, centralized `updateState` mutations with debounced persistence (`MacroPadSettings`), and transient editor preview state |
-| `MacroPadHitTestEngine.kt` (`:companion:domain`) | Multi-touch pointer state machine, single-pass `onPress` AABB hit testing, trackpoint relative/virtual-touch cursor tracking, and scroll wheel accumulation |
+| `MacroPadHitTestEngine.kt` (`:companion:domain`) | Multi-touch pointer state machine, single-pass `onPress` shape-aware hit testing (via `ButtonShapeGeometry`), trackpoint relative/virtual-touch cursor tracking, and scroll wheel accumulation |
+| `ButtonShapeGeometry.kt` (`:shared:core`) | Pure normalized polygon vertex definitions (`NormalizedPoint`) and shape-aware point containment (`isNormalizedPointInside`) shared by hit testing and Compose button rendering |
 | `MacroPadActionDispatch.kt` (`:companion:domain`) | Dispatches discrete button down/up actions to `KeyInjector`, `GamepadInjector`, `MouseInjector`, `MacroExecutor`, layout/profile switching, and mirror controls |
 | `MacroExecutor.kt` (`:companion:domain`) | Tap-to-toggle macro playback and `runTest()`: compiles steps via `MacroEventCompiler`, replays over `PrivdClient`, tracks `runningMacroIds`, and releases all pressed inputs in `finally` |
 | `GamepadInjector.kt` (`:companion:domain`) | Facade routing gamepad button, hat, and joystick commands (`GD`, `GU`, `HD`, `JS`) directly to `PrivdClient` for hardware evdev merge |

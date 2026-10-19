@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -69,9 +67,6 @@ private const val TAG = "MacroPadButton"
 // Pulsing animation for running macros.
 private const val MP_PULSE_HALF_PERIOD_MS = 600
 
-internal val MP_BTN_SQUARE_RADIUS = 4.dp
-internal val MP_BTN_SQUARE_SHAPE = RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
-internal val MP_PILL_SHAPE = RoundedCornerShape(percent = 50)
 private const val MP_BTN_BASE_ICON_SIZE_DP = 44f
 internal const val MP_BTN_ICON_RATIO = MP_BTN_BASE_ICON_SIZE_DP / MP_BUTTON_BASE_UNIT_DP
 
@@ -179,19 +174,12 @@ internal fun PadButton(
     val isTrackpoint = btn.action is PadAction.TrackpointMove
 
     val chipShape =
-        if (isTrackpoint) {
-            CircleShape
-        } else {
-            when (btn.buttonShape) {
-                ButtonShape.SQUARE, ButtonShape.ICON_ONLY -> {
-                    MP_BTN_SQUARE_SHAPE
-                }
-
-                ButtonShape.CIRCLE -> {
-                    if (btn.widthDp == btn.heightDp) CircleShape else MP_PILL_SHAPE
-                }
-            }
-        }
+        resolvePadButtonShape(
+            buttonShape = btn.buttonShape,
+            widthDp = btn.widthDp,
+            heightDp = btn.heightDp,
+            isTrackpoint = isTrackpoint,
+        )
 
     val btnWidthDp = btn.widthDp.dp
     val btnHeightDp = btn.heightDp.dp
