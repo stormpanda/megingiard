@@ -31,10 +31,10 @@ You are an experienced Android/Kotlin engineer with deep knowledge of the **Megi
 
 | Mode | Trigger | Steps |
 | ---- | ------- | ----- |
-| **Planning Mode** | The user describes a feature informally (e.g. "delete buttons by swiping right") | Steps 1–5, then hand-off (5.5). Typically run by a high-reasoning model. |
-| **Implementation Mode** | The user points to an approved `implementation_plan.md` (path or "implement the plan") | Section **Implementation Mode** below, then Steps 7–8. May be run by a lightweight model. |
+| **Planning Mode** | The user describes a feature informally (e.g. "delete buttons by swiping right") | Steps 1–5. Surveys code/docs, conducts the design interview, and presents a concise, high-signal `implementation_plan.md` for user approval. |
+| **Implementation Mode** | The user approves the plan (e.g. "proceed") or points to an approved `implementation_plan.md` | Section **Implementation Mode** below, then Steps 7–8. Executes all planned tasks in a continuous pass and runs `./scripts/verify.sh` once at the end. |
 
-The same agent may run both modes back-to-back; it must still follow Implementation Mode rules once the plan is approved. The design thinking belongs in the plan — Implementation Mode never re-opens it.
+Both modes are optimized for a **same-model, same-session (`Pro` all the way)** workflow while remaining self-contained enough to survive context compaction seamlessly. Design decisions are locked in during Planning Mode — Implementation Mode never re-opens them.
 
 ---
 
@@ -67,7 +67,7 @@ Goal: a complete picture of what already exists in this area and how it works.
 
 ### 3. ✅ Survey the codebase
 
-Explore the affected code area. **Read every file you expect to modify in full** (not just grep hits) — a detailed plan is impossible without it.
+Explore the affected code area. **Read the files you expect to modify** (not just grep hits) so you know exact signatures, line ranges, and conventions.
 
 - Read the relevant files from the module tree (`AGENTS.md §6`)
 - Identify:
@@ -77,8 +77,7 @@ Explore the affected code area. **Read every file you expect to modify in full**
   - Which **data models** (`:shared:core`) may need extending, and are they persisted / exported in `.mgrd`?
   - Which **HelpModal**, onboarding, and `strings.xml` entries cover this area today?
   - Which **existing tests** cover this area (`src/test/**`)?
-- Find the **closest existing feature** as a reference implementation (e.g. how another toggle/action/setting was added end-to-end) and trace it from UI to persistence.
-- Write **survey notes** to `<artifact dir>/scratch/survey_notes.md` while exploring: every relevant symbol with file path + line range, its current behaviour, and the reference implementation trace. These notes feed §3 of the plan and the interview recommendations.
+- Find the **closest existing feature** as a reference implementation (e.g. how another toggle/action/setting was added end-to-end) and trace it from UI to persistence. Record these facts directly into §3 of `implementation_plan.md` after the interview (no separate `scratch/survey_notes.md` file needed).
 
 ---
 
@@ -120,49 +119,42 @@ Explore each relevant domain sequentially:
    - Must existing saved data / `.mgrd` backups still load? Default values for new fields?
    - Which behaviours must be unit-tested vs. manually verified on device?
 
-Keep a running **decision log** (question → chosen answer → rationale → rejected options) during the interview; it becomes §2 of the plan verbatim.
+Keep a running **decision log** (question → chosen answer → rationale → rejected options) during the interview; it becomes §2 of the plan.
 
 ---
 
 ### 5. ✅ Create and present an implementation plan
 
-1. **Read [`references/PLAN_TEMPLATE.md`](references/PLAN_TEMPLATE.md)** (next to this file) — it defines the hand-off contract, the mandatory 17-section plan (§0–§16), depth scaling (S/M/L), and the quality gate.
+1. **Read [`references/PLAN_TEMPLATE.md`](references/PLAN_TEMPLATE.md)** (next to this file) — it defines the streamlined same-session plan structure (§0–§16), depth scaling (S/M/L), and the quality gate.
 2. **Write the plan as an artifact** `implementation_plan.md` in the artifact directory (`RequestFeedback: true`, `UserFacing: true`) — not inline in chat. Record the base commit (`git rev-parse --short HEAD`). Fill every section; inapplicable sections say `n/a — <reason>`.
-3. **Write decision logic as code.** You are the reasoning step: write the actual Kotlin for every function that contains a choice, copy verbatim anchors for every edit, and give new files in full. Prose descriptions of logic leave design to the implementer and defeat the purpose.
-4. **Verify anchors**: `grep` each anchor's first line in its file and confirm it occurs exactly once.
-5. **Run the Quality Gate** at the end of the template, reading the plan as a context-free smaller model would. Fix every failing item **before** presenting.
-6. In chat, give only a short pointer to the artifact plus any open questions — do not re-summarize the plan. Resolve all open questions with the user and fold the answers into the plan; §15 must be empty before hand-off.
+3. **Specify signatures & core decision logic without writing boilerplate twice:**
+   - Give exact signatures, constants (`TAG`, prefixed constants), target file + line ranges (`file:///.../File.kt#L70-L95`), and concise code blocks for **core algorithms / branching / state transitions / Compose effects**.
+   - **Do NOT duplicate** full production files, verbatim before-anchors, XML string blocks, full test file bodies, or verbatim Markdown doc diffs inside §5 — strings live only in §8, tests only in §10, and doc updates only in §11.
+4. **Run the Quality Gate** at the end of `PLAN_TEMPLATE.md`. Fix every failing item **before** presenting.
+5. In chat, give only a short pointer to the artifact plus any open questions — do not re-summarize the plan. Resolve all open questions with the user and fold the answers into the plan; §15 must be empty before implementation.
 
 > ⚠️ **Wait for the user's approval** before starting implementation.
 > If the user requests corrections or additions, revise the artifact (and re-run the quality gate) first.
-
-### 5.5 ✅ Hand-off
-
-After approval, give the user a copy-paste prompt for the implementer (works in this conversation after switching model, or in a fresh session):
-
-```
-Use the megingiard-feature skill in Implementation Mode.
-Plan: <absolute path to implementation_plan.md>
-```
 
 ---
 
 ## Implementation Mode
 
-You are executing an approved plan. **The plan is the specification; you are not the designer.**
+You are executing an approved plan. **The plan is the specification; do not re-open design decisions.**
 
 ### Rules
 
-1. **Read the entire plan first**, then `AGENTS.md` sections referenced in its §13. Do not start editing before you have read §0, §12, and §16.
-2. **Check the base commit**: run `git log --oneline -1` and `git status`. If HEAD differs from the plan's base commit, continue only if every anchor still matches (rule 4).
-3. **Execute §12 task by task, in order.** For each task: apply exactly its edits from §5 → run its verify command → confirm its done-criterion → then move on. Keep a checklist of task ids in your progress updates.
-4. **Anchors must match verbatim.** Locate each edit with `grep` on the anchor. If an anchor is missing or matches more than once, **stop** (rule 7).
-5. **Transcribe code as written.** Do not rename, restructure, "simplify", reorder, change dispatchers, change Compose keys, add extra null checks, or add features. Formatting fixes required by ktlint/verify are allowed.
-6. **Respect §16 guardrails absolutely**, including "looks wrong but is intentional" items and the do-not-touch file list.
-7. **Stop instead of improvising** when: an anchor doesn't match; a referenced symbol/import doesn't exist or has a different signature; plan code doesn't compile and the fix is not a trivial typo (missing import, obvious typo); a test in §10 fails because the *specified behaviour* seems wrong; or any step would require a design decision. Report: task id, edit id, what you expected, what you found, and 1–2 candidate fixes — then wait for the user (or the planner) to amend the plan.
-8. **Compile errors you may fix yourself**: missing/wrong imports, typos in identifiers that are unambiguous from the plan, ktlint formatting. Note each such fix in your final summary under "Deviations from plan".
-9. **Tests from §10 are written exactly as specified** (method names, given/when/then values). You may add tests, never drop or weaken specified ones.
-10. After the last task: Steps 7–8 below (docs from plan §11, verify, code review), then the final summary with a **Deviations from plan** section (`none` if none) and the commit message (§4 of `AGENTS.md`).
+1. **Ensure the plan is loaded**: if continuing in the same session, you already have it; if resuming after compaction or in a new session, read `implementation_plan.md` first.
+2. **Execute all planned edits (`§5`, `§8` strings, `§10` tests, and `§11` docs) in a single continuous pass**:
+   - Batch independent file edits in parallel where possible.
+   - **Do NOT run intermediate Gradle compile or unit test commands between tasks (`T1`, `T2`, …)** unless you hit an unexpected ambiguity that requires checking compilation. All verification is consolidated into the single `./scripts/verify.sh` run in Step 8.
+3. **Follow the planned specifications strictly**:
+   - Use the exact signatures, constants, state ownership, Compose effect patterns, and guardrails in §5 and §16.
+   - Write all localized strings from §8 across `values/strings.xml`, `values-de/strings.xml`, and `values-zh-rTW/strings.xml`.
+   - Implement all unit test cases specified in §10.
+   - Apply all documentation and `HelpModal` updates specified in §11.
+4. **Stop instead of improvising** if a referenced symbol/signature does not match what the plan assumed, or if a step would require a new architectural or UX decision. Report what you expected, what you found, and 1–2 candidate fixes.
+5. **Single verification & self-review pass at the end**: once all code, string, test, and doc edits are applied, proceed to Step 8 (`./scripts/verify.sh` + `megingiard-code-review` pass), then present the final summary with a **Deviations from plan** section (`none` if none), a **Future Improvements** section (`AGENTS.md §5`), and the commit message (`AGENTS.md §4`).
 
 ---
 
@@ -239,15 +231,15 @@ After implementation, always synchronize documentation and in-app help. In Imple
 **Planning Mode**
 
 1. **Interactive design interview**: Conducted one-by-one via `ask_question` tool before drafting the plan
-2. **Implementation plan**: `implementation_plan.md` artifact following `references/PLAN_TEMPLATE.md`, passing its quality gate, approved before coding
-3. **Hand-off prompt** (Step 5.5)
+2. **Implementation plan**: `implementation_plan.md` artifact following `references/PLAN_TEMPLATE.md` (`RequestFeedback: true`, `UserFacing: true`), passing its quality gate, approved before coding
 
 **Implementation Mode**
 
 1. **Implemented code**: All changed and new files, mapped to plan task ids
-2. **Deviations from plan**: every fix beyond verbatim transcription, or `none`
+2. **Deviations from plan**: every fix beyond the planned specification, or `none`
 3. **Documentation updates**: Which `FEATURE.md` sections were changed and how
-4. **Conventional Commits message** as a copy-paste-ready code block (covering all changes):
+4. **Future Improvements**: Observations noted during implementation (`AGENTS.md §5`)
+5. **Conventional Commits message** as a copy-paste-ready code block (covering all changes):
 
 ```
 feat: <short imperative summary>
@@ -262,11 +254,11 @@ feat: <short imperative summary>
 ## Constraints
 
 - Only run the build/test commands permitted in `AGENTS.md` §3.1 (sandbox bypass enabled).
-- `./scripts/run_unit_tests.sh` **must** be run after every implementation to verify all unit tests pass.
+- Run `./scripts/verify.sh` **once at the end of Implementation Mode** (do not run intermediate Gradle compile/test checks after each sub-task unless resolving an unexpected ambiguity).
 - After implementation, always write or update unit tests for new or changed pure logic in `:shared:core` / `:companion:domain`. If logic is not testable without major refactoring, document it as a follow-up task instead of skipping silently.
 - **Planning Mode: always conduct an interactive interview via `ask_question` before drafting the plan** — walk down each branch of the design tree one question at a time with recommendations until all requirements are unambiguous.
 - **Always present the plan before implementing** — no silent coding
-- **Implementation Mode: never re-open design decisions** — stop and report instead (Implementation Mode rule 7)
+- **Implementation Mode: never re-open design decisions** — stop and report instead (Implementation Mode rule 4)
 - Never remove existing functionality without explicit user approval
 - Do not design features that cross module boundaries in ways that violate the architecture in `docs/ARCHITECTURE.md`
 - **Companion Autonomy:** Never introduce dependencies in Megingiard Companion on Game Focus. Megingiard Companion must function 100% standalone.
