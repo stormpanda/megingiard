@@ -77,7 +77,7 @@ Explore the affected code area. **Read the files you expect to modify** (not jus
   - Which **data models** (`:shared:core`) may need extending, and are they persisted / exported in `.mgrd`?
   - Which **HelpModal**, onboarding, and `strings.xml` entries cover this area today?
   - Which **existing tests** cover this area (`src/test/**`)?
-- Find the **closest existing feature** as a reference implementation (e.g. how another toggle/action/setting was added end-to-end) and trace it from UI to persistence. Record these facts directly into §3 of `implementation_plan.md` after the interview (no separate `scratch/survey_notes.md` file needed).
+- Find the **closest existing feature** as a reference implementation (e.g. how another toggle/action/setting was added end-to-end) and trace it from UI to persistence.
 
 ---
 
@@ -125,40 +125,36 @@ Keep a running **decision log** (question → chosen answer → rationale → re
 
 ### 5. ✅ Create and present an implementation plan
 
-1. **Read [`references/PLAN_TEMPLATE.md`](references/PLAN_TEMPLATE.md)** (next to this file) — it defines the streamlined same-session plan structure (§0–§16), depth scaling (S/M/L), and the quality gate.
-2. **Write the plan as an artifact** `implementation_plan.md` in the artifact directory (`RequestFeedback: true`, `UserFacing: true`) — not inline in chat. Record the base commit (`git rev-parse --short HEAD`). Fill every section; inapplicable sections say `n/a — <reason>`.
-3. **Specify signatures & core decision logic without writing boilerplate twice:**
-   - Give exact signatures, constants (`TAG`, prefixed constants), target file + line ranges (`file:///.../File.kt#L70-L95`), and concise code blocks for **core algorithms / branching / state transitions / Compose effects**.
-   - **Do NOT duplicate** full production files, verbatim before-anchors, XML string blocks, full test file bodies, or verbatim Markdown doc diffs inside §5 — strings live only in §8, tests only in §10, and doc updates only in §11.
-4. **Run the Quality Gate** at the end of `PLAN_TEMPLATE.md`. Fix every failing item **before** presenting.
-5. In chat, give only a short pointer to the artifact plus any open questions — do not re-summarize the plan. Resolve all open questions with the user and fold the answers into the plan; §15 must be empty before implementation.
+1. **Read [`references/PLAN_TEMPLATE.md`](references/PLAN_TEMPLATE.md)** (next to this file) — it defines the lean 6-section architectural plan structure (`§1`–`§6`) and quality gate.
+2. **Write the plan as an artifact** `implementation_plan.md` in the artifact directory (`RequestFeedback: true`, `UserFacing: true`) — not inline in chat.
+3. **Keep the plan architectural and prose-driven (do not write code twice):**
+   - Describe data model / schema changes, module ownership, per-file responsibilities (1–3 bullets per file), edge cases, test scenarios, and localization / doc targets in concise prose.
+   - **Do NOT write implementation code blocks** (function bodies, Compose UI trees, `when` mappings, imports, `TAG` / `private const val` lists, 3-locale translation tables, or doc diffs) inside `implementation_plan.md`. Write code once, directly in the source files during Implementation Mode.
+4. **Run the Quality Gate** at the end of `PLAN_TEMPLATE.md`.
+5. In chat, give only a short pointer to the artifact — do not re-summarize the plan.
 
 > ⚠️ **Wait for the user's approval** before starting implementation.
-> If the user requests corrections or additions, revise the artifact (and re-run the quality gate) first.
+> If the user requests corrections or additions, revise the artifact first.
 
 ---
 
 ## Implementation Mode
 
-You are executing an approved plan. **The plan is the specification; do not re-open design decisions.**
+You are executing an approved plan. **The plan is the architectural specification; do not re-open resolved design decisions.**
 
 ### Rules
 
 1. **Ensure the plan is loaded**: if continuing in the same session, you already have it; if resuming after compaction or in a new session, read `implementation_plan.md` first.
-2. **Execute all planned edits (`§5`, `§8` strings, `§10` tests, and `§11` docs) in a single continuous pass**:
+2. **Execute all planned changes (`§4` production files, `§5` unit tests, and `§6` strings/help/docs) in a single continuous pass**:
    - Batch independent file edits in parallel where possible.
-   - **Do NOT run intermediate Gradle compile or unit test commands between tasks (`T1`, `T2`, …)** unless you hit an unexpected ambiguity that requires checking compilation. All verification is consolidated into the single `./scripts/verify.sh` run in Step 8.
-3. **Follow the planned specifications strictly**:
-   - Use the exact signatures, constants, state ownership, Compose effect patterns, and guardrails in §5 and §16.
-   - Write all localized strings from §8 across `values/strings.xml`, `values-de/strings.xml`, and `values-zh-rTW/strings.xml`.
-   - Implement all unit test cases specified in §10.
-   - Apply all documentation and `HelpModal` updates specified in §11.
-4. **Stop instead of improvising** if a referenced symbol/signature does not match what the plan assumed, or if a step would require a new architectural or UX decision. Report what you expected, what you found, and 1–2 candidate fixes.
-5. **Single verification & self-review pass at the end**: once all code, string, test, and doc edits are applied, proceed to Step 8 (`./scripts/verify.sh` + `megingiard-code-review` pass), then present the final summary with a **Deviations from plan** section (`none` if none), a **Future Improvements** section (`AGENTS.md §5`), and the commit message (`AGENTS.md §4`).
+   - **Do NOT run intermediate Gradle compile or unit test commands while applying edits** unless you hit an unexpected ambiguity that requires checking compilation. All verification is consolidated into the single `./scripts/verify.sh` run in Step 8.
+3. **Enforce all `AGENTS.md` coding rules directly while writing code** (see checklist below).
+4. **Stop instead of improvising** if an assumption in the plan turns out to conflict with the codebase or requires a new UX/architectural decision.
+5. **Single verification & self-review pass at the end**: once all code, string, test, and doc edits are applied, run Step 8 (`./scripts/verify.sh` + `megingiard-code-review` pass), then present the final summary with a **Future Improvements** section (`AGENTS.md §5`) and the commit message (`AGENTS.md §4`).
 
 ---
 
-### Coding rules (planner writes plan code to satisfy them; implementer checks them while transcribing)
+### Coding rules (enforced while writing code in Implementation Mode)
 
 **State & architecture:**
 
@@ -183,7 +179,7 @@ You are executing an approved plan. **The plan is the specification; do not re-o
 
 - No magic numbers — `private const val` at file scope
 - No `android.util.Log` — all logging via `AppLog`
-- Every new file needs `private const val TAG = "ClassName"` and full AppLog coverage (§8.4)
+- Every new file with logging needs `private const val TAG = "ClassName"` and full AppLog coverage (§8.4)
 - No FQN references in the function body — everything in imports
 
 **Module ownership:**
@@ -196,15 +192,14 @@ You are executing an approved plan. **The plan is the specification; do not re-o
 
 ### 7. ✅ Update documentation & help tutorials (mandatory)
 
-After implementation, always synchronize documentation and in-app help. In Implementation Mode, use the drafted text from plan §11 and string keys from §8; the checklist below is the completeness check.
+Synchronize documentation and in-app help per §6 of the plan:
 
 **Extending an existing feature:**
 
-1. Open the relevant `docs/features/<feature>/FEATURE.md`
-2. Check whether Functional Requirements or Technical Implementation sections are now outdated
-3. Add new requirements and a technical description for the new behavior
-4. If the architecture is affected: review `docs/ARCHITECTURE.md`
-5. **Update in-app help/tutorials**: if the change modifies user interaction (buttons, view modes, settings, gestures), update the corresponding `HelpModal` files, onboarding/welcome popups, and localized strings (`strings.xml`, `values-de/strings.xml`, `values-zh-rTW/strings.xml`).
+1. Open the relevant `docs/features/<feature>/FEATURE.md` (and split part files)
+2. Update Functional Requirements and Technical Implementation sections
+3. If the architecture is affected: review `docs/ARCHITECTURE.md`
+4. **Update in-app help/tutorials**: if the change modifies user interaction (buttons, view modes, settings, gestures), update the corresponding `HelpModal` files, onboarding/welcome popups, and localized strings (`strings.xml`, `values-de/strings.xml`, `values-zh-rTW/strings.xml`).
 
 **Brand-new feature:**
 
@@ -221,7 +216,7 @@ After implementation, always synchronize documentation and in-app help. In Imple
 2. Walk through the full **Done checklist in `AGENTS.md` §3.5** (do not rely on a partial copy). Feature-specific emphasis:
    - `FEATURE.md` created / updated and added to the `AGENTS.md` §2 table if new
    - In-app help (`HelpModal`), onboarding, and strings in every locale (`values`, `values-de`, `values-zh-rTW`) updated
-   - Every item of plan §9 (edge cases) and §10 (test plan) is implemented, or the deviation is reported
+   - Every item of plan §5 (edge cases & unit test scenarios) is implemented
    - New pure logic covered by unit tests
 
 ---
@@ -231,15 +226,14 @@ After implementation, always synchronize documentation and in-app help. In Imple
 **Planning Mode**
 
 1. **Interactive design interview**: Conducted one-by-one via `ask_question` tool before drafting the plan
-2. **Implementation plan**: `implementation_plan.md` artifact following `references/PLAN_TEMPLATE.md` (`RequestFeedback: true`, `UserFacing: true`), passing its quality gate, approved before coding
+2. **Implementation plan**: Lean 6-section `implementation_plan.md` artifact following `references/PLAN_TEMPLATE.md` (`RequestFeedback: true`, `UserFacing: true`), approved before coding
 
 **Implementation Mode**
 
-1. **Implemented code**: All changed and new files, mapped to plan task ids
-2. **Deviations from plan**: every fix beyond the planned specification, or `none`
-3. **Documentation updates**: Which `FEATURE.md` sections were changed and how
-4. **Future Improvements**: Observations noted during implementation (`AGENTS.md §5`)
-5. **Conventional Commits message** as a copy-paste-ready code block (covering all changes):
+1. **Implemented code**: Summary of changed and new files
+2. **Documentation updates**: Which `FEATURE.md` sections were changed and how
+3. **Future Improvements**: Observations noted during implementation (`AGENTS.md §5`)
+4. **Conventional Commits message** as a copy-paste-ready code block (covering all changes):
 
 ```
 feat: <short imperative summary>
