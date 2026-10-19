@@ -87,6 +87,8 @@ private val GI_ICON_SIZE = 20.dp
 private val GI_SMALL_ICON_SIZE = 16.dp
 private val GI_WARNING_ICON_SIZE = 28.dp
 private val GI_PROGRESS_SIZE = 28.dp
+private val GI_SUBDRAW_START_PADDING = 20.dp
+private val GI_ZERO_PADDING = 0.dp
 private const val GI_SUBTLE_BG_ALPHA = 0.14f
 private const val GI_BORDER_ALPHA = 0.35f
 private const val GI_LIVE_REFRESH_INTERVAL_MS = 1_000L
@@ -480,6 +482,21 @@ private fun AttachedInspectorContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(GI_SECTION_GAP),
     ) {
+        // ── Scene Profile Bar (+ New Scene / Scene 1..N / Recapture / Delete) ──
+        SceneProfileBar(
+            state = state,
+            colors = colors,
+        )
+
+        if (!state.canToggleOrHunt) {
+            NoSceneCapturedPromptCard(
+                colors = colors,
+                onCreateScene = { GameInspectorManager.createSceneFromCurrentFrame() },
+                modifier = Modifier.weight(1f),
+            )
+            return@Column
+        }
+
         // ── Step / Hunt Mode Bar (ReShade ShaderToggler style) ─────────────
         HuntModeBar(
             state = state,
@@ -504,7 +521,7 @@ private fun AttachedInspectorContent(
                 },
                 label = {
                     Text(
-                        text = stringResource(R.string.game_inspector_cat_all, state.nodes.size),
+                        text = stringResource(R.string.game_inspector_cat_all, visibleNodes.size),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 },
@@ -535,6 +552,16 @@ private fun AttachedInspectorContent(
                 label = {
                     Text(
                         text = stringResource(R.string.game_inspector_cat_tagged_ui),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                },
+            )
+            FilterChip(
+                selected = state.showInactiveNodes,
+                onClick = { GameInspectorManager.setShowInactiveNodes(!state.showInactiveNodes) },
+                label = {
+                    Text(
+                        text = stringResource(R.string.game_inspector_cat_show_inactive),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 },
@@ -633,6 +660,7 @@ private fun AttachedInspectorContent(
                     LayerNodeCard(
                         node = node,
                         isHunted = state.huntMode.active && state.huntMode.huntedNodeId == node.id,
+                        isSplit = node.id in state.splitPipelineIds,
                         colors = colors,
                         onToggleEnabled = { enabled ->
                             GameInspectorManager.setNodeEnabled(node.id, enabled)
@@ -640,9 +668,121 @@ private fun AttachedInspectorContent(
                         onToggleTagUi = {
                             GameInspectorManager.toggleTagAsUi(node.id)
                         },
+                        onToggleSplit = {
+                            GameInspectorManager.toggleSplitPipeline(node.id)
+                        },
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SceneProfileBar(
+    state: GameInspectorUiState,
+    colors: AppColors,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(GI_ITEM_GAP),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        state.scenes.forEachIndexed { idx, scene ->
+            val isSelected = scene.id == state.selectedSceneId
+            val isActive = scene.id == state.activeSceneId
+            val labelText =
+                if (isActive) {
+                    stringResource(R.string.game_inspector_scene_active_item, idx + 1)
+                } else {
+                    stringResource(R.string.game_inspector_scene_item, idx + 1)
+                }
+            FilterChip(
+                selected = isSelected,
+                onClick = { GameInspectorManager.selectScene(scene.id) },
+                label = {
+                    Text(
+                        text = labelText,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                    )
+                },
+            )
+        }
+
+        Button(
+            onClick = { GameInspectorManager.createSceneFromCurrentFrame() },
+            contentPadding = PaddingValues(horizontal = GI_BADGE_H_PADDING, vertical = GI_BADGE_V_PADDING),
+        ) {
+            Text(
+                text = stringResource(R.string.game_inspector_scene_new),
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+
+        val selectedScene = state.selectedScene
+        if (selectedScene != null) {
+            OutlinedButton(
+                onClick = { GameInspectorManager.recaptureSelectedScene() },
+                contentPadding = PaddingValues(horizontal = GI_BADGE_H_PADDING, vertical = GI_BADGE_V_PADDING),
+            ) {
+                Text(
+                    text = stringResource(R.string.game_inspector_scene_recapture),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            OutlinedButton(
+                onClick = { GameInspectorManager.deleteScene(selectedScene.id) },
+                contentPadding = PaddingValues(horizontal = GI_BADGE_H_PADDING, vertical = GI_BADGE_V_PADDING),
+            ) {
+                Text(
+                    text = stringResource(R.string.game_inspector_scene_delete),
+                    color = colors.error,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoSceneCapturedPromptCard(
+    colors: AppColors,
+    onCreateScene: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(GI_CARD_SHAPE)
+                .background(colors.surface)
+                .border(GI_BORDER_WIDTH, colors.divider, GI_CARD_SHAPE)
+                .padding(GI_CARD_PADDING),
+        verticalArrangement = Arrangement.spacedBy(GI_SECTION_GAP, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        MaterialSymbol(
+            name = "layers",
+            size = GI_WARNING_ICON_SIZE,
+            tint = colors.accent,
+        )
+        Text(
+            text = stringResource(R.string.game_inspector_scene_empty_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = stringResource(R.string.game_inspector_scene_empty_body),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Button(onClick = onCreateScene) {
+            Text(text = stringResource(R.string.game_inspector_scene_new))
         }
     }
 }
@@ -729,6 +869,26 @@ private fun HuntModeBar(
                 )
             }
             if (huntedNode != null) {
+                if (huntedNode.category == GameLayerCategory.PIPELINE && !huntedNode.isSubDraw) {
+                    val isSplit = huntedNode.id in state.splitPipelineIds
+                    FilterChip(
+                        selected = isSplit,
+                        onClick = { GameInspectorManager.toggleSplitPipeline(huntedNode.id) },
+                        label = {
+                            Text(
+                                text =
+                                    stringResource(
+                                        if (isSplit) {
+                                            R.string.game_inspector_unsplit_subdraws
+                                        } else {
+                                            R.string.game_inspector_split_subdraws
+                                        },
+                                    ),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        },
+                    )
+                }
                 FilterChip(
                     selected = huntedNode.taggedAsUi,
                     onClick = { GameInspectorManager.toggleTagAsUi(huntedNode.id) },
@@ -796,9 +956,11 @@ private fun CategoryChip(
 private fun LayerNodeCard(
     node: GameLayerNode,
     isHunted: Boolean,
+    isSplit: Boolean,
     colors: AppColors,
     onToggleEnabled: (Boolean) -> Unit,
     onToggleTagUi: () -> Unit,
+    onToggleSplit: () -> Unit,
 ) {
     val categoryLabel =
         when (node.category) {
@@ -812,6 +974,7 @@ private fun LayerNodeCard(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .padding(start = if (node.isSubDraw) GI_SUBDRAW_START_PADDING else GI_ZERO_PADDING)
                 .clip(GI_CARD_SHAPE)
                 .background(
                     if (isHunted) {
@@ -867,6 +1030,26 @@ private fun LayerNodeCard(
             )
         }
 
+        if (node.category == GameLayerCategory.PIPELINE && !node.isSubDraw) {
+            FilterChip(
+                selected = isSplit,
+                onClick = onToggleSplit,
+                label = {
+                    Text(
+                        text =
+                            stringResource(
+                                if (isSplit) {
+                                    R.string.game_inspector_unsplit_subdraws
+                                } else {
+                                    R.string.game_inspector_split_subdraws
+                                },
+                            ),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                },
+            )
+        }
+
         IconButton(onClick = onToggleTagUi) {
             Icon(
                 imageVector = if (node.taggedAsUi) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
@@ -904,6 +1087,16 @@ private fun GameInspectorHelpModal(
             icon = Icons.Rounded.Shield,
             label = stringResource(R.string.help_game_inspector_vk_layer_label),
             description = stringResource(R.string.help_game_inspector_vk_layer_desc),
+        )
+        HelpEntry(
+            symbolName = "layers",
+            label = stringResource(R.string.help_game_inspector_scenes_label),
+            description = stringResource(R.string.help_game_inspector_scenes_desc),
+        )
+        HelpEntry(
+            symbolName = "layers",
+            label = stringResource(R.string.help_game_inspector_split_label),
+            description = stringResource(R.string.help_game_inspector_split_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.SkipNext,

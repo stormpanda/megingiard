@@ -64,6 +64,7 @@ class GameInspectorManagerTest {
         runTest {
             GameInspectorManager.requestScan(context, "org.ppsspp.ppsspp")
             GameInspectorManager.confirmWarningAndAttach(context)
+            GameInspectorManager.createSceneFromCurrentFrame()
 
             GameInspectorManager.startHuntMode()
             var state = GameInspectorManager.uiState.value
@@ -194,6 +195,7 @@ class GameInspectorManagerTest {
             GameInspectorManager.requestScan(context, "org.ppsspp.ppsspp")
             GameInspectorManager.confirmWarningAndAttach(context)
             assertEquals(3, GameInspectorManager.uiState.value.nodes.size)
+            GameInspectorManager.createSceneFromCurrentFrame()
 
             GameInspectorManager.setNodeEnabled("vk_pass_1", false)
             assertFalse(
@@ -225,9 +227,87 @@ class GameInspectorManagerTest {
             assertFalse(fakeBackend.nodes[0].enabled)
         }
 
+    @Test
+    fun `toggling or hunting requires capturing a Scene first`() =
+        runTest {
+            GameInspectorManager.requestScan(context, "org.ppsspp.ppsspp")
+            GameInspectorManager.confirmWarningAndAttach(context)
+
+            assertFalse(GameInspectorManager.uiState.value.canToggleOrHunt)
+            GameInspectorManager.setNodeEnabled("vk_pass_1", false)
+            assertTrue(
+                GameInspectorManager.uiState.value.nodes[0]
+                    .enabled,
+            ) // Ignored until scene exists!
+
+            GameInspectorManager.createSceneFromCurrentFrame()
+            assertTrue(GameInspectorManager.uiState.value.canToggleOrHunt)
+            assertEquals("scene_1", GameInspectorManager.uiState.value.selectedSceneId)
+
+            GameInspectorManager.setNodeEnabled("vk_pass_1", false)
+            assertFalse(
+                GameInspectorManager.uiState.value.nodes[0]
+                    .enabled,
+            )
+        }
+
+    @Test
+    fun `automatic scene switching applies scene toggles and restores all ON in unconfigured menu`() =
+        runTest {
+            GameInspectorManager.requestScan(context, "org.ppsspp.ppsspp")
+            GameInspectorManager.confirmWarningAndAttach(context)
+
+            // Gameplay frame: vk_pass_1, vk_fs_2, vk_vs_3 are active
+            GameInspectorManager.createSceneFromCurrentFrame()
+            GameInspectorManager.setNodeEnabled("vk_fs_2", false)
+            assertFalse(fakeBackend.nodes[1].enabled)
+
+            // Game transitions to Menu: vk_pass_1 and vk_vs_3 drop to 0 draws, only menu nodes draw
+            fakeBackend.nodes[0] = fakeBackend.nodes[0].copy(drawCallsPerFrame = 0)
+            fakeBackend.nodes[2] = fakeBackend.nodes[2].copy(drawCallsPerFrame = 0)
+            GameInspectorManager.refreshNodesLive()
+
+            // Fingerprint no longer matches Scene 1 -> Default All ON restores vk_fs_2!
+            assertNull(GameInspectorManager.uiState.value.activeSceneId)
+            assertTrue(fakeBackend.nodes[1].enabled)
+
+            // Game returns to Gameplay -> Scene 1 matches again -> vk_fs_2 automatically disabled!
+            fakeBackend.nodes[0] = fakeBackend.nodes[0].copy(drawCallsPerFrame = 85)
+            fakeBackend.nodes[2] = fakeBackend.nodes[2].copy(drawCallsPerFrame = 24)
+            GameInspectorManager.refreshNodesLive()
+
+            assertEquals("scene_1", GameInspectorManager.uiState.value.activeSceneId)
+            assertFalse(fakeBackend.nodes[1].enabled)
+        }
+
+    @Test
+    fun `toggleSplitPipeline sends SPLIT command and groups SUB_0x children under parent pipeline`() =
+        runTest {
+            fakeBackend.nodes.add(
+                GameLayerNode(
+                    id = "PIPE_0x70516cf130",
+                    name = "Vulkan Pipeline (0x70516cf130)",
+                    category = GameLayerCategory.PIPELINE,
+                    api = GraphicsApi.VULKAN,
+                    hashHex = "70516cf130",
+                    resolution = "Order:#010",
+                    drawCallsPerFrame = 42,
+                    enabled = true,
+                ),
+            )
+            GameInspectorManager.requestScan(context, "org.ppsspp.ppsspp")
+            GameInspectorManager.confirmWarningAndAttach(context)
+            GameInspectorManager.createSceneFromCurrentFrame()
+
+            GameInspectorManager.toggleSplitPipeline("PIPE_0x70516cf130")
+            assertTrue("PIPE_0x70516cf130" in GameInspectorManager.uiState.value.splitPipelineIds)
+            assertEquals(listOf("PIPE_0x70516cf130" to true), fakeBackend.splitCalls)
+        }
+
     private class FakeGameInspectorBackend : GameInspectorBackend {
         var privdRunning = true
         var fallbackTopPackage: String? = null
+        val splitCalls = mutableListOf<Pair<String, Boolean>>()
         val nodes =
             mutableListOf(
                 GameLayerNode(
@@ -300,6 +380,14 @@ class GameInspectorManagerTest {
                 return true
             }
             return false
+        }
+
+        override suspend fun setPipelineSplit(
+            nodeId: String,
+            split: Boolean,
+        ): Boolean {
+            splitCalls.add(nodeId to split)
+            return true
         }
 
         override suspend fun setAllNodesEnabled(enabled: Boolean): Boolean {

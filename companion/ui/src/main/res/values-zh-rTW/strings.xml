@@ -1421,4 +1421,18 @@ Open Settings to create a layout.</string>
     <string name="help_game_inspector_hunt_desc">在清單中逐步切換時每次僅單獨停用一個通道或著色器，讓您立即看出哪個著色器負責繪製 HUD 或 3D 世界並將其標記為 UI。</string>
     <string name="help_game_inspector_invert_label">全開 / 全關 / 反轉全部</string>
     <string name="help_game_inspector_invert_desc">批次切換所有已發現的通道與著色器，或一鍵反轉所有開關以單獨保留 UI 或 3D 遊戲畫面。</string>
+    <string name="game_inspector_scene_new">+ 新增場景</string>
+    <string name="game_inspector_scene_item">場景 %1$d</string>
+    <string name="game_inspector_scene_active_item">● 場景 %1$d</string>
+    <string name="game_inspector_scene_recapture">重新擷取</string>
+    <string name="game_inspector_scene_delete">刪除場景</string>
+    <string name="game_inspector_scene_empty_title">擷取場景以開始使用</string>
+    <string name="game_inspector_scene_empty_body">請在上螢幕切換至您想自訂的畫面（例如遊戲畫面、地圖或選單），然後點擊「+ 新增場景」。您關閉的著色器僅會在該場景顯示時隱藏，並在切換至其他場景或選單時自動恢復顯示。</string>
+    <string name="game_inspector_cat_show_inactive">顯示非活動項目</string>
+    <string name="game_inspector_split_subdraws">細分</string>
+    <string name="game_inspector_unsplit_subdraws">已細分 ✓</string>
+    <string name="help_game_inspector_scenes_label">場景設定檔（+ 新增場景 / 重新擷取）</string>
+    <string name="help_game_inspector_scenes_desc">擷取目前上螢幕畫面的活動 GPU 管線指紋。停用的著色器僅在該場景顯示時生效，切換至選單或其他場景時會自動恢復。</string>
+    <string name="help_game_inspector_split_label">子繪製細分（共用管線）</string>
+    <string name="help_game_inspector_split_desc">將共用管線展開為個別的幾何繪製呼叫項目，讓您能單獨隱藏特定 HUD 元素，而不影響同一管線繪製的其他介面。</string>
 </resources>

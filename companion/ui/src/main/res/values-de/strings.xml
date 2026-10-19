@@ -1420,4 +1420,18 @@ Open Settings to create a layout.</string>
     <string name="help_game_inspector_hunt_desc">Deaktiviert beim Durchblättern jeweils genau einen Pass oder Shader, damit du sofort siehst, welcher Shader das HUD oder die 3D-Welt zeichnet, und ihn als UI markieren kannst.</string>
     <string name="help_game_inspector_invert_label">Alle an / Alle aus / Invertieren</string>
     <string name="help_game_inspector_invert_desc">Schaltet alle erkannten Pässe und Shader gemeinsam um oder kehrt die Auswahl um, um nur die UI oder nur das 3D-Gameplay anzuzeigen.</string>
+    <string name="game_inspector_scene_new">+ Neue Szene</string>
+    <string name="game_inspector_scene_item">Szene %1$d</string>
+    <string name="game_inspector_scene_active_item">● Szene %1$d</string>
+    <string name="game_inspector_scene_recapture">Neu erfassen</string>
+    <string name="game_inspector_scene_delete">Szene löschen</string>
+    <string name="game_inspector_scene_empty_title">Szene erfassen, um zu starten</string>
+    <string name="game_inspector_scene_empty_body">Wechsle auf dem oberen Bildschirm zu der Ansicht, die du anpassen möchtest (z. B. Gameplay, Karte oder Menü), und tippe auf „+ Neue Szene“. Deaktivierte Shader werden nur in dieser Szene ausgeblendet und in anderen Szenen oder Menüs automatisch wieder aktiviert.</string>
+    <string name="game_inspector_cat_show_inactive">Inaktive zeigen</string>
+    <string name="game_inspector_split_subdraws">Teilen</string>
+    <string name="game_inspector_unsplit_subdraws">Geteilt ✓</string>
+    <string name="help_game_inspector_scenes_label">Szenen-Profile (+ Neue Szene / Neu erfassen)</string>
+    <string name="help_game_inspector_scenes_desc">Erfasst den GPU-Pipeline-Fingerabdruck der aktuellen Szene auf dem oberen Bildschirm. Deaktivierte Shader gelten nur in dieser Szene und werden in Menüs oder anderen Szenen automatisch wiederhergestellt.</string>
+    <string name="help_game_inspector_split_label">Sub-Draw-Teilung (Geteilte Pipelines)</string>
+    <string name="help_game_inspector_split_desc">Teilt eine gemeinsam genutzte Pipeline in einzelne Draw-Call-Geometriegruppen auf, sodass bestimmte HUD-Elemente ausgeblendet werden können, ohne andere UI-Teile derselben Pipeline zu verbergen.</string>
 </resources>

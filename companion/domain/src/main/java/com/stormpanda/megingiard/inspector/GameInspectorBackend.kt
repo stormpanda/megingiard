@@ -107,6 +107,11 @@ interface GameInspectorBackend {
     suspend fun setAllNodesEnabled(enabled: Boolean): Boolean
 
     suspend fun invertAllNodes(): Boolean
+
+    suspend fun setPipelineSplit(
+        nodeId: String,
+        split: Boolean,
+    ): Boolean = false
 }
 
 /**
@@ -326,6 +331,21 @@ object PrivdGameInspectorBackend : GameInspectorBackend {
     override suspend fun invertAllNodes(): Boolean =
         withContext(Dispatchers.IO) {
             val cmd = GameInspectorProtocol.formatInvertCommand()
+            val primaryOk = sendInspectorRpc(cmd, multiLine = false, targetPid = activeTargetPid) == "OK"
+            if (primaryOk) return@withContext true
+            if (activeFallbackPid > 0 && activeFallbackPid != activeTargetPid) {
+                sendInspectorRpc(cmd, multiLine = false, targetPid = activeFallbackPid) == "OK"
+            } else {
+                false
+            }
+        }
+
+    override suspend fun setPipelineSplit(
+        nodeId: String,
+        split: Boolean,
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            val cmd = GameInspectorProtocol.formatSplitCommand(nodeId, split)
             val primaryOk = sendInspectorRpc(cmd, multiLine = false, targetPid = activeTargetPid) == "OK"
             if (primaryOk) return@withContext true
             if (activeFallbackPid > 0 && activeFallbackPid != activeTargetPid) {

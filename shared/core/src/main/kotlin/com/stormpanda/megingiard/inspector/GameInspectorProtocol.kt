@@ -45,6 +45,14 @@ object GameInspectorProtocol {
 
     fun formatInvertCommand(): String = "INVERT\n"
 
+    fun formatSplitCommand(
+        nodeId: String,
+        split: Boolean,
+    ): String {
+        val flag = if (split) 1 else 0
+        return "SPLIT $nodeId $flag\n"
+    }
+
     fun formatPingCommand(): String = "PING\n"
 
     fun parseSnapshot(

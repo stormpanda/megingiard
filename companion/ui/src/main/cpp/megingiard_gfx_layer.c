@@ -47,7 +47,6 @@
 
 #define INSPECTOR_PORT 51255
 #define MAX_NODES 256
-#define MAX_PROGRAM_PROBE 512
 #define MAX_CMD_BUF_SLOTS 16
 #define MAX_ORIG_CANDIDATES 4
 
@@ -55,7 +54,8 @@ typedef enum {
     CAT_RENDER_PASS = 0,
     CAT_PIPELINE = 1,
     CAT_FRAGMENT_SHADER = 2,
-    CAT_VERTEX_SHADER = 3
+    CAT_VERTEX_SHADER = 3,
+    CAT_SUB_DRAW = 4
 } NodeCategory;
 
 typedef enum {
@@ -74,11 +74,13 @@ typedef struct {
     uint64_t handle_key;
     uint64_t vs_key;
     uint64_t fs_key;
+    uint64_t parent_pipe_key;
     int width;
     int height;
     int draw_calls_accum;
     int draw_calls_last_frame;
     int enabled;
+    int split_enabled;
 } InspectorNode;
 
 typedef struct {
@@ -104,6 +106,7 @@ static int g_cur_gl_vp_w = 1920;
 static int g_cur_gl_vp_h = 1080;
 static int g_gl_probed_existing = 0;
 static int g_gl_draws_since_rollover = 0;
+static int g_gl_has_swap_hook = 0;
 
 /* Current Vulkan state (per-VkCommandBuffer + global fallback) */
 static VkCmdBufState g_vk_cmd_states[MAX_CMD_BUF_SLOTS];
@@ -163,9 +166,13 @@ static InspectorNode *find_or_create_node_locked(
     int width,
     int height
 ) {
+    int free_idx = -1;
     for (int i = 0; i < g_node_count; i++) {
-        if (g_nodes[i].in_use &&
-            g_nodes[i].category == category &&
+        if (!g_nodes[i].in_use) {
+            if (free_idx < 0) free_idx = i;
+            continue;
+        }
+        if (g_nodes[i].category == category &&
             g_nodes[i].api == api &&
             g_nodes[i].handle_key == handle_key) {
             if (width > 0 && height > 0) {
@@ -175,10 +182,15 @@ static InspectorNode *find_or_create_node_locked(
             return &g_nodes[i];
         }
     }
-    if (g_node_count >= MAX_NODES) {
-        return NULL;
+    InspectorNode *node = NULL;
+    if (free_idx >= 0) {
+        node = &g_nodes[free_idx];
+    } else {
+        if (g_node_count >= MAX_NODES) {
+            return NULL;
+        }
+        node = &g_nodes[g_node_count++];
     }
-    InspectorNode *node = &g_nodes[g_node_count++];
     memset(node, 0, sizeof(*node));
     node->in_use = 1;
     node->category = category;
@@ -266,10 +278,6 @@ typedef void (*PFN_glDrawElements)(GLenum mode, GLsizei count, GLenum type, cons
 typedef void (*PFN_glDrawArraysInstanced)(GLenum mode, GLint first, GLsizei count, GLsizei instancecount);
 typedef void (*PFN_glDrawElementsInstanced)(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount);
 typedef void (*PFN_glGetIntegerv)(GLenum pname, GLint *data);
-typedef GLboolean (*PFN_glIsProgram)(GLuint program);
-typedef void (*PFN_glGetAttachedShaders)(GLuint program, GLsizei maxCount, GLsizei *count, GLuint *shaders);
-typedef void (*PFN_glGetShaderiv)(GLuint shader, GLenum pname, GLint *params);
-typedef void (*PFN_glGetShaderSource)(GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *source);
 typedef EGLBoolean (*PFN_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 typedef EGLBoolean (*PFN_eglSwapBuffersWithDamageKHR)(EGLDisplay dpy, EGLSurface surface, EGLint *rects, EGLint n_rects);
 typedef __eglMustCastToProperFunctionPointerType (*PFN_eglGetProcAddress)(const char *procname);
@@ -285,17 +293,13 @@ static PFN_glDrawElements real_glDrawElements = NULL;
 static PFN_glDrawArraysInstanced real_glDrawArraysInstanced = NULL;
 static PFN_glDrawElementsInstanced real_glDrawElementsInstanced = NULL;
 static PFN_glGetIntegerv real_glGetIntegerv = NULL;
-static PFN_glIsProgram real_glIsProgram = NULL;
-static PFN_glGetAttachedShaders real_glGetAttachedShaders = NULL;
-static PFN_glGetShaderiv real_glGetShaderiv = NULL;
-static PFN_glGetShaderSource real_glGetShaderSource = NULL;
 static PFN_eglSwapBuffers real_eglSwapBuffers = NULL;
 static PFN_eglSwapBuffersWithDamageKHR real_eglSwapBuffersWithDamageKHR = NULL;
 static PFN_eglGetProcAddress real_eglGetProcAddress = NULL;
 
 static void probe_existing_gl_programs_once(void) {
     if (g_gl_probed_existing) return;
-    if (!real_glGetIntegerv || !real_glIsProgram) return;
+    if (!real_glGetIntegerv) return;
     g_gl_probed_existing = 1;
 
     GLint vp[4] = {0, 0, 1920, 1080};
@@ -316,110 +320,9 @@ static void probe_existing_gl_programs_once(void) {
     if (cur_fbo >= 0 && g_cur_gl_fbo == 0) {
         g_cur_gl_fbo = (GLuint)cur_fbo;
     }
-
-    pthread_mutex_lock(&g_mutex);
-    find_or_create_node_locked(
-        CAT_RENDER_PASS,
-        API_GLES,
-        0,
-        0xFB000000u,
-        "gl_pass",
-        "GLES Default Framebuffer (FBO #0)",
-        g_cur_gl_vp_w,
-        g_cur_gl_vp_h
-    );
-    pthread_mutex_unlock(&g_mutex);
-
-    for (GLuint prog = 1; prog <= MAX_PROGRAM_PROBE; prog++) {
-        if (!real_glIsProgram(prog)) continue;
-
-        uint64_t vs_id = 0;
-        uint64_t fs_id = 0;
-
-        if (real_glGetAttachedShaders && real_glGetShaderiv) {
-            GLuint shaders[8];
-            GLsizei attached_count = 0;
-            real_glGetAttachedShaders(prog, 8, &attached_count, shaders);
-
-            for (GLsizei s = 0; s < attached_count && s < 8; s++) {
-                GLuint sh = shaders[s];
-                GLint sh_type = 0;
-                real_glGetShaderiv(sh, GL_SHADER_TYPE, &sh_type);
-
-                GLint src_len = 0;
-                real_glGetShaderiv(sh, GL_SHADER_SOURCE_LENGTH, &src_len);
-                uint32_t sh_hash = 0x50000000u ^ (sh * 2654435761u);
-                if (real_glGetShaderSource && src_len > 1 && src_len < 65536) {
-                    char *src_buf = (char *)malloc((size_t)src_len);
-                    if (src_buf) {
-                        GLsizei actual_len = 0;
-                        real_glGetShaderSource(sh, src_len, &actual_len, src_buf);
-                        if (actual_len > 0) {
-                            sh_hash = compute_crc32(src_buf, (size_t)actual_len);
-                        }
-                        free(src_buf);
-                    }
-                }
-
-                pthread_mutex_lock(&g_mutex);
-                if (sh_type == GL_VERTEX_SHADER) {
-                    vs_id = sh;
-                    char name[96];
-                    snprintf(name, sizeof(name), "GLES Vertex Shader #%u (Prog #%u)", (unsigned)sh, (unsigned)prog);
-                    find_or_create_node_locked(
-                        CAT_VERTEX_SHADER, API_GLES, (uint64_t)sh, sh_hash,
-                        "gl_vs", name, g_cur_gl_vp_w, g_cur_gl_vp_h
-                    );
-                } else if (sh_type == GL_FRAGMENT_SHADER) {
-                    fs_id = sh;
-                    char name[96];
-                    snprintf(name, sizeof(name), "GLES Pixel Shader #%u (Prog #%u)", (unsigned)sh, (unsigned)prog);
-                    find_or_create_node_locked(
-                        CAT_FRAGMENT_SHADER, API_GLES, (uint64_t)sh, sh_hash,
-                        "gl_fs", name, g_cur_gl_vp_w, g_cur_gl_vp_h
-                    );
-                }
-                pthread_mutex_unlock(&g_mutex);
-            }
-        }
-
-        pthread_mutex_lock(&g_mutex);
-        if (vs_id == 0) {
-            vs_id = 0x10000000ULL | (uint64_t)prog;
-            char vs_name[96];
-            snprintf(vs_name, sizeof(vs_name), "GLES Vertex Shader (Prog #%u)", (unsigned)prog);
-            find_or_create_node_locked(
-                CAT_VERTEX_SHADER, API_GLES, vs_id,
-                0x51000000u ^ (prog * 2654435761u),
-                "gl_vs_prog", vs_name, g_cur_gl_vp_w, g_cur_gl_vp_h
-            );
-        }
-        if (fs_id == 0) {
-            fs_id = 0x20000000ULL | (uint64_t)prog;
-            char fs_name[96];
-            snprintf(fs_name, sizeof(fs_name), "GLES Pixel Shader (Prog #%u)", (unsigned)prog);
-            find_or_create_node_locked(
-                CAT_FRAGMENT_SHADER, API_GLES, fs_id,
-                0x61000000u ^ (prog * 2654435761u),
-                "gl_fs_prog", fs_name, g_cur_gl_vp_w, g_cur_gl_vp_h
-            );
-        }
-        char prog_name[96];
-        snprintf(prog_name, sizeof(prog_name), "GLES Program Pipeline #%u", (unsigned)prog);
-        InspectorNode *pnode = find_or_create_node_locked(
-            CAT_PIPELINE, API_GLES, (uint64_t)prog,
-            0x70000000u ^ (prog * 2246822519u),
-            "gl_prog", prog_name, g_cur_gl_vp_w, g_cur_gl_vp_h
-        );
-        if (pnode) {
-            pnode->vs_key = vs_id;
-            pnode->fs_key = fs_id;
-        }
-        pthread_mutex_unlock(&g_mutex);
-    }
 }
 
-static int should_allow_gl_draw_and_record(void) {
+static int should_allow_gl_draw_and_record(GLsizei vert_or_idx_count) {
     g_seen_gles = 1;
     probe_existing_gl_programs_once();
 
@@ -450,6 +353,7 @@ static int should_allow_gl_draw_and_record(void) {
     if (pass_node) pass_node->draw_calls_accum++;
 
     InspectorNode *prog_node = NULL;
+    InspectorNode *sub_node = NULL;
     if (g_cur_gl_program != 0) {
         char prog_name[96];
         snprintf(prog_name, sizeof(prog_name), "GLES Program Pipeline #%u", (unsigned)g_cur_gl_program);
@@ -506,12 +410,34 @@ static int should_allow_gl_draw_and_record(void) {
                     g_nodes[i].draw_calls_accum++;
                 }
             }
+            if (prog_node->split_enabled && vert_or_idx_count > 0) {
+                uint32_t vcnt = (uint32_t)vert_or_idx_count;
+                uint64_t sub_key = ((uint64_t)g_cur_gl_program << 32) | (uint64_t)vcnt;
+                uint32_t sub_hash = prog_node->hash ^ (vcnt * 2654435761u);
+                char sub_name[96];
+                snprintf(sub_name, sizeof(sub_name), "  ↳ Sub-Draw (%u verts/idx) [Prog #%u]", vcnt, (unsigned)g_cur_gl_program);
+                sub_node = find_or_create_node_locked(
+                    CAT_SUB_DRAW,
+                    API_GLES,
+                    sub_key,
+                    sub_hash,
+                    "gl_sub",
+                    sub_name,
+                    g_cur_gl_vp_w,
+                    g_cur_gl_vp_h
+                );
+                if (sub_node) {
+                    sub_node->parent_pipe_key = (uint64_t)g_cur_gl_program;
+                    sub_node->draw_calls_accum++;
+                }
+            }
         }
     }
 
     int allow = 1;
     if (pass_node && !pass_node->enabled) allow = 0;
     if (prog_node && !prog_node->enabled) allow = 0;
+    if (sub_node && !sub_node->enabled) allow = 0;
     if (prog_node && prog_node->vs_key != 0 && !is_node_enabled_locked(CAT_VERTEX_SHADER, API_GLES, prog_node->vs_key)) {
         allow = 0;
     }
@@ -519,7 +445,7 @@ static int should_allow_gl_draw_and_record(void) {
         allow = 0;
     }
 
-    if (++g_gl_draws_since_rollover >= 2048) {
+    if (!g_gl_has_swap_hook && ++g_gl_draws_since_rollover >= 2048) {
         g_gl_draws_since_rollover = 0;
         end_of_frame_rollover_locked(API_GLES);
     }
@@ -620,27 +546,28 @@ static void hook_glAttachShader(GLuint program, GLuint shader) {
 }
 
 static void hook_glDrawArrays(GLenum mode, GLint first, GLsizei count) {
-    if (!should_allow_gl_draw_and_record()) return;
+    if (!should_allow_gl_draw_and_record(count)) return;
     if (real_glDrawArrays) real_glDrawArrays(mode, first, count);
 }
 
 static void hook_glDrawElements(GLenum mode, GLsizei count, GLenum type, const void *indices) {
-    if (!should_allow_gl_draw_and_record()) return;
+    if (!should_allow_gl_draw_and_record(count)) return;
     if (real_glDrawElements) real_glDrawElements(mode, count, type, indices);
 }
 
 static void hook_glDrawArraysInstanced(GLenum mode, GLint first, GLsizei count, GLsizei instancecount) {
-    if (!should_allow_gl_draw_and_record()) return;
+    if (!should_allow_gl_draw_and_record(count)) return;
     if (real_glDrawArraysInstanced) real_glDrawArraysInstanced(mode, first, count, instancecount);
 }
 
 static void hook_glDrawElementsInstanced(GLenum mode, GLsizei count, GLenum type, const void *indices, GLsizei instancecount) {
-    if (!should_allow_gl_draw_and_record()) return;
+    if (!should_allow_gl_draw_and_record(count)) return;
     if (real_glDrawElementsInstanced) real_glDrawElementsInstanced(mode, count, type, indices, instancecount);
 }
 
 static EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     g_seen_gles = 1;
+    g_gl_has_swap_hook = 1;
     probe_existing_gl_programs_once();
     g_gl_draws_since_rollover = 0;
     end_of_frame_rollover(API_GLES);
@@ -649,6 +576,7 @@ static EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
 
 static EGLBoolean hook_eglSwapBuffersWithDamageKHR(EGLDisplay dpy, EGLSurface surface, EGLint *rects, EGLint n_rects) {
     g_seen_gles = 1;
+    g_gl_has_swap_hook = 1;
     probe_existing_gl_programs_once();
     g_gl_draws_since_rollover = 0;
     end_of_frame_rollover(API_GLES);
@@ -720,7 +648,7 @@ static PFN_vkQueueSubmit real_vkQueueSubmit = NULL;
 static PFN_vkQueueSubmit2_Compat real_vkQueueSubmit2 = NULL;
 static PFN_vkQueuePresentKHR real_vkQueuePresentKHR = NULL;
 
-static int should_allow_vk_draw_and_record(VkCommandBuffer commandBuffer, int is_compute) {
+static int should_allow_vk_draw_and_record(VkCommandBuffer commandBuffer, int is_compute, uint32_t vert_or_idx_count) {
     g_seen_vk = 1;
     pthread_mutex_lock(&g_mutex);
 
@@ -759,6 +687,7 @@ static int should_allow_vk_draw_and_record(VkCommandBuffer commandBuffer, int is
     }
 
     InspectorNode *pipe_node = NULL;
+    InspectorNode *sub_node = NULL;
     if (pipe_key != 0) {
         uint32_t p_hash = mix_hash64(pipe_key);
         char pipe_name[96];
@@ -811,12 +740,33 @@ static int should_allow_vk_draw_and_record(VkCommandBuffer commandBuffer, int is
                     g_nodes[i].draw_calls_accum++;
                 }
             }
+            if (pipe_node->split_enabled && !is_compute && vert_or_idx_count > 0) {
+                uint64_t sub_key = (pipe_key ^ ((uint64_t)vert_or_idx_count << 32)) | (uint64_t)vert_or_idx_count;
+                uint32_t sub_hash = pipe_node->hash ^ (vert_or_idx_count * 2654435761u);
+                char sub_name[96];
+                snprintf(sub_name, sizeof(sub_name), "  ↳ Sub-Draw (%u verts/idx) [Pipe 0x%08X]", vert_or_idx_count, pipe_node->hash);
+                sub_node = find_or_create_node_locked(
+                    CAT_SUB_DRAW,
+                    API_VK,
+                    sub_key,
+                    sub_hash,
+                    "vk_sub",
+                    sub_name,
+                    rp_w,
+                    rp_h
+                );
+                if (sub_node) {
+                    sub_node->parent_pipe_key = pipe_key;
+                    sub_node->draw_calls_accum++;
+                }
+            }
         }
     }
 
     int allow = 1;
     if (pass_node && !pass_node->enabled) allow = 0;
     if (pipe_node && !pipe_node->enabled) allow = 0;
+    if (sub_node && !sub_node->enabled) allow = 0;
     if (pipe_node && pipe_node->vs_key != 0 && !is_node_enabled_locked(CAT_VERTEX_SHADER, API_VK, pipe_node->vs_key)) {
         allow = 0;
     }
@@ -824,7 +774,7 @@ static int should_allow_vk_draw_and_record(VkCommandBuffer commandBuffer, int is
         allow = 0;
     }
 
-    if (++g_vk_draws_since_rollover >= 2048) {
+    if (!g_vk_has_present_hook && ++g_vk_draws_since_rollover >= 2048) {
         g_vk_draws_since_rollover = 0;
         end_of_frame_rollover_locked(API_VK);
     }
@@ -1106,7 +1056,7 @@ static VKAPI_ATTR void VKAPI_CALL hook_vkCmdDraw(
     uint32_t firstVertex,
     uint32_t firstInstance
 ) {
-    if (!should_allow_vk_draw_and_record(commandBuffer, 0)) return;
+    if (!should_allow_vk_draw_and_record(commandBuffer, 0, vertexCount)) return;
     if (real_vkCmdDraw) real_vkCmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
@@ -1118,7 +1068,7 @@ static VKAPI_ATTR void VKAPI_CALL hook_vkCmdDrawIndexed(
     int32_t vertexOffset,
     uint32_t firstInstance
 ) {
-    if (!should_allow_vk_draw_and_record(commandBuffer, 0)) return;
+    if (!should_allow_vk_draw_and_record(commandBuffer, 0, indexCount)) return;
     if (real_vkCmdDrawIndexed) {
         real_vkCmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
     }
@@ -1131,7 +1081,7 @@ static VKAPI_ATTR void VKAPI_CALL hook_vkCmdDrawIndirect(
     uint32_t drawCount,
     uint32_t stride
 ) {
-    if (!should_allow_vk_draw_and_record(commandBuffer, 0)) return;
+    if (!should_allow_vk_draw_and_record(commandBuffer, 0, drawCount)) return;
     if (real_vkCmdDrawIndirect) {
         real_vkCmdDrawIndirect(commandBuffer, buffer, offset, drawCount, stride);
     }
@@ -1144,7 +1094,7 @@ static VKAPI_ATTR void VKAPI_CALL hook_vkCmdDrawIndexedIndirect(
     uint32_t drawCount,
     uint32_t stride
 ) {
-    if (!should_allow_vk_draw_and_record(commandBuffer, 0)) return;
+    if (!should_allow_vk_draw_and_record(commandBuffer, 0, drawCount)) return;
     if (real_vkCmdDrawIndexedIndirect) {
         real_vkCmdDrawIndexedIndirect(commandBuffer, buffer, offset, drawCount, stride);
     }
@@ -1156,7 +1106,7 @@ static VKAPI_ATTR void VKAPI_CALL hook_vkCmdDispatch(
     uint32_t groupCountY,
     uint32_t groupCountZ
 ) {
-    if (!should_allow_vk_draw_and_record(commandBuffer, 1)) return;
+    if (!should_allow_vk_draw_and_record(commandBuffer, 1, 0)) return;
     if (real_vkCmdDispatch) {
         real_vkCmdDispatch(commandBuffer, groupCountX, groupCountY, groupCountZ);
     }
@@ -1513,58 +1463,66 @@ VKAPI_ATTR VkResult VKAPI_CALL vkEnumerateDeviceExtensionProperties(
  * ELF PLT/GOT, .bss Dispatch & Heap Table Patcher via dl_iterate_phdr
  * ========================================================================= */
 
+#define PATCH_MODE_HEAP_VK_TABLE 0
+#define PATCH_MODE_APP_DATA      1
+#define PATCH_MODE_LIBEGL_DATA   2
+
 typedef struct {
     const char *symbol_name;
     void *hook_fn;
     void **orig_fn_slot;
     void *orig_candidates[MAX_ORIG_CANDIDATES];
     int vk_dispatch_offset;
+    int has_vendor_real;
 } HookEntry;
 
 static HookEntry g_hooks[] = {
-    { "eglSwapBuffers", (void *)hook_eglSwapBuffers, (void **)&real_eglSwapBuffers, {NULL}, -1 },
-    { "eglSwapBuffersWithDamageKHR", (void *)hook_eglSwapBuffersWithDamageKHR, (void **)&real_eglSwapBuffersWithDamageKHR, {NULL}, -1 },
-    { "eglGetProcAddress", (void *)hook_eglGetProcAddress, (void **)&real_eglGetProcAddress, {NULL}, -1 },
-    { "glUseProgram", (void *)hook_glUseProgram, (void **)&real_glUseProgram, {NULL}, -1 },
-    { "glBindFramebuffer", (void *)hook_glBindFramebuffer, (void **)&real_glBindFramebuffer, {NULL}, -1 },
-    { "glViewport", (void *)hook_glViewport, (void **)&real_glViewport, {NULL}, -1 },
-    { "glCreateShader", (void *)hook_glCreateShader, (void **)&real_glCreateShader, {NULL}, -1 },
-    { "glShaderSource", (void *)hook_glShaderSource, (void **)&real_glShaderSource, {NULL}, -1 },
-    { "glAttachShader", (void *)hook_glAttachShader, (void **)&real_glAttachShader, {NULL}, -1 },
-    { "glDrawArrays", (void *)hook_glDrawArrays, (void **)&real_glDrawArrays, {NULL}, -1 },
-    { "glDrawElements", (void *)hook_glDrawElements, (void **)&real_glDrawElements, {NULL}, -1 },
-    { "glDrawArraysInstanced", (void *)hook_glDrawArraysInstanced, (void **)&real_glDrawArraysInstanced, {NULL}, -1 },
-    { "glDrawElementsInstanced", (void *)hook_glDrawElementsInstanced, (void **)&real_glDrawElementsInstanced, {NULL}, -1 },
-    { "vkGetInstanceProcAddr", (void *)vkGetInstanceProcAddr, (void **)&real_vkGetInstanceProcAddr, {NULL}, -1 },
-    { "vkGetDeviceProcAddr", (void *)vkGetDeviceProcAddr, (void **)&real_vkGetDeviceProcAddr, {NULL}, -1 },
-    { "vkCreateShaderModule", (void *)hook_vkCreateShaderModule, (void **)&real_vkCreateShaderModule, {NULL}, -1 },
-    { "vkCreateGraphicsPipelines", (void *)hook_vkCreateGraphicsPipelines, (void **)&real_vkCreateGraphicsPipelines, {NULL}, -1 },
-    { "vkCreateComputePipelines", (void *)hook_vkCreateComputePipelines, (void **)&real_vkCreateComputePipelines, {NULL}, -1 },
-    { "vkCmdBeginRenderPass", (void *)hook_vkCmdBeginRenderPass, (void **)&real_vkCmdBeginRenderPass, {NULL}, -1 },
-    { "vkCmdEndRenderPass", (void *)hook_vkCmdEndRenderPass, (void **)&real_vkCmdEndRenderPass, {NULL}, -1 },
-    { "vkCmdBeginRenderPass2", (void *)hook_vkCmdBeginRenderPass2, (void **)&real_vkCmdBeginRenderPass2, {NULL}, -1 },
-    { "vkCmdBeginRenderPass2KHR", (void *)hook_vkCmdBeginRenderPass2, (void **)&real_vkCmdBeginRenderPass2, {NULL}, -1 },
-    { "vkCmdEndRenderPass2", (void *)hook_vkCmdEndRenderPass2, (void **)&real_vkCmdEndRenderPass2, {NULL}, -1 },
-    { "vkCmdEndRenderPass2KHR", (void *)hook_vkCmdEndRenderPass2, (void **)&real_vkCmdEndRenderPass2, {NULL}, -1 },
-    { "vkCmdBeginRendering", (void *)hook_vkCmdBeginRendering, (void **)&real_vkCmdBeginRendering, {NULL}, -1 },
-    { "vkCmdBeginRenderingKHR", (void *)hook_vkCmdBeginRenderingKHR, (void **)&real_vkCmdBeginRenderingKHR, {NULL}, -1 },
-    { "vkCmdEndRendering", (void *)hook_vkCmdEndRendering, (void **)&real_vkCmdEndRendering, {NULL}, -1 },
-    { "vkCmdEndRenderingKHR", (void *)hook_vkCmdEndRenderingKHR, (void **)&real_vkCmdEndRenderingKHR, {NULL}, -1 },
-    { "vkCmdBindPipeline", (void *)hook_vkCmdBindPipeline, (void **)&real_vkCmdBindPipeline, {NULL}, -1 },
-    { "vkCmdDraw", (void *)hook_vkCmdDraw, (void **)&real_vkCmdDraw, {NULL}, -1 },
-    { "vkCmdDrawIndexed", (void *)hook_vkCmdDrawIndexed, (void **)&real_vkCmdDrawIndexed, {NULL}, -1 },
-    { "vkCmdDrawIndirect", (void *)hook_vkCmdDrawIndirect, (void **)&real_vkCmdDrawIndirect, {NULL}, -1 },
-    { "vkCmdDrawIndexedIndirect", (void *)hook_vkCmdDrawIndexedIndirect, (void **)&real_vkCmdDrawIndexedIndirect, {NULL}, -1 },
-    { "vkCmdDispatch", (void *)hook_vkCmdDispatch, (void **)&real_vkCmdDispatch, {NULL}, -1 },
-    { "vkQueueSubmit", (void *)hook_vkQueueSubmit, (void **)&real_vkQueueSubmit, {NULL}, -1 },
-    { "vkQueueSubmit2", (void *)hook_vkQueueSubmit2, (void **)&real_vkQueueSubmit2, {NULL}, -1 },
-    { "vkQueueSubmit2KHR", (void *)hook_vkQueueSubmit2, (void **)&real_vkQueueSubmit2, {NULL}, -1 },
-    { "vkQueuePresentKHR", (void *)hook_vkQueuePresentKHR, (void **)&real_vkQueuePresentKHR, {NULL}, -1 },
+    { "eglSwapBuffers", (void *)hook_eglSwapBuffers, (void **)&real_eglSwapBuffers, {NULL}, -1, 0 },
+    { "eglSwapBuffersWithDamageKHR", (void *)hook_eglSwapBuffersWithDamageKHR, (void **)&real_eglSwapBuffersWithDamageKHR, {NULL}, -1, 0 },
+    { "eglGetProcAddress", (void *)hook_eglGetProcAddress, (void **)&real_eglGetProcAddress, {NULL}, -1, 0 },
+    { "glUseProgram", (void *)hook_glUseProgram, (void **)&real_glUseProgram, {NULL}, -1, 0 },
+    { "glBindFramebuffer", (void *)hook_glBindFramebuffer, (void **)&real_glBindFramebuffer, {NULL}, -1, 0 },
+    { "glViewport", (void *)hook_glViewport, (void **)&real_glViewport, {NULL}, -1, 0 },
+    { "glCreateShader", (void *)hook_glCreateShader, (void **)&real_glCreateShader, {NULL}, -1, 0 },
+    { "glShaderSource", (void *)hook_glShaderSource, (void **)&real_glShaderSource, {NULL}, -1, 0 },
+    { "glAttachShader", (void *)hook_glAttachShader, (void **)&real_glAttachShader, {NULL}, -1, 0 },
+    { "glDrawArrays", (void *)hook_glDrawArrays, (void **)&real_glDrawArrays, {NULL}, -1, 0 },
+    { "glDrawElements", (void *)hook_glDrawElements, (void **)&real_glDrawElements, {NULL}, -1, 0 },
+    { "glDrawArraysInstanced", (void *)hook_glDrawArraysInstanced, (void **)&real_glDrawArraysInstanced, {NULL}, -1, 0 },
+    { "glDrawElementsInstanced", (void *)hook_glDrawElementsInstanced, (void **)&real_glDrawElementsInstanced, {NULL}, -1, 0 },
+    { "vkGetInstanceProcAddr", (void *)vkGetInstanceProcAddr, (void **)&real_vkGetInstanceProcAddr, {NULL}, -1, 0 },
+    { "vkGetDeviceProcAddr", (void *)vkGetDeviceProcAddr, (void **)&real_vkGetDeviceProcAddr, {NULL}, -1, 0 },
+    { "vkCreateShaderModule", (void *)hook_vkCreateShaderModule, (void **)&real_vkCreateShaderModule, {NULL}, -1, 0 },
+    { "vkCreateGraphicsPipelines", (void *)hook_vkCreateGraphicsPipelines, (void **)&real_vkCreateGraphicsPipelines, {NULL}, -1, 0 },
+    { "vkCreateComputePipelines", (void *)hook_vkCreateComputePipelines, (void **)&real_vkCreateComputePipelines, {NULL}, -1, 0 },
+    { "vkCmdBeginRenderPass", (void *)hook_vkCmdBeginRenderPass, (void **)&real_vkCmdBeginRenderPass, {NULL}, -1, 0 },
+    { "vkCmdEndRenderPass", (void *)hook_vkCmdEndRenderPass, (void **)&real_vkCmdEndRenderPass, {NULL}, -1, 0 },
+    { "vkCmdBeginRenderPass2", (void *)hook_vkCmdBeginRenderPass2, (void **)&real_vkCmdBeginRenderPass2, {NULL}, -1, 0 },
+    { "vkCmdBeginRenderPass2KHR", (void *)hook_vkCmdBeginRenderPass2, (void **)&real_vkCmdBeginRenderPass2, {NULL}, -1, 0 },
+    { "vkCmdEndRenderPass2", (void *)hook_vkCmdEndRenderPass2, (void **)&real_vkCmdEndRenderPass2, {NULL}, -1, 0 },
+    { "vkCmdEndRenderPass2KHR", (void *)hook_vkCmdEndRenderPass2, (void **)&real_vkCmdEndRenderPass2, {NULL}, -1, 0 },
+    { "vkCmdBeginRendering", (void *)hook_vkCmdBeginRendering, (void **)&real_vkCmdBeginRendering, {NULL}, -1, 0 },
+    { "vkCmdBeginRenderingKHR", (void *)hook_vkCmdBeginRenderingKHR, (void **)&real_vkCmdBeginRenderingKHR, {NULL}, -1, 0 },
+    { "vkCmdEndRendering", (void *)hook_vkCmdEndRendering, (void **)&real_vkCmdEndRendering, {NULL}, -1, 0 },
+    { "vkCmdEndRenderingKHR", (void *)hook_vkCmdEndRenderingKHR, (void **)&real_vkCmdEndRenderingKHR, {NULL}, -1, 0 },
+    { "vkCmdBindPipeline", (void *)hook_vkCmdBindPipeline, (void **)&real_vkCmdBindPipeline, {NULL}, -1, 0 },
+    { "vkCmdDraw", (void *)hook_vkCmdDraw, (void **)&real_vkCmdDraw, {NULL}, -1, 0 },
+    { "vkCmdDrawIndexed", (void *)hook_vkCmdDrawIndexed, (void **)&real_vkCmdDrawIndexed, {NULL}, -1, 0 },
+    { "vkCmdDrawIndirect", (void *)hook_vkCmdDrawIndirect, (void **)&real_vkCmdDrawIndirect, {NULL}, -1, 0 },
+    { "vkCmdDrawIndexedIndirect", (void *)hook_vkCmdDrawIndexedIndirect, (void **)&real_vkCmdDrawIndexedIndirect, {NULL}, -1, 0 },
+    { "vkCmdDispatch", (void *)hook_vkCmdDispatch, (void **)&real_vkCmdDispatch, {NULL}, -1, 0 },
+    { "vkQueueSubmit", (void *)hook_vkQueueSubmit, (void **)&real_vkQueueSubmit, {NULL}, -1, 0 },
+    { "vkQueueSubmit2", (void *)hook_vkQueueSubmit2, (void **)&real_vkQueueSubmit2, {NULL}, -1, 0 },
+    { "vkQueueSubmit2KHR", (void *)hook_vkQueueSubmit2, (void **)&real_vkQueueSubmit2, {NULL}, -1, 0 },
+    { "vkQueuePresentKHR", (void *)hook_vkQueuePresentKHR, (void **)&real_vkQueuePresentKHR, {NULL}, -1, 0 },
 };
 
-static void add_hook_candidate(HookEntry *entry, void *fn_ptr, int prefer_as_real) {
+static void add_hook_candidate(HookEntry *entry, void *fn_ptr, int is_vendor_real) {
     if (!entry || !fn_ptr || fn_ptr == entry->hook_fn) return;
-    if (prefer_as_real || *(entry->orig_fn_slot) == NULL) {
+    if (is_vendor_real) {
+        *(entry->orig_fn_slot) = fn_ptr;
+        entry->has_vendor_real = 1;
+    } else if (*(entry->orig_fn_slot) == NULL) {
         *(entry->orig_fn_slot) = fn_ptr;
     }
     for (int i = 0; i < MAX_ORIG_CANDIDATES; i++) {
@@ -1638,15 +1596,37 @@ static int matches_driver_symbol(const char *sym_name, const char *hook_name) {
     return 0;
 }
 
-static int is_vendor_driver_module(const char *name) {
+static int is_vendor_gles_driver_module(const char *name) {
     if (!name || name[0] == '\0') return 0;
-    if (strstr(name, "/vendor/lib") != NULL ||
-        strstr(name, "vulkan.") != NULL ||
+    if (strstr(name, "libGLESv1") != NULL ||
+        strstr(name, "libEGL") != NULL ||
+        strstr(name, "VkLayer") != NULL ||
+        strstr(name, "q3dtools") != NULL ||
+        strstr(name, "qprofiler") != NULL ||
+        strstr(name, "SubDriver") != NULL) {
+        return 0;
+    }
+    if (strstr(name, "libGLESv2_") != NULL ||
+        strstr(name, "libGLESv3_") != NULL ||
+        strstr(name, "libGLES_mali") != NULL ||
+        (strstr(name, "/vendor/") != NULL && strstr(name, "libGLES") != NULL)) {
+        return 1;
+    }
+    return 0;
+}
+
+static int is_vendor_vk_driver_module(const char *name) {
+    if (!name || name[0] == '\0') return 0;
+    if (strstr(name, "libGLES") != NULL ||
+        strstr(name, "libEGL") != NULL ||
+        strstr(name, "VkLayer") != NULL ||
+        strstr(name, "q3dtools") != NULL ||
+        strstr(name, "qprofiler") != NULL ||
+        strstr(name, "SubDriver") != NULL) {
+        return 0;
+    }
+    if (strstr(name, "vulkan.") != NULL ||
         strstr(name, "libvulkan_") != NULL ||
-        strstr(name, "libGLESv2_") != NULL ||
-        strstr(name, "libGLESv1_") != NULL ||
-        strstr(name, "libEGL_") != NULL ||
-        strstr(name, "adreno") != NULL ||
         strstr(name, "freedreno") != NULL ||
         strstr(name, "turnip") != NULL) {
         return 1;
@@ -1659,7 +1639,8 @@ static void harvest_module_symbols(
     const Elf64_Sym *symtab,
     size_t sym_count,
     const char *strtab,
-    int is_vendor_driver,
+    int is_vendor_gles,
+    int is_vendor_vk,
     int is_libvulkan_loader
 ) {
     size_t num_hooks = sizeof(g_hooks) / sizeof(g_hooks[0]);
@@ -1672,24 +1653,29 @@ static void harvest_module_symbols(
         void *fn_addr = (void *)(load_bias + symtab[i].st_value);
 
         for (size_t h = 0; h < num_hooks; h++) {
-            if (matches_driver_symbol(sym_name, g_hooks[h].symbol_name)) {
-                add_hook_candidate(&g_hooks[h], fn_addr, is_vendor_driver);
-                if (is_libvulkan_loader && strncmp(g_hooks[h].symbol_name, "vk", 2) == 0 &&
-                    strcmp(sym_name, g_hooks[h].symbol_name) == 0) {
-                    int off = decode_vk_dispatch_offset(fn_addr);
-                    if (off > 0) {
-                        g_hooks[h].vk_dispatch_offset = off;
+            /* Never harvest egl* from vendor modules; eglSwapBuffers must stay libEGL.so's wrapper */
+            if (strncmp(g_hooks[h].symbol_name, "egl", 3) == 0) continue;
+            if (strncmp(g_hooks[h].symbol_name, "gl", 2) == 0) {
+                if (is_vendor_vk || is_libvulkan_loader) continue;
+                if (matches_driver_symbol(sym_name, g_hooks[h].symbol_name)) {
+                    add_hook_candidate(&g_hooks[h], fn_addr, is_vendor_gles);
+                }
+            } else if (strncmp(g_hooks[h].symbol_name, "vk", 2) == 0) {
+                if (!is_vendor_vk && !is_libvulkan_loader) continue;
+                if (matches_driver_symbol(sym_name, g_hooks[h].symbol_name)) {
+                    add_hook_candidate(&g_hooks[h], fn_addr, is_vendor_vk);
+                    if (is_libvulkan_loader && strcmp(sym_name, g_hooks[h].symbol_name) == 0) {
+                        int off = decode_vk_dispatch_offset(fn_addr);
+                        if (off > 0) {
+                            g_hooks[h].vk_dispatch_offset = off;
+                        }
                     }
                 }
             }
         }
 
-        if (is_vendor_driver) {
-            if (strcmp(sym_name, "glGetIntegerv") == 0) real_glGetIntegerv = (PFN_glGetIntegerv)fn_addr;
-            else if (strcmp(sym_name, "glIsProgram") == 0) real_glIsProgram = (PFN_glIsProgram)fn_addr;
-            else if (strcmp(sym_name, "glGetAttachedShaders") == 0) real_glGetAttachedShaders = (PFN_glGetAttachedShaders)fn_addr;
-            else if (strcmp(sym_name, "glGetShaderiv") == 0) real_glGetShaderiv = (PFN_glGetShaderiv)fn_addr;
-            else if (strcmp(sym_name, "glGetShaderSource") == 0) real_glGetShaderSource = (PFN_glGetShaderSource)fn_addr;
+        if (is_vendor_gles && strcmp(sym_name, "glGetIntegerv") == 0) {
+            real_glGetIntegerv = (PFN_glGetIntegerv)fn_addr;
         }
     }
 }
@@ -1714,10 +1700,6 @@ static void resolve_default_symbols(void) {
             }
         }
         if (!real_glGetIntegerv) real_glGetIntegerv = (PFN_glGetIntegerv)dlsym(libgles, "glGetIntegerv");
-        if (!real_glIsProgram) real_glIsProgram = (PFN_glIsProgram)dlsym(libgles, "glIsProgram");
-        if (!real_glGetAttachedShaders) real_glGetAttachedShaders = (PFN_glGetAttachedShaders)dlsym(libgles, "glGetAttachedShaders");
-        if (!real_glGetShaderiv) real_glGetShaderiv = (PFN_glGetShaderiv)dlsym(libgles, "glGetShaderiv");
-        if (!real_glGetShaderSource) real_glGetShaderSource = (PFN_glGetShaderSource)dlsym(libgles, "glGetShaderSource");
     }
 
     void *libvk = dlopen("libvulkan.so", RTLD_NOW | RTLD_NOLOAD);
@@ -1785,10 +1767,8 @@ static int matches_any_candidate(const HookEntry *entry, void *val) {
     return 0;
 }
 
-static void inspect_and_patch_memory_range(uintptr_t range_start, size_t range_len, int allow_mprotect) {
+static void inspect_and_patch_memory_range(uintptr_t range_start, size_t range_len, int patch_mode) {
     size_t num_hooks = sizeof(g_hooks) / sizeof(g_hooks[0]);
-    long page_size = sysconf(_SC_PAGESIZE);
-    if (page_size <= 0) page_size = 4096;
 
     /* Find hook entries for vkCmdDraw and vkCmdDrawIndexed to detect DeviceDispatchTable instances */
     HookEntry *draw_entry = NULL;
@@ -1807,7 +1787,8 @@ static void inspect_and_patch_memory_range(uintptr_t range_start, size_t range_l
         if (val == NULL) continue;
 
         /* Check if `addr` is the `vkCmdDraw` slot inside a live Vulkan `DeviceDispatchTable` */
-        if (draw_entry && draw_idx_entry &&
+        if (patch_mode != PATCH_MODE_LIBEGL_DATA &&
+            draw_entry && draw_idx_entry &&
             draw_entry->vk_dispatch_offset > 0 &&
             draw_idx_entry->vk_dispatch_offset > 0 &&
             matches_any_candidate(draw_entry, val)) {
@@ -1816,6 +1797,7 @@ static void inspect_and_patch_memory_range(uintptr_t range_start, size_t range_l
             if (table_base >= range_start && idx_slot_addr + sizeof(void *) <= range_end) {
                 void *idx_val = *(void **)idx_slot_addr;
                 if (matches_any_candidate(draw_idx_entry, idx_val) || idx_val == draw_idx_entry->hook_fn) {
+                    g_seen_vk = 1;
                     /* Extract and patch all DeviceDispatchTable slots (including internal QueuePresentKHR) */
                     for (size_t h = 0; h < num_hooks; h++) {
                         if (g_hooks[h].vk_dispatch_offset <= 0) continue;
@@ -1825,24 +1807,32 @@ static void inspect_and_patch_memory_range(uintptr_t range_start, size_t range_l
                         void *t_val = *t_slot;
                         if (t_val != NULL && t_val != g_hooks[h].hook_fn) {
                             add_hook_candidate(&g_hooks[h], t_val, 1);
-                            if (!allow_mprotect ||
-                                mprotect((void *)(s_addr & ~((uintptr_t)page_size - 1)), (size_t)page_size, PROT_READ | PROT_WRITE) == 0) {
-                                *t_slot = g_hooks[h].hook_fn;
-                            }
+                            *t_slot = g_hooks[h].hook_fn;
                         }
                     }
                 }
             }
         }
 
+        if (patch_mode == PATCH_MODE_HEAP_VK_TABLE) {
+            /* Never patch lone pointers on the heap outside a verified DeviceDispatchTable */
+            continue;
+        }
+
         for (size_t h = 0; h < num_hooks; h++) {
-            if (matches_any_candidate(&g_hooks[h], val)) {
-                uintptr_t page_start = addr & ~((uintptr_t)page_size - 1);
-                if (!allow_mprotect ||
-                    mprotect((void *)page_start, (size_t)page_size, PROT_READ | PROT_WRITE) == 0) {
+            if (patch_mode == PATCH_MODE_LIBEGL_DATA) {
+                /* Inside libEGL.so's .bss (gEGLImpl), only patch GLESv2/v3 vendor pointers */
+                if (strncmp(g_hooks[h].symbol_name, "gl", 2) != 0) continue;
+                if (!g_hooks[h].has_vendor_real) continue;
+                if (val == *(g_hooks[h].orig_fn_slot) && val != g_hooks[h].hook_fn) {
                     *slot = g_hooks[h].hook_fn;
+                    break;
                 }
-                break;
+            } else if (patch_mode == PATCH_MODE_APP_DATA) {
+                if (matches_any_candidate(&g_hooks[h], val)) {
+                    *slot = g_hooks[h].hook_fn;
+                    break;
+                }
             }
         }
     }
@@ -1853,6 +1843,7 @@ static int phdr_harvest_cb(struct dl_phdr_info *info, size_t size, void *data) {
     (void)data;
     const char *name = info->dlpi_name ? info->dlpi_name : "";
     if (strstr(name, "libVkLayer_MegingiardInspector.so") ||
+        strstr(name, "libGLESv1") ||
         strstr(name, "/linker64") ||
         strstr(name, "/libc.so") ||
         strstr(name, "/libdl.so") ||
@@ -1861,14 +1852,10 @@ static int phdr_harvest_cb(struct dl_phdr_info *info, size_t size, void *data) {
     }
 
     int is_vk_loader = (strstr(name, "libvulkan.so") != NULL);
-    int is_vendor = is_vendor_driver_module(name);
-    if (is_vk_loader || strstr(name, "vulkan") != NULL) {
-        g_seen_vk = 1;
-    }
-    if (strstr(name, "libGLES") != NULL) {
-        g_seen_gles = 1;
-    }
-    if (!is_vendor && !is_vk_loader && strstr(name, "libGLES") == NULL && strstr(name, "libEGL") == NULL) {
+    int is_vendor_gles = is_vendor_gles_driver_module(name);
+    int is_vendor_vk = is_vendor_vk_driver_module(name);
+    int is_sys_gles = (strstr(name, "libGLESv2.so") != NULL || strstr(name, "libGLESv3.so") != NULL);
+    if (!is_vendor_gles && !is_vendor_vk && !is_vk_loader && !is_sys_gles) {
         return 0;
     }
 
@@ -1897,7 +1884,7 @@ static int phdr_harvest_cb(struct dl_phdr_info *info, size_t size, void *data) {
 
     size_t sym_count = compute_dynsym_count(sysv_hash, gnu_hash);
     if (symtab && strtab && sym_count > 0 && sym_count < 65536) {
-        harvest_module_symbols(load_bias, symtab, sym_count, strtab, is_vendor, is_vk_loader);
+        harvest_module_symbols(load_bias, symtab, sym_count, strtab, is_vendor_gles, is_vendor_vk, is_vk_loader);
     }
     return 0;
 }
@@ -1908,24 +1895,33 @@ static int phdr_patch_cb(struct dl_phdr_info *info, size_t size, void *data) {
     const char *name = info->dlpi_name ? info->dlpi_name : "";
 
     if (strstr(name, "libVkLayer_MegingiardInspector.so") ||
+        strncmp(name, "/vendor/", 8) == 0 ||
         strstr(name, "/linker64") ||
         strstr(name, "/libc.so") ||
         strstr(name, "/libdl.so") ||
         strstr(name, "/libm.so") ||
         strstr(name, "libGLESv2.so") ||
         strstr(name, "libGLESv3.so") ||
-        strstr(name, "libGLESv1_CM.so") ||
-        is_vendor_driver_module(name)) {
+        strstr(name, "libGLESv1") ||
+        is_vendor_gles_driver_module(name) ||
+        is_vendor_vk_driver_module(name)) {
         return 0;
     }
 
     uintptr_t load_bias = (uintptr_t)info->dlpi_addr;
     const Elf64_Dyn *dyn = NULL;
+    uintptr_t relro_start = 0;
+    uintptr_t relro_end = 0;
+    long page_size = sysconf(_SC_PAGESIZE);
+    if (page_size <= 0) page_size = 4096;
 
     for (int i = 0; i < info->dlpi_phnum; i++) {
         if (info->dlpi_phdr[i].p_type == PT_DYNAMIC) {
             dyn = (const Elf64_Dyn *)(load_bias + info->dlpi_phdr[i].p_vaddr);
-            break;
+        } else if (info->dlpi_phdr[i].p_type == 0x6474e552U /* PT_GNU_RELRO */) {
+            relro_start = (load_bias + info->dlpi_phdr[i].p_vaddr) & ~((uintptr_t)page_size - 1);
+            relro_end = (load_bias + info->dlpi_phdr[i].p_vaddr + info->dlpi_phdr[i].p_memsz + (uintptr_t)page_size - 1) &
+                        ~((uintptr_t)page_size - 1);
         }
     }
     if (!dyn) return 0;
@@ -1962,7 +1958,8 @@ static int phdr_patch_cb(struct dl_phdr_info *info, size_t size, void *data) {
         }
     }
 
-    if (symtab && strtab && strstr(name, "libEGL.so") == NULL && strstr(name, "libvulkan.so") == NULL) {
+    int is_libegl = (strstr(name, "libEGL.so") != NULL);
+    if (symtab && strtab && !is_libegl && strstr(name, "libvulkan.so") == NULL) {
         if (jmprel && jmprel_sz > 0) {
             patch_relocation_table(load_bias, jmprel, jmprel_sz / sizeof(Elf64_Rela), symtab, strtab);
         }
@@ -1971,8 +1968,9 @@ static int phdr_patch_cb(struct dl_phdr_info *info, size_t size, void *data) {
         }
     }
 
-    /* Patch cached function pointer tables in .data and .bss (including libEGL.so's gEGLImpl) */
-    if (strncmp(name, "/data/", 6) == 0 || strstr(name, "libEGL.so") != NULL) {
+    /* Patch cached function pointer tables in writable non-RELRO .data/.bss */
+    if (strncmp(name, "/data/", 6) == 0 || is_libegl) {
+        int mode = is_libegl ? PATCH_MODE_LIBEGL_DATA : PATCH_MODE_APP_DATA;
         for (int i = 0; i < info->dlpi_phnum; i++) {
             const Elf64_Phdr *ph = &info->dlpi_phdr[i];
             if (ph->p_type == PT_LOAD &&
@@ -1980,7 +1978,14 @@ static int phdr_patch_cb(struct dl_phdr_info *info, size_t size, void *data) {
                 !(ph->p_flags & PF_X) &&
                 ph->p_memsz > 0 &&
                 ph->p_memsz <= (32 * 1024 * 1024)) {
-                inspect_and_patch_memory_range(load_bias + ph->p_vaddr, (size_t)ph->p_memsz, 1);
+                uintptr_t seg_start = load_bias + ph->p_vaddr;
+                uintptr_t seg_end = seg_start + (size_t)ph->p_memsz;
+                if (relro_end > seg_start && relro_start <= seg_start) {
+                    seg_start = relro_end;
+                }
+                if (seg_end > seg_start) {
+                    inspect_and_patch_memory_range(seg_start, seg_end - seg_start, mode);
+                }
             }
         }
     }
@@ -2018,7 +2023,7 @@ static void scan_and_patch_heap_dispatch_tables(void) {
         for (uintptr_t page = start; page + (uintptr_t)page_size <= end; page += (uintptr_t)page_size) {
             unsigned char vec = 0;
             if (mincore((void *)page, (size_t)page_size, &vec) == 0 && (vec & 1U) != 0U) {
-                inspect_and_patch_memory_range(page, (size_t)page_size, 0);
+                inspect_and_patch_memory_range(page, (size_t)page_size, PATCH_MODE_HEAP_VK_TABLE);
                 total_scanned += (size_t)page_size;
                 if (total_scanned >= max_heap_scan) break;
             }
@@ -2094,7 +2099,14 @@ static void handle_client_command(int client_fd, const char *cmd) {
         int val = atoi(cmd + 8) ? 1 : 0;
         pthread_mutex_lock(&g_mutex);
         for (int i = 0; i < g_node_count; i++) {
-            if (g_nodes[i].in_use) g_nodes[i].enabled = val;
+            if (!g_nodes[i].in_use) continue;
+            g_nodes[i].enabled = val;
+            if (val == 1) {
+                g_nodes[i].split_enabled = 0;
+                if (g_nodes[i].category == CAT_SUB_DRAW) {
+                    g_nodes[i].in_use = 0;
+                }
+            }
         }
         pthread_mutex_unlock(&g_mutex);
         (void)write(client_fd, "OK\n", 3);
@@ -2109,6 +2121,42 @@ static void handle_client_command(int client_fd, const char *cmd) {
         pthread_mutex_unlock(&g_mutex);
         (void)write(client_fd, "OK\n", 3);
         return;
+    }
+
+    if (strncmp(cmd, "SPLIT ", 6) == 0) {
+        char target_id[64] = {0};
+        int val = 0;
+        if (sscanf(cmd + 6, "%63s %d", target_id, &val) == 2) {
+            int found = 0;
+            pthread_mutex_lock(&g_mutex);
+            for (int i = 0; i < g_node_count; i++) {
+                if (g_nodes[i].in_use && strcmp(g_nodes[i].id, target_id) == 0) {
+                    g_nodes[i].split_enabled = val ? 1 : 0;
+                    if (!val) {
+                        uint64_t parent_key = g_nodes[i].handle_key;
+                        NodeApi parent_api = g_nodes[i].api;
+                        for (int j = 0; j < g_node_count; j++) {
+                            if (g_nodes[j].in_use &&
+                                g_nodes[j].category == CAT_SUB_DRAW &&
+                                g_nodes[j].api == parent_api &&
+                                g_nodes[j].parent_pipe_key == parent_key) {
+                                g_nodes[j].enabled = 1;
+                                g_nodes[j].in_use = 0;
+                            }
+                        }
+                    }
+                    found = 1;
+                    break;
+                }
+            }
+            pthread_mutex_unlock(&g_mutex);
+            if (found) {
+                (void)write(client_fd, "OK\n", 3);
+            } else {
+                (void)write(client_fd, "ERR NOT_FOUND\n", 14);
+            }
+            return;
+        }
     }
 
     if (strncmp(cmd, "SET ", 4) == 0) {

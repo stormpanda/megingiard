@@ -1420,5 +1420,19 @@ Open Settings to create a layout.</string>
     <string name="help_game_inspector_hunt_desc">Solo-disables one pass or shader at a time as you step through the list so you can immediately see which shader renders the HUD or 3D world, and tag it as UI.</string>
     <string name="help_game_inspector_invert_label">All On / All Off / Invert All</string>
     <string name="help_game_inspector_invert_desc">Bulk-toggles all discovered passes and shaders, or inverts every toggle at once to isolate only the UI or only the 3D gameplay.</string>
+    <string name="game_inspector_scene_new">+ New Scene</string>
+    <string name="game_inspector_scene_item">Scene %1$d</string>
+    <string name="game_inspector_scene_active_item">● Scene %1$d</string>
+    <string name="game_inspector_scene_recapture">Recapture</string>
+    <string name="game_inspector_scene_delete">Delete Scene</string>
+    <string name="game_inspector_scene_empty_title">Capture a Scene to Begin</string>
+    <string name="game_inspector_scene_empty_body">Navigate to the screen you want to customize (e.g. Gameplay, Map, or Menu) on the top display and tap \"+ New Scene\". Shaders you turn off will only be hidden while that scene is on screen, and automatically turn back on in other scenes or menus.</string>
+    <string name="game_inspector_cat_show_inactive">Show Inactive</string>
+    <string name="game_inspector_split_subdraws">Split</string>
+    <string name="game_inspector_unsplit_subdraws">Split ✓</string>
+    <string name="help_game_inspector_scenes_label">Scene Profiles (+ New Scene / Recapture)</string>
+    <string name="help_game_inspector_scenes_desc">Captures the active GPU pipeline fingerprint of the current top-screen scene. Disabled shaders only apply while that scene is active on screen and automatically restore when switching to menus or other scenes.</string>
+    <string name="help_game_inspector_split_label">Sub-Draw Split (Shared Pipelines)</string>
+    <string name="help_game_inspector_split_desc">Expands a shared pipeline into individual draw-call geometry buckets so you can hide specific HUD elements without hiding other UI drawn by the same pipeline.</string>
 </resources>
 

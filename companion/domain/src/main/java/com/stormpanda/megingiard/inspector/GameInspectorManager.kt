@@ -18,6 +18,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "GameInspectorManager"
+private const val SCENE_MATCH_MIN_RECALL = 0.70
+private const val SCENE_MATCH_MIN_PRECISION = 0.70
 
 /**
  * State coordinator for the Universal Graphics (Vulkan + OpenGL ES) UI & Shader Inspector.
@@ -27,9 +29,12 @@ private const val TAG = "GameInspectorManager"
  * - Enforces [GameInspectorBlacklist] with zero heuristics before any process attachment
  *   or Vulkan startup layer arming.
  * - Enforces a mandatory two-step ban-risk confirmation before attaching to any game.
+ * - Manages per-scene shader configurations ([InspectorSceneProfile]) with automatic
+ *   frame-fingerprint scene switching and safe all-ON fallback on unconfigured screens.
  * - Manages real-time toggling of `RENDER_PASS`, `PIPELINE`, `FRAGMENT_SHADER`, and
- *   `VERTEX_SHADER` nodes, plus interactive **Step / Hunt Mode** (`< Prev` / `Next >`
- *   solo-disable stepper) and UI shader bookmarking (`taggedAsUi`).
+ *   `VERTEX_SHADER` nodes, sub-draw pipeline splitting (`SUB_0x`), interactive
+ *   **Step / Hunt Mode** (`< Prev` / `Next >` solo-disable stepper), and UI shader
+ *   bookmarking (`taggedAsUi`).
  */
 object GameInspectorManager {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -41,6 +46,7 @@ object GameInspectorManager {
     private val taggedUiNodeIds = mutableSetOf<String>()
     private val preHuntNodeStates = mutableMapOf<String, Boolean>()
     private val desiredNodeStates = ConcurrentHashMap<String, Boolean>()
+    private val sceneCounter = AtomicInteger(0)
     private val mutationGeneration = AtomicLong(0L)
     private val activeMutationCount = AtomicInteger(0)
     private val liveRefreshInFlight = AtomicBoolean(false)
@@ -115,6 +121,10 @@ object GameInspectorManager {
                     blacklistMatchedRule = blockMatch.matchedRule,
                     errorCode = InspectorErrorCode.NONE,
                     nodes = emptyList(),
+                    scenes = emptyList(),
+                    selectedSceneId = null,
+                    activeSceneId = null,
+                    splitPipelineIds = emptySet(),
                     huntMode = HuntModeState(),
                 )
             }
@@ -169,6 +179,262 @@ object GameInspectorManager {
         }
     }
 
+    // ── Scene Profile Management & Automatic Fingerprint Switching ────────────
+
+    fun createSceneFromCurrentFrame(): InspectorSceneProfile? {
+        val current = _uiState.value
+        if (current.phase != InspectorConnectionPhase.ATTACHED) {
+            AppLog.d(TAG, "createSceneFromCurrentFrame ignored: phase=${current.phase}")
+            return null
+        }
+        if (current.huntMode.active) {
+            stopHuntMode()
+        }
+        val stateNow = _uiState.value
+        val fingerprint = captureFingerprintFromNodes(stateNow.nodes)
+        val sceneNum = sceneCounter.incrementAndGet()
+        val newScene =
+            InspectorSceneProfile(
+                id = "scene_$sceneNum",
+                name = "Scene $sceneNum",
+                fingerprintNodeIds = fingerprint,
+                disabledNodeIds = emptySet(),
+            )
+        AppLog.i(TAG, "createSceneFromCurrentFrame: created ${newScene.id} (${newScene.name}) with ${fingerprint.size} primary nodes")
+
+        mutationGeneration.incrementAndGet()
+        stateNow.nodes.forEach { desiredNodeStates[it.id] = true }
+        val updatedNodes = stateNow.nodes.map { if (it.enabled) it else it.copy(enabled = true) }
+        val hadDisabled = stateNow.nodes.any { !it.enabled }
+
+        _uiState.update { cur ->
+            cur.copy(
+                scenes = cur.scenes + newScene,
+                selectedSceneId = newScene.id,
+                activeSceneId = newScene.id,
+                nodes = updatedNodes,
+                huntMode = HuntModeState(),
+            )
+        }
+
+        if (hadDisabled) {
+            activeMutationCount.incrementAndGet()
+            scope.launch {
+                try {
+                    backend.setAllNodesEnabled(true)
+                } finally {
+                    activeMutationCount.decrementAndGet()
+                }
+            }
+        }
+        return newScene
+    }
+
+    fun selectScene(sceneId: String) {
+        val current = _uiState.value
+        val targetScene = current.scenes.firstOrNull { it.id == sceneId } ?: return
+        if (current.huntMode.active) {
+            stopHuntMode()
+        }
+        AppLog.d(TAG, "selectScene($sceneId)")
+        _uiState.update { cur ->
+            cur.copy(selectedSceneId = targetScene.id)
+        }
+    }
+
+    fun recaptureSelectedScene() {
+        val current = _uiState.value
+        val selected = current.selectedScene ?: return
+        if (current.huntMode.active) {
+            stopHuntMode()
+        }
+        val stateNow = _uiState.value
+        val newFingerprint = captureFingerprintFromNodes(stateNow.nodes)
+        val updatedScene = selected.copy(fingerprintNodeIds = newFingerprint)
+        AppLog.i(TAG, "recaptureSelectedScene(${selected.id}): updated fingerprint with ${newFingerprint.size} primary nodes")
+
+        mutationGeneration.incrementAndGet()
+        applySceneDesiredStates(updatedScene, stateNow.nodes)
+        val reconciledNodes = reconcileNodesWithDesiredState(stateNow.nodes)
+
+        _uiState.update { cur ->
+            cur.copy(
+                scenes = cur.scenes.map { if (it.id == updatedScene.id) updatedScene else it },
+                activeSceneId = updatedScene.id,
+                nodes = reconciledNodes,
+            )
+        }
+    }
+
+    fun deleteScene(sceneId: String) {
+        val current = _uiState.value
+        if (current.scenes.none { it.id == sceneId }) return
+        if (current.huntMode.active) {
+            stopHuntMode()
+        }
+        val stateNow = _uiState.value
+        val remaining = stateNow.scenes.filterNot { it.id == sceneId }
+        val nextSelectedId =
+            if (stateNow.selectedSceneId == sceneId) {
+                remaining.lastOrNull()?.id
+            } else {
+                stateNow.selectedSceneId
+            }
+        val matched = matchActiveScene(remaining, stateNow.nodes)
+        AppLog.i(TAG, "deleteScene($sceneId): remaining=${remaining.size} nextSelected=$nextSelectedId nextActive=${matched?.id}")
+
+        mutationGeneration.incrementAndGet()
+        applySceneDesiredStates(matched, stateNow.nodes)
+        val reconciledNodes = reconcileNodesWithDesiredState(stateNow.nodes)
+
+        _uiState.update { cur ->
+            cur.copy(
+                scenes = remaining,
+                selectedSceneId = nextSelectedId,
+                activeSceneId = matched?.id,
+                nodes = reconciledNodes,
+                huntMode = HuntModeState(),
+            )
+        }
+
+        if (matched == null) {
+            activeMutationCount.incrementAndGet()
+            scope.launch {
+                try {
+                    backend.setAllNodesEnabled(true)
+                } finally {
+                    activeMutationCount.decrementAndGet()
+                }
+            }
+        }
+    }
+
+    fun setShowInactiveNodes(show: Boolean) {
+        AppLog.d(TAG, "setShowInactiveNodes($show)")
+        if (_uiState.value.huntMode.active) {
+            stopHuntMode()
+        }
+        _uiState.update { it.copy(showInactiveNodes = show) }
+    }
+
+    fun toggleSplitPipeline(nodeId: String) {
+        val current = _uiState.value
+        if (!current.canToggleOrHunt) {
+            AppLog.d(TAG, "toggleSplitPipeline($nodeId) ignored: no scene captured")
+            return
+        }
+        val nowSplit = nodeId !in current.splitPipelineIds
+        val updatedSplits =
+            if (nowSplit) {
+                current.splitPipelineIds + nodeId
+            } else {
+                current.splitPipelineIds - nodeId
+            }
+        AppLog.i(TAG, "toggleSplitPipeline($nodeId) -> split=$nowSplit")
+
+        mutationGeneration.incrementAndGet()
+        if (!nowSplit) {
+            desiredNodeStates.keys
+                .filter { isSubDrawNodeId(it) && resolveParentPipelineId(it) == nodeId }
+                .forEach { desiredNodeStates.remove(it) }
+        }
+
+        _uiState.update { state ->
+            val updatedScenes =
+                if (!nowSplit) {
+                    state.scenes.map { scene ->
+                        scene.copy(
+                            disabledNodeIds =
+                                scene.disabledNodeIds.filterNotTo(mutableSetOf()) { id ->
+                                    isSubDrawNodeId(id) && resolveParentPipelineId(id) == nodeId
+                                },
+                        )
+                    }
+                } else {
+                    state.scenes
+                }
+            state.copy(
+                splitPipelineIds = updatedSplits,
+                scenes = updatedScenes,
+                nodes =
+                    if (!nowSplit) {
+                        state.nodes.filterNot { it.isSubDraw && it.parentPipelineId == nodeId }
+                    } else {
+                        state.nodes
+                    },
+            )
+        }
+
+        activeMutationCount.incrementAndGet()
+        scope.launch {
+            try {
+                backend.setPipelineSplit(nodeId, nowSplit)
+            } finally {
+                activeMutationCount.decrementAndGet()
+            }
+            refreshNodesLive()
+        }
+    }
+
+    private fun captureFingerprintFromNodes(nodes: List<GameLayerNode>): Set<String> {
+        val activePrimary =
+            nodes
+                .filter { it.isPrimarySceneNode && it.drawCallsPerFrame > 0 }
+                .mapTo(mutableSetOf()) { it.id }
+        if (activePrimary.isNotEmpty()) return activePrimary
+        val anyPrimary =
+            nodes
+                .filter { it.isPrimarySceneNode }
+                .mapTo(mutableSetOf()) { it.id }
+        if (anyPrimary.isNotEmpty()) return anyPrimary
+        return nodes.mapTo(mutableSetOf()) { it.id }
+    }
+
+    internal fun matchActiveScene(
+        scenes: List<InspectorSceneProfile>,
+        rawNodes: List<GameLayerNode>,
+    ): InspectorSceneProfile? {
+        if (scenes.isEmpty()) return null
+        val livePrimaryIds =
+            rawNodes
+                .filter { it.isPrimarySceneNode && it.drawCallsPerFrame > 0 }
+                .mapTo(mutableSetOf()) { it.id }
+        if (livePrimaryIds.isEmpty()) {
+            return scenes.firstOrNull { it.id == _uiState.value.selectedSceneId } ?: scenes.firstOrNull()
+        }
+
+        var bestScene: InspectorSceneProfile? = null
+        var bestJaccard = -1.0
+
+        for (scene in scenes) {
+            val fp = scene.fingerprintNodeIds
+            if (fp.isEmpty()) continue
+            val intersection = fp.count { it in livePrimaryIds }
+            val recall = intersection.toDouble() / fp.size.toDouble()
+            val precision = intersection.toDouble() / livePrimaryIds.size.toDouble()
+            if (recall < SCENE_MATCH_MIN_RECALL || precision < SCENE_MATCH_MIN_PRECISION) {
+                continue
+            }
+            val unionSize = fp.size + livePrimaryIds.size - intersection
+            val jaccard = if (unionSize > 0) intersection.toDouble() / unionSize.toDouble() else 0.0
+            if (jaccard > bestJaccard) {
+                bestJaccard = jaccard
+                bestScene = scene
+            }
+        }
+        return bestScene
+    }
+
+    private fun applySceneDesiredStates(
+        activeScene: InspectorSceneProfile?,
+        rawNodes: List<GameLayerNode>,
+    ) {
+        val disabledIds = activeScene?.disabledNodeIds ?: emptySet()
+        for (node in rawNodes) {
+            desiredNodeStates[node.id] = node.id !in disabledIds
+        }
+    }
+
     fun refreshNodes() {
         val current = _uiState.value
         if (current.phase != InspectorConnectionPhase.ATTACHED) {
@@ -187,11 +453,23 @@ object GameInspectorManager {
                     )
                 }
             } else {
+                val curState = _uiState.value
+                val matchedScene =
+                    if (!curState.huntMode.active) {
+                        val m = matchActiveScene(curState.scenes, snapshot.nodes)
+                        applySceneDesiredStates(m, snapshot.nodes)
+                        m
+                    } else {
+                        curState.activeScene
+                    }
                 val reconciledNodes = reconcileNodesWithDesiredState(snapshot.nodes)
                 if (activeMutationCount.get() > 0 || mutationGeneration.get() != genBefore) {
                     return@launch
                 }
-                AppLog.d(TAG, "refreshNodes: loaded ${reconciledNodes.size} nodes (api=${snapshot.detectedApi})")
+                AppLog.d(
+                    TAG,
+                    "refreshNodes: loaded ${reconciledNodes.size} nodes (api=${snapshot.detectedApi}, activeScene=${matchedScene?.id})",
+                )
                 _uiState.update {
                     it.copy(
                         detectedApi =
@@ -200,6 +478,7 @@ object GameInspectorManager {
                             } else {
                                 it.detectedApi
                             },
+                        activeSceneId = if (it.huntMode.active) it.activeSceneId else matchedScene?.id,
                         nodes = reconciledNodes,
                     )
                 }
@@ -222,6 +501,15 @@ object GameInspectorManager {
                 if (activeMutationCount.get() > 0 || mutationGeneration.get() != genBefore) {
                     return@launch
                 }
+                val curState = _uiState.value
+                val matchedScene =
+                    if (!curState.huntMode.active) {
+                        val m = matchActiveScene(curState.scenes, snapshot.nodes)
+                        applySceneDesiredStates(m, snapshot.nodes)
+                        m
+                    } else {
+                        curState.activeScene
+                    }
                 val reconciledNodes = reconcileNodesWithDesiredState(snapshot.nodes)
                 _uiState.update { cur ->
                     if (cur.phase != InspectorConnectionPhase.ATTACHED ||
@@ -237,6 +525,7 @@ object GameInspectorManager {
                                 } else {
                                     cur.detectedApi
                                 },
+                            activeSceneId = if (cur.huntMode.active) cur.activeSceneId else matchedScene?.id,
                             nodes = reconciledNodes,
                         )
                     }
@@ -278,11 +567,31 @@ object GameInspectorManager {
         nodeId: String,
         enabled: Boolean,
     ) {
-        AppLog.d(TAG, "setNodeEnabled($nodeId, $enabled)")
+        val selected = _uiState.value.selectedScene
+        if (selected == null) {
+            AppLog.d(TAG, "setNodeEnabled($nodeId, $enabled) ignored: no scene captured")
+            return
+        }
+        AppLog.d(TAG, "setNodeEnabled($nodeId, $enabled) in scene=${selected.id}")
         desiredNodeStates[nodeId] = enabled
         mutationGeneration.incrementAndGet()
         _uiState.update { state ->
+            val updatedScenes =
+                state.scenes.map { scene ->
+                    if (scene.id != selected.id) {
+                        scene
+                    } else {
+                        val updatedDisabled =
+                            if (enabled) {
+                                scene.disabledNodeIds - nodeId
+                            } else {
+                                scene.disabledNodeIds + nodeId
+                            }
+                        scene.copy(disabledNodeIds = updatedDisabled)
+                    }
+                }
             state.copy(
+                scenes = updatedScenes,
                 nodes =
                     state.nodes.map { node ->
                         if (node.id == nodeId) node.copy(enabled = enabled) else node
@@ -300,12 +609,37 @@ object GameInspectorManager {
     }
 
     fun setAllNodesEnabled(enabled: Boolean) {
-        AppLog.d(TAG, "setAllNodesEnabled($enabled)")
+        val selected = _uiState.value.selectedScene
+        if (selected == null) {
+            AppLog.d(TAG, "setAllNodesEnabled($enabled) ignored: no scene captured")
+            return
+        }
+        AppLog.d(TAG, "setAllNodesEnabled($enabled) in scene=${selected.id}")
         mutationGeneration.incrementAndGet()
         _uiState.update { state ->
-            state.nodes.forEach { desiredNodeStates[it.id] = enabled }
+            val visibleIds = state.filteredNodes.mapTo(mutableSetOf()) { it.id }
+            val targetIds = if (visibleIds.isNotEmpty()) visibleIds else state.nodes.mapTo(mutableSetOf()) { it.id }
+            targetIds.forEach { desiredNodeStates[it] = enabled }
+            val updatedScenes =
+                state.scenes.map { scene ->
+                    if (scene.id != selected.id) {
+                        scene
+                    } else {
+                        val updatedDisabled =
+                            if (enabled) {
+                                scene.disabledNodeIds - targetIds
+                            } else {
+                                scene.disabledNodeIds + targetIds
+                            }
+                        scene.copy(disabledNodeIds = updatedDisabled)
+                    }
+                }
             state.copy(
-                nodes = state.nodes.map { it.copy(enabled = enabled) },
+                scenes = updatedScenes,
+                nodes =
+                    state.nodes.map { node ->
+                        if (node.id in targetIds) node.copy(enabled = enabled) else node
+                    },
                 huntMode = HuntModeState(),
             )
         }
@@ -321,16 +655,32 @@ object GameInspectorManager {
     }
 
     fun invertAllNodes() {
-        AppLog.d(TAG, "invertAllNodes()")
+        val selected = _uiState.value.selectedScene
+        if (selected == null) {
+            AppLog.d(TAG, "invertAllNodes() ignored: no scene captured")
+            return
+        }
+        AppLog.d(TAG, "invertAllNodes() in scene=${selected.id}")
         mutationGeneration.incrementAndGet()
         _uiState.update { state ->
+            val updatedDisabled = selected.disabledNodeIds.toMutableSet()
             val updatedNodes =
                 state.nodes.map { node ->
                     val inverted = !node.enabled
                     desiredNodeStates[node.id] = inverted
+                    if (inverted) {
+                        updatedDisabled.remove(node.id)
+                    } else {
+                        updatedDisabled.add(node.id)
+                    }
                     node.copy(enabled = inverted)
                 }
+            val updatedScenes =
+                state.scenes.map { scene ->
+                    if (scene.id == selected.id) scene.copy(disabledNodeIds = updatedDisabled) else scene
+                }
             state.copy(
+                scenes = updatedScenes,
                 nodes = updatedNodes,
                 huntMode = HuntModeState(),
             )
@@ -393,7 +743,12 @@ object GameInspectorManager {
     // ── Interactive Step / Hunt Mode (ReShade ShaderToggler style) ────────────
 
     fun startHuntMode() {
-        val visible = _uiState.value.filteredNodes
+        val current = _uiState.value
+        if (!current.canToggleOrHunt) {
+            AppLog.d(TAG, "startHuntMode ignored: no scene captured")
+            return
+        }
+        val visible = current.filteredNodes
         if (visible.isEmpty()) {
             AppLog.d(TAG, "startHuntMode: no visible nodes to hunt")
             return
@@ -475,6 +830,7 @@ object GameInspectorManager {
 
     private fun stepHuntByDelta(delta: Int) {
         val state = _uiState.value
+        if (!state.canToggleOrHunt) return
         val visible = state.filteredNodes
         if (visible.isEmpty()) return
         if (!state.huntMode.active) {
@@ -633,6 +989,10 @@ object GameInspectorManager {
                 return@launch
             }
 
+            val packageChanged = _uiState.value.targetPackageName != packageName
+            if (packageChanged) {
+                sceneCounter.set(0)
+            }
             desiredNodeStates.clear()
             snapshot.nodes.forEach { desiredNodeStates[it.id] = it.enabled }
 
@@ -654,6 +1014,10 @@ object GameInspectorManager {
                     phase = InspectorConnectionPhase.ATTACHED,
                     errorCode = InspectorErrorCode.NONE,
                     nodes = snapshot.nodes,
+                    scenes = if (packageChanged) emptyList() else it.scenes,
+                    selectedSceneId = if (packageChanged) null else it.selectedSceneId,
+                    activeSceneId = if (packageChanged) null else it.activeSceneId,
+                    splitPipelineIds = if (packageChanged) emptySet() else it.splitPipelineIds,
                     huntMode = HuntModeState(),
                 )
             }
@@ -675,6 +1039,7 @@ object GameInspectorManager {
         taggedUiNodeIds.clear()
         preHuntNodeStates.clear()
         desiredNodeStates.clear()
+        sceneCounter.set(0)
         mutationGeneration.set(0L)
         activeMutationCount.set(0)
         liveRefreshInFlight.set(false)

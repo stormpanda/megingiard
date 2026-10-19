@@ -63,15 +63,17 @@
 
 #define CAVE_MAGIC_V1   0x4D47524443415645ULL /* "MGRDCAVE" */
 #define CAVE_MAGIC_V2   0x4D47524443415632ULL /* "MGRDCAV2" */
-#define CAVE_MAGIC      0x4D47524443415633ULL /* "MGRDCAV3" */
+#define CAVE_MAGIC_V3   0x4D47524443415633ULL /* "MGRDCAV3" */
+#define CAVE_MAGIC      0x4D47524443415634ULL /* "MGRDCAV4" */
 #define CAVE_MAX_NODES  128
 #define CAVE_CMD_STATES 16
 
 typedef struct {
     uint64_t handle;     /* +0x00 */
     uint32_t draws;      /* +0x08 */
-    uint16_t category;   /* +0x0C: 1=RENDER_PASS, 2=PIPELINE */
-    uint16_t enabled;    /* +0x0E: bit0=allow, bits1..3=mask3, bit8=tag, bits9..15=idle */
+    uint8_t  category;   /* +0x0C: 1=RENDER_PASS, 2=PIPELINE, 3=SUB_DRAW */
+    uint8_t  draw_order; /* +0x0D: per-frame sequence order (1..255) */
+    uint16_t enabled;    /* +0x0E: bit0=allow, bits1..3=mask3, bit4=split, bit8=tag, bits9..15=idle */
 } CaveNode;              /* 16 bytes */
 
 typedef struct {
@@ -82,7 +84,7 @@ typedef struct {
 
 typedef struct {
     uint64_t magic;                             /* +0x000 */
-    uint32_t api;                               /* +0x008: low byte 2=VULKAN, byte +0x00B=cmd_ring_idx */
+    uint32_t api;                               /* +0x008: +0x08=api(2), +0x09=last_node_tag, +0x0A=frame_seq, +0x0B=cmd_ring_idx */
     uint32_t node_count;                        /* +0x00C */
     uint64_t frame_counter;                     /* +0x010 */
     uint64_t last_active_rp;                    /* +0x018 */
@@ -188,7 +190,7 @@ __asm__(
     "4:\n"
     "    ret\n"
 
-    /* cave_find_or_add_node: x9 = state_ptr, x10 = handle, w11 = cat, w12 = inc_draw -> w12 = allow_draw (0/1) */
+    /* cave_find_or_add_node: x9 = state_ptr, x10 = handle, w11 = cat, w12 = inc_draw -> w12 = raw_enabled */
     "cave_find_or_add_node:\n"
     "    cbz x10, 5f\n"
     "    add x14, x9, #0x230\n"
@@ -224,7 +226,8 @@ __asm__(
     "2:\n"
     "    str x10, [x14, #0]\n"
     "    str wzr, [x14, #8]\n"
-    "    strh w11, [x14, #12]\n"
+    "    strb w11, [x14, #12]\n"
+    "    strb wzr, [x14, #13]\n"
     "    mov w13, #0x010F\n"
     "    strh w13, [x14, #14]\n"
     "    ldr w13, [x9, #0x0C]\n"
@@ -237,9 +240,21 @@ __asm__(
     "    ldr w13, [x14, #8]\n"
     "    add w13, w13, #1\n"
     "    str w13, [x14, #8]\n"
+    "    ldrb w13, [x9, #0x09]\n"
+    "    ubfx x15, x14, #4, #7\n"
+    "    orr w15, w15, #0x80\n"
+    "    cmp w13, w15\n"
+    "    b.eq 4f\n"
+    "    strb w15, [x9, #0x09]\n"
+    "    ldrb w13, [x9, #0x0A]\n"
+    "    cmp w13, #254\n"
+    "    b.hs 10f\n"
+    "    add w13, w13, #1\n"
+    "    strb w13, [x9, #0x0A]\n"
+    "10:\n"
+    "    strb w13, [x14, #13]\n"
     "4:\n"
     "    ldrh w12, [x14, #14]\n"
-    "    and w12, w12, #1\n"
     "    ret\n"
     "5:\n"
     "    mov w12, #1\n"
@@ -271,7 +286,7 @@ __asm__(
     "    ldp x29, x30, [sp], #16\n"
     "    ret\n"
 
-    /* cave_check_draw_allowed: x0 = cmdBuf -> x9 = state_ptr, w12 = allowed (1/0) */
+    /* cave_check_draw_allowed: x0 = cmdBuf, w1 = vertOrIdxCount -> x9 = state_ptr, w12 = allowed (1/0) */
     "cave_check_draw_allowed:\n"
     "    stp x29, x30, [sp, #-16]!\n"
     "    ldr x9, cave_code_start\n"
@@ -286,7 +301,8 @@ __asm__(
     "    mov w11, #1\n"
     "    mov w12, #1\n"
     "    bl cave_find_or_add_node\n"
-    "    and w16, w16, w12\n"
+    "    and w13, w12, #1\n"
+    "    and w16, w16, w13\n"
     "2:\n"
     "    ldr x10, [x17, #16]\n"
     "    cbnz x10, 3f\n"
@@ -296,7 +312,18 @@ __asm__(
     "    mov w11, #2\n"
     "    mov w12, #1\n"
     "    bl cave_find_or_add_node\n"
-    "    and w16, w16, w12\n"
+    "    and w13, w12, #1\n"
+    "    and w16, w16, w13\n"
+    "    tbz w12, #4, 4f\n"
+    "    and x10, x10, #0x0000ffffffffffff\n"
+    "    and x13, x1, #0x7fff\n"
+    "    orr x13, x13, #0x8000\n"
+    "    orr x10, x10, x13, lsl #48\n"
+    "    mov w11, #3\n"
+    "    mov w12, #1\n"
+    "    bl cave_find_or_add_node\n"
+    "    and w13, w12, #1\n"
+    "    and w16, w16, w13\n"
     "4:\n"
     "    mov w12, w16\n"
     "    ldp x29, x30, [sp], #16\n"
@@ -452,6 +479,8 @@ __asm__(
     "cave_hook_QueueSubmit:\n"
     "    hint #34\n"
     "    ldr x9, cave_code_start\n"
+    "    strb wzr, [x9, #0x09]\n"
+    "    strb wzr, [x9, #0x0A]\n"
     "    ldr x10, [x9, #0x10]\n"
     "    add x10, x10, #1\n"
     "    str x10, [x9, #0x10]\n"
@@ -462,6 +491,8 @@ __asm__(
     "cave_hook_QueueSubmit2:\n"
     "    hint #34\n"
     "    ldr x9, cave_code_start\n"
+    "    strb wzr, [x9, #0x09]\n"
+    "    strb wzr, [x9, #0x0A]\n"
     "    ldr x10, [x9, #0x10]\n"
     "    add x10, x10, #1\n"
     "    str x10, [x9, #0x10]\n"
@@ -472,6 +503,8 @@ __asm__(
     "cave_hook_QueuePresentKHR:\n"
     "    hint #34\n"
     "    ldr x9, cave_code_start\n"
+    "    strb wzr, [x9, #0x09]\n"
+    "    strb wzr, [x9, #0x0A]\n"
     "    ldr x10, [x9, #0x10]\n"
     "    add x10, x10, #1\n"
     "    str x10, [x9, #0x10]\n"
@@ -1031,8 +1064,9 @@ static int inject_via_proc_mem_internal(pid_t pid, int quiet) {
     if (sf) {
         unsigned long existing_state = 0, existing_code = 0;
         if (fscanf(sf, "%lx %lx", &existing_state, &existing_code) == 2 && existing_state != 0) {
-            ssize_t hdr_rd = pread64(mem_fd, &prev_cave, 0xA0, (off64_t)existing_state);
-            if (hdr_rd == 0xA0 && prev_cave.magic == CAVE_MAGIC) {
+            const size_t hdr_sz = offsetof(MemCaveState, cmd_states);
+            ssize_t hdr_rd = pread64(mem_fd, &prev_cave, hdr_sz, (off64_t)existing_state);
+            if (hdr_rd == (ssize_t)hdr_sz && prev_cave.magic == CAVE_MAGIC) {
                 if (pread64(mem_fd, &prev_cave, sizeof(prev_cave), (off64_t)existing_state) == (ssize_t)sizeof(prev_cave) &&
                     is_in_ranges(prev_cave.real_CmdDraw, target_code_ranges, target_code_count)) {
                     fclose(sf);
@@ -1043,8 +1077,14 @@ static int inject_via_proc_mem_internal(pid_t pid, int quiet) {
                     if (!quiet) printf("INJECT_OK handle=0x%lx\n", existing_state);
                     return 0;
                 }
-            } else if (hdr_rd == 0xA0 &&
-                       (prev_cave.magic == CAVE_MAGIC_V1 || prev_cave.magic == CAVE_MAGIC_V2)) {
+            } else if (hdr_rd == (ssize_t)hdr_sz &&
+                       (prev_cave.magic == CAVE_MAGIC_V1 ||
+                        prev_cave.magic == CAVE_MAGIC_V2 ||
+                        prev_cave.magic == CAVE_MAGIC_V3)) {
+                if (prev_cave.magic == CAVE_MAGIC_V1) {
+                    prev_cave.real_CmdDrawIndirectCount = 0;
+                    prev_cave.real_CmdDrawIndexedIndirectCount = 0;
+                }
                 prev_state_addr = (uintptr_t)existing_state;
                 prev_code_addr = (uintptr_t)existing_code;
                 has_prev_cave = 1;
@@ -1357,7 +1397,9 @@ static int inject_via_proc_mem_internal(pid_t pid, int quiet) {
         }
     }
 
-    if ((prev_cave.magic == CAVE_MAGIC_V1 || prev_cave.magic == CAVE_MAGIC_V2) &&
+    if ((prev_cave.magic == CAVE_MAGIC_V1 ||
+         prev_cave.magic == CAVE_MAGIC_V2 ||
+         prev_cave.magic == CAVE_MAGIC_V3) &&
         prev_state_addr != 0 && prev_state_addr != state_cave_addr) {
         uint64_t zero_magic = 0;
         (void)pwrite64(mem_fd, &zero_magic, sizeof(zero_magic), (off64_t)prev_state_addr);
@@ -1395,15 +1437,16 @@ static uint16_t unpack_cave_node_mask(uint16_t raw) {
     return raw ? 0x7u : 0x0u;
 }
 
-static uint16_t pack_cave_node_state(uint16_t mask3, uint16_t idle_polls) {
+static uint16_t pack_cave_node_state_with_flags(uint16_t mask3, uint16_t idle_polls, uint16_t prev_raw) {
     uint16_t m = (uint16_t)(mask3 & 0x7u);
     uint16_t idle = (uint16_t)(idle_polls & 0x7Fu);
+    uint16_t split_flag = (uint16_t)(prev_raw & 0x0010u);
     uint16_t allow_draw = (m == 0x7u) ? 1u : 0u;
-    return (uint16_t)(0x0100u | (idle << 9) | (m << 1) | allow_draw);
+    return (uint16_t)(0x0100u | (idle << 9) | split_flag | (m << 1) | allow_draw);
 }
 
-static uint16_t pack_cave_node_mask(uint16_t mask3) {
-    return pack_cave_node_state(mask3, 0u);
+static uint16_t pack_cave_node_mask_preserving(uint16_t mask3, uint16_t prev_raw) {
+    return pack_cave_node_state_with_flags(mask3, 0u, prev_raw);
 }
 
 typedef struct {
@@ -1436,7 +1479,10 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
     MemCaveState state;
     memset(&state, 0, sizeof(state));
     ssize_t rd = pread64(mem_fd, &state, sizeof(state), (off64_t)state_addr);
-    if (rd >= 0xA0 && (state.magic == CAVE_MAGIC_V1 || state.magic == CAVE_MAGIC_V2)) {
+    if (rd >= 0xA0 &&
+        (state.magic == CAVE_MAGIC_V1 ||
+         state.magic == CAVE_MAGIC_V2 ||
+         state.magic == CAVE_MAGIC_V3)) {
         close(mem_fd);
         if (inject_via_proc_mem_internal(pid, 1) != 0) {
             return -1;
@@ -1505,6 +1551,7 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
             unsigned long long h = (unsigned long long)n->handle;
             unsigned long long h32 = h & 0xFFFFFFFFULL;
             uint16_t mask3 = unpack_cave_node_mask(n->enabled);
+            unsigned int order = (unsigned int)n->draw_order;
 
             if (total_delta > 0) {
                 tracker.prev_draws[i] = n->draws;
@@ -1514,7 +1561,7 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
                 } else {
                     tracker.idle_streak[i]++;
                     tracker.last_delta[i] = 0;
-                    if (mask3 == 0x7u && tracker.idle_streak[i] >= 5u) {
+                    if (mask3 == 0x7u && (n->enabled & 0x0010u) == 0u && tracker.idle_streak[i] >= 5u) {
                         CaveNode empty_node;
                         memset(&empty_node, 0, sizeof(empty_node));
                         (void)pwrite64(mem_fd, &empty_node, sizeof(empty_node), node_off);
@@ -1530,18 +1577,24 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
             unsigned int draws = (unsigned int)tracker.last_delta[i];
             if (n->category == 1) {
                 unsigned int rp_en = (mask3 & 1u) ? 1u : 0u;
-                printf("NODE|RP_0x%llx|RENDER_PASS|VULKAN|%08llX|Active|%u|%u|Vulkan RenderPass (0x%llx)\n",
-                       h, h32, draws, rp_en, h);
+                printf("NODE|RP_0x%llx|RENDER_PASS|VULKAN|%08llX|Order:#%03u|%u|%u|Vulkan RenderPass (0x%llx)\n",
+                       h, h32, order, draws, rp_en, h);
             } else if (n->category == 2) {
                 unsigned int pipe_en = (mask3 & 1u) ? 1u : 0u;
                 unsigned int vs_en = (mask3 & 2u) ? 1u : 0u;
                 unsigned int fs_en = (mask3 & 4u) ? 1u : 0u;
-                printf("NODE|PIPE_0x%llx|PIPELINE|VULKAN|%08llX|Active|%u|%u|Vulkan Pipeline (0x%llx)\n",
-                       h, h32, draws, pipe_en, h);
-                printf("NODE|VS_SYNTH_0x%llx|VERTEX_SHADER|VULKAN|%08llX|Active|%u|%u|Vertex Shader (Pipeline 0x%llx)\n",
-                       h, h32, draws, vs_en, h);
-                printf("NODE|FS_SYNTH_0x%llx|FRAGMENT_SHADER|VULKAN|%08llX|Active|%u|%u|Fragment Shader (Pipeline 0x%llx)\n",
-                       h, h32, draws, fs_en, h);
+                printf("NODE|PIPE_0x%llx|PIPELINE|VULKAN|%08llX|Order:#%03u|%u|%u|Vulkan Pipeline (0x%llx)\n",
+                       h, h32, order, draws, pipe_en, h);
+                printf("NODE|VS_SYNTH_0x%llx|VERTEX_SHADER|VULKAN|%08llX|Order:#%03u|%u|%u|Vertex Shader (Pipeline 0x%llx)\n",
+                       h, h32, order, draws, vs_en, h);
+                printf("NODE|FS_SYNTH_0x%llx|FRAGMENT_SHADER|VULKAN|%08llX|Order:#%03u|%u|%u|Fragment Shader (Pipeline 0x%llx)\n",
+                       h, h32, order, draws, fs_en, h);
+            } else if (n->category == 3) {
+                unsigned int sub_en = (mask3 & 1u) ? 1u : 0u;
+                unsigned long long parent_h = h & 0x0000FFFFFFFFFFFFULL;
+                unsigned int idx_count = (unsigned int)((h >> 48) & 0x7FFFu);
+                printf("NODE|SUB_0x%llx|PIPELINE|VULKAN|%08llX|Order:#%03u Idx:%u|%u|%u|↳ Sub-Draw (%u verts/idx · Pipe 0x%llx)\n",
+                       h, h32, order, idx_count, draws, sub_en, idx_count, parent_h);
             }
         }
 
@@ -1565,7 +1618,7 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
         for (uint32_t i = 0; i < CAVE_MAX_NODES; i++) {
             if (state.nodes[i].handle == target_handle && target_handle != 0) {
                 uint16_t mask3 = unpack_cave_node_mask(state.nodes[i].enabled);
-                if (state.nodes[i].category == 1) {
+                if (state.nodes[i].category == 1 || state.nodes[i].category == 3) {
                     mask3 = en ? 0x7u : 0x0u;
                 } else {
                     uint16_t bit = 1u;
@@ -1580,7 +1633,7 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
                         mask3 &= (uint16_t)~bit;
                     }
                 }
-                uint16_t packed = pack_cave_node_mask(mask3);
+                uint16_t packed = pack_cave_node_mask_preserving(mask3, state.nodes[i].enabled);
                 off64_t en_off = (off64_t)(state_addr + offsetof(MemCaveState, nodes) +
                                            (size_t)i * sizeof(CaveNode) + offsetof(CaveNode, enabled));
                 (void)pwrite64(mem_fd, &packed, sizeof(packed), en_off);
@@ -1591,11 +1644,38 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
         return 0;
     }
 
+    if (strcmp(cmd, "SPLIT") == 0 && argc >= 6) {
+        const char *node_id = argv[4];
+        int split = atoi(argv[5]) != 0 ? 1 : 0;
+        const char *hex_part = strstr(node_id, "0x");
+        uint64_t target_handle = hex_part ? (strtoull(hex_part, NULL, 16) & 0x0000FFFFFFFFFFFFULL) : 0;
+        for (uint32_t i = 0; i < CAVE_MAX_NODES; i++) {
+            if (state.nodes[i].handle == target_handle && target_handle != 0 && state.nodes[i].category == 2) {
+                uint16_t mask3 = unpack_cave_node_mask(state.nodes[i].enabled);
+                uint16_t flags = split ? 0x0010u : 0x0000u;
+                uint16_t packed = pack_cave_node_mask_preserving(mask3, flags);
+                off64_t en_off = (off64_t)(state_addr + offsetof(MemCaveState, nodes) +
+                                           (size_t)i * sizeof(CaveNode) + offsetof(CaveNode, enabled));
+                (void)pwrite64(mem_fd, &packed, sizeof(packed), en_off);
+            } else if (!split && state.nodes[i].category == 3 &&
+                       (state.nodes[i].handle & 0x0000FFFFFFFFFFFFULL) == target_handle) {
+                CaveNode empty_node;
+                memset(&empty_node, 0, sizeof(empty_node));
+                off64_t node_off = (off64_t)(state_addr + offsetof(MemCaveState, nodes) +
+                                             (size_t)i * sizeof(CaveNode));
+                (void)pwrite64(mem_fd, &empty_node, sizeof(empty_node), node_off);
+            }
+        }
+        close(mem_fd);
+        printf("OK\n");
+        return 0;
+    }
+
     if (strcmp(cmd, "SET_ALL") == 0 && argc >= 5) {
         uint16_t en = (uint16_t)(atoi(argv[4]) != 0 ? 1u : 0u);
-        uint16_t packed = pack_cave_node_mask(en ? 0x7u : 0x0u);
         for (uint32_t i = 0; i < CAVE_MAX_NODES; i++) {
             if (state.nodes[i].handle != 0) {
+                uint16_t packed = pack_cave_node_mask_preserving(en ? 0x7u : 0x0u, state.nodes[i].enabled);
                 off64_t en_off = (off64_t)(state_addr + offsetof(MemCaveState, nodes) +
                                            (size_t)i * sizeof(CaveNode) + offsetof(CaveNode, enabled));
                 (void)pwrite64(mem_fd, &packed, sizeof(packed), en_off);
@@ -1610,12 +1690,12 @@ static int handle_cave_rpc(pid_t pid, int argc, char **argv) {
         for (uint32_t i = 0; i < CAVE_MAX_NODES; i++) {
             if (state.nodes[i].handle != 0) {
                 uint16_t mask3 = unpack_cave_node_mask(state.nodes[i].enabled);
-                if (state.nodes[i].category == 1) {
+                if (state.nodes[i].category == 1 || state.nodes[i].category == 3) {
                     mask3 = (mask3 & 1u) ? 0x0u : 0x7u;
                 } else {
                     mask3 = (uint16_t)((~mask3) & 0x7u);
                 }
-                uint16_t packed = pack_cave_node_mask(mask3);
+                uint16_t packed = pack_cave_node_mask_preserving(mask3, state.nodes[i].enabled);
                 off64_t en_off = (off64_t)(state_addr + offsetof(MemCaveState, nodes) +
                                            (size_t)i * sizeof(CaveNode) + offsetof(CaveNode, enabled));
                 (void)pwrite64(mem_fd, &packed, sizeof(packed), en_off);
@@ -2023,8 +2103,11 @@ int main(int argc, char **argv) {
     }
 
     (void)write_remote_mem(pid, scratch_addr, saved_stack, sizeof(saved_stack));
-    if (has_syscall && saved_syscall != -1) {
-        (void)ptrace(PTRACE_SETREGSET, pid, (void *)NT_ARM_SYSTEM_CALL, &sys_iov);
+    /* After call_remote_func, the thread is stopped on SIGSEGV rather than a syscall stop;
+     * convert kernel internal restart codes (-ERESTART_RESTARTBLOCK = -516 .. -ERESTARTSYS = -512)
+     * in saved x0 to -EINTR so libc sees a normal interrupted syscall instead of errno 516. */
+    if ((int64_t)saved_regs.regs[0] >= -516 && (int64_t)saved_regs.regs[0] <= -512) {
+        saved_regs.regs[0] = (uint64_t)(int64_t)-EINTR;
     }
     set_regs(pid, &saved_regs);
     if (has_sigmask) {
