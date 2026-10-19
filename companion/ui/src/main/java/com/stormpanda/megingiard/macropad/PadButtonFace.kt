@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +29,8 @@ import kotlin.math.sqrt
 
 private val PBF_BACKING_COLOR = AppPalettes.padButtonBacking
 private val PBF_BORDER_WIDTH = 1.dp
+private const val PBF_CENTER_NORM = 0.5f
+private val PBF_ZERO_OFFSET = NormalizedPoint(0f, 0f)
 
 internal val PBF_SQUARE_RADIUS = 4.dp
 internal val PBF_SQUARE_SHAPE = RoundedCornerShape(PBF_SQUARE_RADIUS)
@@ -38,6 +41,7 @@ internal val PBF_PILL_SHAPE = RoundedCornerShape(percent = PBF_PILL_PERCENT)
 
 private class PolygonButtonShape(
     private val vertices: List<NormalizedPoint>,
+    val contentCenterOffset: NormalizedPoint,
 ) : Shape {
     override fun createOutline(
         size: Size,
@@ -57,16 +61,26 @@ private class PolygonButtonShape(
         return Outline.Generic(path)
     }
 
-    override fun equals(other: Any?): Boolean = this === other || (other is PolygonButtonShape && vertices == other.vertices)
+    override fun equals(other: Any?): Boolean =
+        this === other ||
+            (
+                other is PolygonButtonShape &&
+                    vertices == other.vertices &&
+                    contentCenterOffset == other.contentCenterOffset
+            )
 
-    override fun hashCode(): Int = vertices.hashCode()
+    override fun hashCode(): Int = 31 * vertices.hashCode() + contentCenterOffset.hashCode()
 }
 
 private val PBF_POLYGON_SHAPES: Map<ButtonShape, Shape> =
     ButtonShape.entries
         .mapNotNull { shape ->
             ButtonShapeGeometry.verticesFor(shape)?.let { vertices ->
-                shape to PolygonButtonShape(vertices)
+                shape to
+                    PolygonButtonShape(
+                        vertices = vertices,
+                        contentCenterOffset = ButtonShapeGeometry.contentCenterOffsetFor(shape),
+                    )
             }
         }.toMap()
 
@@ -126,9 +140,10 @@ internal fun PadButtonFace(
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
+    val contentOffset = (shape as? PolygonButtonShape)?.contentCenterOffset ?: PBF_ZERO_OFFSET
 
     val bgBrush =
-        remember(bgColor, width, height, density) {
+        remember(bgColor, width, height, density, contentOffset) {
             val wPx = with(density) { width.toPx() }
             val hPx = with(density) { height.toPx() }
             val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
@@ -138,7 +153,11 @@ internal fun PadButtonFace(
                 0.50f to bgColor.copy(alpha = maxAlpha * 0.25f),
                 0.75f to bgColor.copy(alpha = maxAlpha * 0.5625f),
                 1.00f to bgColor.copy(alpha = maxAlpha),
-                center = Offset(wPx / 2f, hPx / 2f),
+                center =
+                    Offset(
+                        wPx * (PBF_CENTER_NORM + contentOffset.x),
+                        hPx * (PBF_CENTER_NORM + contentOffset.y),
+                    ),
                 radius = halfDiag,
             )
         }
@@ -166,6 +185,15 @@ internal fun PadButtonFace(
                     },
                 ),
     ) {
-        content()
+        if (contentOffset.x != 0f || contentOffset.y != 0f) {
+            Box(
+                modifier = Modifier.offset(x = width * contentOffset.x, y = height * contentOffset.y),
+                contentAlignment = Alignment.Center,
+            ) {
+                content()
+            }
+        } else {
+            content()
+        }
     }
 }

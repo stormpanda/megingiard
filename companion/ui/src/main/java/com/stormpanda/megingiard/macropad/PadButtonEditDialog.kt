@@ -796,6 +796,7 @@ internal fun EditButtonSubPageContent(
 
     val previewLabel = stringResource(R.string.macropad_editor_button_preview_text)
     val previewShape = resolvePadButtonPreviewShape(buttonShape)
+    val previewIconSize = PBD_ICON_SIZE_DP * ButtonShapeGeometry.contentScaleFor(buttonShape)
     val buttonPreviewLeading: (textColor: Color, borderColor: Color, bgColor: Color, isIconOnly: Boolean) -> @Composable () -> Unit =
         { tColor, bColor, bgCol, iconOnly ->
             {
@@ -811,7 +812,7 @@ internal fun EditButtonSubPageContent(
                     if (currentIcon != null) {
                         MaterialSymbol(
                             name = currentIcon,
-                            size = PBD_ICON_SIZE_DP,
+                            size = previewIconSize,
                             tint = tColor,
                             filled = iconFilled,
                         )

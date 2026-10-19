@@ -7,8 +7,11 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.acos
+import kotlin.math.cos
 import kotlin.math.hypot
+import kotlin.math.sin
 
 class ButtonShapeGeometryTest {
     @Test
@@ -185,5 +188,100 @@ class ButtonShapeGeometryTest {
         assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.PENTAGON_1, 0.25f, 0.05f, 60f, 60f))
         // PENTAGON_2 (corner up) slopes from (0.5, 0.024) to (0, 0.388) -> at x=0.25, y_edge = 0.206 > 0.05 -> outside
         assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.PENTAGON_2, 0.25f, 0.05f, 60f, 60f))
+    }
+
+    @Test
+    fun `contentCenterOffsetFor is zero for doubly-symmetric shapes and places content at the exact incenter for asymmetric polygons`() {
+        val symmetricShapes =
+            listOf(
+                ButtonShape.SQUARE,
+                ButtonShape.ROUNDED_SQUARE,
+                ButtonShape.CIRCLE,
+                ButtonShape.ICON_ONLY,
+                ButtonShape.HEXAGON_1,
+                ButtonShape.HEXAGON_2,
+                ButtonShape.OCTAGON,
+                ButtonShape.DIAMOND,
+            )
+        for (shape in symmetricShapes) {
+            val offset = ButtonShapeGeometry.contentCenterOffsetFor(shape)
+            assertEquals("Expected zero x-offset for $shape", 0f, offset.x, 1e-6f)
+            assertEquals("Expected zero y-offset for $shape", 0f, offset.y, 1e-6f)
+        }
+
+        val asymmetricShapes =
+            listOf(
+                ButtonShape.PENTAGON_1,
+                ButtonShape.PENTAGON_2,
+                ButtonShape.TRIANGLE_UP,
+                ButtonShape.TRIANGLE_DOWN,
+                ButtonShape.TRIANGLE_LEFT,
+                ButtonShape.TRIANGLE_RIGHT,
+            )
+        for (shape in asymmetricShapes) {
+            val offset = ButtonShapeGeometry.contentCenterOffsetFor(shape)
+            assertTrue(
+                "Expected non-zero offset for asymmetric $shape",
+                hypot(offset.x, offset.y) > 0.04f,
+            )
+            val cx = 0.5f + offset.x
+            val cy = 0.5f + offset.y
+            val vertices = ButtonShapeGeometry.verticesFor(shape)!!
+            val count = vertices.size
+            val edgeDistances =
+                (0 until count).map { i ->
+                    val a = vertices[i]
+                    val b = vertices[(i + 1) % count]
+                    val ex = b.x - a.x
+                    val ey = b.y - a.y
+                    val edgeLen = hypot(ex, ey)
+                    abs(ex * (cy - a.y) - ey * (cx - a.x)) / edgeLen
+                }
+            val firstDist = edgeDistances.first()
+            for ((index, dist) in edgeDistances.withIndex()) {
+                assertEquals(
+                    "Incenter perpendicular distance to edge $index mismatch for $shape",
+                    firstDist,
+                    dist,
+                    1e-4f,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `contentScaleFor matches inscribed circle diameter and keeps scaled icon inside every ButtonShape`() {
+        assertEquals(1.0f, ButtonShapeGeometry.contentScaleFor(ButtonShape.SQUARE), 1e-4f)
+        assertEquals(1.0f, ButtonShapeGeometry.contentScaleFor(ButtonShape.ROUNDED_SQUARE), 1e-4f)
+        assertEquals(1.0f, ButtonShapeGeometry.contentScaleFor(ButtonShape.CIRCLE), 1e-4f)
+        assertEquals(1.0f, ButtonShapeGeometry.contentScaleFor(ButtonShape.ICON_ONLY), 1e-4f)
+        assertEquals(1.0f, ButtonShapeGeometry.contentScaleFor(ButtonShape.OCTAGON), 1e-4f)
+        assertEquals(0.8660254f, ButtonShapeGeometry.contentScaleFor(ButtonShape.HEXAGON_1), 1e-4f)
+        assertEquals(0.8660254f, ButtonShapeGeometry.contentScaleFor(ButtonShape.HEXAGON_2), 1e-4f)
+        assertEquals(0.8506508f, ButtonShapeGeometry.contentScaleFor(ButtonShape.PENTAGON_1), 1e-4f)
+        assertEquals(0.8506508f, ButtonShapeGeometry.contentScaleFor(ButtonShape.PENTAGON_2), 1e-4f)
+        assertEquals(0.7071068f, ButtonShapeGeometry.contentScaleFor(ButtonShape.DIAMOND), 1e-4f)
+        assertEquals(0.5773503f, ButtonShapeGeometry.contentScaleFor(ButtonShape.TRIANGLE_UP), 1e-4f)
+        assertEquals(0.5773503f, ButtonShapeGeometry.contentScaleFor(ButtonShape.TRIANGLE_DOWN), 1e-4f)
+        assertEquals(0.5773503f, ButtonShapeGeometry.contentScaleFor(ButtonShape.TRIANGLE_LEFT), 1e-4f)
+        assertEquals(0.5773503f, ButtonShapeGeometry.contentScaleFor(ButtonShape.TRIANGLE_RIGHT), 1e-4f)
+
+        val baseIconRadius = (44f / 60f) * 0.5f
+        for (shape in ButtonShape.entries) {
+            val offset = ButtonShapeGeometry.contentCenterOffsetFor(shape)
+            val scale = ButtonShapeGeometry.contentScaleFor(shape)
+            val cx = 0.5f + offset.x
+            val cy = 0.5f + offset.y
+            val iconRadius = baseIconRadius * scale
+            for (step in 0 until 16) {
+                val angle = (2.0 * PI * step / 16.0).toFloat()
+                val px = cx + iconRadius * cos(angle)
+                val py = cy + iconRadius * sin(angle)
+                assertTrue(
+                    "Scaled icon perimeter point ($px, $py) should fit inside $shape",
+                    ButtonShapeGeometry.isNormalizedPointInside(shape, px, py, 60f, 60f),
+                )
+            }
+        }
     }
 }

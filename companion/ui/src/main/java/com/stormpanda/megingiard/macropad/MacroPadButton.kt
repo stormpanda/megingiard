@@ -264,6 +264,9 @@ internal fun PadButtonContent(
     isTrackpoint: Boolean = btn.action is PadAction.TrackpointMove,
     effectiveContentAccent: Color = effectiveTextTint,
 ) {
+    val contentScale = ButtonShapeGeometry.contentScaleFor(btn.buttonShape, isTrackpoint)
+    val scaledIconSize = iconSize * contentScale
+
     if (isTrackpoint) {
         Text(
             "●",
@@ -273,26 +276,29 @@ internal fun PadButtonContent(
     } else if (btn.action is PadAction.ScrollWheel) {
         ScrollWheelFace(accentColor = effectiveContentAccent)
     } else if (btn.action is PadAction.BackgroundPeek) {
-        BackgroundPeekFace(accentColor = effectiveContentAccent)
+        BackgroundPeekFace(
+            accentColor = effectiveContentAccent,
+            iconSize = MP_PEEK_ICON_SIZE * contentScale,
+        )
     } else if (btn.action is PadAction.AppLauncher) {
         AppLauncherFace(
             btn = btn,
             action = btn.action as PadAction.AppLauncher,
             effectiveTextTint = effectiveTextTint,
-            iconSize = iconSize,
+            iconSize = scaledIconSize,
         )
     } else {
         val iconName = btn.iconName
         if (iconName != null) {
             MaterialSymbol(
                 name = iconName,
-                size = iconSize,
+                size = scaledIconSize,
                 tint = effectiveTextTint,
                 filled = btn.iconFilled,
             )
         } else {
-            val widthScaledSp = MP_BTN_LABEL_BASE_FONT_SP * (btn.widthDp / MP_BUTTON_BASE_UNIT_DP)
-            val heightCapSp = btn.heightDp * MP_BTN_LABEL_MAX_HEIGHT_RATIO
+            val widthScaledSp = MP_BTN_LABEL_BASE_FONT_SP * (btn.widthDp / MP_BUTTON_BASE_UNIT_DP) * contentScale
+            val heightCapSp = btn.heightDp * MP_BTN_LABEL_MAX_HEIGHT_RATIO * contentScale
             val fontSp =
                 minOf(widthScaledSp, heightCapSp)
                     .coerceIn(MP_BTN_LABEL_MIN_FONT_SP, MP_BTN_LABEL_MAX_FONT_SP)
@@ -340,7 +346,13 @@ internal fun AppLauncherFace(
         }
     }
 
-    val targetSize = iconSize ?: (minOf(btn.widthDp, btn.heightDp).dp * MP_BTN_ICON_RATIO)
+    val targetSize =
+        iconSize
+            ?: (
+                minOf(btn.widthDp, btn.heightDp).dp *
+                    MP_BTN_ICON_RATIO *
+                    ButtonShapeGeometry.contentScaleFor(btn.buttonShape)
+            )
     val bitmap = appIconBitmap
     if (bitmap != null) {
         val colorFilter =
@@ -441,13 +453,16 @@ internal fun ScrollWheelFace(accentColor: Color) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-internal fun BackgroundPeekFace(accentColor: Color) {
+internal fun BackgroundPeekFace(
+    accentColor: Color,
+    iconSize: Dp = MP_PEEK_ICON_SIZE,
+) {
     val isPeekActive by MacroPadState.isPeekActive.collectAsStateWithLifecycle()
     Icon(
         imageVector = if (isPeekActive) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
         contentDescription = null,
         tint = accentColor,
-        modifier = Modifier.size(MP_PEEK_ICON_SIZE),
+        modifier = Modifier.size(iconSize),
     )
 }
 

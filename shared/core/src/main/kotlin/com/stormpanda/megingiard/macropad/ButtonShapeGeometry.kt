@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
+import kotlin.math.abs
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 
@@ -39,6 +41,7 @@ private const val BSG_OCT_INSET = 0.2928932f
 private const val BSG_OCT_FAR = 0.7071068f
 
 private const val BSG_EDGE_EPSILON = 1e-5f
+private val BSG_ZERO_OFFSET = NormalizedPoint(0f, 0f)
 
 /**
  * Pure geometry definitions and hit-testing math for [ButtonShape].
@@ -166,6 +169,83 @@ object ButtonShapeGeometry {
             ButtonShape.ICON_ONLY,
             -> null
         }
+
+    private val CONTENT_CENTER_OFFSETS: Map<ButtonShape, NormalizedPoint> =
+        ButtonShape.entries.associateWith { shape ->
+            val vertices = verticesFor(shape)
+            if (vertices.isNullOrEmpty()) {
+                BSG_ZERO_OFFSET
+            } else {
+                var sumX = 0f
+                var sumY = 0f
+                for (v in vertices) {
+                    sumX += v.x
+                    sumY += v.y
+                }
+                val dx = sumX / vertices.size - BSG_HALF
+                val dy = sumY / vertices.size - BSG_HALF
+                NormalizedPoint(
+                    x = if (abs(dx) < BSG_EDGE_EPSILON) 0f else dx,
+                    y = if (abs(dy) < BSG_EDGE_EPSILON) 0f else dy,
+                )
+            }
+        }
+
+    /**
+     * Returns the normalized offset `(dx, dy)` from the bounding-box midpoint `(0.5f, 0.5f)` to
+     * the shape's true geometric center (centroid and incircle center, where perpendicular
+     * distance to every polygon edge is equal).
+     *
+     * Shapes that are symmetric across both the horizontal and vertical axes return `(0f, 0f)`.
+     * Shapes whose halves are not congruent across both axes (`PENTAGON_1`, `PENTAGON_2`,
+     * `TRIANGLE_UP`, `TRIANGLE_DOWN`, `TRIANGLE_LEFT`, `TRIANGLE_RIGHT`) return a non-zero offset
+     * of magnitude `(R - r) / 2` toward the flat base edge (`±0.05020285f` for pentagons,
+     * `±sqrt(3)/12 ≈ ±0.14433757f` for equilateral triangles).
+     */
+    fun contentCenterOffsetFor(
+        shape: ButtonShape,
+        isTrackpoint: Boolean = false,
+    ): NormalizedPoint {
+        if (isTrackpoint) return BSG_ZERO_OFFSET
+        return CONTENT_CENTER_OFFSETS[shape] ?: BSG_ZERO_OFFSET
+    }
+
+    private val CONTENT_SCALES: Map<ButtonShape, Float> =
+        ButtonShape.entries.associateWith { shape ->
+            val vertices = verticesFor(shape)
+            if (vertices == null || vertices.size < 3) {
+                1f
+            } else {
+                val offset = contentCenterOffsetFor(shape)
+                val cx = BSG_HALF + offset.x
+                val cy = BSG_HALF + offset.y
+                val a = vertices[0]
+                val b = vertices[1]
+                val ex = b.x - a.x
+                val ey = b.y - a.y
+                val edgeLen = hypot(ex, ey)
+                val inradius = if (edgeLen > 0f) abs(ex * (cy - a.y) - ey * (cx - a.x)) / edgeLen else BSG_HALF
+                (inradius / BSG_HALF).coerceIn(0f, 1f)
+            }
+        }
+
+    /**
+     * Returns the content scale factor `(0f..1f]` for icons and labels inside [shape], equal to
+     * the ratio of the shape's inscribed circle diameter `2r` to the unit circle diameter `1.0`.
+     *
+     * - `SQUARE`, `ROUNDED_SQUARE`, `CIRCLE`, `ICON_ONLY`, `OCTAGON`: `1.0f`
+     * - `HEXAGON_1`, `HEXAGON_2`: `sqrt(3) / 2 ≈ 0.8660254f`
+     * - `PENTAGON_1`, `PENTAGON_2`: `1 / (2 * sin(36°)) ≈ 0.8506508f`
+     * - `DIAMOND`: `sqrt(2) / 2 ≈ 0.7071068f`
+     * - `TRIANGLE_UP`, `TRIANGLE_DOWN`, `TRIANGLE_LEFT`, `TRIANGLE_RIGHT`: `sqrt(3) / 3 ≈ 0.5773503f`
+     */
+    fun contentScaleFor(
+        shape: ButtonShape,
+        isTrackpoint: Boolean = false,
+    ): Float {
+        if (isTrackpoint) return 1f
+        return CONTENT_SCALES[shape] ?: 1f
+    }
 
     /**
      * Evaluates whether a normalized point `(nx, ny)` in `[0f, 1f] × [0f, 1f]` lies inside
