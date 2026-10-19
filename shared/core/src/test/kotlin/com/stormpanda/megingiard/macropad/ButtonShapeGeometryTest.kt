@@ -6,6 +6,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.PI
+import kotlin.math.acos
+import kotlin.math.hypot
 
 class ButtonShapeGeometryTest {
     @Test
@@ -40,6 +43,64 @@ class ButtonShapeGeometryTest {
                     assertTrue("x out of [0,1] for $shape: ${pt.x}", pt.x in 0f..1f)
                     assertTrue("y out of [0,1] for $shape: ${pt.y}", pt.y in 0f..1f)
                 }
+            }
+        }
+    }
+
+    @Test
+    fun `all polygon shapes are regular with equal edge lengths and equal interior angles`() {
+        val polygonShapes =
+            listOf(
+                ButtonShape.HEXAGON_1,
+                ButtonShape.HEXAGON_2,
+                ButtonShape.PENTAGON_1,
+                ButtonShape.PENTAGON_2,
+                ButtonShape.OCTAGON,
+                ButtonShape.DIAMOND,
+                ButtonShape.TRIANGLE_UP,
+                ButtonShape.TRIANGLE_DOWN,
+                ButtonShape.TRIANGLE_LEFT,
+                ButtonShape.TRIANGLE_RIGHT,
+            )
+
+        for (shape in polygonShapes) {
+            val vertices = ButtonShapeGeometry.verticesFor(shape)!!
+            val count = vertices.size
+            val edgeLengths =
+                (0 until count).map { i ->
+                    val a = vertices[i]
+                    val b = vertices[(i + 1) % count]
+                    hypot(b.x - a.x, b.y - a.y)
+                }
+            val firstEdge = edgeLengths.first()
+            for ((index, length) in edgeLengths.withIndex()) {
+                assertEquals(
+                    "Edge $index length mismatch for $shape",
+                    firstEdge,
+                    length,
+                    1e-4f,
+                )
+            }
+
+            val expectedInteriorAngleDeg = (count - 2) * 180.0 / count
+            for (i in 0 until count) {
+                val prev = vertices[(i - 1 + count) % count]
+                val curr = vertices[i]
+                val next = vertices[(i + 1) % count]
+                val ux = (prev.x - curr.x).toDouble()
+                val uy = (prev.y - curr.y).toDouble()
+                val vx = (next.x - curr.x).toDouble()
+                val vy = (next.y - curr.y).toDouble()
+                val dot = ux * vx + uy * vy
+                val mag = hypot(ux, uy) * hypot(vx, vy)
+                val cosTheta = (dot / mag).coerceIn(-1.0, 1.0)
+                val angleDeg = acos(cosTheta) * 180.0 / PI
+                assertEquals(
+                    "Interior angle at vertex $i mismatch for $shape",
+                    expectedInteriorAngleDeg,
+                    angleDeg,
+                    0.05,
+                )
             }
         }
     }
@@ -90,39 +151,39 @@ class ButtonShapeGeometryTest {
 
     @Test
     fun `directional triangles accept base corners and reject apex-side corners`() {
-        // TRIANGLE_UP: apex at (0.5, 0), base from (0, 1) to (1, 1)
-        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_UP, 0.05f, 0.05f, 60f, 60f))
-        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_UP, 0.95f, 0.05f, 60f, 60f))
-        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_UP, 0.05f, 0.95f, 60f, 60f))
-        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_UP, 0.95f, 0.95f, 60f, 60f))
+        // TRIANGLE_UP: apex at (0.5, 0.067), base from (0, 0.933) to (1, 0.933)
+        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_UP, 0.05f, 0.08f, 60f, 60f))
+        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_UP, 0.95f, 0.08f, 60f, 60f))
+        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_UP, 0.05f, 0.92f, 60f, 60f))
+        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_UP, 0.95f, 0.92f, 60f, 60f))
 
-        // TRIANGLE_DOWN: base from (0, 0) to (1, 0), apex at (0.5, 1)
-        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_DOWN, 0.05f, 0.05f, 60f, 60f))
-        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_DOWN, 0.95f, 0.05f, 60f, 60f))
-        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_DOWN, 0.05f, 0.95f, 60f, 60f))
-        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_DOWN, 0.95f, 0.95f, 60f, 60f))
+        // TRIANGLE_DOWN: base from (0, 0.067) to (1, 0.067), apex at (0.5, 0.933)
+        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_DOWN, 0.05f, 0.08f, 60f, 60f))
+        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_DOWN, 0.95f, 0.08f, 60f, 60f))
+        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_DOWN, 0.05f, 0.92f, 60f, 60f))
+        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_DOWN, 0.95f, 0.92f, 60f, 60f))
 
-        // TRIANGLE_LEFT: apex at (0, 0.5), base from (1, 0) to (1, 1)
-        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_LEFT, 0.05f, 0.05f, 60f, 60f))
-        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_LEFT, 0.95f, 0.05f, 60f, 60f))
-        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_LEFT, 0.95f, 0.95f, 60f, 60f))
+        // TRIANGLE_LEFT: apex at (0.067, 0.5), base from (0.933, 0) to (0.933, 1)
+        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_LEFT, 0.08f, 0.05f, 60f, 60f))
+        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_LEFT, 0.92f, 0.05f, 60f, 60f))
+        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_LEFT, 0.92f, 0.95f, 60f, 60f))
 
-        // TRIANGLE_RIGHT: base from (0, 0) to (0, 1), apex at (1, 0.5)
-        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_RIGHT, 0.05f, 0.05f, 60f, 60f))
-        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_RIGHT, 0.05f, 0.95f, 60f, 60f))
-        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_RIGHT, 0.95f, 0.05f, 60f, 60f))
+        // TRIANGLE_RIGHT: base from (0.067, 0) to (0.067, 1), apex at (0.933, 0.5)
+        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_RIGHT, 0.08f, 0.05f, 60f, 60f))
+        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_RIGHT, 0.08f, 0.95f, 60f, 60f))
+        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.TRIANGLE_RIGHT, 0.92f, 0.05f, 60f, 60f))
     }
 
     @Test
     fun `hexagon and pentagon variants differ in top-center vs top-edge containment`() {
-        // HEXAGON_1 (edge up) has flat top from x=0.25..0.75 at y=0 -> (0.26, 0.02) is inside
-        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.HEXAGON_1, 0.26f, 0.02f, 60f, 60f))
-        // HEXAGON_2 (corner up) slopes from (0.5, 0) to (0, 0.25) -> at x=0.26, y_edge = 0.12 > 0.02 -> outside
-        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.HEXAGON_2, 0.26f, 0.02f, 60f, 60f))
+        // HEXAGON_1 (edge up) has flat top from x=0.25..0.75 at y=0.067 -> (0.26, 0.08) is inside
+        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.HEXAGON_1, 0.26f, 0.08f, 60f, 60f))
+        // HEXAGON_2 (corner up) slopes from (0.5, 0) to (0.067, 0.25) -> at x=0.26, y_edge = 0.139 > 0.08 -> outside
+        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.HEXAGON_2, 0.26f, 0.08f, 60f, 60f))
 
-        // PENTAGON_1 (edge up) has flat top from x=0.191..0.809 at y=0 -> (0.25, 0.02) is inside
-        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.PENTAGON_1, 0.25f, 0.02f, 60f, 60f))
-        // PENTAGON_2 (corner up) slopes from (0.5, 0) to (0, 0.382) -> (0.25, 0.02) is outside
-        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.PENTAGON_2, 0.25f, 0.02f, 60f, 60f))
+        // PENTAGON_1 (edge up) has flat top from x=0.191..0.809 at y=0.024 -> (0.25, 0.05) is inside
+        assertTrue(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.PENTAGON_1, 0.25f, 0.05f, 60f, 60f))
+        // PENTAGON_2 (corner up) slopes from (0.5, 0.024) to (0, 0.388) -> at x=0.25, y_edge = 0.206 > 0.05 -> outside
+        assertFalse(ButtonShapeGeometry.isNormalizedPointInside(ButtonShape.PENTAGON_2, 0.25f, 0.05f, 60f, 60f))
     }
 }

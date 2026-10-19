@@ -22,11 +22,17 @@ private const val BSG_HALF = 0.5f
 private const val BSG_HEX_INSET = 0.25f
 private const val BSG_HEX_FAR = 0.75f
 
-// Regular pentagon normalized to [0f, 1f] × [0f, 1f]
+// Regular hexagon & equilateral triangle altitude inset: (1 - sqrt(3) / 2) / 2 and (1 + sqrt(3) / 2) / 2
+private const val BSG_SQRT3_INSET = 0.0669873f
+private const val BSG_SQRT3_FAR = 0.9330127f
+
+// Regular pentagon (side = (sqrt(5) - 1) / 2, height = sin(72°)) centered in [0f, 1f] × [0f, 1f]
 private const val BSG_PENT_BASE_INSET_X = 0.190983f
 private const val BSG_PENT_BASE_FAR_X = 0.809017f
-private const val BSG_PENT_CORNER_UP_SHOULDER_Y = 0.381966f
-private const val BSG_PENT_EDGE_UP_SHOULDER_Y = 0.618034f
+private const val BSG_PENT_Y_INSET = 0.02447174f
+private const val BSG_PENT_Y_FAR = 0.97552826f
+private const val BSG_PENT_CORNER_UP_SHOULDER_Y = 0.387743f
+private const val BSG_PENT_EDGE_UP_SHOULDER_Y = 0.612257f
 
 // Regular octagon corner cut fraction: (2 - sqrt(2)) / 2
 private const val BSG_OCT_INSET = 0.2928932f
@@ -36,43 +42,46 @@ private const val BSG_EDGE_EPSILON = 1e-5f
 
 /**
  * Pure geometry definitions and hit-testing math for [ButtonShape].
+ *
+ * Every polygonal shape is defined as a true regular polygon (all edge lengths equal and
+ * all interior angles equal) maximally fitted and centered within `[0f, 1f] × [0f, 1f]`.
  */
 object ButtonShapeGeometry {
     private val HEXAGON_1_VERTICES =
         listOf(
-            NormalizedPoint(BSG_HEX_INSET, 0f),
-            NormalizedPoint(BSG_HEX_FAR, 0f),
+            NormalizedPoint(BSG_HEX_INSET, BSG_SQRT3_INSET),
+            NormalizedPoint(BSG_HEX_FAR, BSG_SQRT3_INSET),
             NormalizedPoint(1f, BSG_HALF),
-            NormalizedPoint(BSG_HEX_FAR, 1f),
-            NormalizedPoint(BSG_HEX_INSET, 1f),
+            NormalizedPoint(BSG_HEX_FAR, BSG_SQRT3_FAR),
+            NormalizedPoint(BSG_HEX_INSET, BSG_SQRT3_FAR),
             NormalizedPoint(0f, BSG_HALF),
         )
 
     private val HEXAGON_2_VERTICES =
         listOf(
             NormalizedPoint(BSG_HALF, 0f),
-            NormalizedPoint(1f, BSG_HEX_INSET),
-            NormalizedPoint(1f, BSG_HEX_FAR),
+            NormalizedPoint(BSG_SQRT3_FAR, BSG_HEX_INSET),
+            NormalizedPoint(BSG_SQRT3_FAR, BSG_HEX_FAR),
             NormalizedPoint(BSG_HALF, 1f),
-            NormalizedPoint(0f, BSG_HEX_FAR),
-            NormalizedPoint(0f, BSG_HEX_INSET),
+            NormalizedPoint(BSG_SQRT3_INSET, BSG_HEX_FAR),
+            NormalizedPoint(BSG_SQRT3_INSET, BSG_HEX_INSET),
         )
 
     private val PENTAGON_1_VERTICES =
         listOf(
-            NormalizedPoint(BSG_PENT_BASE_INSET_X, 0f),
-            NormalizedPoint(BSG_PENT_BASE_FAR_X, 0f),
+            NormalizedPoint(BSG_PENT_BASE_INSET_X, BSG_PENT_Y_INSET),
+            NormalizedPoint(BSG_PENT_BASE_FAR_X, BSG_PENT_Y_INSET),
             NormalizedPoint(1f, BSG_PENT_EDGE_UP_SHOULDER_Y),
-            NormalizedPoint(BSG_HALF, 1f),
+            NormalizedPoint(BSG_HALF, BSG_PENT_Y_FAR),
             NormalizedPoint(0f, BSG_PENT_EDGE_UP_SHOULDER_Y),
         )
 
     private val PENTAGON_2_VERTICES =
         listOf(
-            NormalizedPoint(BSG_HALF, 0f),
+            NormalizedPoint(BSG_HALF, BSG_PENT_Y_INSET),
             NormalizedPoint(1f, BSG_PENT_CORNER_UP_SHOULDER_Y),
-            NormalizedPoint(BSG_PENT_BASE_FAR_X, 1f),
-            NormalizedPoint(BSG_PENT_BASE_INSET_X, 1f),
+            NormalizedPoint(BSG_PENT_BASE_FAR_X, BSG_PENT_Y_FAR),
+            NormalizedPoint(BSG_PENT_BASE_INSET_X, BSG_PENT_Y_FAR),
             NormalizedPoint(0f, BSG_PENT_CORNER_UP_SHOULDER_Y),
         )
 
@@ -98,30 +107,30 @@ object ButtonShapeGeometry {
 
     private val TRIANGLE_UP_VERTICES =
         listOf(
-            NormalizedPoint(BSG_HALF, 0f),
-            NormalizedPoint(1f, 1f),
-            NormalizedPoint(0f, 1f),
+            NormalizedPoint(BSG_HALF, BSG_SQRT3_INSET),
+            NormalizedPoint(1f, BSG_SQRT3_FAR),
+            NormalizedPoint(0f, BSG_SQRT3_FAR),
         )
 
     private val TRIANGLE_DOWN_VERTICES =
         listOf(
-            NormalizedPoint(0f, 0f),
-            NormalizedPoint(1f, 0f),
-            NormalizedPoint(BSG_HALF, 1f),
+            NormalizedPoint(0f, BSG_SQRT3_INSET),
+            NormalizedPoint(1f, BSG_SQRT3_INSET),
+            NormalizedPoint(BSG_HALF, BSG_SQRT3_FAR),
         )
 
     private val TRIANGLE_LEFT_VERTICES =
         listOf(
-            NormalizedPoint(0f, BSG_HALF),
-            NormalizedPoint(1f, 0f),
-            NormalizedPoint(1f, 1f),
+            NormalizedPoint(BSG_SQRT3_INSET, BSG_HALF),
+            NormalizedPoint(BSG_SQRT3_FAR, 0f),
+            NormalizedPoint(BSG_SQRT3_FAR, 1f),
         )
 
     private val TRIANGLE_RIGHT_VERTICES =
         listOf(
-            NormalizedPoint(0f, 0f),
-            NormalizedPoint(1f, BSG_HALF),
-            NormalizedPoint(0f, 1f),
+            NormalizedPoint(BSG_SQRT3_INSET, 0f),
+            NormalizedPoint(BSG_SQRT3_FAR, BSG_HALF),
+            NormalizedPoint(BSG_SQRT3_INSET, 1f),
         )
 
     /**
