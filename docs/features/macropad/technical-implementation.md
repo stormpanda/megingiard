@@ -132,7 +132,7 @@ PadProfile
         ├── posX / posY: Float  (normalised 0.0–1.0)
         ├── widthDp: Float      (stepless width, default 60.0 dp, min 30.0 dp)
         ├── heightDp: Float     (stepless height, default 60.0 dp, min 30.0 dp)
-        ├── buttonShape: ButtonShape (SQUARE | CIRCLE | ICON_ONLY; CIRCLE renders as pill when width != height)
+        ├── buttonShape: ButtonShape (SQUARE | ROUNDED_SQUARE | CIRCLE | HEXAGON_1 | HEXAGON_2 | PENTAGON_1 | PENTAGON_2 | OCTAGON | DIAMOND | TRIANGLE_UP | TRIANGLE_DOWN | TRIANGLE_LEFT | TRIANGLE_RIGHT | ICON_ONLY)
         ├── buttonTextColor: ColorOption?  (override, null = layout default)
         ├── buttonBorderColor: ColorOption? (override, null = layout default)
         ├── buttonBgColor: ColorOption?    (override, null = layout default)

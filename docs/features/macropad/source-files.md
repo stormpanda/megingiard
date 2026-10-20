@@ -63,7 +63,7 @@
 | --- | --- |
 | `MacroPadState.kt` (`:companion:domain`) | Singleton state: profiles, active profile, active layout, centralized `updateState` mutations with debounced persistence (`MacroPadSettings`), and transient editor preview state |
 | `MacroPadHitTestEngine.kt` (`:companion:domain`) | Multi-touch pointer state machine, single-pass `onPress` shape-aware hit testing (via `ButtonShapeGeometry`), trackpoint relative/virtual-touch cursor tracking, and scroll wheel accumulation |
-| `ButtonShapeGeometry.kt` (`:shared:core`) | Pure normalized polygon vertex definitions (`NormalizedPoint`) and shape-aware point containment (`isNormalizedPointInside`) shared by hit testing and Compose button rendering |
+| `ButtonShapeGeometry.kt` (`:shared:core`) | Pure normalized polygon vertex definitions (`NormalizedPoint`, `verticesFor`), inscribed-circle optical centering and scaling (`contentCenterOffsetFor`, `contentScaleFor`), and shape-aware point containment (`isNormalizedPointInside`) shared by hit testing and Compose button rendering |
 | `MacroPadActionDispatch.kt` (`:companion:domain`) | Dispatches discrete button down/up actions to `KeyInjector`, `GamepadInjector`, `MouseInjector`, `MacroExecutor`, layout/profile switching, and mirror controls |
 | `MacroExecutor.kt` (`:companion:domain`) | Tap-to-toggle macro playback and `runTest()`: compiles steps via `MacroEventCompiler`, replays over `PrivdClient`, tracks `runningMacroIds`, and releases all pressed inputs in `finally` |
 | `GamepadInjector.kt` (`:companion:domain`) | Facade routing gamepad button, hat, and joystick commands (`GD`, `GU`, `HD`, `JS`) directly to `PrivdClient` for hardware evdev merge |

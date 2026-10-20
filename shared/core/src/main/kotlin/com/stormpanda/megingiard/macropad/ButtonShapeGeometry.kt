@@ -15,7 +15,7 @@ data class NormalizedPoint(
 )
 
 /** Corner radius fraction (25% of the shorter side) used by [ButtonShape.ROUNDED_SQUARE]. */
-const val MP_ROUNDED_SQUARE_CORNER_FRACTION = 0.25f
+private const val BSG_ROUNDED_SQUARE_CORNER_FRACTION = 0.25f
 
 /** Corner radius fraction (50% of the shorter side) used by [ButtonShape.CIRCLE] (circle / pill). */
 private const val BSG_CIRCLE_CORNER_FRACTION = 0.5f
@@ -281,7 +281,7 @@ object ButtonShapeGeometry {
                     ny = ny,
                     widthDp = widthDp,
                     heightDp = heightDp,
-                    cornerFraction = MP_ROUNDED_SQUARE_CORNER_FRACTION,
+                    cornerFraction = BSG_ROUNDED_SQUARE_CORNER_FRACTION,
                 )
             }
 

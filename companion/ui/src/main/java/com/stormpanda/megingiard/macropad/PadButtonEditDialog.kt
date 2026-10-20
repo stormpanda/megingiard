@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -796,7 +797,8 @@ internal fun EditButtonSubPageContent(
 
     val previewLabel = stringResource(R.string.macropad_editor_button_preview_text)
     val previewShape = resolvePadButtonPreviewShape(buttonShape)
-    val previewIconSize = PBD_ICON_SIZE_DP * ButtonShapeGeometry.contentScaleFor(buttonShape)
+    val previewContentScale = ButtonShapeGeometry.contentScaleFor(buttonShape)
+    val previewIconSize = PBD_ICON_SIZE_DP * previewContentScale
     val buttonPreviewLeading: (textColor: Color, borderColor: Color, bgColor: Color, isIconOnly: Boolean) -> @Composable () -> Unit =
         { tColor, bColor, bgCol, iconOnly ->
             {
@@ -824,6 +826,11 @@ internal fun EditButtonSubPageContent(
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             softWrap = false,
+                            modifier =
+                                Modifier.graphicsLayer {
+                                    scaleX = previewContentScale
+                                    scaleY = previewContentScale
+                                },
                         )
                     }
                 }
