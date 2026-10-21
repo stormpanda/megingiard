@@ -409,4 +409,21 @@ class PadButtonSerializationTest {
         assertEquals("view_quilt", PadAction.SwitchToLayout("layout-1", holdToShift = false).defaultIconName())
         assertEquals("dashboard", PadAction.SwitchToHub.defaultIconName())
     }
+
+    @Test
+    fun `StopAllMacros action serializes and deserializes with defaultIconName`() {
+        val stopButton =
+            PadButton(
+                id = "btn-stop-macros",
+                label = "Stop Macros",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.StopAllMacros,
+            )
+        val encoded = json.encodeToString(stopButton)
+        assertTrue(encoded.contains("\"type\":\"stop_all_macros\""))
+        val decoded = json.decodeFromString<PadButton>(encoded)
+        assertEquals(stopButton, decoded)
+        assertEquals("stop_circle", PadAction.StopAllMacros.defaultIconName())
+    }
 }

@@ -1386,4 +1386,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_switch_layout_hold_desc">Solange gedrückt temporär wechseln und beim Loslassen zurückkehren</string>
     <string name="macropad_action_switch_to_hub">Zum Hub wechseln</string>
     <string name="macropad_action_switch_to_hub_desc">Companion Hub auf dem unteren Bildschirm öffnen</string>
+    <string name="macropad_action_stop_all_macros">Alle Makros stoppen</string>
+    <string name="macropad_action_stop_all_macros_desc">Alle laufenden Makros abbrechen und gehaltene Eingaben lösen</string>
 </resources>

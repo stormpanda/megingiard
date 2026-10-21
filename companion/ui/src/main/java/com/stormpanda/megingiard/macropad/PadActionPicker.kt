@@ -96,6 +96,7 @@ internal fun ActionPicker(
 
         is PadAction.FullScreenKeyboard,
         is PadAction.Screenshot,
+        is PadAction.StopAllMacros,
         -> {
             GamepadActionCard(
                 title = stringResource(R.string.macropad_action_group_tools),

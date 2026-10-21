@@ -60,6 +60,7 @@
   | `Screenshot(TOP)`       | Screenshot (Top)    | `splitscreen_bottom` |
   | `Screenshot(BOTTOM)`    | Screenshot (Bottom) | `splitscreen_top` |
   | `Screenshot(BOTH)`      | Screenshot (Both)   | `splitscreen`   |
+  | `StopAllMacros`         | Stop All Macros     | `stop_circle`   |
   | `Macro`                 | _(from macro name)_ | `smart_button`  |
   | All others              | _(empty)_           | _(null)_        |
 

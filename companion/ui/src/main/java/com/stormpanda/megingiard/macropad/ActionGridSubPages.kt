@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.SmartButton
+import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Visibility
@@ -104,6 +105,12 @@ private val TOOLS_ACTION_ITEMS =
             R.string.macropad_action_screenshot_both,
             R.string.macropad_action_screenshot_both_desc,
             Icons.Rounded.PhotoCamera,
+        ),
+        ActionGridItem(
+            PadAction.StopAllMacros,
+            R.string.macropad_action_stop_all_macros,
+            R.string.macropad_action_stop_all_macros_desc,
+            Icons.Rounded.StopCircle,
         ),
     )
 

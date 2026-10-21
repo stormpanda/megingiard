@@ -133,6 +133,11 @@ fun injectActionDown(action: PadAction) {
             AppLog.d(TAG, "actionDown: Screenshot target=${action.target}")
             ScreenCaptureManager.requestScreenshot(action.target)
         }
+
+        is PadAction.StopAllMacros -> {
+            AppLog.d(TAG, "actionDown: StopAllMacros")
+            MacroExecutor.stopAll()
+        }
     }
 }
 

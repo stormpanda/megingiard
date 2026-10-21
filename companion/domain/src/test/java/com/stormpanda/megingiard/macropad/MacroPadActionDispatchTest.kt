@@ -6,12 +6,16 @@ import com.stormpanda.megingiard.CompanionCommand
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
+import com.stormpanda.megingiard.privd.PrivdClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -192,4 +196,49 @@ class MacroPadActionDispatchTest {
         injectActionDown(PadAction.SwitchToHub)
         assertEquals(CompanionViewMode.DASHBOARD, AppStateManager.companionViewMode.value)
     }
+
+    @Test
+    fun injectActionDown_stopAllMacros() =
+        runBlocking {
+            PrivdClient.isConnectedForTest = true
+            try {
+                val macro =
+                    Macro(
+                        id = "macro-loop",
+                        name = "LoopMacro",
+                        loopEnabled = true,
+                        steps =
+                            listOf(
+                                MacroStep.GamepadButtonTap(
+                                    startTimeMs = 0L,
+                                    durationMs = 50L,
+                                    btnCode = 304,
+                                    label = "A",
+                                ),
+                            ),
+                    )
+                MacroExecutor.execute(macro)
+                val started =
+                    withTimeoutOrNull(1000L) {
+                        while (!MacroExecutor.isRunning("macro-loop")) {
+                            delay(5)
+                        }
+                        true
+                    } ?: false
+                assertTrue(started)
+
+                injectActionDown(PadAction.StopAllMacros)
+                val stopped =
+                    withTimeoutOrNull(1000L) {
+                        while (MacroExecutor.isRunning("macro-loop")) {
+                            delay(5)
+                        }
+                        true
+                    } ?: false
+                assertTrue(stopped)
+            } finally {
+                MacroExecutor.stopAll()
+                PrivdClient.isConnectedForTest = null
+            }
+        }
 }

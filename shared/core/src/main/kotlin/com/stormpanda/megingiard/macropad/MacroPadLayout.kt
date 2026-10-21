@@ -345,6 +345,11 @@ sealed class PadAction {
     data class Screenshot(
         val target: ScreenshotTarget = ScreenshotTarget.TOP,
     ) : PadAction()
+
+    /** Immediately stops all running macros and releases any held virtual inputs. */
+    @Serializable
+    @SerialName("stop_all_macros")
+    data object StopAllMacros : PadAction()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -417,6 +422,10 @@ fun PadAction.defaultIconName(): String? =
                 ScreenshotTarget.BOTTOM -> "splitscreen_top"
                 ScreenshotTarget.BOTH -> "splitscreen"
             }
+        }
+
+        is PadAction.StopAllMacros -> {
+            "stop_circle"
         }
 
         else -> {

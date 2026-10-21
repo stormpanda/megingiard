@@ -1387,4 +1387,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_switch_layout_hold_desc">按住時暫時切換配置，放開後返回原配置</string>
     <string name="macropad_action_switch_to_hub">切換至中心</string>
     <string name="macropad_action_switch_to_hub_desc">在下螢幕開啟 Companion 中心</string>
+    <string name="macropad_action_stop_all_macros">停止所有巨集</string>
+    <string name="macropad_action_stop_all_macros_desc">立即取消所有執行中的巨集並放開虛擬輸入</string>
 </resources>

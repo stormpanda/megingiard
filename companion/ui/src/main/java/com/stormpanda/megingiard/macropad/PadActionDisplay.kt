@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.TouchApp
@@ -232,6 +233,12 @@ internal enum class ActionCategory(
         ActionGroup.TOOLS,
         { PadAction.Screenshot(ScreenshotTarget.BOTH) },
     ),
+    STOP_ALL_MACROS(
+        Icons.Rounded.StopCircle,
+        R.string.macropad_action_stop_all_macros,
+        ActionGroup.TOOLS,
+        { PadAction.StopAllMacros },
+    ),
     APP_LAUNCHER(
         Icons.Rounded.Apps,
         R.string.macropad_action_app_launcher,
@@ -325,6 +332,10 @@ internal fun PadAction.toCategory(): ActionCategory =
                 ScreenshotTarget.BOTTOM -> ActionCategory.SCREENSHOT_BOTTOM
                 ScreenshotTarget.BOTH -> ActionCategory.SCREENSHOT_BOTH
             }
+        }
+
+        is PadAction.StopAllMacros -> {
+            ActionCategory.STOP_ALL_MACROS
         }
 
         is PadAction.AppLauncher -> {
@@ -462,6 +473,10 @@ internal fun PadAction.displayLabel(): String {
                 ScreenshotTarget.BOTTOM -> context.getString(R.string.macropad_action_screenshot_bottom)
                 ScreenshotTarget.BOTH -> context.getString(R.string.macropad_action_screenshot_both)
             }
+        }
+
+        is PadAction.StopAllMacros -> {
+            context.getString(R.string.macropad_action_stop_all_macros)
         }
 
         is PadAction.AppLauncher -> {
