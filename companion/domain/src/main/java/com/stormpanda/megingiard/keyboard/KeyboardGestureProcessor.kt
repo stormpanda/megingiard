@@ -43,6 +43,7 @@ class KeyboardGestureProcessor(
     // Per-pointer key & repeat state
     private val pointerKeyMap = mutableMapOf<Long, KeyDef>()
     private val downKeycodesByPointer = mutableMapOf<Long, List<Int>>()
+    private val committedByRollover = mutableSetOf<Long>()
     private var repeatJob: Job? = null
     private var modifierHoldJob: Job? = null
     private var heldKey: KeyDef? = null
@@ -102,6 +103,9 @@ class KeyboardGestureProcessor(
         if (pressPositions.containsKey(pointerId)) {
             AppLog.w(TAG, "onPress called for already-active pointerId=$pointerId; releasing stale state")
             onRelease(pointerId, isFullLayout)
+        }
+        if (hoveredKeyDef != null && hoveredKeyDef.isCharacterKey) {
+            commitPendingCharKeysOnRollover(excludePointerId = pointerId, isFullLayout = isFullLayout)
         }
         pressPositions[pointerId] = Pair(x, y)
 
@@ -163,6 +167,7 @@ class KeyboardGestureProcessor(
         isFullLayout: Boolean,
         hoveredKeyDef: KeyDef? = findKeyAt(grid, x, y),
     ) {
+        if (pointerId in committedByRollover) return
         val keyId = hoveredKeyDef?.id
 
         if (isFullLayout) {
@@ -196,7 +201,7 @@ class KeyboardGestureProcessor(
         } else {
             val popup = _activePopupState.value
             val longPressSwipeThresholdPx = KB_LONG_PRESS_SWIPE_THRESHOLD_DP * density
-            if (popup != null) {
+            if (popup != null && popup.pointerId == pointerId) {
                 if (popup.isLongPress) {
                     if (virtualAnchorX == 0f) {
                         virtualAnchorX = x
@@ -314,6 +319,7 @@ class KeyboardGestureProcessor(
         longPressJobs.values.forEach { it.cancel() }
         longPressJobs.clear()
         pressPositions.clear()
+        committedByRollover.clear()
         _activePopupState.value = null
         virtualAnchorX = 0f
         spaceDragPointerId = null
@@ -359,6 +365,7 @@ class KeyboardGestureProcessor(
         deltaY: Float,
         isFullLayout: Boolean = false,
     ): Boolean {
+        if (pointerId in committedByRollover) return false
         val prevDef = pointerKeyMap[pointerId] ?: return false
         val newDef = newKeyDef ?: return false
         if (prevDef.id == newDef.id) return false
@@ -394,6 +401,7 @@ class KeyboardGestureProcessor(
         isFullLayout: Boolean = false,
         skipInjection: Boolean = false,
     ): Boolean {
+        val wasCommitted = committedByRollover.remove(pointerId)
         val keyDef = pointerKeyMap.remove(pointerId) ?: return false
         val releasedId = keyDef.id
 
@@ -401,7 +409,7 @@ class KeyboardGestureProcessor(
             KeyType.NORMAL -> {
                 heldKey = null
                 repeatJob?.cancel()
-                if (skipInjection) {
+                if (skipInjection || wasCommitted) {
                     releasePointerDownKeycodes(pointerId)
                 } else {
                     val isCharKey = keyDef.isCharacterKey
@@ -467,6 +475,7 @@ class KeyboardGestureProcessor(
             .forEach { injector.keyUp(it) }
         downKeycodesByPointer.clear()
         pointerKeyMap.clear()
+        committedByRollover.clear()
         _pressedKeys.value = emptySet()
         _activePopupState.value = null
         heldKey = null
@@ -479,6 +488,34 @@ class KeyboardGestureProcessor(
 
     private fun releasePointerDownKeycodes(pointerId: Long) {
         downKeycodesByPointer.remove(pointerId)?.forEach { injector.keyUp(it) }
+    }
+
+    private fun commitPendingCharKeysOnRollover(
+        excludePointerId: Long,
+        isFullLayout: Boolean,
+    ) {
+        val activePopup = _activePopupState.value
+        for ((otherPid, otherKeyDef) in pointerKeyMap) {
+            if (otherPid == excludePointerId) continue
+            if (otherPid in committedByRollover) continue
+            if (!otherKeyDef.isCharacterKey) continue
+            if (otherPid == spaceDragPointerId && isSpaceDragging) continue
+            if (activePopup != null && activePopup.pointerId == otherPid && activePopup.isLongPress) continue
+
+            AppLog.d(TAG, "commitPendingCharKeysOnRollover pointerId=$otherPid keyId=${otherKeyDef.id}")
+            longPressJobs.remove(otherPid)?.cancel()
+            if (otherPid == spaceDragPointerId) {
+                spaceDragPointerId = null
+                isSpaceDragging = false
+            }
+            if (otherKeyDef.linuxKeycode != 0) {
+                injectKeyStroke(otherKeyDef, isFullLayout)
+                KeyboardState
+                    .releaseStickyModifiers()
+                    .forEach { injector.keyUp(it) }
+            }
+            committedByRollover.add(otherPid)
+        }
     }
 
     private fun injectKeyDownWithModifiers(

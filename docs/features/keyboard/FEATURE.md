@@ -42,7 +42,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 - Holding the backspace key (`"bksp"`) triggers an initial key injection on press, followed after **500 ms** by repeated keystrokes every **30 ms** until released.
 - Holding a character key in ergonomic modes triggers a long-press popup options bubble (`CharPopupOverlay`) after **400 ms** if the key defines secondary options (`getPopupOptions(keyDef)`).
-- Standard character keys do not repeat on hold; their single keystroke injection is deferred until finger release so long-press popup selection or spacebar cursor dragging can supersede it.
+- Standard character keys do not repeat on hold; their single keystroke injection is deferred until finger release so long-press popup selection or spacebar cursor dragging can supersede it. When a second pointer presses another character key while a prior character key press is still pending (two-thumb rollover), the prior pointer's character key is immediately committed and injected in press order without waiting for finger lift.
 - Dragging horizontally while a long-press popup is open selects among the available options. Releasing the finger injects the selected character via `KeyboardViewModel.injectPopupSelection` (`LinuxKeycodes.charToKeyMapping`) and dismisses the popup.
 - On the compact full keyboard layout (`KeyboardMode.FULL`), long-pressing keys does not show secondary popup options; only the single-character preview popup is shown, and moving the finger performs slide-to-correct across keys.
 

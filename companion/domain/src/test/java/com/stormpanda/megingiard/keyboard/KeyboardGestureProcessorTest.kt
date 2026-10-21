@@ -343,4 +343,39 @@ class KeyboardGestureProcessorTest {
             assertTrue(processor.pressedKeys.value.isEmpty())
             assertFalse(processor.isPointerActive(1L))
         }
+
+    @Test
+    fun `two-thumb rollover commits first character key immediately when second character key is pressed`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            processor.updateBounds("q", 0f, 0f, 50f, 40f)
+            processor.updateBounds("w", 50f, 0f, 100f, 40f)
+
+            // Thumb 1 presses 'q'
+            processor.onPress(1L, 25f, 20f, grid, isFullLayout = false)
+            assertTrue(testInjector.calls.isEmpty())
+
+            // Before Thumb 1 lifts, Thumb 2 presses 'w' -> 'q' is committed immediately
+            processor.onPress(2L, 75f, 20f, grid, isFullLayout = false)
+            assertEquals(
+                listOf("down" to LinuxKeycodes.KEY_Q, "up" to LinuxKeycodes.KEY_Q),
+                testInjector.calls,
+            )
+
+            // Even if Thumb 2 lifts before Thumb 1, 'w' is injected after 'q' and Thumb 1's release does not double-inject 'q'
+            processor.onRelease(2L, isFullLayout = false)
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertEquals(
+                listOf(
+                    "down" to LinuxKeycodes.KEY_Q,
+                    "up" to LinuxKeycodes.KEY_Q,
+                    "down" to LinuxKeycodes.KEY_W,
+                    "up" to LinuxKeycodes.KEY_W,
+                ),
+                testInjector.calls,
+            )
+            assertTrue(processor.pressedKeys.value.isEmpty())
+        }
 }
