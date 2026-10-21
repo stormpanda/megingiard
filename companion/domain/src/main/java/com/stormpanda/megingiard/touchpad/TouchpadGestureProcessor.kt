@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 private const val TAG = "TouchpadGestureProc"
 
@@ -69,6 +68,9 @@ class TouchpadGestureProcessor(
     private val movedTooFar = HashSet<Long>()
     private val releasedAsTap = ArrayList<Long>()
     private var scrollAccumY = 0f
+    private var moveRemainderX = 0f
+    private var moveRemainderY = 0f
+    private var wasTwoFingerScrolling = false
     private var lastTapReleaseTime = 0L
     private var isDragging = false
     private var pendingClickJob: Job? = null
@@ -82,6 +84,9 @@ class TouchpadGestureProcessor(
         pressTimes.clear()
         downPositions.clear()
         movedTooFar.clear()
+        moveRemainderX = 0f
+        moveRemainderY = 0f
+        wasTwoFingerScrolling = false
         updateActivePointers()
     }
 
@@ -125,10 +130,16 @@ class TouchpadGestureProcessor(
         surfaceW: Float,
         surfaceH: Float,
     ) {
+        if (downPositions.containsKey(pointerId) || pointerToSlotMap.containsKey(pointerId)) {
+            AppLog.w(TAG, "onPress called for already-active pointerId=$pointerId; releasing stale state")
+            onRelease(pointerId, x, y, surfaceW, surfaceH)
+        }
         val currentConfig = config()
         if (currentConfig.useMouse) {
             pressTimes[pointerId] = System.currentTimeMillis()
             downPositions[pointerId] = Pair(x, y)
+            moveRemainderX = 0f
+            moveRemainderY = 0f
             if (downPositions.size != 2) {
                 scrollAccumY = 0f
             }
@@ -195,22 +206,34 @@ class TouchpadGestureProcessor(
             }
             val isPrimary = downPositions.keys.firstOrNull() == pointerId
             if (currentConfig.twoFingerScrollEnabled && downPositions.size == 2) {
+                moveRemainderX = 0f
+                moveRemainderY = 0f
+                if (pointerId in movedTooFar) {
+                    wasTwoFingerScrolling = true
+                }
                 if (isPrimary) {
                     scrollAccumY += deltaY
                     val speed = currentConfig.scrollSpeed.coerceIn(TouchpadSettings.SCROLL_SPEED_MIN, TouchpadSettings.SCROLL_SPEED_MAX)
                     val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / speed // Sensitivity threshold in pixels
                     val units = (scrollAccumY / scrollThreshold).toInt()
                     if (units != 0) {
+                        wasTwoFingerScrolling = true
                         val directionMultiplier = if (currentConfig.naturalScrollEnabled) 1 else -1
                         MouseInjector.scrollWheel(units * directionMultiplier)
                         scrollAccumY -= units * scrollThreshold
                     }
                 }
-            } else if (isPrimary) {
+            } else if (isPrimary && !wasTwoFingerScrolling) {
                 val sens = currentConfig.sensitivity.coerceIn(TouchpadSettings.SENSITIVITY_MIN, TP_SENSITIVITY_MAX)
-                val dx = (deltaX * TP_MOUSE_SENSITIVITY * sens).roundToInt()
-                val dy = (deltaY * TP_MOUSE_SENSITIVITY * sens).roundToInt()
-                if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
+                moveRemainderX += deltaX * TP_MOUSE_SENSITIVITY * sens
+                moveRemainderY += deltaY * TP_MOUSE_SENSITIVITY * sens
+                val dx = moveRemainderX.toInt()
+                val dy = moveRemainderY.toInt()
+                if (dx != 0 || dy != 0) {
+                    moveRemainderX -= dx
+                    moveRemainderY -= dy
+                    MouseInjector.moveMouse(dx, dy)
+                }
             }
         } else {
             val slot = pointerToSlotMap[pointerId]
@@ -264,7 +287,7 @@ class TouchpadGestureProcessor(
 
             // When all fingers are up, evaluate taps
             if (downPositions.isEmpty()) {
-                val tapCount = releasedAsTap.size
+                val tapCount = if (wasTwoFingerScrolling) 0 else releasedAsTap.size
                 resetMousePointers()
                 when {
                     tapCount == 1 && currentConfig.tapToClick -> {

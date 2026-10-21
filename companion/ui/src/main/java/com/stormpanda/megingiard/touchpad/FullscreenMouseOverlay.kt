@@ -163,56 +163,56 @@ fun Modifier.touchpadSurfaceInput(
                         val clampedY = localPos.y.coerceIn(0f, sh)
                         val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
 
-                        when (event.type) {
-                            PointerEventType.Press -> {
-                                if (!change.previousPressed && isInside && !change.isConsumed) {
-                                    processor.onPress(
-                                        pointerId = id,
-                                        x = clampedX,
-                                        y = clampedY,
-                                        surfaceW = sw,
-                                        surfaceH = sh,
-                                    )
-                                }
+                        if (!change.pressed) {
+                            if (change.previousPressed) {
+                                processor.onRelease(
+                                    pointerId = id,
+                                    x = clampedX,
+                                    y = clampedY,
+                                    surfaceW = sw,
+                                    surfaceH = sh,
+                                )
                             }
-
-                            PointerEventType.Move -> {
-                                if (!isInside && !useMouse) {
-                                    processor.onRelease(
-                                        pointerId = id,
-                                        x = clampedX,
-                                        y = clampedY,
-                                        surfaceW = sw,
-                                        surfaceH = sh,
-                                    )
-                                } else if (!change.isConsumed) {
-                                    val delta = change.positionChange()
-                                    processor.onMove(
-                                        pointerId = id,
-                                        x = clampedX,
-                                        y = clampedY,
-                                        deltaX = delta.x,
-                                        deltaY = delta.y,
-                                        surfaceW = sw,
-                                        surfaceH = sh,
-                                    )
+                        } else {
+                            when (event.type) {
+                                PointerEventType.Press -> {
+                                    if (!change.previousPressed && isInside && !change.isConsumed) {
+                                        processor.onPress(
+                                            pointerId = id,
+                                            x = clampedX,
+                                            y = clampedY,
+                                            surfaceW = sw,
+                                            surfaceH = sh,
+                                        )
+                                    }
                                 }
-                            }
 
-                            PointerEventType.Release -> {
-                                if (!change.pressed) {
-                                    processor.onRelease(
-                                        pointerId = id,
-                                        x = clampedX,
-                                        y = clampedY,
-                                        surfaceW = sw,
-                                        surfaceH = sh,
-                                    )
+                                PointerEventType.Move -> {
+                                    if (!isInside && !useMouse) {
+                                        processor.onRelease(
+                                            pointerId = id,
+                                            x = clampedX,
+                                            y = clampedY,
+                                            surfaceW = sw,
+                                            surfaceH = sh,
+                                        )
+                                    } else if (!change.isConsumed) {
+                                        val delta = change.positionChange()
+                                        processor.onMove(
+                                            pointerId = id,
+                                            x = clampedX,
+                                            y = clampedY,
+                                            deltaX = delta.x,
+                                            deltaY = delta.y,
+                                            surfaceW = sw,
+                                            surfaceH = sh,
+                                        )
+                                    }
                                 }
-                            }
 
-                            else -> {
-                                Unit
+                                else -> {
+                                    Unit
+                                }
                             }
                         }
                         change.consume()
