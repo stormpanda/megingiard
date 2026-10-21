@@ -620,4 +620,28 @@ class KeyboardGestureProcessorTest {
                 testInjector.calls,
             )
         }
+
+    @Test
+    fun `sliding onto mode_switch key clears character preview popup`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor()
+            val qDef = KeyDef("q", "q", LinuxKeycodes.KEY_Q)
+            val modeSwitchDef = KeyDef("mode_switch", "?123", 0)
+            val slideGrid = listOf(listOf(qDef, modeSwitchDef))
+            processor.updateBounds("q", 0f, 0f, 50f, 40f)
+            processor.updateBounds("mode_switch", 50f, 0f, 100f, 40f)
+
+            processor.onPress(1L, 25f, 20f, slideGrid, isFullLayout = false)
+            assertEquals(
+                "q",
+                processor.activePopupState.value
+                    ?.keyDef
+                    ?.id,
+            )
+
+            processor.onMove(1L, 75f, 20f, 50f, 0f, slideGrid, isFullLayout = false)
+            assertNull(processor.activePopupState.value)
+
+            processor.onRelease(1L, isFullLayout = false)
+        }
 }

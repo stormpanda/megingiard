@@ -18,6 +18,11 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import kotlin.math.roundToInt
 
+private const val IST_PERCENT_MULTIPLIER = 100f
+private const val IST_STICK_DEADZONE_MIN = 0f
+private const val IST_STICK_DEADZONE_MAX = 0.50f
+private const val IST_DEADZONE_STEP = 0.01f
+
 @Composable
 fun InputSettingsTab(
     gamepadSwapFaceButtons: Boolean,
@@ -56,8 +61,8 @@ fun InputSettingsTab(
         actionText =
             stringResource(
                 R.string.privd_deadzone_summary,
-                (deadzoneLeft * 100f).roundToInt(),
-                (deadzoneRight * 100f).roundToInt(),
+                (deadzoneLeft * IST_PERCENT_MULTIPLIER).roundToInt(),
+                (deadzoneRight * IST_PERCENT_MULTIPLIER).roundToInt(),
             ),
         icon = Icons.Rounded.Games,
         onClick = onOpenDeadzones,
@@ -91,10 +96,10 @@ fun DeadzonesSubPage(
         title = stringResource(R.string.privd_deadzone_left),
         description = stringResource(R.string.help_settings_deadzone_desc),
         value = deadzoneLeft,
-        valueRange = 0f..0.50f,
-        step = 0.01f,
+        valueRange = IST_STICK_DEADZONE_MIN..IST_STICK_DEADZONE_MAX,
+        step = IST_DEADZONE_STEP,
         icon = Icons.Rounded.NearMe,
-        valueLabel = "${(deadzoneLeft * 100f).roundToInt()}%",
+        valueLabel = "${(deadzoneLeft * IST_PERCENT_MULTIPLIER).roundToInt()}%",
         onValueChange = onLeftChange,
         modifier = Modifier.firstDeckItem(),
     )
@@ -103,10 +108,10 @@ fun DeadzonesSubPage(
         title = stringResource(R.string.privd_deadzone_right),
         description = stringResource(R.string.help_settings_deadzone_desc),
         value = deadzoneRight,
-        valueRange = 0f..0.50f,
-        step = 0.01f,
+        valueRange = IST_STICK_DEADZONE_MIN..IST_STICK_DEADZONE_MAX,
+        step = IST_DEADZONE_STEP,
         icon = Icons.Rounded.NearMe,
-        valueLabel = "${(deadzoneRight * 100f).roundToInt()}%",
+        valueLabel = "${(deadzoneRight * IST_PERCENT_MULTIPLIER).roundToInt()}%",
         onValueChange = onRightChange,
     )
 }

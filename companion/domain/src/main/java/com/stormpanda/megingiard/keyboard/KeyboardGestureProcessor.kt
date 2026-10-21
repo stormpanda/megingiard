@@ -102,6 +102,7 @@ class KeyboardGestureProcessor(
 
     private fun isCharKey(keyDef: KeyDef?): Boolean =
         keyDef != null && keyDef.type == KeyType.NORMAL &&
+            !keyDef.id.startsWith("mode_switch") &&
             keyDef.id != "bksp" && keyDef.id != "space" && keyDef.id != "space_num" && keyDef.id != "enter"
 
     fun onPress(

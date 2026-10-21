@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -185,12 +186,11 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                 animationSpec = tween(KS_TRANSITION_DURATION_MS),
                 label = "Layout Switch",
             ) { isFullMode ->
-                val activeState =
-                    if (isFullMode == (layoutState.mode == KeyboardMode.FULL)) {
-                        layoutState
-                    } else {
-                        remember { layoutState }
-                    }
+                val lastMatchingState = remember { mutableStateOf(layoutState) }
+                if (isFullMode == (layoutState.mode == KeyboardMode.FULL)) {
+                    lastMatchingState.value = layoutState
+                }
+                val activeState = lastMatchingState.value
                 Column(
                     modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                 ) {
@@ -211,7 +211,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                         isAltGrActive = isAltGrActive,
                         isQuickMenuOpen = isQuickMenuOpen,
                         onCloseQuickMenu = { viewModel.closeQuickMenu() },
-                        onModeChange = { nextMode -> viewModel.setKeyboardMode(nextMode) },
                         modifier = Modifier.weight(1f),
                     )
                 }

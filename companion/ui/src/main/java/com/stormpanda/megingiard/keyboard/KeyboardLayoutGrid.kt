@@ -46,12 +46,10 @@ internal fun KeyboardLayoutGrid(
     isAltGrActive: Boolean,
     isQuickMenuOpen: Boolean,
     onCloseQuickMenu: () -> Unit,
-    onModeChange: (KeyboardMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isQuickMenuOpenState = rememberUpdatedState(isQuickMenuOpen)
     val activeStateRef = rememberUpdatedState(activeState)
-    val onModeChangeState = rememberUpdatedState(onModeChange)
     val isFullLayoutMode = activeState.mode == KeyboardMode.FULL
     val gridHeight = if (isFullLayoutMode) KB_GRID_HEIGHT_FULL else KB_GRID_HEIGHT_ERGO
     val boxCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
@@ -129,12 +127,10 @@ internal fun KeyboardLayoutGrid(
                                             change.position.x,
                                             change.position.y,
                                         )
-                                    val keyId = hoveredKey?.id
 
                                     when (event.type) {
                                         PointerEventType.Press -> {
                                             if (!gestureProcessor.isPointerActive(pid)) {
-                                                val prevMode = currentState.mode
                                                 gestureProcessor.onPress(
                                                     pointerId = pid,
                                                     x = change.position.x,
@@ -143,19 +139,6 @@ internal fun KeyboardLayoutGrid(
                                                     isFullLayout = isFull,
                                                     hoveredKeyDef = hoveredKey,
                                                 )
-                                                if (keyId != null &&
-                                                    keyId.startsWith("mode_switch") &&
-                                                    activeStateRef.value.mode == prevMode
-                                                ) {
-                                                    val targetMode =
-                                                        when (keyId) {
-                                                            "mode_switch" -> KeyboardMode.SYMBOLS_1
-                                                            "mode_switch_abc" -> KeyboardMode.LETTERS
-                                                            "mode_switch_1234" -> KeyboardMode.NUMERIC
-                                                            else -> KeyboardMode.LETTERS
-                                                        }
-                                                    onModeChangeState.value(targetMode)
-                                                }
                                                 change.consume()
                                             }
                                         }
