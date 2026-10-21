@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.MPE_CANVAS_HEIGHT_PX
 import com.stormpanda.megingiard.math.MPE_CANVAS_WIDTH_PX
@@ -469,6 +470,18 @@ internal fun EditButtonSubPageContent(
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val macros = profile?.macros ?: emptyList()
     val layouts = profile?.layouts ?: emptyList()
+    val recordedTap by TouchRecordingManager.recordedTap.collectAsStateWithLifecycle()
+
+    LaunchedEffect(recordedTap) {
+        val tap = recordedTap ?: return@LaunchedEffect
+        if (action is PadAction.TouchTap) {
+            val (rx, ry) = tap
+            TouchRecordingManager.consumeRecordedTap()
+            TouchRecordingManager.resetState()
+            AppLog.i(TAG, "Recorded touch tap applied to button: normX=$rx normY=$ry")
+            action = PadAction.TouchTap(normX = rx, normY = ry)
+        }
+    }
 
     LaunchedEffect(macros) {
         val currentAction = action
@@ -686,6 +699,11 @@ internal fun EditButtonSubPageContent(
         },
         onOpenLayoutPicker = {
             onOpenLayoutPicker?.invoke(currentButton)
+        },
+        onRecordTouchTap = {
+            MacroPadNavState.setButtonDraft(currentButton)
+            AppStateManager.suspendCurrentAndDismiss()
+            TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
         },
         onChange = ::onActionChanged,
     )

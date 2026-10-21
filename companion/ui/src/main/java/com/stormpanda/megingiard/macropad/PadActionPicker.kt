@@ -25,6 +25,7 @@ internal fun ActionPicker(
     onOpenMirrorPicker: () -> Unit = {},
     onOpenToolsPicker: () -> Unit = {},
     onOpenLayoutPicker: () -> Unit = {},
+    onRecordTouchTap: () -> Unit = {},
     isFirstItem: Boolean = false,
     onChange: (PadAction) -> Unit,
 ) {
@@ -89,6 +90,16 @@ internal fun ActionPicker(
             FullScreenMousePicker(
                 current = current,
                 onOpenPicker = onOpenToolsPicker,
+                onChange = onChange,
+                isFirstItem = isFirstItem,
+            )
+        }
+
+        is PadAction.TouchTap -> {
+            TouchTapPicker(
+                current = current,
+                onOpenPicker = onOpenToolsPicker,
+                onRecordTap = onRecordTouchTap,
                 onChange = onChange,
                 isFirstItem = isFirstItem,
             )

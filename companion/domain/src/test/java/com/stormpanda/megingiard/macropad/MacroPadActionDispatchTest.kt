@@ -241,4 +241,21 @@ class MacroPadActionDispatchTest {
                 PrivdClient.isConnectedForTest = null
             }
         }
+
+    @Test
+    fun injectActionDownAndUp_touchTap() {
+        PrivdClient.isConnectedForTest = true
+        PrivdClient.clearQueueForTest()
+        try {
+            val action = PadAction.TouchTap(normX = 0.5f, normY = 0.5f)
+            injectActionDown(action)
+            assertEquals("D $MP_TOUCH_TAP_SLOT 540 960\n", PrivdClient.pollCommandForTest())
+
+            injectActionUp(action)
+            assertEquals("U $MP_TOUCH_TAP_SLOT\n", PrivdClient.pollCommandForTest())
+        } finally {
+            PrivdClient.clearQueueForTest()
+            PrivdClient.isConnectedForTest = null
+        }
+    }
 }

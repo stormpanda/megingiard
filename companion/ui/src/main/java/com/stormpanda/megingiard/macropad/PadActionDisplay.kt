@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.rounded.AdsClick
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Cast
@@ -33,8 +34,10 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import kotlin.math.roundToInt
 
 private const val TAG = "PadActionDisplay"
+private const val PAD_PERCENT_MULTIPLIER = 100f
 
 internal enum class ActionGroup(
     val icon: ImageVector,
@@ -239,6 +242,12 @@ internal enum class ActionCategory(
         ActionGroup.TOOLS,
         { PadAction.StopAllMacros },
     ),
+    TOUCH_TAP(
+        Icons.Rounded.AdsClick,
+        R.string.macropad_action_touch_tap,
+        ActionGroup.TOOLS,
+        { PadAction.TouchTap() },
+    ),
     APP_LAUNCHER(
         Icons.Rounded.Apps,
         R.string.macropad_action_app_launcher,
@@ -336,6 +345,10 @@ internal fun PadAction.toCategory(): ActionCategory =
 
         is PadAction.StopAllMacros -> {
             ActionCategory.STOP_ALL_MACROS
+        }
+
+        is PadAction.TouchTap -> {
+            ActionCategory.TOUCH_TAP
         }
 
         is PadAction.AppLauncher -> {
@@ -477,6 +490,14 @@ internal fun PadAction.displayLabel(): String {
 
         is PadAction.StopAllMacros -> {
             context.getString(R.string.macropad_action_stop_all_macros)
+        }
+
+        is PadAction.TouchTap -> {
+            context.getString(
+                R.string.macropad_display_touch_tap,
+                (normX * PAD_PERCENT_MULTIPLIER).roundToInt(),
+                (normY * PAD_PERCENT_MULTIPLIER).roundToInt(),
+            )
         }
 
         is PadAction.AppLauncher -> {

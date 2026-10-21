@@ -61,6 +61,7 @@
   | `Screenshot(BOTTOM)`    | Screenshot (Bottom) | `splitscreen_top` |
   | `Screenshot(BOTH)`      | Screenshot (Both)   | `splitscreen`   |
   | `StopAllMacros`         | Stop All Macros     | `stop_circle`   |
+  | `TouchTap`              | Touch Tap           | `ads_click`     |
   | `Macro`                 | _(from macro name)_ | `smart_button`  |
   | All others              | _(empty)_           | _(null)_        |
 

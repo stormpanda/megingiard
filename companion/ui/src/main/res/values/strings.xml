@@ -1388,5 +1388,14 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_switch_to_hub_desc">Open the Companion Hub on the bottom screen</string>
     <string name="macropad_action_stop_all_macros">Stop All Macros</string>
     <string name="macropad_action_stop_all_macros_desc">Cancel all running macros and release held virtual inputs</string>
+    <string name="macropad_action_touch_tap">Touch Tap</string>
+    <string name="macropad_action_touch_tap_desc">Tap a fixed coordinate on the primary screen while held</string>
+    <string name="macropad_display_touch_tap">Touch Tap (%1$d%%, %2$d%%)</string>
+    <string name="macropad_touch_tap_record_title">Record Screen Tap</string>
+    <string name="macropad_touch_tap_record_desc">Tap the top screen directly to capture the target position</string>
+    <string name="macropad_touch_tap_x_title">Horizontal Position (X)</string>
+    <string name="macropad_touch_tap_x_desc">Horizontal screen coordinate from left (0%) to right (100%)</string>
+    <string name="macropad_touch_tap_y_title">Vertical Position (Y)</string>
+    <string name="macropad_touch_tap_y_desc">Vertical screen coordinate from top (0%) to bottom (100%)</string>
 </resources>
 

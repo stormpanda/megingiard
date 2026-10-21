@@ -350,6 +350,14 @@ sealed class PadAction {
     @Serializable
     @SerialName("stop_all_macros")
     data object StopAllMacros : PadAction()
+
+    /** Injects a direct screen touch on the primary display at normalized [normX], [normY] in [0.0, 1.0] while held. */
+    @Serializable
+    @SerialName("touch_tap")
+    data class TouchTap(
+        val normX: Float = 0.5f,
+        val normY: Float = 0.5f,
+    ) : PadAction()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -426,6 +434,10 @@ fun PadAction.defaultIconName(): String? =
 
         is PadAction.StopAllMacros -> {
             "stop_circle"
+        }
+
+        is PadAction.TouchTap -> {
+            "ads_click"
         }
 
         else -> {

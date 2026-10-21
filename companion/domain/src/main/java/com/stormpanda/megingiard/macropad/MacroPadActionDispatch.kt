@@ -4,12 +4,15 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.input.MouseInjector
+import com.stormpanda.megingiard.input.TouchAction
+import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 
 // MacroPadState and MacroExecutor are in the same package — no import needed.
 
 private const val TAG = "MacroPadActionDispatch"
+internal const val MP_TOUCH_TAP_SLOT = 8
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Injection helpers
@@ -138,6 +141,13 @@ fun injectActionDown(action: PadAction) {
             AppLog.d(TAG, "actionDown: StopAllMacros")
             MacroExecutor.stopAll()
         }
+
+        is PadAction.TouchTap -> {
+            val clampedX = action.normX.coerceIn(0f, 1f)
+            val clampedY = action.normY.coerceIn(0f, 1f)
+            AppLog.d(TAG, "actionDown: TouchTap normX=$clampedX normY=$clampedY")
+            TouchInjector.injectTouch(MP_TOUCH_TAP_SLOT, TouchAction.DOWN, clampedX, clampedY)
+        }
     }
 }
 
@@ -165,6 +175,13 @@ fun injectActionUp(action: PadAction) {
                 AppLog.d(TAG, "actionUp: SwitchToLayout holdToShift layoutId=${action.layoutId}")
                 MacroPadState.endHoldToShiftLayout(action.layoutId)
             }
+        }
+
+        is PadAction.TouchTap -> {
+            val clampedX = action.normX.coerceIn(0f, 1f)
+            val clampedY = action.normY.coerceIn(0f, 1f)
+            AppLog.d(TAG, "actionUp: TouchTap normX=$clampedX normY=$clampedY")
+            TouchInjector.injectTouch(MP_TOUCH_TAP_SLOT, TouchAction.UP, clampedX, clampedY)
         }
 
         else -> { /* All other action types fire or toggle on down; up is no-op */ }

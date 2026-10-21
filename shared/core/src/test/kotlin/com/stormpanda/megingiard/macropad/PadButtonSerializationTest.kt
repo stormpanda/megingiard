@@ -426,4 +426,21 @@ class PadButtonSerializationTest {
         assertEquals(stopButton, decoded)
         assertEquals("stop_circle", PadAction.StopAllMacros.defaultIconName())
     }
+
+    @Test
+    fun `TouchTap action serializes and deserializes with defaultIconName`() {
+        val tapButton =
+            PadButton(
+                id = "btn-touch-tap",
+                label = "Tap",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.TouchTap(normX = 0.25f, normY = 0.75f),
+            )
+        val encoded = json.encodeToString(tapButton)
+        assertTrue(encoded.contains("\"type\":\"touch_tap\""))
+        val decoded = json.decodeFromString<PadButton>(encoded)
+        assertEquals(tapButton, decoded)
+        assertEquals("ads_click", PadAction.TouchTap(0.25f, 0.75f).defaultIconName())
+    }
 }

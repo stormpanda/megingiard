@@ -1389,4 +1389,13 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_switch_to_hub_desc">在下螢幕開啟 Companion 中心</string>
     <string name="macropad_action_stop_all_macros">停止所有巨集</string>
     <string name="macropad_action_stop_all_macros_desc">立即取消所有執行中的巨集並放開虛擬輸入</string>
+    <string name="macropad_action_touch_tap">螢幕觸控點擊</string>
+    <string name="macropad_action_touch_tap_desc">按住時點擊主螢幕上的指定座標位置</string>
+    <string name="macropad_display_touch_tap">觸控點擊 (%1$d%%, %2$d%%)</string>
+    <string name="macropad_touch_tap_record_title">錄製螢幕點擊位置</string>
+    <string name="macropad_touch_tap_record_desc">直接點擊上螢幕以擷取目標座標位置</string>
+    <string name="macropad_touch_tap_x_title">水平位置 (X)</string>
+    <string name="macropad_touch_tap_x_desc">螢幕水平座標，由左 (0%) 至右 (100%)</string>
+    <string name="macropad_touch_tap_y_title">垂直位置 (Y)</string>
+    <string name="macropad_touch_tap_y_desc">螢幕垂直座標，由上 (0%) 至下 (100%)</string>
 </resources>

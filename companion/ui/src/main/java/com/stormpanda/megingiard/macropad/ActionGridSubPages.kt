@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.rounded.AdsClick
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Dashboard
@@ -111,6 +112,12 @@ private val TOOLS_ACTION_ITEMS =
             R.string.macropad_action_stop_all_macros,
             R.string.macropad_action_stop_all_macros_desc,
             Icons.Rounded.StopCircle,
+        ),
+        ActionGridItem(
+            PadAction.TouchTap(),
+            R.string.macropad_action_touch_tap,
+            R.string.macropad_action_touch_tap_desc,
+            Icons.Rounded.AdsClick,
         ),
     )
 
