@@ -48,7 +48,9 @@
   | ----------------------- | ------------------- | --------------- |
   | `LayoutNext`            | Next Layout         | `arrow_forward` |
   | `LayoutPrevious`        | Prev Layout         | `arrow_back`    |
+  | `SwitchToLayout`        | Switch Layout       | `view_quilt`    |
   | `ProfileSwitcher`       | Switch Profile      | `swap_horiz`    |
+  | `SwitchToHub`           | Hub                 | `dashboard`     |
   | `MirrorPlayStop`        | Mirror              | `cast`          |
   | `MirrorFreeze`          | Freeze              | `pause_circle`  |
   | `MirrorViewportEdit`    | Viewport            | `crop_free`     |

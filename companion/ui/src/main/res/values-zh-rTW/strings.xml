@@ -1378,4 +1378,13 @@ Open Settings to create a layout.</string>
     <string name="keyboard_mode_full">完整</string>
     <string name="touchpad_mode_mouse">滑鼠</string>
     <string name="touchpad_mode_touch">觸控</string>
+    <string name="macropad_action_switch_to_layout">切換至指定配置</string>
+    <string name="macropad_action_switch_to_layout_desc">直接跳轉至目前設定檔中的指定配置</string>
+    <string name="macropad_display_switch_to_layout">配置：%1$s</string>
+    <string name="macropad_switch_layout_target_title">目標配置</string>
+    <string name="macropad_switch_layout_target_desc">選擇在此設定檔中要啟用的配置</string>
+    <string name="macropad_switch_layout_hold_title">按住切換</string>
+    <string name="macropad_switch_layout_hold_desc">按住時暫時切換配置，放開後返回原配置</string>
+    <string name="macropad_action_switch_to_hub">切換至中心</string>
+    <string name="macropad_action_switch_to_hub_desc">在下螢幕開啟 Companion 中心</string>
 </resources>

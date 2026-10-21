@@ -59,6 +59,7 @@ class MacroPadHitTestEngine(
 
     // Per-pointer tracking
     private val pointerMap = mutableMapOf<Long, String>()
+    private val pointerButtonMap = mutableMapOf<Long, PadButton>()
     private val scrollStartY = mutableMapOf<Long, Float>()
     private var virtualCursorX = 0.5f
     private var virtualCursorY = 0.5f
@@ -135,6 +136,7 @@ class MacroPadHitTestEngine(
         val hitButton = hitList.firstOrNull { btn -> isPointInsideButton(btn, px, py, canvasW, canvasH) } ?: return false
 
         pointerMap[pointerId] = hitButton.id
+        pointerButtonMap[pointerId] = hitButton
         when {
             hitButton.action is PadAction.ScrollWheel -> {
                 scrollStartY[pointerId] = py
@@ -196,7 +198,7 @@ class MacroPadHitTestEngine(
         buttons: List<PadButton>,
     ) {
         val mappedId = pointerMap[pointerId] ?: return
-        val mappedBtn = buttons.firstOrNull { it.id == mappedId } ?: return
+        val mappedBtn = buttons.firstOrNull { it.id == mappedId } ?: pointerButtonMap[pointerId] ?: return
 
         when {
             mappedBtn.action is PadAction.TrackpointMove -> {
@@ -282,7 +284,8 @@ class MacroPadHitTestEngine(
         buttons: List<PadButton>,
     ) {
         val mapped = pointerMap.remove(pointerId) ?: return
-        val btn = buttons.firstOrNull { it.id == mapped } ?: return
+        val cachedBtn = pointerButtonMap.remove(pointerId)
+        val btn = buttons.firstOrNull { it.id == mapped } ?: cachedBtn ?: return
 
         when {
             btn.action is PadAction.TrackpointMove -> {
@@ -306,6 +309,7 @@ class MacroPadHitTestEngine(
     /** Reset all tracking state. */
     fun reset() {
         pointerMap.clear()
+        pointerButtonMap.clear()
         _pressedIds.value = emptySet()
         scrollStartY.clear()
         unclampedCursorX = virtualCursorX
@@ -318,10 +322,12 @@ class MacroPadHitTestEngine(
     fun releaseAll(buttons: List<PadButton>) {
         val activeIds = _pressedIds.value
         val pointerMappedIds = pointerMap.values.toSet()
+        val cachedButtonsById = pointerButtonMap.values.associateBy { it.id }
         val allActiveIds = activeIds + pointerMappedIds
 
         _pressedIds.value = emptySet()
         pointerMap.clear()
+        pointerButtonMap.clear()
         scrollStartY.clear()
 
         val upX = unclampedCursorX
@@ -333,7 +339,7 @@ class MacroPadHitTestEngine(
         lastDySign = 0f
 
         allActiveIds.forEach { buttonId ->
-            val btn = buttons.firstOrNull { it.id == buttonId }
+            val btn = buttons.firstOrNull { it.id == buttonId } ?: cachedButtonsById[buttonId]
             if (btn != null) {
                 AppLog.d(TAG, "Releasing button due to gesture cancellation: $buttonId")
                 when {

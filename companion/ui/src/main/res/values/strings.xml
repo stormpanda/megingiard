@@ -1377,5 +1377,14 @@ Open Settings to create a layout.</string>
     <string name="quick_actions_title">Quick Actions</string>
     <string name="quick_action_edit_buttons">Arrange Button Positions</string>
     <string name="quick_action_edit_buttons_desc">Move, resize, and position MacroPad buttons visually</string>
+    <string name="macropad_action_switch_to_layout">Switch to Layout</string>
+    <string name="macropad_action_switch_to_layout_desc">Jump directly to a specific layout in the active profile</string>
+    <string name="macropad_display_switch_to_layout">Layout: %1$s</string>
+    <string name="macropad_switch_layout_target_title">Target Layout</string>
+    <string name="macropad_switch_layout_target_desc">Select which layout in this profile to activate</string>
+    <string name="macropad_switch_layout_hold_title">Hold to Shift</string>
+    <string name="macropad_switch_layout_hold_desc">Temporarily switch while held and return on release</string>
+    <string name="macropad_action_switch_to_hub">Switch to Hub</string>
+    <string name="macropad_action_switch_to_hub_desc">Open the Companion Hub on the bottom screen</string>
 </resources>
 

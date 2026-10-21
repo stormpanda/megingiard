@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.PauseCircle
@@ -151,11 +152,31 @@ internal enum class ActionCategory(
         ActionGroup.LAYOUT,
         { PadAction.LayoutPrevious },
     ),
+    SWITCH_TO_LAYOUT(
+        Icons.AutoMirrored.Rounded.ViewQuilt,
+        R.string.macropad_action_switch_to_layout,
+        ActionGroup.LAYOUT,
+        {
+            val profile = MacroPadState.activeProfile.value
+            val activeId = MacroPadState.activeLayout.value?.id
+            val defaultTargetId =
+                profile?.layouts?.firstOrNull { it.id != activeId }?.id
+                    ?: profile?.layouts?.firstOrNull()?.id
+                    ?: ""
+            PadAction.SwitchToLayout(layoutId = defaultTargetId, holdToShift = false)
+        },
+    ),
     PROFILE_SWITCHER(
         Icons.Rounded.SwapHoriz,
         R.string.macropad_action_profile_switcher,
         ActionGroup.LAYOUT,
         { PadAction.ProfileSwitcher },
+    ),
+    SWITCH_TO_HUB(
+        Icons.Rounded.Dashboard,
+        R.string.macropad_action_switch_to_hub,
+        ActionGroup.LAYOUT,
+        { PadAction.SwitchToHub },
     ),
     MIRROR_PLAY_STOP(
         Icons.Rounded.Cast,
@@ -262,8 +283,16 @@ internal fun PadAction.toCategory(): ActionCategory =
             ActionCategory.LAYOUT_PREVIOUS
         }
 
+        is PadAction.SwitchToLayout -> {
+            ActionCategory.SWITCH_TO_LAYOUT
+        }
+
         is PadAction.ProfileSwitcher -> {
             ActionCategory.PROFILE_SWITCHER
+        }
+
+        is PadAction.SwitchToHub -> {
+            ActionCategory.SWITCH_TO_HUB
         }
 
         is PadAction.MirrorPlayStop -> {
@@ -382,8 +411,25 @@ internal fun PadAction.displayLabel(): String {
             context.getString(R.string.macropad_action_layout_previous)
         }
 
+        is PadAction.SwitchToLayout -> {
+            val layoutName =
+                MacroPadState.activeProfile.value
+                    ?.layouts
+                    ?.firstOrNull { it.id == layoutId }
+                    ?.name
+            if (layoutName != null) {
+                context.getString(R.string.macropad_display_switch_to_layout, layoutName)
+            } else {
+                context.getString(R.string.macropad_action_switch_to_layout)
+            }
+        }
+
         is PadAction.ProfileSwitcher -> {
             context.getString(R.string.macropad_action_profile_switcher)
+        }
+
+        is PadAction.SwitchToHub -> {
+            context.getString(R.string.macropad_action_switch_to_hub)
         }
 
         is PadAction.MirrorPlayStop -> {

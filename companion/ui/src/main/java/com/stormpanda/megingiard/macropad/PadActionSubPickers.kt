@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.Info
@@ -25,6 +26,7 @@ import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadStepperCard
+import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import java.util.Locale
@@ -284,5 +286,58 @@ internal fun FullScreenMousePicker(
             val stepped = ((current.sensitivity + FS_MOUSE_SENSITIVITY_STEP) * 10f).roundToInt() / 10f
             onChange(current.copy(sensitivity = stepped.coerceIn(FS_MOUSE_SENSITIVITY_MIN, FS_MOUSE_SENSITIVITY_MAX)))
         },
+    )
+}
+
+@Composable
+internal fun SwitchToLayoutPicker(
+    current: PadAction.SwitchToLayout,
+    onOpenPicker: () -> Unit,
+    onChange: (PadAction) -> Unit,
+    isFirstItem: Boolean = false,
+) {
+    val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
+    val layouts = profile?.layouts ?: emptyList()
+    val selectedLayout =
+        layouts.firstOrNull { it.id == current.layoutId }
+            ?: layouts.firstOrNull()
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_action_group_layout),
+        description = stringResource(R.string.macropad_action_group_layout_desc),
+        actionText = stringResource(R.string.macropad_action_switch_to_layout),
+        icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+        onClick = onOpenPicker,
+        modifier = Modifier.firstDeckItem(isFirstItem),
+    )
+
+    if (layouts.isNotEmpty() && selectedLayout != null) {
+        GamepadChoiceCard(
+            title = stringResource(R.string.macropad_switch_layout_target_title),
+            description = stringResource(R.string.macropad_switch_layout_target_desc),
+            selectedText = selectedLayout.name,
+            icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+            onPrevious = {
+                val prev = layouts.cycle(selectedLayout, BumperDirection.PREV)
+                AppLog.d(TAG, "SwitchToLayoutPicker: layoutId=${prev.id} name='${prev.name}'")
+                onChange(current.copy(layoutId = prev.id))
+            },
+            onNext = {
+                val next = layouts.cycle(selectedLayout, BumperDirection.NEXT)
+                AppLog.d(TAG, "SwitchToLayoutPicker: layoutId=${next.id} name='${next.name}'")
+                onChange(current.copy(layoutId = next.id))
+            },
+        )
+    }
+
+    GamepadToggleCard(
+        title = stringResource(R.string.macropad_switch_layout_hold_title),
+        description = stringResource(R.string.macropad_switch_layout_hold_desc),
+        checked = current.holdToShift,
+        onCheckedChange = { enabled ->
+            AppLog.d(TAG, "SwitchToLayoutPicker: holdToShift=$enabled")
+            onChange(current.copy(holdToShift = enabled))
+        },
+        icon = Icons.AutoMirrored.Rounded.ViewQuilt,
     )
 }

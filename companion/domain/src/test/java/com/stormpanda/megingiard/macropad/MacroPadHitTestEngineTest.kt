@@ -263,4 +263,25 @@ class MacroPadHitTestEngineTest {
         assertEquals(setOf("btn-tri-up"), engine.pressedIds.value)
         engine.onRelease(1L, buttons)
     }
+
+    @Test
+    fun `button pressed on layout A still dispatches release when layout B buttons are passed to onRelease`() {
+        val btnA =
+            centeredButton(PadAction.GamepadButton(btnCode = 304, label = "A")).copy(
+                id = "btn-layout-a",
+            )
+        val layoutAButtons = listOf(btnA)
+        val layoutBButtons =
+            listOf(
+                centeredButton(PadAction.GamepadButton(btnCode = 305, label = "B")).copy(id = "btn-layout-b"),
+            )
+
+        assertTrue(engine.onPress(7L, 500f, 500f, canvasW, canvasH, layoutAButtons, false))
+        assertEquals("GD 304\n", PrivdClient.pollCommandForTest())
+
+        // Release occurs while layout B is active (layoutBButtons does not contain btnA)
+        engine.onRelease(7L, layoutBButtons)
+        assertEquals("GU 304\n", PrivdClient.pollCommandForTest())
+        assertFalse(engine.isPointerTracked(7L))
+    }
 }

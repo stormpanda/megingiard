@@ -1377,4 +1377,13 @@ Open Settings to create a layout.</string>
     <string name="quick_actions_title">Schnellaktionen</string>
     <string name="quick_action_edit_buttons">Tastenpositionen anordnen</string>
     <string name="quick_action_edit_buttons_desc">MacroPad-Tasten visuell verschieben und anpassen</string>
+    <string name="macropad_action_switch_to_layout">Zu Layout wechseln</string>
+    <string name="macropad_action_switch_to_layout_desc">Direkt zu einem bestimmten Layout im aktiven Profil springen</string>
+    <string name="macropad_display_switch_to_layout">Layout: %1$s</string>
+    <string name="macropad_switch_layout_target_title">Ziel-Layout</string>
+    <string name="macropad_switch_layout_target_desc">Wähle das Layout aus, das aktiviert werden soll</string>
+    <string name="macropad_switch_layout_hold_title">Halten zum Umschalten</string>
+    <string name="macropad_switch_layout_hold_desc">Solange gedrückt temporär wechseln und beim Loslassen zurückkehren</string>
+    <string name="macropad_action_switch_to_hub">Zum Hub wechseln</string>
+    <string name="macropad_action_switch_to_hub_desc">Companion Hub auf dem unteren Bildschirm öffnen</string>
 </resources>

@@ -118,6 +118,7 @@ internal fun ActionPicker(
         is PadAction.LayoutNext,
         is PadAction.LayoutPrevious,
         is PadAction.ProfileSwitcher,
+        is PadAction.SwitchToHub,
         -> {
             GamepadActionCard(
                 title = stringResource(R.string.macropad_action_group_layout),
@@ -126,6 +127,15 @@ internal fun ActionPicker(
                 icon = Icons.AutoMirrored.Rounded.ViewQuilt,
                 onClick = onOpenLayoutPicker,
                 modifier = Modifier.firstDeckItem(isFirstItem),
+            )
+        }
+
+        is PadAction.SwitchToLayout -> {
+            SwitchToLayoutPicker(
+                current = current,
+                onOpenPicker = onOpenLayoutPicker,
+                onChange = onChange,
+                isFirstItem = isFirstItem,
             )
         }
 

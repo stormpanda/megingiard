@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
@@ -120,10 +122,22 @@ private val LAYOUT_ACTION_ITEMS =
             Icons.AutoMirrored.Rounded.ArrowBack,
         ),
         ActionGridItem(
+            PadAction.SwitchToLayout(),
+            R.string.macropad_action_switch_to_layout,
+            R.string.macropad_action_switch_to_layout_desc,
+            Icons.AutoMirrored.Rounded.ViewQuilt,
+        ),
+        ActionGridItem(
             PadAction.ProfileSwitcher,
             R.string.macropad_action_profile_switcher,
             R.string.macropad_action_profile_switcher_desc,
             Icons.Rounded.SwapHoriz,
+        ),
+        ActionGridItem(
+            PadAction.SwitchToHub,
+            R.string.macropad_action_switch_to_hub,
+            R.string.macropad_action_switch_to_hub_desc,
+            Icons.Rounded.Dashboard,
         ),
     )
 
@@ -149,7 +163,7 @@ private fun GenericActionGridPickerSubPageContent(
             icon = item.icon,
             actionText = if (isSelected) stringResource(R.string.gamepad_color_selected) else null,
             alwaysShowFullDescription = true,
-            onClick = { onSelectAction(item.action) },
+            onClick = { onSelectAction(item.action.toCategory().defaultAction()) },
             modifier = cardModifier,
         )
     }

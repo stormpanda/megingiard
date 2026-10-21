@@ -468,6 +468,7 @@ internal fun EditButtonSubPageContent(
 
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val macros = profile?.macros ?: emptyList()
+    val layouts = profile?.layouts ?: emptyList()
 
     LaunchedEffect(macros) {
         val currentAction = action
@@ -475,6 +476,16 @@ internal fun EditButtonSubPageContent(
             val macroExists = macros.any { it.id == currentAction.macroId }
             if (!macroExists) {
                 action = initAction
+            }
+        }
+    }
+
+    LaunchedEffect(layouts) {
+        val currentAction = action
+        if (currentAction is PadAction.SwitchToLayout && layouts.isNotEmpty()) {
+            val layoutExists = layouts.any { it.id == currentAction.layoutId }
+            if (!layoutExists) {
+                action = currentAction.copy(layoutId = layouts.first().id)
             }
         }
     }
@@ -559,10 +570,26 @@ internal fun EditButtonSubPageContent(
 
     val isConfirmEnabled =
         when {
-            action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> true
-            action is PadAction.AppLauncher -> (action as PadAction.AppLauncher).packageName.isNotBlank() && label.isNotBlank()
-            action is PadAction.Macro -> label.isNotBlank() && macros.any { it.id == (action as PadAction.Macro).macroId }
-            else -> label.isNotBlank()
+            action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> {
+                true
+            }
+
+            action is PadAction.AppLauncher -> {
+                (action as PadAction.AppLauncher).packageName.isNotBlank() && label.isNotBlank()
+            }
+
+            action is PadAction.Macro -> {
+                label.isNotBlank() && macros.any { it.id == (action as PadAction.Macro).macroId }
+            }
+
+            action is PadAction.SwitchToLayout -> {
+                label.isNotBlank() &&
+                    layouts.any { it.id == (action as PadAction.SwitchToLayout).layoutId }
+            }
+
+            else -> {
+                label.isNotBlank()
+            }
         }
 
     val isNew = savedButton == null

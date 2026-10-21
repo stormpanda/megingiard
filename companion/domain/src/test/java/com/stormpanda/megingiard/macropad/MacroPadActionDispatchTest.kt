@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.macropad
 import app.cash.turbine.test
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionCommand
+import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import kotlinx.coroutines.Dispatchers
@@ -138,5 +139,57 @@ class MacroPadActionDispatchTest {
             assertTrue(ScreenCaptureManager.screenshotRequested.value)
             ScreenCaptureManager.consumeScreenshotRequest()
         }
+    }
+
+    @Test
+    fun injectActionDownAndUp_switchToLayoutAndHoldToShift() {
+        val layoutA = PadLayout(id = "layout-a", name = "Main")
+        val layoutB = PadLayout(id = "layout-b", name = "Shift")
+        val profile =
+            PadProfile(
+                id = "prof-1",
+                name = "Test",
+                layouts = listOf(layoutA, layoutB),
+                activeLayoutId = "layout-a",
+            )
+        MacroPadState.loadFrom(listOf(profile), "prof-1")
+        assertEquals("layout-a", MacroPadState.activeLayout.value?.id)
+
+        // Tap-to-switch stays on layout B after release
+        val tapAction = PadAction.SwitchToLayout(layoutId = "layout-b", holdToShift = false)
+        injectActionDown(tapAction)
+        assertEquals("layout-b", MacroPadState.activeLayout.value?.id)
+        injectActionUp(tapAction)
+        assertEquals("layout-b", MacroPadState.activeLayout.value?.id)
+
+        // Reset to layout A and test Hold-to-Shift
+        MacroPadState.setActiveLayoutId("layout-a")
+        val holdAction = PadAction.SwitchToLayout(layoutId = "layout-b", holdToShift = true)
+        injectActionDown(holdAction)
+        assertEquals("layout-b", MacroPadState.activeLayout.value?.id)
+        injectActionUp(holdAction)
+        assertEquals("layout-a", MacroPadState.activeLayout.value?.id)
+
+        // End-to-end hit-test engine hold-to-shift across layouts
+        val engine = MacroPadHitTestEngine(buttonUnitDpToPx = { it })
+        val shiftBtn =
+            PadButton(
+                id = "btn-shift",
+                label = "Shift",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = holdAction,
+            )
+        engine.onPress(7L, 500f, 500f, 1000f, 1000f, listOf(shiftBtn), false)
+        assertEquals("layout-b", MacroPadState.activeLayout.value?.id)
+        engine.onRelease(7L, emptyList())
+        assertEquals("layout-a", MacroPadState.activeLayout.value?.id)
+    }
+
+    @Test
+    fun injectActionDown_switchToHub() {
+        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+        injectActionDown(PadAction.SwitchToHub)
+        assertEquals(CompanionViewMode.DASHBOARD, AppStateManager.companionViewMode.value)
     }
 }

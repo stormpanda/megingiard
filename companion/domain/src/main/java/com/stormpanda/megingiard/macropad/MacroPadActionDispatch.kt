@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
@@ -68,9 +69,23 @@ fun injectActionDown(action: PadAction) {
             MacroPadState.previousLayout()
         }
 
+        is PadAction.SwitchToLayout -> {
+            AppLog.d(TAG, "actionDown: SwitchToLayout layoutId=${action.layoutId} holdToShift=${action.holdToShift}")
+            if (action.holdToShift) {
+                MacroPadState.beginHoldToShiftLayout(action.layoutId)
+            } else {
+                MacroPadState.switchToLayout(action.layoutId)
+            }
+        }
+
         is PadAction.ProfileSwitcher -> {
             AppLog.d(TAG, "actionDown: ProfileSwitcher")
             AppStateManager.openQuickMenu()
+        }
+
+        is PadAction.SwitchToHub -> {
+            AppLog.d(TAG, "actionDown: SwitchToHub")
+            AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
         }
 
         is PadAction.FullScreenMouse -> {
@@ -138,6 +153,13 @@ fun injectActionUp(action: PadAction) {
         is PadAction.MouseButton -> {
             AppLog.d(TAG, "actionUp: MouseButton ${action.button}")
             MouseInjector.buttonUp(action.button)
+        }
+
+        is PadAction.SwitchToLayout -> {
+            if (action.holdToShift) {
+                AppLog.d(TAG, "actionUp: SwitchToLayout holdToShift layoutId=${action.layoutId}")
+                MacroPadState.endHoldToShiftLayout(action.layoutId)
+            }
         }
 
         else -> { /* All other action types fire or toggle on down; up is no-op */ }

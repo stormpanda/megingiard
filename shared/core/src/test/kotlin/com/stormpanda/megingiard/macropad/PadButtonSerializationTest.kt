@@ -375,4 +375,38 @@ class PadButtonSerializationTest {
         assertEquals("splitscreen_top", PadAction.Screenshot(ScreenshotTarget.BOTTOM).defaultIconName())
         assertEquals("splitscreen", PadAction.Screenshot(ScreenshotTarget.BOTH).defaultIconName())
     }
+
+    @Test
+    fun `SwitchToLayout and SwitchToHub actions serialize and deserialize with defaultIconName`() {
+        for (hold in listOf(false, true)) {
+            val button =
+                PadButton(
+                    id = "btn-switch-layout-$hold",
+                    label = "Switch Layout",
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.SwitchToLayout(layoutId = "layout-target-1", holdToShift = hold),
+                )
+            val encoded = json.encodeToString(button)
+            assertTrue(encoded.contains("\"type\":\"switch_to_layout\""))
+            val decoded = json.decodeFromString<PadButton>(encoded)
+            assertEquals(button, decoded)
+        }
+
+        val hubButton =
+            PadButton(
+                id = "btn-switch-hub",
+                label = "Hub",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.SwitchToHub,
+            )
+        val encodedHub = json.encodeToString(hubButton)
+        assertTrue(encodedHub.contains("\"type\":\"switch_to_hub\""))
+        val decodedHub = json.decodeFromString<PadButton>(encodedHub)
+        assertEquals(hubButton, decodedHub)
+
+        assertEquals("view_quilt", PadAction.SwitchToLayout("layout-1", holdToShift = false).defaultIconName())
+        assertEquals("dashboard", PadAction.SwitchToHub.defaultIconName())
+    }
 }

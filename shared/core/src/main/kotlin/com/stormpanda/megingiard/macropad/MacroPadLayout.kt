@@ -293,10 +293,27 @@ sealed class PadAction {
     @SerialName("layout_previous")
     data object LayoutPrevious : PadAction()
 
+    /**
+     * Switches directly to the layout with [layoutId] within the active profile.
+     * When [holdToShift] is true, pressing the button temporarily activates [layoutId]
+     * and releasing the button returns to the previously active layout.
+     */
+    @Serializable
+    @SerialName("switch_to_layout")
+    data class SwitchToLayout(
+        val layoutId: String = "",
+        val holdToShift: Boolean = false,
+    ) : PadAction()
+
     /** Opens the profile-switcher dialog to select a different profile. */
     @Serializable
     @SerialName("profile_switcher")
     data object ProfileSwitcher : PadAction()
+
+    /** Switches the secondary screen directly to the Companion Hub (Dashboard). */
+    @Serializable
+    @SerialName("switch_to_hub")
+    data object SwitchToHub : PadAction()
 
     // ── Special ────────────────────────────────────────────────────────────
 
@@ -350,8 +367,16 @@ fun PadAction.defaultIconName(): String? =
             "arrow_back"
         }
 
+        is PadAction.SwitchToLayout -> {
+            "view_quilt"
+        }
+
         is PadAction.ProfileSwitcher -> {
             "swap_horiz"
+        }
+
+        is PadAction.SwitchToHub -> {
+            "dashboard"
         }
 
         is PadAction.MirrorPlayStop -> {
