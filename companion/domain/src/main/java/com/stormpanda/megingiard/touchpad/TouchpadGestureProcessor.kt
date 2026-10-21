@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 private const val TAG = "TouchpadGestureProc"
 
@@ -23,6 +24,12 @@ private const val TP_CLICK_DURATION_MS = 40L
 private const val TP_DOUBLE_TAP_TIMEOUT_MS = 500L
 private const val TP_SENSITIVITY_MAX = 10f
 private const val TP_SCROLL_THRESHOLD_BASE_PX = 12f
+private const val TP_SCROLL_VELOCITY_SMOOTHING = 0.4f
+private const val TP_SCROLL_FLING_MIN_VELOCITY_PX = 15f
+private const val TP_SCROLL_FLING_STOP_VELOCITY_PX = 1.5f
+private const val TP_SCROLL_FLING_FRICTION = 0.90f
+private const val TP_SCROLL_FLING_FRAME_MS = 16L
+private const val TP_SCROLL_STOP_TIMEOUT_MS = 80L
 private const val MAX_TOUCH_SLOTS = 10
 
 data class TouchpadGestureConfig(
@@ -68,6 +75,9 @@ class TouchpadGestureProcessor(
     private val movedTooFar = HashSet<Long>()
     private val releasedAsTap = ArrayList<Long>()
     private var scrollAccumY = 0f
+    private var scrollVelocityY = 0f
+    private var lastScrollMoveTimeMs = 0L
+    private var scrollFlingJob: Job? = null
     private var moveRemainderX = 0f
     private var moveRemainderY = 0f
     private var wasTwoFingerScrolling = false
@@ -87,6 +97,8 @@ class TouchpadGestureProcessor(
         moveRemainderX = 0f
         moveRemainderY = 0f
         wasTwoFingerScrolling = false
+        scrollVelocityY = 0f
+        lastScrollMoveTimeMs = 0L
         updateActivePointers()
     }
 
@@ -135,6 +147,8 @@ class TouchpadGestureProcessor(
             onRelease(pointerId, x, y, surfaceW, surfaceH)
         }
         val currentConfig = config()
+        scrollFlingJob?.cancel()
+        scrollFlingJob = null
         if (currentConfig.useMouse) {
             pressTimes[pointerId] = System.currentTimeMillis()
             downPositions[pointerId] = Pair(x, y)
@@ -213,6 +227,10 @@ class TouchpadGestureProcessor(
                 }
                 if (isPrimary) {
                     scrollAccumY += deltaY
+                    scrollVelocityY =
+                        scrollVelocityY * TP_SCROLL_VELOCITY_SMOOTHING +
+                        deltaY * (1f - TP_SCROLL_VELOCITY_SMOOTHING)
+                    lastScrollMoveTimeMs = System.currentTimeMillis()
                     val speed = currentConfig.scrollSpeed.coerceIn(TouchpadSettings.SCROLL_SPEED_MIN, TouchpadSettings.SCROLL_SPEED_MAX)
                     val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / speed // Sensitivity threshold in pixels
                     val units = (scrollAccumY / scrollThreshold).toInt()
@@ -285,10 +303,19 @@ class TouchpadGestureProcessor(
                 return
             }
 
-            // When all fingers are up, evaluate taps
+            // When all fingers are up, evaluate taps or start inertial scroll fling
             if (downPositions.isEmpty()) {
+                val shouldFling =
+                    wasTwoFingerScrolling &&
+                        currentConfig.twoFingerScrollEnabled &&
+                        abs(scrollVelocityY) >= TP_SCROLL_FLING_MIN_VELOCITY_PX &&
+                        (System.currentTimeMillis() - lastScrollMoveTimeMs) <= TP_SCROLL_STOP_TIMEOUT_MS
+                val releaseVelocityY = scrollVelocityY
                 val tapCount = if (wasTwoFingerScrolling) 0 else releasedAsTap.size
                 resetMousePointers()
+                if (shouldFling) {
+                    startScrollFling(releaseVelocityY, currentConfig)
+                }
                 when {
                     tapCount == 1 && currentConfig.tapToClick -> {
                         lastTapReleaseTime = System.currentTimeMillis()
@@ -326,6 +353,8 @@ class TouchpadGestureProcessor(
         isDragging = false
         resetMousePointers()
         scrollAccumY = 0f
+        scrollFlingJob?.cancel()
+        scrollFlingJob = null
         pendingClickJob?.cancel()
         pendingClickJob = null
         if (wasDragging) {
@@ -339,5 +368,43 @@ class TouchpadGestureProcessor(
             TouchInjector.injectTouch(slot, TouchAction.UP, 0f, 0f)
         }
         updateActivePointers()
+    }
+
+    private fun startScrollFling(
+        initialVelocityY: Float,
+        currentConfig: TouchpadGestureConfig,
+    ) {
+        scrollFlingJob?.cancel()
+        val speed =
+            currentConfig.scrollSpeed.coerceIn(
+                TouchpadSettings.SCROLL_SPEED_MIN,
+                TouchpadSettings.SCROLL_SPEED_MAX,
+            )
+        val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / speed
+        val directionMultiplier = if (currentConfig.naturalScrollEnabled) 1 else -1
+        var velocityY = initialVelocityY
+        var flingAccumY = 0f
+        var jobRef: Job? = null
+        val job =
+            scope.launch {
+                try {
+                    while (abs(velocityY) >= TP_SCROLL_FLING_STOP_VELOCITY_PX) {
+                        delay(TP_SCROLL_FLING_FRAME_MS)
+                        velocityY *= TP_SCROLL_FLING_FRICTION
+                        flingAccumY += velocityY
+                        val units = (flingAccumY / scrollThreshold).toInt()
+                        if (units != 0) {
+                            MouseInjector.scrollWheel(units * directionMultiplier)
+                            flingAccumY -= units * scrollThreshold
+                        }
+                    }
+                } finally {
+                    if (scrollFlingJob === jobRef) {
+                        scrollFlingJob = null
+                    }
+                }
+            }
+        jobRef = job
+        scrollFlingJob = job
     }
 }

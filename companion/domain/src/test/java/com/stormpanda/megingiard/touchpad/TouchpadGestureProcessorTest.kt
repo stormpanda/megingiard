@@ -342,4 +342,34 @@ class TouchpadGestureProcessorTest {
             assertEquals("MM 20 10\n", PrivdClient.pollCommandForTest())
             processor.release(3L, 110f, 205f)
         }
+
+    @Test
+    fun `two-finger flick triggers inertial scroll fling and stops when touched again`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor(useMouse = { true }, naturalScrollEnabled = true, scrollSpeed = 1.0f)
+
+            processor.press(1L, 100f, 200f)
+            processor.press(2L, 120f, 220f)
+            // Two fast downward scroll frames (dy = 30f each -> smoothed velocity = 25.2f >= 15f)
+            processor.move(1L, 100f, 230f, dx = 0f, dy = 30f)
+            processor.move(1L, 100f, 260f, dx = 0f, dy = 30f)
+            PrivdClient.clearQueueForTest()
+
+            processor.release(1L, 100f, 260f)
+            processor.release(2L, 120f, 280f)
+
+            // Advance 2 fling frames (32ms) -> inertial wheel steps emitted
+            testScheduler.advanceTimeBy(32L)
+            testScheduler.runCurrent()
+            assertEquals("MW 1\n", PrivdClient.pollCommandForTest())
+            assertEquals("MW 2\n", PrivdClient.pollCommandForTest())
+
+            // Touching the touchpad immediately cancels the ongoing fling
+            processor.press(3L, 100f, 200f)
+            PrivdClient.clearQueueForTest()
+            testScheduler.advanceTimeBy(200L)
+            testScheduler.runCurrent()
+            assertEquals(null, PrivdClient.pollCommandForTest())
+            processor.release(3L, 100f, 200f)
+        }
 }
