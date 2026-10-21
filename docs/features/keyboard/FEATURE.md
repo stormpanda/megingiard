@@ -62,7 +62,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
   - From the top down if the Quick Menu is configured at the top.
 - While the keyboard is active, the QuickKeyboardBar MUST be hidden. Swiping from the edge closes the keyboard overlay.
 
-### FR-K8: Spacebar Cursor Navigation
+### FR-K8: Spacebar Cursor Navigation & Backspace Word-Delete Slide
 
 - Pressing and holding the spacebar key (`"space"` or `"space_num"`) in ergonomic modes and dragging horizontally MUST trigger cursor navigation.
 - If the horizontal drag distance exceeds **16 dp** (`KB_SWIPE_THRESHOLD_DP`), cursor sliding mode is activated and no space character will be typed on finger release.
@@ -70,6 +70,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
   - Horizontally: a `KEY_LEFT` (for leftward swipe) or `KEY_RIGHT` (for rightward swipe) tap.
   - Vertically: a `KEY_UP` (for upward swipe) or `KEY_DOWN` (for downward swipe) tap.
 - If the finger is released without exceeding the **16 dp** drag threshold, a normal space keystroke MUST be injected on release.
+- Pressing and holding the Backspace key (`"bksp"`) in ergonomic modes and sliding leftward beyond **16 dp** (`KB_SWIPE_THRESHOLD_DP`) MUST cancel single-character backspace repeat, release the initial `KEY_BACKSPACE` down state, and inject a word-delete chord (`KEY_LEFTCTRL` + `KEY_BACKSPACE`) with haptic feedback for every **24 dp** (`KB_BKSP_WORD_STEP_DP`) of leftward movement without activating hovered character keys.
 
 ### FR-K9: Keyboard Settings Toolbar Button & Screen
 

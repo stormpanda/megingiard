@@ -19,6 +19,7 @@ private const val KB_MODIFIER_HOLD_MS = 300L
 private const val KB_LONG_PRESS_DELAY_MS = 400L
 private const val KB_SWIPE_THRESHOLD_DP = 16f
 private const val KB_SWIPE_STEP_DP = 8f
+private const val KB_BKSP_WORD_STEP_DP = 24f
 private const val KB_LONG_PRESS_SWIPE_THRESHOLD_DP = 24f
 private const val KB_POPUP_STEP_WIDTH_DP = 48f / 2.5f
 
@@ -61,6 +62,10 @@ class KeyboardGestureProcessor(
     var accumulatedSpaceDeltaX = 0f
     var accumulatedSpaceDeltaY = 0f
     var spaceDragPointerId: Long? = null
+    var bkspDragStartX = 0f
+    var isBkspDragging = false
+    var accumulatedBkspDeltaX = 0f
+    var bkspDragPointerId: Long? = null
     private var modeSwitchSlidePointerId: Long? = null
     private var modeSwitchSlideMoved = false
 
@@ -177,6 +182,11 @@ class KeyboardGestureProcessor(
             isSpaceDragging = false
             accumulatedSpaceDeltaX = 0f
             accumulatedSpaceDeltaY = 0f
+        } else if (keyId == "bksp" && !isFullLayout) {
+            bkspDragPointerId = pointerId
+            bkspDragStartX = x
+            isBkspDragging = false
+            accumulatedBkspDeltaX = 0f
         }
 
         onKeyDown(pointerId, hoveredKeyDef, isFullLayout)
@@ -302,6 +312,40 @@ class KeyboardGestureProcessor(
                     }
                 }
 
+                if (pointerId == bkspDragPointerId) {
+                    val dragDeltaX = x - bkspDragStartX
+                    val swipeThresholdPx = KB_SWIPE_THRESHOLD_DP * density
+                    val wordStepPx = KB_BKSP_WORD_STEP_DP * density
+                    if (!isBkspDragging && dragDeltaX < -swipeThresholdPx) {
+                        isBkspDragging = true
+                        heldKey = null
+                        repeatJob?.cancel()
+                        releasePointerDownKeycodes(pointerId)
+                        bkspDragStartX = x
+                        accumulatedBkspDeltaX = 0f
+                    }
+
+                    if (isBkspDragging) {
+                        accumulatedBkspDeltaX += dragDeltaX
+                        bkspDragStartX = x
+
+                        if (accumulatedBkspDeltaX <= -wordStepPx) {
+                            val steps = (-accumulatedBkspDeltaX / wordStepPx).toInt()
+                            if (steps > 0) {
+                                onHapticFeedback()
+                                repeat(steps) {
+                                    injector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                    injector.keyDown(LinuxKeycodes.KEY_BACKSPACE)
+                                    injector.keyUp(LinuxKeycodes.KEY_BACKSPACE)
+                                    injector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                                }
+                                accumulatedBkspDeltaX += steps * wordStepPx
+                            }
+                        }
+                    }
+                    return
+                }
+
                 if (!isSpaceDragging) {
                     val startPos = pressPositions[pointerId]
                     if (startPos != null) {
@@ -332,13 +376,18 @@ class KeyboardGestureProcessor(
             spaceDragPointerId = null
             isSpaceDragging = false
         }
+        val wasBkspDragging = isBkspDragging && pointerId == bkspDragPointerId
+        if (pointerId == bkspDragPointerId) {
+            bkspDragPointerId = null
+            isBkspDragging = false
+        }
         val wasModeSwitchSlide = pointerId == modeSwitchSlidePointerId && modeSwitchSlideMoved
         if (pointerId == modeSwitchSlidePointerId) {
             modeSwitchSlidePointerId = null
             modeSwitchSlideMoved = false
         }
 
-        if (wasDragging) {
+        if (wasDragging || wasBkspDragging) {
             onKeyUp(pointerId, isFullLayout, skipInjection = true)
         } else {
             val popup = _activePopupState.value
@@ -382,6 +431,9 @@ class KeyboardGestureProcessor(
         isSpaceDragging = false
         accumulatedSpaceDeltaX = 0f
         accumulatedSpaceDeltaY = 0f
+        bkspDragPointerId = null
+        isBkspDragging = false
+        accumulatedBkspDeltaX = 0f
         modeSwitchSlidePointerId = null
         modeSwitchSlideMoved = false
     }
@@ -561,6 +613,9 @@ class KeyboardGestureProcessor(
         isSpaceDragging = false
         accumulatedSpaceDeltaX = 0f
         accumulatedSpaceDeltaY = 0f
+        bkspDragPointerId = null
+        isBkspDragging = false
+        accumulatedBkspDeltaX = 0f
         modeSwitchSlidePointerId = null
         modeSwitchSlideMoved = false
     }

@@ -548,4 +548,37 @@ class KeyboardGestureProcessorTest {
                 testInjector.calls,
             )
         }
+
+    @Test
+    fun `sliding left from bksp key deletes whole words with Ctrl+Backspace`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            val mDef = KeyDef("m", "m", LinuxKeycodes.KEY_M)
+            val bkspDef = KeyDef("bksp", "⌫", LinuxKeycodes.KEY_BACKSPACE)
+            val bkspGrid = listOf(listOf(mDef, bkspDef))
+            processor.updateBounds("m", 0f, 0f, 50f, 40f)
+            processor.updateBounds("bksp", 50f, 0f, 100f, 40f)
+
+            // Press bksp -> immediate KEY_BACKSPACE down
+            processor.onPress(1L, 80f, 20f, bkspGrid, isFullLayout = false)
+            assertEquals(listOf("down" to LinuxKeycodes.KEY_BACKSPACE), testInjector.calls)
+
+            // Slide left by 30dp (exceeds 16dp threshold and 24dp word step) -> releases initial bksp and injects Ctrl+Backspace
+            processor.onMove(1L, 50f, 20f, -30f, 0f, bkspGrid, isFullLayout = false)
+            assertTrue(processor.isBkspDragging)
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertEquals(
+                listOf(
+                    "down" to LinuxKeycodes.KEY_BACKSPACE,
+                    "up" to LinuxKeycodes.KEY_BACKSPACE,
+                    "down" to LinuxKeycodes.KEY_LEFTCTRL,
+                    "down" to LinuxKeycodes.KEY_BACKSPACE,
+                    "up" to LinuxKeycodes.KEY_BACKSPACE,
+                    "up" to LinuxKeycodes.KEY_LEFTCTRL,
+                ),
+                testInjector.calls,
+            )
+        }
 }
