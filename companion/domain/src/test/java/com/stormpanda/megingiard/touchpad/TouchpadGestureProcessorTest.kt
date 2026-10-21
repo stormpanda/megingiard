@@ -372,4 +372,24 @@ class TouchpadGestureProcessorTest {
             assertEquals(null, PrivdClient.pollCommandForTest())
             processor.release(3L, 100f, 200f)
         }
+
+    @Test
+    fun `two-finger horizontal scroll dispatches MH commands and supports horizontal fling`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor(useMouse = { true }, naturalScrollEnabled = true, scrollSpeed = 1.0f)
+
+            processor.press(1L, 100f, 200f)
+            processor.press(2L, 120f, 220f)
+            processor.move(1L, 130f, 200f, dx = 30f, dy = 0f)
+            assertEquals("MH 2\n", PrivdClient.pollCommandForTest())
+            processor.move(1L, 160f, 200f, dx = 30f, dy = 0f)
+            assertEquals("MH 3\n", PrivdClient.pollCommandForTest())
+
+            processor.release(1L, 160f, 200f)
+            processor.release(2L, 180f, 220f)
+
+            testScheduler.advanceTimeBy(16L)
+            testScheduler.runCurrent()
+            assertEquals("MH 1\n", PrivdClient.pollCommandForTest())
+        }
 }

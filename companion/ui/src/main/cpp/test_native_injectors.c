@@ -96,6 +96,16 @@ static void test_mouse_protocol_parsing(void) {
     assert(g_events[0].value == 3);
     assert(g_events[1].type == EV_SYN);
 
+    // Horizontal scroll wheel
+    g_event_count = 0;
+    res = parse_mouse_command("MH -2\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_event_count == 2);
+    assert(g_events[0].type == EV_REL);
+    assert(g_events[0].code == REL_HWHEEL);
+    assert(g_events[0].value == -2);
+    assert(g_events[1].type == EV_SYN);
+
     // Mouse button left down / up
     g_event_count = 0;
     res = parse_mouse_command("MB L D\n", MOCK_FD);

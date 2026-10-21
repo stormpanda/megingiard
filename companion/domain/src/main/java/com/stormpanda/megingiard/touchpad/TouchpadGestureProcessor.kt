@@ -74,7 +74,9 @@ class TouchpadGestureProcessor(
     private val downPositions = LinkedHashMap<Long, Pair<Float, Float>>()
     private val movedTooFar = HashSet<Long>()
     private val releasedAsTap = ArrayList<Long>()
+    private var scrollAccumX = 0f
     private var scrollAccumY = 0f
+    private var scrollVelocityX = 0f
     private var scrollVelocityY = 0f
     private var lastScrollMoveTimeMs = 0L
     private var scrollFlingJob: Job? = null
@@ -97,6 +99,7 @@ class TouchpadGestureProcessor(
         moveRemainderX = 0f
         moveRemainderY = 0f
         wasTwoFingerScrolling = false
+        scrollVelocityX = 0f
         scrollVelocityY = 0f
         lastScrollMoveTimeMs = 0L
         updateActivePointers()
@@ -155,6 +158,7 @@ class TouchpadGestureProcessor(
             moveRemainderX = 0f
             moveRemainderY = 0f
             if (downPositions.size != 2) {
+                scrollAccumX = 0f
                 scrollAccumY = 0f
             }
             if (currentConfig.tapDrag && downPositions.size == 1) {
@@ -226,19 +230,29 @@ class TouchpadGestureProcessor(
                     wasTwoFingerScrolling = true
                 }
                 if (isPrimary) {
+                    scrollAccumX += deltaX
                     scrollAccumY += deltaY
+                    scrollVelocityX =
+                        scrollVelocityX * TP_SCROLL_VELOCITY_SMOOTHING +
+                        deltaX * (1f - TP_SCROLL_VELOCITY_SMOOTHING)
                     scrollVelocityY =
                         scrollVelocityY * TP_SCROLL_VELOCITY_SMOOTHING +
                         deltaY * (1f - TP_SCROLL_VELOCITY_SMOOTHING)
                     lastScrollMoveTimeMs = System.currentTimeMillis()
                     val speed = currentConfig.scrollSpeed.coerceIn(TouchpadSettings.SCROLL_SPEED_MIN, TouchpadSettings.SCROLL_SPEED_MAX)
                     val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / speed // Sensitivity threshold in pixels
-                    val units = (scrollAccumY / scrollThreshold).toInt()
-                    if (units != 0) {
+                    val directionMultiplier = if (currentConfig.naturalScrollEnabled) 1 else -1
+                    val unitsX = (scrollAccumX / scrollThreshold).toInt()
+                    if (unitsX != 0) {
                         wasTwoFingerScrolling = true
-                        val directionMultiplier = if (currentConfig.naturalScrollEnabled) 1 else -1
-                        MouseInjector.scrollWheel(units * directionMultiplier)
-                        scrollAccumY -= units * scrollThreshold
+                        MouseInjector.scrollHorizontalWheel(unitsX * directionMultiplier)
+                        scrollAccumX -= unitsX * scrollThreshold
+                    }
+                    val unitsY = (scrollAccumY / scrollThreshold).toInt()
+                    if (unitsY != 0) {
+                        wasTwoFingerScrolling = true
+                        MouseInjector.scrollWheel(unitsY * directionMultiplier)
+                        scrollAccumY -= unitsY * scrollThreshold
                     }
                 }
             } else if (isPrimary && !wasTwoFingerScrolling) {
@@ -292,6 +306,7 @@ class TouchpadGestureProcessor(
             AppLog.d(TAG, "onRelease: pressTime=$pressTime, disqualified=$disqualified, isTap=$isTap")
             if (isTap) releasedAsTap.add(pointerId)
             if (downPositions.size != 2) {
+                scrollAccumX = 0f
                 scrollAccumY = 0f
             }
 
@@ -308,13 +323,17 @@ class TouchpadGestureProcessor(
                 val shouldFling =
                     wasTwoFingerScrolling &&
                         currentConfig.twoFingerScrollEnabled &&
-                        abs(scrollVelocityY) >= TP_SCROLL_FLING_MIN_VELOCITY_PX &&
+                        (
+                            abs(scrollVelocityX) >= TP_SCROLL_FLING_MIN_VELOCITY_PX ||
+                                abs(scrollVelocityY) >= TP_SCROLL_FLING_MIN_VELOCITY_PX
+                        ) &&
                         (System.currentTimeMillis() - lastScrollMoveTimeMs) <= TP_SCROLL_STOP_TIMEOUT_MS
+                val releaseVelocityX = scrollVelocityX
                 val releaseVelocityY = scrollVelocityY
                 val tapCount = if (wasTwoFingerScrolling) 0 else releasedAsTap.size
                 resetMousePointers()
                 if (shouldFling) {
-                    startScrollFling(releaseVelocityY, currentConfig)
+                    startScrollFling(releaseVelocityX, releaseVelocityY, currentConfig)
                 }
                 when {
                     tapCount == 1 && currentConfig.tapToClick -> {
@@ -352,6 +371,7 @@ class TouchpadGestureProcessor(
         val wasDragging = isDragging
         isDragging = false
         resetMousePointers()
+        scrollAccumX = 0f
         scrollAccumY = 0f
         scrollFlingJob?.cancel()
         scrollFlingJob = null
@@ -371,6 +391,7 @@ class TouchpadGestureProcessor(
     }
 
     private fun startScrollFling(
+        initialVelocityX: Float,
         initialVelocityY: Float,
         currentConfig: TouchpadGestureConfig,
     ) {
@@ -382,20 +403,32 @@ class TouchpadGestureProcessor(
             )
         val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / speed
         val directionMultiplier = if (currentConfig.naturalScrollEnabled) 1 else -1
+        var velocityX = initialVelocityX
         var velocityY = initialVelocityY
+        var flingAccumX = 0f
         var flingAccumY = 0f
         var jobRef: Job? = null
         val job =
             scope.launch {
                 try {
-                    while (abs(velocityY) >= TP_SCROLL_FLING_STOP_VELOCITY_PX) {
+                    while (
+                        abs(velocityX) >= TP_SCROLL_FLING_STOP_VELOCITY_PX ||
+                        abs(velocityY) >= TP_SCROLL_FLING_STOP_VELOCITY_PX
+                    ) {
                         delay(TP_SCROLL_FLING_FRAME_MS)
+                        velocityX *= TP_SCROLL_FLING_FRICTION
                         velocityY *= TP_SCROLL_FLING_FRICTION
+                        flingAccumX += velocityX
                         flingAccumY += velocityY
-                        val units = (flingAccumY / scrollThreshold).toInt()
-                        if (units != 0) {
-                            MouseInjector.scrollWheel(units * directionMultiplier)
-                            flingAccumY -= units * scrollThreshold
+                        val unitsX = (flingAccumX / scrollThreshold).toInt()
+                        if (unitsX != 0) {
+                            MouseInjector.scrollHorizontalWheel(unitsX * directionMultiplier)
+                            flingAccumX -= unitsX * scrollThreshold
+                        }
+                        val unitsY = (flingAccumY / scrollThreshold).toInt()
+                        if (unitsY != 0) {
+                            MouseInjector.scrollWheel(unitsY * directionMultiplier)
+                            flingAccumY -= unitsY * scrollThreshold
                         }
                     }
                 } finally {

@@ -69,4 +69,9 @@ object MouseInjector {
         if (delta == 0) return
         PrivdClient.send("MW $delta\n")
     }
+
+    fun scrollHorizontalWheel(delta: Int) {
+        if (delta == 0) return
+        PrivdClient.send("MH $delta\n")
+    }
 }

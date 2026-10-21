@@ -65,7 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 17
+#define PRIVD_VERSION 18
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
@@ -307,6 +307,7 @@ static int init_virtual_mouse(void) {
     ioctl(fd, UI_SET_RELBIT, REL_X);
     ioctl(fd, UI_SET_RELBIT, REL_Y);
     ioctl(fd, UI_SET_RELBIT, REL_WHEEL);
+    ioctl(fd, UI_SET_RELBIT, REL_HWHEEL);
 
     ioctl(fd, UI_SET_EVBIT, EV_SYN);
 
