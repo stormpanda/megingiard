@@ -169,6 +169,31 @@ object KeyboardState {
     }
 
     /**
+     * Transitions a modifier key to [ModifierState.STICKY] when the user presses the modifier
+     * and slides off it onto a character key. If the modifier had already transitioned to
+     * [ModifierState.HELD], releases its held state (and clears ergonomic CapsLock) so the slide
+     * acts as a single-keystroke modifier.
+     */
+    fun activateStickyFromSlide(
+        id: String,
+        isFullLayout: Boolean = false,
+    ): List<Int> {
+        touchDownTimes.remove(id)
+        val flow = getOrCreate(id)
+        val releasedKeycodes = mutableListOf<Int>()
+        if (flow.value == ModifierState.HELD) {
+            val code = MODIFIER_KEYCODES[id] ?: 0
+            if (code != 0) releasedKeycodes.add(code)
+            if (!isFullLayout && (id == "lshift" || id == "rshift")) {
+                getOrCreate("caps").value = ModifierState.INACTIVE
+            }
+        }
+        AppLog.d(TAG, "modifier '$id' ${flow.value} → STICKY (slide from modifier)")
+        flow.value = ModifierState.STICKY
+        return releasedKeycodes
+    }
+
+    /**
      * Clears all non-Caps [ModifierState.STICKY] modifiers and returns the list of
      * keycodes that need KEY_UP injection.
      */

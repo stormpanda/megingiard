@@ -21,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -181,36 +180,40 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                     ),
         ) {
             Crossfade(
-                targetState = layoutState,
+                targetState = layoutState.mode == KeyboardMode.FULL,
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 animationSpec = tween(KS_TRANSITION_DURATION_MS),
                 label = "Layout Switch",
-            ) { activeState ->
-                key(activeState.mode) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                    ) {
-                        KeyboardTopToolbar(
-                            activeState = activeState,
-                        )
-
-                        KeyboardMacroQuickRow(
-                            visible = isMacroRowVisible && activeState.mode != KeyboardMode.FULL,
-                        )
-
-                        KeyboardLayoutGrid(
-                            activeState = activeState,
-                            gestureProcessor = gestureProcessor,
-                            pressedKeys = pressedKeys,
-                            isShiftActive = isShiftActive,
-                            isCapsActive = isCapsActive,
-                            isAltGrActive = isAltGrActive,
-                            isQuickMenuOpen = isQuickMenuOpen,
-                            onCloseQuickMenu = { viewModel.closeQuickMenu() },
-                            onModeChange = { nextMode -> viewModel.setKeyboardMode(nextMode) },
-                            modifier = Modifier.weight(1f),
-                        )
+            ) { isFullMode ->
+                val activeState =
+                    if (isFullMode == (layoutState.mode == KeyboardMode.FULL)) {
+                        layoutState
+                    } else {
+                        remember { layoutState }
                     }
+                Column(
+                    modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                ) {
+                    KeyboardTopToolbar(
+                        activeState = activeState,
+                    )
+
+                    KeyboardMacroQuickRow(
+                        visible = isMacroRowVisible && !isFullMode,
+                    )
+
+                    KeyboardLayoutGrid(
+                        activeState = activeState,
+                        gestureProcessor = gestureProcessor,
+                        pressedKeys = pressedKeys,
+                        isShiftActive = isShiftActive,
+                        isCapsActive = isCapsActive,
+                        isAltGrActive = isAltGrActive,
+                        isQuickMenuOpen = isQuickMenuOpen,
+                        onCloseQuickMenu = { viewModel.closeQuickMenu() },
+                        onModeChange = { nextMode -> viewModel.setKeyboardMode(nextMode) },
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
 

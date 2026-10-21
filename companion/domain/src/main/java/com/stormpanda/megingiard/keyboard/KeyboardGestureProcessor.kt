@@ -31,6 +31,8 @@ class KeyboardGestureProcessor(
     private val onInjectPopupSelection: (KeyDef, String) -> Unit = { _, _ -> },
     private val injector: KeyCodeInjector = RealKeyCodeInjector,
     var onHapticFeedback: () -> Unit = {},
+    private val onModeChange: (KeyboardMode) -> Unit = {},
+    private val activeMode: () -> KeyboardMode = { KeyboardMode.LETTERS },
 ) {
     var density = initialDensity
 
@@ -57,6 +59,8 @@ class KeyboardGestureProcessor(
     var isSpaceDragging = false
     var accumulatedSpaceDeltaX = 0f
     var spaceDragPointerId: Long? = null
+    private var modeSwitchSlidePointerId: Long? = null
+    private var modeSwitchSlideMoved = false
 
     fun updateBounds(
         id: String,
@@ -111,6 +115,21 @@ class KeyboardGestureProcessor(
         pressPositions[pointerId] = Pair(x, y)
 
         val keyId = hoveredKeyDef?.id
+        if (keyId != null && keyId.startsWith("mode_switch")) {
+            onHapticFeedback()
+            val targetMode =
+                when (keyId) {
+                    "mode_switch" -> KeyboardMode.SYMBOLS_1
+                    "mode_switch_abc" -> KeyboardMode.LETTERS
+                    "mode_switch_1234" -> KeyboardMode.NUMERIC
+                    else -> KeyboardMode.LETTERS
+                }
+            modeSwitchSlidePointerId = pointerId
+            modeSwitchSlideMoved = false
+            pointerKeyMap[pointerId] = hoveredKeyDef
+            onModeChange(targetMode)
+            return
+        }
         if (hoveredKeyDef != null && isCharKey(hoveredKeyDef)) {
             val bounds = keyBounds[keyId]
             if (bounds != null) {
@@ -221,14 +240,14 @@ class KeyboardGestureProcessor(
                     }
                 } else {
                     val startPos = pressPositions[pointerId]
-                    if (startPos != null) {
-                        val dist = distance(x, y, startPos.first, startPos.second)
-                        if (dist > longPressSwipeThresholdPx) {
-                            longPressJobs[pointerId]?.cancel()
-                            longPressJobs.remove(pointerId)
-                            _activePopupState.value = null
-                            virtualAnchorX = 0f
-                        }
+                    val hasLongPressJob = longPressJobs.containsKey(pointerId)
+                    if (!hasLongPressJob ||
+                        (startPos != null && distance(x, y, startPos.first, startPos.second) > longPressSwipeThresholdPx)
+                    ) {
+                        longPressJobs.remove(pointerId)?.cancel()
+                        virtualAnchorX = 0f
+                        onKeyMove(pointerId, hoveredKeyDef, dx, dy, isFullLayout)
+                        updatePreviewPopupForHover(pointerId, hoveredKeyDef)
                     }
                 }
             } else {
@@ -271,6 +290,7 @@ class KeyboardGestureProcessor(
                         }
                     }
                     onKeyMove(pointerId, hoveredKeyDef, dx, dy, isFullLayout)
+                    updatePreviewPopupForHover(pointerId, hoveredKeyDef)
                 }
             }
         }
@@ -289,6 +309,11 @@ class KeyboardGestureProcessor(
         if (pointerId == spaceDragPointerId) {
             spaceDragPointerId = null
             isSpaceDragging = false
+        }
+        val wasModeSwitchSlide = pointerId == modeSwitchSlidePointerId && modeSwitchSlideMoved
+        if (pointerId == modeSwitchSlidePointerId) {
+            modeSwitchSlidePointerId = null
+            modeSwitchSlideMoved = false
         }
 
         if (wasDragging) {
@@ -311,6 +336,9 @@ class KeyboardGestureProcessor(
             } else {
                 onKeyUp(pointerId, isFullLayout, skipInjection = false)
             }
+            if (wasModeSwitchSlide && activeMode() != KeyboardMode.LETTERS) {
+                onModeChange(KeyboardMode.LETTERS)
+            }
             if (pressPositions.isEmpty()) {
                 _activePopupState.value = null
             }
@@ -331,6 +359,8 @@ class KeyboardGestureProcessor(
         spaceDragPointerId = null
         isSpaceDragging = false
         accumulatedSpaceDeltaX = 0f
+        modeSwitchSlidePointerId = null
+        modeSwitchSlideMoved = false
     }
 
     fun onKeyDown(
@@ -376,18 +406,28 @@ class KeyboardGestureProcessor(
         val prevDef = pointerKeyMap[pointerId] ?: return false
         val newDef = newKeyDef ?: return false
         if (prevDef.id == newDef.id) return false
+        if (newDef.id.startsWith("mode_switch")) return false
 
-        if (prevDef.type == KeyType.NORMAL && prevDef.linuxKeycode != 0) {
+        if (prevDef.type == KeyType.MODIFIER && !isFullLayout) {
+            modifierBeingHeldId = null
+            modifierHoldJob?.cancel()
+            KeyboardState
+                .activateStickyFromSlide(prevDef.id, isFullLayout)
+                .forEach { injector.keyUp(it) }
+        } else if (prevDef.type == KeyType.NORMAL) {
             heldKey = null
             repeatJob?.cancel()
             val isPrevCharKey = prevDef.isCharacterKey
-            if (!isPrevCharKey) {
+            if (!isPrevCharKey && prevDef.linuxKeycode != 0) {
                 releasePointerDownKeycodes(pointerId)
             }
             _pressedKeys.value = _pressedKeys.value - prevDef.id
         }
 
         if (newDef.type == KeyType.NORMAL) {
+            if (pointerId == modeSwitchSlidePointerId) {
+                modeSwitchSlideMoved = true
+            }
             pointerKeyMap[pointerId] = newDef
             _pressedKeys.value = _pressedKeys.value + newDef.id
             heldKey = newDef
@@ -425,6 +465,11 @@ class KeyboardGestureProcessor(
                         KeyboardState
                             .releaseStickyModifiers()
                             .forEach { injector.keyUp(it) }
+                        if ((releasedId == "space" || releasedId == "space_num") &&
+                            activeMode() == KeyboardMode.SYMBOLS_1
+                        ) {
+                            onModeChange(KeyboardMode.LETTERS)
+                        }
                     } else if (keyDef.linuxKeycode != 0) {
                         releasePointerDownKeycodes(pointerId)
                         KeyboardState
@@ -492,6 +537,37 @@ class KeyboardGestureProcessor(
         spaceDragPointerId = null
         isSpaceDragging = false
         accumulatedSpaceDeltaX = 0f
+        modeSwitchSlidePointerId = null
+        modeSwitchSlideMoved = false
+    }
+
+    private fun updatePreviewPopupForHover(
+        pointerId: Long,
+        hoveredKeyDef: KeyDef?,
+    ) {
+        if (hoveredKeyDef != null && isCharKey(hoveredKeyDef)) {
+            val bounds = keyBounds[hoveredKeyDef.id]
+            if (bounds != null) {
+                val label = hoveredKeyDef.resolveDisplayLabel(isShiftActive(), isCapsActive(), isAltGrActive())
+                val currentPopup = _activePopupState.value
+                if (currentPopup == null ||
+                    currentPopup.keyDef.id != hoveredKeyDef.id ||
+                    currentPopup.options.firstOrNull() != label
+                ) {
+                    _activePopupState.value =
+                        PopupState(
+                            hoveredKeyDef,
+                            listOf(label),
+                            0,
+                            bounds,
+                            isLongPress = false,
+                            pointerId = pointerId,
+                        )
+                }
+            }
+        } else if (_activePopupState.value?.pointerId == pointerId) {
+            _activePopupState.value = null
+        }
     }
 
     private fun releasePointerDownKeycodes(pointerId: Long) {
@@ -521,6 +597,11 @@ class KeyboardGestureProcessor(
                 KeyboardState
                     .releaseStickyModifiers()
                     .forEach { injector.keyUp(it) }
+                if ((otherKeyDef.id == "space" || otherKeyDef.id == "space_num") &&
+                    activeMode() == KeyboardMode.SYMBOLS_1
+                ) {
+                    onModeChange(KeyboardMode.LETTERS)
+                }
             }
             committedByRollover.add(otherPid)
         }

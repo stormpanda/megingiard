@@ -43,15 +43,22 @@ class KeyboardGestureProcessorTest {
         injector: KeyCodeInjector = TestKeyCodeInjector(),
         onInjectPopupSelection: (KeyDef, String) -> Unit = { _, _ -> },
         onHapticFeedback: () -> Unit = {},
+        onModeChange: (KeyboardMode) -> Unit = {},
+        activeMode: () -> KeyboardMode = { KeyboardMode.LETTERS },
     ) = KeyboardGestureProcessor(
         scope = this,
-        isShiftActive = { false },
-        isCapsActive = { false },
-        isAltGrActive = { false },
+        isShiftActive = {
+            KeyboardState.stateFor("lshift").value != ModifierState.INACTIVE ||
+                KeyboardState.stateFor("rshift").value != ModifierState.INACTIVE
+        },
+        isCapsActive = { KeyboardState.stateFor("caps").value != ModifierState.INACTIVE },
+        isAltGrActive = { KeyboardState.stateFor("altgr").value != ModifierState.INACTIVE },
         initialDensity = 1.0f,
         onInjectPopupSelection = onInjectPopupSelection,
         injector = injector,
         onHapticFeedback = onHapticFeedback,
+        onModeChange = onModeChange,
+        activeMode = activeMode,
     )
 
     @Test
@@ -419,5 +426,96 @@ class KeyboardGestureProcessorTest {
             assertEquals(8, hapticCount)
             processor.onModifierRelease("ctrl", LinuxKeycodes.KEY_LEFTCTRL, isFullLayout = false)
             KeyboardState.reset()
+        }
+
+    @Test
+    fun `tapping space in SYMBOLS_1 mode injects space and auto-returns to LETTERS mode`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            var currentMode = KeyboardMode.SYMBOLS_1
+            val processor =
+                createProcessor(
+                    injector = testInjector,
+                    onModeChange = { currentMode = it },
+                    activeMode = { currentMode },
+                )
+            processor.updateBounds("space", 0f, 50f, 150f, 100f)
+
+            processor.onPress(1L, 75f, 75f, grid, isFullLayout = false)
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertEquals(
+                listOf("down" to LinuxKeycodes.KEY_SPACE, "up" to LinuxKeycodes.KEY_SPACE),
+                testInjector.calls,
+            )
+            assertEquals(KeyboardMode.LETTERS, currentMode)
+        }
+
+    @Test
+    fun `hold and slide from lshift onto letter key injects shifted letter and resets sticky shift`() =
+        runTest(testDispatcher) {
+            KeyboardState.reset()
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            val lshiftDef = KeyDef("lshift", "Shift", LinuxKeycodes.KEY_LEFTSHIFT, type = KeyType.MODIFIER)
+            val qDef = KeyDef("q", "q", LinuxKeycodes.KEY_Q)
+            val slideGrid = listOf(listOf(lshiftDef, qDef))
+            processor.updateBounds("lshift", 0f, 0f, 50f, 40f)
+            processor.updateBounds("q", 50f, 0f, 100f, 40f)
+
+            processor.onPress(1L, 25f, 20f, slideGrid, isFullLayout = false)
+            processor.onMove(1L, 75f, 20f, 50f, 0f, slideGrid, isFullLayout = false)
+            assertEquals(ModifierState.STICKY, KeyboardState.stateFor("lshift").value)
+            assertEquals(
+                "Q",
+                processor.activePopupState.value
+                    ?.options
+                    ?.firstOrNull(),
+            )
+
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertEquals(
+                listOf(
+                    "down" to LinuxKeycodes.KEY_LEFTSHIFT,
+                    "down" to LinuxKeycodes.KEY_Q,
+                    "up" to LinuxKeycodes.KEY_Q,
+                    "up" to LinuxKeycodes.KEY_LEFTSHIFT,
+                    "up" to LinuxKeycodes.KEY_LEFTSHIFT,
+                ),
+                testInjector.calls,
+            )
+            assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("lshift").value)
+            KeyboardState.reset()
+        }
+
+    @Test
+    fun `hold and slide from mode_switch onto symbol key injects symbol and returns to LETTERS mode`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            var currentMode = KeyboardMode.LETTERS
+            val processor =
+                createProcessor(
+                    injector = testInjector,
+                    onModeChange = { currentMode = it },
+                    activeMode = { currentMode },
+                )
+            val modeSwitchDef = KeyDef("mode_switch", "?123", 0)
+            val num1Def = KeyDef("1", "1", LinuxKeycodes.KEY_1)
+            val slideGrid = listOf(listOf(modeSwitchDef, num1Def))
+            processor.updateBounds("mode_switch", 0f, 0f, 50f, 40f)
+            processor.updateBounds("1", 50f, 0f, 100f, 40f)
+
+            processor.onPress(1L, 25f, 20f, slideGrid, isFullLayout = false)
+            assertEquals(KeyboardMode.SYMBOLS_1, currentMode)
+
+            processor.onMove(1L, 75f, 20f, 50f, 0f, slideGrid, isFullLayout = false)
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertEquals(
+                listOf("down" to LinuxKeycodes.KEY_1, "up" to LinuxKeycodes.KEY_1),
+                testInjector.calls,
+            )
+            assertEquals(KeyboardMode.LETTERS, currentMode)
         }
 }

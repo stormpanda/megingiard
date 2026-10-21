@@ -78,6 +78,8 @@ class KeyboardViewModel : ViewModel() {
             },
             initialDensity = 1f,
             onInjectPopupSelection = ::injectPopupSelection,
+            onModeChange = ::setKeyboardMode,
+            activeMode = { _keyboardMode.value },
         )
 
     fun closeQuickMenu() = AppStateManager.closeQuickMenu()

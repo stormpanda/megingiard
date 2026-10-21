@@ -27,6 +27,8 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
   - **NUMERIC (`KeyboardMode.NUMERIC`):** 4-row split numeric keypad with arithmetic operators on the left column and a 3×3 digit grid + bottom row on the right, accessed via the `1234` switcher key (`mode_switch_1234`).
   - **COMPACT FULL (`KeyboardMode.FULL`):** 6-row physical-style keyboard layout (`FR-K11`), toggled via the mode switch pill in `KeyboardBottomToolbar`.
 - Tapping switcher keys (`?123`, `ABC`, `1234`) switches the active sub-mode and resets active sticky/held modifiers.
+- Pressing `?123` (`mode_switch`), sliding onto a symbol/number key in `KeyboardMode.SYMBOLS_1`, and releasing injects that key and automatically returns to `KeyboardMode.LETTERS` (`ABC`). Tapping `Space` while in `KeyboardMode.SYMBOLS_1` also injects a space keystroke and automatically returns to `KeyboardMode.LETTERS`.
+- Pressing a modifier key (such as `Shift`) in ergonomic modes, sliding onto a character key, and releasing transitions the modifier to `STICKY` for the slide (`KeyboardState.activateStickyFromSlide`), injects the modified character on release, and resets the sticky modifier back to `INACTIVE`.
 - Shift and AltGr alternate labels MUST be shown on individual keys when the respective modifier is active (`KeyDef.resolveDisplayLabel`).
 
 ### FR-K2: Modifier Keys
