@@ -1399,10 +1399,10 @@ fun MacroPadEditor(
                                                         ),
                                                     )
                                                 },
-                                                onOpenOverlayPicker = { currentDraft ->
+                                                onOpenToolsPicker = { currentDraft ->
                                                     pushSubPageFromEdit(
                                                         currentDraft,
-                                                        MacroPadSubPage.ChooseOverlayAction(
+                                                        MacroPadSubPage.ChooseToolsAction(
                                                             buttonId = currentSubPage.buttonId,
                                                         ),
                                                     )
@@ -1753,7 +1753,7 @@ fun MacroPadEditor(
                                         }
                                     }
 
-                                    is MacroPadSubPage.ChooseOverlayAction -> {
+                                    is MacroPadSubPage.ChooseToolsAction -> {
                                         val savedButton =
                                             currentSubPage.buttonId?.let { id ->
                                                 activeLayout?.buttons?.firstOrNull { it.id == id }
@@ -1781,10 +1781,10 @@ fun MacroPadEditor(
                                                             },
                                                         )
                                                     },
-                                                    stringResource(R.string.macropad_picker_overlay_title),
+                                                    stringResource(R.string.macropad_picker_tools_title),
                                                 ),
                                         ) {
-                                            OverlayActionPickerSubPageContent(
+                                            ToolsActionPickerSubPageContent(
                                                 currentAction = effectiveButton.action,
                                                 onSelectAction = { act ->
                                                     val updatedDraft = applyActionToDraftButton(effectiveButton, act)

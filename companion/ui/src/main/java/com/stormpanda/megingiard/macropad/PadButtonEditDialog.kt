@@ -398,7 +398,7 @@ internal fun EditButtonSubPageContent(
     onOpenGamepadPicker: ((currentDraft: PadButton, slotIndex: Int) -> Unit)? = null,
     onOpenMousePicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenMirrorPicker: ((currentDraft: PadButton) -> Unit)? = null,
-    onOpenOverlayPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenToolsPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenLayoutPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenMacroPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onDuplicate: ((PadButton) -> Unit)? = null,
@@ -654,8 +654,8 @@ internal fun EditButtonSubPageContent(
         onOpenMirrorPicker = {
             onOpenMirrorPicker?.invoke(currentButton)
         },
-        onOpenOverlayPicker = {
-            onOpenOverlayPicker?.invoke(currentButton)
+        onOpenToolsPicker = {
+            onOpenToolsPicker?.invoke(currentButton)
         },
         onOpenLayoutPicker = {
             onOpenLayoutPicker?.invoke(currentButton)

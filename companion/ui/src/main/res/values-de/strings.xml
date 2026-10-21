@@ -213,6 +213,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_mirror_touch_projection">Touch-Projektion</string>
     <string name="macropad_action_fullscreen_mouse">Vollbild-Maus</string>
     <string name="macropad_action_fullscreen_keyboard">Vollbild-Tastatur</string>
+    <string name="macropad_action_screenshot_top">Screenshot (Oberer Bildschirm)</string>
+    <string name="macropad_action_screenshot_bottom">Screenshot (Unterer Bildschirm)</string>
+    <string name="macropad_action_screenshot_both">Screenshot (Beide Bildschirme)</string>
     <string name="macropad_action_app_launcher">App Quick-Switch</string>
     <string name="app_launcher_picker_title">Anwendung auswählen</string>
     <string name="app_launcher_picker_select_app">App wählen</string>
@@ -637,8 +640,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_mirror_desc">Bildschirmübertragung, Einfrieren oder Touch-Projektion steuern</string>
     <string name="macropad_action_group_app_launcher">App Quick-Switch</string>
     <string name="macropad_action_group_app_launcher_desc">Schnell zwischen Megingiard und einer anderen App wechseln</string>
-    <string name="macropad_action_group_other">Overlays</string>
-    <string name="macropad_action_group_other_desc">Vollbild-Maus- und Tastatur-Overlays öffnen</string>
+    <string name="macropad_action_group_tools">Werkzeuge</string>
+    <string name="macropad_action_group_tools_desc">Vollbild-Maus- und Tastatur-Overlays öffnen oder Screenshots erstellen</string>
     <string name="macropad_editor_button_type">Tastentyp</string>
 
     <!-- Log report export -->
@@ -1128,7 +1131,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_picker_visual_gamepad_title">Gamepad-Taste auswählen</string>
     <string name="macropad_picker_visual_mouse_title">Mausaktion auswählen</string>
     <string name="macropad_picker_mirror_title">Mirror-Aktion auswählen</string>
-    <string name="macropad_picker_overlay_title">Overlay-Aktion auswählen</string>
+    <string name="macropad_picker_tools_title">Werkzeug-Aktion auswählen</string>
     <string name="macropad_picker_layout_title">Layout-Aktion auswählen</string>
     <string name="macropad_mouse_btn_left">Linksklick</string>
     <string name="macropad_mouse_btn_left_desc">Primäre Maustaste</string>
@@ -1149,6 +1152,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_ambient_peek_desc">Gedrückt halten oder tippen, um den Bildschirm darunter zu zeigen</string>
     <string name="macropad_action_fullscreen_mouse_desc">Vollbild-Touchpad-Overlay öffnen</string>
     <string name="macropad_action_fullscreen_keyboard_desc">Vollbild-Tastatur-Overlay öffnen</string>
+    <string name="macropad_action_screenshot_top_desc">Screenshot des oberen Bildschirms aufnehmen und speichern</string>
+    <string name="macropad_action_screenshot_bottom_desc">Screenshot des unteren Bildschirms aufnehmen und speichern</string>
+    <string name="macropad_action_screenshot_both_desc">Beide Bildschirme aufnehmen und als kombiniertes Bild speichern</string>
     <string name="macropad_action_layout_next_desc">Zum nächsten Layout im Profil wechseln</string>
     <string name="macropad_action_layout_previous_desc">Zum vorherigen Layout im Profil wechseln</string>
     <string name="macropad_action_profile_switcher_desc">Profil-Auswahlmenü öffnen</string>

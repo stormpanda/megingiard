@@ -55,15 +55,18 @@
   | `MirrorTouchProjection` | Touch Projection    | `touch_app`     |
   | `FullScreenMouse`       | Mouse               | `mouse`         |
   | `FullScreenKeyboard`    | Keyboard            | `keyboard`      |
+  | `Screenshot(TOP)`       | Screenshot (Top)    | `splitscreen_bottom` |
+  | `Screenshot(BOTTOM)`    | Screenshot (Bottom) | `splitscreen_top` |
+  | `Screenshot(BOTH)`      | Screenshot (Both)   | `splitscreen`   |
   | `Macro`                 | _(from macro name)_ | `smart_button`  |
   | All others              | _(empty)_           | _(null)_        |
 
 - `ScrollWheel`, `TrackpointMove`, and `BackgroundPeek` are excluded — they have fixed rendering and do not use labels or icons.
 
-### FR-P12: Grouped Action Dropdown in Button Editor
+### FR-P12: Grouped Action Selection in Button Editor
 
-- `PadActionPicker` MUST provide a grouped action selection flow in `ButtonEditDialog`.
-- The first dropdown selects the action **group** (`Keyboard`, `Gamepad`, `Mouse`, `Macro`, `Layout`, `Mirror`, `Profile`, `Other`).
+- `PadActionPicker` MUST provide a grouped action selection flow in `EditButtonSubPageContent`.
+- The button type group (`Keyboard`, `Gamepad`, `Mouse`, `App Quick-Switch`, `Macro`, `Layout`, `Mirror`, `Tools`) determines which action sub-page picker opens.
 - The second dropdown selects the concrete action inside the currently selected group. **If the selected group only has a single enabled concrete action, this second dropdown is hidden, and that action is automatically selected in the background.**
 - Group and action labels MUST come from `strings.xml` resources.
 - Existing action-specific inline editors (keyboard modifier slots, gamepad extra-button slots, macro picker) MUST remain unchanged and appear after action selection.

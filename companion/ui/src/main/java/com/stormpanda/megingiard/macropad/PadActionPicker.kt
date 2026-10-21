@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Mouse
@@ -22,7 +23,7 @@ internal fun ActionPicker(
     onOpenGamepadPicker: (slotIndex: Int) -> Unit = {},
     onOpenMousePicker: () -> Unit = {},
     onOpenMirrorPicker: () -> Unit = {},
-    onOpenOverlayPicker: () -> Unit = {},
+    onOpenToolsPicker: () -> Unit = {},
     onOpenLayoutPicker: () -> Unit = {},
     isFirstItem: Boolean = false,
     onChange: (PadAction) -> Unit,
@@ -87,19 +88,21 @@ internal fun ActionPicker(
         is PadAction.FullScreenMouse -> {
             FullScreenMousePicker(
                 current = current,
-                onOpenPicker = onOpenOverlayPicker,
+                onOpenPicker = onOpenToolsPicker,
                 onChange = onChange,
                 isFirstItem = isFirstItem,
             )
         }
 
-        is PadAction.FullScreenKeyboard -> {
+        is PadAction.FullScreenKeyboard,
+        is PadAction.Screenshot,
+        -> {
             GamepadActionCard(
-                title = stringResource(R.string.macropad_action_group_other),
-                description = stringResource(R.string.macropad_action_group_other_desc),
+                title = stringResource(R.string.macropad_action_group_tools),
+                description = stringResource(R.string.macropad_action_group_tools_desc),
                 actionText = current.displayLabel(),
-                icon = Icons.Rounded.Layers,
-                onClick = onOpenOverlayPicker,
+                icon = Icons.Rounded.Build,
+                onClick = onOpenToolsPicker,
                 modifier = Modifier.firstDeckItem(isFirstItem),
             )
         }

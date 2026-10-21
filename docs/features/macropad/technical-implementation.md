@@ -143,6 +143,7 @@ PadProfile
         │     MouseButton(button: MouseButton enum)
         │     ScrollWheel
         │     TrackpointMove(size: TrackpointSize = MEDIUM, mode: TrackpointMode) — legacy size deprecated; sized via PadButton.widthDp/heightDp
+        │     Screenshot(target: ScreenshotTarget = TOP)
         └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG | CUSTOM, default OFF)
 ```
 

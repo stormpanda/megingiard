@@ -113,6 +113,11 @@ fun injectActionDown(action: PadAction) {
                 AppStateManager.requestAppLaunch(action.packageName)
             }
         }
+
+        is PadAction.Screenshot -> {
+            AppLog.d(TAG, "actionDown: Screenshot target=${action.target}")
+            ScreenCaptureManager.requestScreenshot(action.target)
+        }
     }
 }
 

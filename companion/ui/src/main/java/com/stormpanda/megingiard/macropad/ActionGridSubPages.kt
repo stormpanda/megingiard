@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.PauseCircle
+import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.TouchApp
@@ -22,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
@@ -69,7 +71,7 @@ private val MIRROR_ACTION_ITEMS =
         ),
     )
 
-private val OVERLAY_ACTION_ITEMS =
+private val TOOLS_ACTION_ITEMS =
     listOf(
         ActionGridItem(
             PadAction.FullScreenMouse(),
@@ -82,6 +84,24 @@ private val OVERLAY_ACTION_ITEMS =
             R.string.macropad_action_fullscreen_keyboard,
             R.string.macropad_action_fullscreen_keyboard_desc,
             Icons.Rounded.Keyboard,
+        ),
+        ActionGridItem(
+            PadAction.Screenshot(ScreenshotTarget.TOP),
+            R.string.macropad_action_screenshot_top,
+            R.string.macropad_action_screenshot_top_desc,
+            Icons.Rounded.PhotoCamera,
+        ),
+        ActionGridItem(
+            PadAction.Screenshot(ScreenshotTarget.BOTTOM),
+            R.string.macropad_action_screenshot_bottom,
+            R.string.macropad_action_screenshot_bottom_desc,
+            Icons.Rounded.PhotoCamera,
+        ),
+        ActionGridItem(
+            PadAction.Screenshot(ScreenshotTarget.BOTH),
+            R.string.macropad_action_screenshot_both,
+            R.string.macropad_action_screenshot_both_desc,
+            Icons.Rounded.PhotoCamera,
         ),
     )
 
@@ -121,7 +141,7 @@ private fun GenericActionGridPickerSubPageContent(
         items = items,
         modifier = modifier,
     ) { item, _, cardModifier ->
-        val isSelected = currentAction::class == item.action::class
+        val isSelected = currentAction.toCategory() == item.action.toCategory()
 
         GamepadActionCard(
             title = stringResource(item.titleRes),
@@ -151,14 +171,14 @@ internal fun MirrorActionPickerSubPageContent(
 }
 
 @Composable
-internal fun OverlayActionPickerSubPageContent(
+internal fun ToolsActionPickerSubPageContent(
     currentAction: PadAction,
     onSelectAction: (action: PadAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     GenericActionGridPickerSubPageContent(
-        tag = "OverlayActionPickerSubPageContent",
-        items = OVERLAY_ACTION_ITEMS,
+        tag = "ToolsActionPickerSubPageContent",
+        items = TOOLS_ACTION_ITEMS,
         currentAction = currentAction,
         onSelectAction = onSelectAction,
         modifier = modifier,

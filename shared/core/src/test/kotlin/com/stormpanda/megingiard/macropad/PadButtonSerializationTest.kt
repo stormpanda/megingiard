@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -335,5 +336,43 @@ class PadButtonSerializationTest {
         assertEquals(75f, updated.widthDp, 0.001f)
         assertEquals(95f, updated.heightDp, 0.001f)
         assertEquals(ButtonShape.ICON_ONLY, updated.buttonShape)
+    }
+
+    @Test
+    fun `Screenshot action serializes and deserializes across all targets and defaults`() {
+        for (target in ScreenshotTarget.entries) {
+            val button =
+                PadButton(
+                    id = "btn-screenshot-${target.name}",
+                    label = "Shot ${target.name}",
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.Screenshot(target),
+                )
+            val encoded = json.encodeToString(button)
+            assertTrue(encoded.contains("\"type\":\"screenshot\""))
+            val decoded = json.decodeFromString<PadButton>(encoded)
+            assertEquals(button, decoded)
+        }
+
+        val defaultTargetJson =
+            """
+            {
+                "id": "btn-screenshot-default",
+                "label": "Shot Default",
+                "posX": 0.5,
+                "posY": 0.5,
+                "action": { "type": "screenshot" }
+            }
+            """.trimIndent()
+        val decodedDefault = json.decodeFromString<PadButton>(defaultTargetJson)
+        assertEquals(PadAction.Screenshot(ScreenshotTarget.TOP), decodedDefault.action)
+    }
+
+    @Test
+    fun `Screenshot action defaultIconName returns matching splitscreen symbol for each target`() {
+        assertEquals("splitscreen_bottom", PadAction.Screenshot(ScreenshotTarget.TOP).defaultIconName())
+        assertEquals("splitscreen_top", PadAction.Screenshot(ScreenshotTarget.BOTTOM).defaultIconName())
+        assertEquals("splitscreen", PadAction.Screenshot(ScreenshotTarget.BOTH).defaultIconName())
     }
 }

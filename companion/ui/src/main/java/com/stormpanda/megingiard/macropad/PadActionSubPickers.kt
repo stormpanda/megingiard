@@ -2,10 +2,10 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SportsEsports
@@ -263,10 +263,10 @@ internal fun FullScreenMousePicker(
     AppLog.d(TAG, "FullScreenMousePicker: sens=${current.sensitivity}")
 
     GamepadActionCard(
-        title = stringResource(R.string.macropad_action_group_other),
-        description = stringResource(R.string.macropad_action_group_other_desc),
+        title = stringResource(R.string.macropad_action_group_tools),
+        description = stringResource(R.string.macropad_action_group_tools_desc),
         actionText = current.displayLabel(),
-        icon = Icons.Rounded.Layers,
+        icon = Icons.Rounded.Build,
         onClick = onOpenPicker,
         modifier = Modifier.firstDeckItem(isFirstItem),
     )

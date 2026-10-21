@@ -6,13 +6,14 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.PauseCircle
+import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.SwapHoriz
@@ -28,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
+import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.settings.MacroPadSettings
 
 private const val TAG = "PadActionDisplay"
@@ -72,10 +74,10 @@ internal enum class ActionGroup(
         R.string.macropad_action_group_mirror,
         R.string.macropad_action_group_mirror_desc,
     ),
-    OTHER(
-        Icons.Rounded.Layers,
-        R.string.macropad_action_group_other,
-        R.string.macropad_action_group_other_desc,
+    TOOLS(
+        Icons.Rounded.Build,
+        R.string.macropad_action_group_tools,
+        R.string.macropad_action_group_tools_desc,
     ),
     ;
 
@@ -182,14 +184,32 @@ internal enum class ActionCategory(
     FULLSCREEN_MOUSE(
         Icons.Rounded.Mouse,
         R.string.macropad_action_fullscreen_mouse,
-        ActionGroup.OTHER,
+        ActionGroup.TOOLS,
         { PadAction.FullScreenMouse() },
     ),
     FULLSCREEN_KEYBOARD(
         Icons.Rounded.Keyboard,
         R.string.macropad_action_fullscreen_keyboard,
-        ActionGroup.OTHER,
+        ActionGroup.TOOLS,
         { PadAction.FullScreenKeyboard() },
+    ),
+    SCREENSHOT_TOP(
+        Icons.Rounded.PhotoCamera,
+        R.string.macropad_action_screenshot_top,
+        ActionGroup.TOOLS,
+        { PadAction.Screenshot(ScreenshotTarget.TOP) },
+    ),
+    SCREENSHOT_BOTTOM(
+        Icons.Rounded.PhotoCamera,
+        R.string.macropad_action_screenshot_bottom,
+        ActionGroup.TOOLS,
+        { PadAction.Screenshot(ScreenshotTarget.BOTTOM) },
+    ),
+    SCREENSHOT_BOTH(
+        Icons.Rounded.PhotoCamera,
+        R.string.macropad_action_screenshot_both,
+        ActionGroup.TOOLS,
+        { PadAction.Screenshot(ScreenshotTarget.BOTH) },
     ),
     APP_LAUNCHER(
         Icons.Rounded.Apps,
@@ -206,23 +226,81 @@ internal fun PadAction.categoryResId(): Int = toCategory().labelResId
 
 internal fun PadAction.toCategory(): ActionCategory =
     when (this) {
-        is PadAction.KeyboardKey -> ActionCategory.KEYBOARD_KEY
-        is PadAction.GamepadButton -> ActionCategory.GAMEPAD_BUTTON
-        is PadAction.MouseButton -> ActionCategory.MOUSE_BUTTON
-        is PadAction.ScrollWheel -> ActionCategory.SCROLL_WHEEL
-        is PadAction.TrackpointMove -> ActionCategory.TRACKPOINT
-        is PadAction.Macro -> ActionCategory.MACRO
-        is PadAction.BackgroundPeek -> ActionCategory.BACKGROUND_PEEK
-        is PadAction.LayoutNext -> ActionCategory.LAYOUT_NEXT
-        is PadAction.LayoutPrevious -> ActionCategory.LAYOUT_PREVIOUS
-        is PadAction.ProfileSwitcher -> ActionCategory.PROFILE_SWITCHER
-        is PadAction.MirrorPlayStop -> ActionCategory.MIRROR_PLAY_STOP
-        is PadAction.MirrorFreeze -> ActionCategory.MIRROR_FREEZE
-        is PadAction.MirrorViewportEdit -> ActionCategory.MIRROR_VIEWPORT_EDIT
-        is PadAction.MirrorTouchProjection -> ActionCategory.MIRROR_TOUCH_PROJECTION
-        is PadAction.FullScreenMouse -> ActionCategory.FULLSCREEN_MOUSE
-        is PadAction.FullScreenKeyboard -> ActionCategory.FULLSCREEN_KEYBOARD
-        is PadAction.AppLauncher -> ActionCategory.APP_LAUNCHER
+        is PadAction.KeyboardKey -> {
+            ActionCategory.KEYBOARD_KEY
+        }
+
+        is PadAction.GamepadButton -> {
+            ActionCategory.GAMEPAD_BUTTON
+        }
+
+        is PadAction.MouseButton -> {
+            ActionCategory.MOUSE_BUTTON
+        }
+
+        is PadAction.ScrollWheel -> {
+            ActionCategory.SCROLL_WHEEL
+        }
+
+        is PadAction.TrackpointMove -> {
+            ActionCategory.TRACKPOINT
+        }
+
+        is PadAction.Macro -> {
+            ActionCategory.MACRO
+        }
+
+        is PadAction.BackgroundPeek -> {
+            ActionCategory.BACKGROUND_PEEK
+        }
+
+        is PadAction.LayoutNext -> {
+            ActionCategory.LAYOUT_NEXT
+        }
+
+        is PadAction.LayoutPrevious -> {
+            ActionCategory.LAYOUT_PREVIOUS
+        }
+
+        is PadAction.ProfileSwitcher -> {
+            ActionCategory.PROFILE_SWITCHER
+        }
+
+        is PadAction.MirrorPlayStop -> {
+            ActionCategory.MIRROR_PLAY_STOP
+        }
+
+        is PadAction.MirrorFreeze -> {
+            ActionCategory.MIRROR_FREEZE
+        }
+
+        is PadAction.MirrorViewportEdit -> {
+            ActionCategory.MIRROR_VIEWPORT_EDIT
+        }
+
+        is PadAction.MirrorTouchProjection -> {
+            ActionCategory.MIRROR_TOUCH_PROJECTION
+        }
+
+        is PadAction.FullScreenMouse -> {
+            ActionCategory.FULLSCREEN_MOUSE
+        }
+
+        is PadAction.FullScreenKeyboard -> {
+            ActionCategory.FULLSCREEN_KEYBOARD
+        }
+
+        is PadAction.Screenshot -> {
+            when (target) {
+                ScreenshotTarget.TOP -> ActionCategory.SCREENSHOT_TOP
+                ScreenshotTarget.BOTTOM -> ActionCategory.SCREENSHOT_BOTTOM
+                ScreenshotTarget.BOTH -> ActionCategory.SCREENSHOT_BOTH
+            }
+        }
+
+        is PadAction.AppLauncher -> {
+            ActionCategory.APP_LAUNCHER
+        }
     }
 
 internal fun ActionCategory.isAvailable(hasMacros: Boolean): Boolean =
@@ -330,6 +408,14 @@ internal fun PadAction.displayLabel(): String {
 
         is PadAction.FullScreenKeyboard -> {
             context.getString(R.string.macropad_action_fullscreen_keyboard)
+        }
+
+        is PadAction.Screenshot -> {
+            when (target) {
+                ScreenshotTarget.TOP -> context.getString(R.string.macropad_action_screenshot_top)
+                ScreenshotTarget.BOTTOM -> context.getString(R.string.macropad_action_screenshot_bottom)
+                ScreenshotTarget.BOTH -> context.getString(R.string.macropad_action_screenshot_both)
+            }
         }
 
         is PadAction.AppLauncher -> {

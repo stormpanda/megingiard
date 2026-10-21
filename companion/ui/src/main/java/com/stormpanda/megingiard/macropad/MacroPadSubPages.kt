@@ -238,7 +238,7 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
 
-    data class ChooseOverlayAction(
+    data class ChooseToolsAction(
         val buttonId: String?,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS

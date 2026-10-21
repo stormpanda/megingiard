@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionCommand
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -123,5 +124,19 @@ class MacroPadActionDispatchTest {
         injectActionUp(PadAction.LayoutPrevious)
         injectActionUp(PadAction.ProfileSwitcher)
         injectActionUp(PadAction.MirrorTouchProjection)
+    }
+
+    @Test
+    fun injectActionDownAndUp_screenshotTargets() {
+        for (target in ScreenshotTarget.entries) {
+            ScreenCaptureManager.consumeScreenshotRequest()
+            val action = PadAction.Screenshot(target)
+            injectActionDown(action)
+            assertTrue(ScreenCaptureManager.screenshotRequested.value)
+            assertEquals(target, ScreenCaptureManager.pendingScreenshotTarget.value)
+            injectActionUp(action)
+            assertTrue(ScreenCaptureManager.screenshotRequested.value)
+            ScreenCaptureManager.consumeScreenshotRequest()
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.mirror.VisualAnchorSignature
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
@@ -320,6 +321,13 @@ sealed class PadAction {
     data class AppLauncher(
         val packageName: String = "",
     ) : PadAction()
+
+    /** Takes a screenshot of the specified [target] display (Top, Bottom, or Both). */
+    @Serializable
+    @SerialName("screenshot")
+    data class Screenshot(
+        val target: ScreenshotTarget = ScreenshotTarget.TOP,
+    ) : PadAction()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -334,18 +342,61 @@ sealed class PadAction {
  */
 fun PadAction.defaultIconName(): String? =
     when (this) {
-        is PadAction.LayoutNext -> "arrow_forward"
-        is PadAction.LayoutPrevious -> "arrow_back"
-        is PadAction.ProfileSwitcher -> "swap_horiz"
-        is PadAction.MirrorPlayStop -> "cast"
-        is PadAction.MirrorFreeze -> "pause_circle"
-        is PadAction.MirrorViewportEdit -> "crop_free"
-        is PadAction.MirrorTouchProjection -> "touch_app"
-        is PadAction.FullScreenMouse -> "mouse"
-        is PadAction.FullScreenKeyboard -> "keyboard"
-        is PadAction.AppLauncher -> "apps"
-        is PadAction.Macro -> "smart_button"
-        else -> null
+        is PadAction.LayoutNext -> {
+            "arrow_forward"
+        }
+
+        is PadAction.LayoutPrevious -> {
+            "arrow_back"
+        }
+
+        is PadAction.ProfileSwitcher -> {
+            "swap_horiz"
+        }
+
+        is PadAction.MirrorPlayStop -> {
+            "cast"
+        }
+
+        is PadAction.MirrorFreeze -> {
+            "pause_circle"
+        }
+
+        is PadAction.MirrorViewportEdit -> {
+            "crop_free"
+        }
+
+        is PadAction.MirrorTouchProjection -> {
+            "touch_app"
+        }
+
+        is PadAction.FullScreenMouse -> {
+            "mouse"
+        }
+
+        is PadAction.FullScreenKeyboard -> {
+            "keyboard"
+        }
+
+        is PadAction.AppLauncher -> {
+            "apps"
+        }
+
+        is PadAction.Macro -> {
+            "smart_button"
+        }
+
+        is PadAction.Screenshot -> {
+            when (target) {
+                ScreenshotTarget.TOP -> "splitscreen_bottom"
+                ScreenshotTarget.BOTTOM -> "splitscreen_top"
+                ScreenshotTarget.BOTH -> "splitscreen"
+            }
+        }
+
+        else -> {
+            null
+        }
     }
 
 // ─────────────────────────────────────────────────────────────────────────────
