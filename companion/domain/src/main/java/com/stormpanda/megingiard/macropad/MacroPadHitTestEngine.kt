@@ -76,10 +76,22 @@ class MacroPadHitTestEngine(
     ): Boolean {
         val chipWidthPx = buttonUnitDpToPx(btn.widthDp)
         val chipHeightPx = buttonUnitDpToPx(btn.heightDp)
-        val bx = btn.posX * canvasW
-        val by = btn.posY * canvasH
-        return px >= bx - chipWidthPx / 2f && px <= bx + chipWidthPx / 2f &&
-            py >= by - chipHeightPx / 2f && py <= by + chipHeightPx / 2f
+        if (chipWidthPx <= 0f || chipHeightPx <= 0f) return false
+        val left = btn.posX * canvasW - chipWidthPx / 2f
+        val top = btn.posY * canvasH - chipHeightPx / 2f
+        if (px < left || px > left + chipWidthPx || py < top || py > top + chipHeightPx) {
+            return false
+        }
+        val nx = (px - left) / chipWidthPx
+        val ny = (py - top) / chipHeightPx
+        return ButtonShapeGeometry.isNormalizedPointInside(
+            shape = btn.buttonShape,
+            nx = nx,
+            ny = ny,
+            widthDp = btn.widthDp,
+            heightDp = btn.heightDp,
+            isTrackpoint = btn.action is PadAction.TrackpointMove,
+        )
     }
 
     private fun triggerHaptic(

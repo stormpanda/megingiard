@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Lock
@@ -102,9 +101,6 @@ private const val TAG = "PadCanvas"
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-private val ED_BTN_SQUARE_RADIUS = 4.dp
-private val ED_BTN_SQUARE_SHAPE = RoundedCornerShape(ED_BTN_SQUARE_RADIUS)
-
 // Highlight border when button positioning is unlocked or cropping background
 private val PC_HIGHLIGHT_BORDER_WIDTH = 2.dp
 private val PC_HIGHLIGHT_BORDER_RADIUS = 10.dp
@@ -122,7 +118,6 @@ private const val PC_LOCK_ANIM_OUT_MS = 250
 private val PC_LOCK_BADGE_SIZE = 72.dp
 private val PC_LOCK_BADGE_CORNER = 16.dp
 private val PC_LOCK_BADGE_SHAPE = RoundedCornerShape(PC_LOCK_BADGE_CORNER)
-private val PC_PILL_SHAPE = RoundedCornerShape(percent = 50)
 private val PC_LOCK_ICON_SIZE = 40.dp
 
 // Grid: half a button unit — two steps apart = buttons touch exactly
@@ -811,23 +806,12 @@ private fun DraggableButton(
     val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
 
     val chipShape =
-        if (isTrackpoint) {
-            CircleShape
-        } else {
-            when (btn.buttonShape) {
-                ButtonShape.SQUARE, ButtonShape.ICON_ONLY -> {
-                    ED_BTN_SQUARE_SHAPE
-                }
-
-                ButtonShape.CIRCLE -> {
-                    if (btn.widthDp == btn.heightDp) {
-                        CircleShape
-                    } else {
-                        PC_PILL_SHAPE
-                    }
-                }
-            }
-        }
+        resolvePadButtonShape(
+            buttonShape = btn.buttonShape,
+            widthDp = btn.widthDp,
+            heightDp = btn.heightDp,
+            isTrackpoint = isTrackpoint,
+        )
 
     Box(
         contentAlignment = Alignment.Center,

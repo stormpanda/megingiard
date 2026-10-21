@@ -45,4 +45,23 @@ class ButtonShapeTest {
         assertEquals(button, decoded)
         assertEquals(ButtonShape.ICON_ONLY, decoded.buttonShape)
     }
+
+    @Test
+    fun `all ButtonShape entries survive PadButton JSON round-trip`() {
+        for (shape in ButtonShape.entries) {
+            val button =
+                PadButton(
+                    id = "btn-${shape.name}",
+                    label = shape.name,
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    buttonShape = shape,
+                    action = PadAction.KeyboardKey(keycode = 30, label = "A"),
+                )
+            val encoded = json.encodeToString(button)
+            val decoded = json.decodeFromString<PadButton>(encoded)
+            assertEquals(shape, decoded.buttonShape)
+            assertEquals(button, decoded)
+        }
+    }
 }

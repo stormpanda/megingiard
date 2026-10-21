@@ -218,4 +218,49 @@ class MacroPadHitTestEngineTest {
         engineWithHaptic.onPress(5L, 500f, 500f, canvasW, canvasH, listOf(hapticBtn), false)
         assertTrue(hapticTriggered)
     }
+
+    @Test
+    fun `shape-aware hit test rejects empty bounding-box corners for DIAMOND and accepts for SQUARE`() {
+        // 60x60 button centered at (500, 500) -> AABB is [470, 530] x [470, 530].
+        // Point (475, 475) is inside the AABB, but outside the diamond (|dx| + |dy| = 25 + 25 = 50 > 30).
+        val diamondBtn =
+            centeredButton(PadAction.KeyboardKey(keycode = 30, label = "A")).copy(
+                id = "btn-diamond",
+                buttonShape = ButtonShape.DIAMOND,
+            )
+        val squareBtn =
+            centeredButton(PadAction.KeyboardKey(keycode = 31, label = "B")).copy(
+                id = "btn-square",
+                buttonShape = ButtonShape.SQUARE,
+            )
+
+        assertFalse(engine.onPress(1L, 475f, 475f, canvasW, canvasH, listOf(diamondBtn), false))
+        assertTrue(engine.onPress(2L, 500f, 500f, canvasW, canvasH, listOf(diamondBtn), false))
+        engine.onRelease(2L, listOf(diamondBtn))
+
+        assertTrue(engine.onPress(3L, 475f, 475f, canvasW, canvasH, listOf(squareBtn), false))
+        engine.onRelease(3L, listOf(squareBtn))
+    }
+
+    @Test
+    fun `overlapping triangle buttons resolve press to the polygon containing the tap point`() {
+        // Two 60x60 triangles sharing the exact same [470, 530] x [470, 530] bounding box:
+        // TRIANGLE_DOWN is listed first, TRIANGLE_UP is listed second.
+        // Tapping bottom-left (475, 525) is outside TRIANGLE_DOWN but inside TRIANGLE_UP.
+        val triDown =
+            centeredButton(PadAction.KeyboardKey(keycode = 30, label = "Down")).copy(
+                id = "btn-tri-down",
+                buttonShape = ButtonShape.TRIANGLE_DOWN,
+            )
+        val triUp =
+            centeredButton(PadAction.KeyboardKey(keycode = 31, label = "Up")).copy(
+                id = "btn-tri-up",
+                buttonShape = ButtonShape.TRIANGLE_UP,
+            )
+        val buttons = listOf(triDown, triUp)
+
+        assertTrue(engine.onPress(1L, 475f, 525f, canvasW, canvasH, buttons, false))
+        assertEquals(setOf("btn-tri-up"), engine.pressedIds.value)
+        engine.onRelease(1L, buttons)
+    }
 }
