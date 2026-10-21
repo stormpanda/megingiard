@@ -301,4 +301,46 @@ class KeyboardGestureProcessorTest {
             )
             KeyboardState.reset()
         }
+
+    @Test
+    fun `findKeyAt resolves gaps and outer margins to nearest key rectangle edge`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor()
+            processor.updateBounds("q", 0f, 0f, 50f, 40f)
+            processor.updateBounds("w", 54f, 0f, 104f, 40f)
+            processor.updateBounds("space", 0f, 46f, 150f, 86f)
+
+            // Horizontal gutter between q (right=50) and w (left=54)
+            assertEquals("q", processor.findKeyAt(grid, 51f, 20f)?.id)
+            assertEquals("w", processor.findKeyAt(grid, 53f, 20f)?.id)
+
+            // Vertical gutter near left end of wide spacebar (x=10 is far from space center=75,
+            // but y=44 is 2px from space top=46 vs 4px from q bottom=40)
+            assertEquals("space", processor.findKeyAt(grid, 10f, 44f)?.id)
+            assertEquals("q", processor.findKeyAt(grid, 10f, 41f)?.id)
+
+            // Outer left margin snaps to q
+            assertEquals("q", processor.findKeyAt(grid, -3f, 20f)?.id)
+        }
+
+    @Test
+    fun `onPress on already-active pointerId releases stale pointer before new press`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            processor.updateBounds("q", 0f, 0f, 50f, 40f)
+            processor.updateBounds("w", 50f, 0f, 100f, 40f)
+
+            // Simulate pointer 1L pressing q and never receiving onRelease (e.g. cancelled event)
+            processor.onPress(1L, 25f, 20f, grid, isFullLayout = false)
+            assertTrue(processor.isPointerActive(1L))
+
+            // Next tap with same pointerId 1L on w should clean up q and press w
+            processor.onPress(1L, 75f, 20f, grid, isFullLayout = false)
+            assertEquals(setOf("w"), processor.pressedKeys.value)
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertTrue(processor.pressedKeys.value.isEmpty())
+            assertFalse(processor.isPointerActive(1L))
+        }
 }

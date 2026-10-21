@@ -71,12 +71,20 @@ class KeyboardGestureProcessor(
         x: Float,
         y: Float,
     ): KeyDef? {
+        var nearestKey: KeyDef? = null
+        var minDistanceSq = Float.POSITIVE_INFINITY
         for (row in grid) {
             for (key in row) {
-                if (keyBounds[key.id]?.contains(x, y) == true) return key
+                val bounds = keyBounds[key.id] ?: continue
+                if (bounds.contains(x, y)) return key
+                val distSq = bounds.distanceSquaredTo(x, y)
+                if (distSq < minDistanceSq) {
+                    minDistanceSq = distSq
+                    nearestKey = key
+                }
             }
         }
-        return null
+        return nearestKey
     }
 
     private fun isCharKey(keyDef: KeyDef?): Boolean =
@@ -91,6 +99,10 @@ class KeyboardGestureProcessor(
         isFullLayout: Boolean,
         hoveredKeyDef: KeyDef? = findKeyAt(grid, x, y),
     ) {
+        if (pressPositions.containsKey(pointerId)) {
+            AppLog.w(TAG, "onPress called for already-active pointerId=$pointerId; releasing stale state")
+            onRelease(pointerId, isFullLayout)
+        }
         pressPositions[pointerId] = Pair(x, y)
 
         val keyId = hoveredKeyDef?.id

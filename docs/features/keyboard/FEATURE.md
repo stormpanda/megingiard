@@ -181,6 +181,7 @@ data class KeyDef(
 
 - **Ergonomic modes (`LETTERS`, `SYMBOLS_1`, `NUMERIC`):** 4 rows per layout, paired with `KeyboardTopToolbar` (`ESC`, `TAB`, `CTRL`, `ALT`, macro row toggle, and clipboard shortcuts `Select All`, `Cut`, `Copy`, `Paste`).
 - **Compact Full mode (`FULL`):** 6 rows per layout with uniform `15.0f` row weight, sharing a common top function row (`Esc`, `F1–F12`, `Print`, `Del`) and bottom bar (`Ctrl`, `Meta`, `Alt`, `Space`, `AltGr`, `RCtrl`, `Left`, `Up`, `Down`, `Right`).
+- **Gapless Hit-Testing:** Each `KeyCap` records `KeyBounds` on its unpadded outer layout cell (while applying `1 dp` horizontal and `3 dp` vertical visual inset padding inside the cell), so adjacent key touch targets tile edge-to-edge. For touches on outer grid margins or fractional-pixel boundaries, `KeyboardGestureProcessor.findKeyAt` falls back to the key with the minimum squared distance to its `KeyBounds` rectangle (`KeyBounds.distanceSquaredTo`), eliminating dead spots across the keyboard grid.
 
 ### Modifier State Machine
 
@@ -226,8 +227,8 @@ data class KeyDef(
 | **`:companion:domain`** | [MouseInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/input/MouseInjector.kt) | Shared facade for relative mouse movements, clicks, and scroll events over `PrivdClient` |
 | **`:shared:core`** | [KeyboardLayout.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/KeyboardLayout.kt) | `KeyDef`, `KeyboardMode`, `KbLayout`, QWERTZ/QWERTY/AZERTY layout builders, and `resolveDisplayLabel` |
 | **`:shared:core`** | [LinuxKeycodes.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/LinuxKeycodes.kt) | Linux `input-event-codes.h` `KEY_*` constants and `charToKeyMapping` lookup table |
-| **`:shared:core`** | [PopupState.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/PopupState.kt) | Immutable model representing an active key preview or long-press character popup |
-| **`:shared:core`** | [KeyBounds.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/KeyBounds.kt) | Bounding-box model for key hit-testing and popup positioning |
+| **`:companion:domain`** | [PopupState.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/PopupState.kt) | Immutable model representing an active key preview or long-press character popup |
+| **`:companion:domain`** | [KeyBounds.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyBounds.kt) | Bounding-box model for key hit-testing (`contains`, `distanceSquaredTo`) and popup positioning |
 | Native Source | `companion/ui/src/main/cpp/megingiard_privd.c` | Megingiard System Service daemon handling `/dev/uinput` keyboard and mouse devices |
 | Binary Asset | `companion/ui/src/main/assets/megingiard_privd_arm64` | Pre-built Megingiard System Service daemon executable |
 

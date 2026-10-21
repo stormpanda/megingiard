@@ -27,6 +27,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private const val KB_NUMERIC_GRID_ROW_COUNT = 3
 private const val KB_DEFAULT_BOX_WIDTH_PX = 1240
+private const val KB_NUMERIC_TOP_ROW_WEIGHT = 3f
+private const val KB_NUMERIC_OPS_COL_WEIGHT = 1.3f
+private const val KB_NUMERIC_DIGITS_COL_WEIGHT = 7.3f
+private val KB_GRID_HEIGHT_FULL = 220.dp
+private val KB_GRID_HEIGHT_ERGO = 168.dp
+private val KB_GRID_PADDING_H = 4.dp
+private val KB_GRID_PADDING_V = 2.dp
 
 @Composable
 internal fun KeyboardLayoutGrid(
@@ -42,7 +49,7 @@ internal fun KeyboardLayoutGrid(
     modifier: Modifier = Modifier,
 ) {
     val isQuickMenuOpenState = rememberUpdatedState(isQuickMenuOpen)
-    val gridHeight = if (activeState.mode == KeyboardMode.FULL) 220.dp else 168.dp
+    val gridHeight = if (activeState.mode == KeyboardMode.FULL) KB_GRID_HEIGHT_FULL else KB_GRID_HEIGHT_ERGO
     val boxCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
     val activePopupState = gestureProcessor.activePopupState.collectAsStateWithLifecycle().value
     val density = LocalDensity.current
@@ -79,7 +86,7 @@ internal fun KeyboardLayoutGrid(
             modifier
                 .fillMaxWidth()
                 .height(gridHeight)
-                .padding(horizontal = 4.dp, vertical = 2.dp)
+                .padding(horizontal = KB_GRID_PADDING_H, vertical = KB_GRID_PADDING_V)
                 .onGloballyPositioned { boxCoords.value = it }
                 .pointerInput(activeState) {
                     try {
@@ -98,6 +105,15 @@ internal fun KeyboardLayoutGrid(
 
                                 for (change in event.changes) {
                                     val pid = change.id.value
+
+                                    if (!change.pressed && gestureProcessor.isPointerActive(pid)) {
+                                        gestureProcessor.onRelease(
+                                            pointerId = pid,
+                                            isFullLayout = activeState.mode == KeyboardMode.FULL,
+                                        )
+                                        change.consume()
+                                        continue
+                                    }
 
                                     if (change.isConsumed) continue
 
@@ -156,16 +172,6 @@ internal fun KeyboardLayoutGrid(
                                                 }
                                             }
                                         }
-
-                                        PointerEventType.Release -> {
-                                            if (!change.pressed && gestureProcessor.isPointerActive(pid)) {
-                                                gestureProcessor.onRelease(
-                                                    pointerId = pid,
-                                                    isFullLayout = activeState.mode == KeyboardMode.FULL,
-                                                )
-                                                change.consume()
-                                            }
-                                        }
                                     }
                                 }
                             }
@@ -183,21 +189,18 @@ internal fun KeyboardLayoutGrid(
 
             Column(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_V),
             ) {
                 Row(
                     modifier =
                         Modifier
-                            .weight(3f)
+                            .weight(KB_NUMERIC_TOP_ROW_WEIGHT)
                             .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
                 ) {
                     Column(
                         modifier =
                             Modifier
-                                .weight(1.3f)
+                                .weight(KB_NUMERIC_OPS_COL_WEIGHT)
                                 .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_V),
                     ) {
                         ops.forEach { key ->
                             renderKey(key, Modifier.weight(1f))
@@ -207,9 +210,8 @@ internal fun KeyboardLayoutGrid(
                     Column(
                         modifier =
                             Modifier
-                                .weight(7.3f)
+                                .weight(KB_NUMERIC_DIGITS_COL_WEIGHT)
                                 .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_V),
                     ) {
                         gridRows.forEach { row ->
                             Row(
@@ -217,7 +219,6 @@ internal fun KeyboardLayoutGrid(
                                     Modifier
                                         .weight(1f)
                                         .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
                             ) {
                                 row.forEach { key ->
                                     renderKey(key, Modifier.weight(key.widthWeight))
@@ -232,7 +233,6 @@ internal fun KeyboardLayoutGrid(
                         Modifier
                             .weight(1f)
                             .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
                 ) {
                     bottomRow.forEach { key ->
                         renderKey(key, Modifier.weight(key.widthWeight))
@@ -250,7 +250,6 @@ internal fun KeyboardLayoutGrid(
                             Modifier
                                 .weight(1f)
                                 .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
                     ) {
                         row.forEach { key ->
                             renderKey(key, Modifier.weight(key.widthWeight))
