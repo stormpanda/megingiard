@@ -99,10 +99,12 @@ internal fun KeyboardTopToolbar(
             ToolbarKeyButton(
                 label = "ESC",
                 keycode = KEY_ESC,
+                gestureProcessor = gestureProcessor,
             )
             ToolbarKeyButton(
                 label = "TAB",
                 keycode = KEY_TAB,
+                gestureProcessor = gestureProcessor,
             )
             ModifierButton(
                 id = "ctrl",
@@ -226,6 +228,7 @@ private fun ModifierButton(
 private fun ToolbarKeyButton(
     label: String,
     keycode: Int,
+    gestureProcessor: KeyboardGestureProcessor,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -243,6 +246,7 @@ private fun ToolbarKeyButton(
         modifier = modifier,
         onPress = { _ ->
             isPressed = true
+            gestureProcessor.onHapticFeedback()
             KeyInjector.keyDown(keycode)
             try {
                 awaitRelease()

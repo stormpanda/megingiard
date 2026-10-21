@@ -30,6 +30,7 @@ class KeyboardGestureProcessor(
     initialDensity: Float = 1f,
     private val onInjectPopupSelection: (KeyDef, String) -> Unit = { _, _ -> },
     private val injector: KeyCodeInjector = RealKeyCodeInjector,
+    var onHapticFeedback: () -> Unit = {},
 ) {
     var density = initialDensity
 
@@ -131,6 +132,7 @@ class KeyboardGestureProcessor(
                         delay(KB_LONG_PRESS_DELAY_MS)
                         val options = getPopupOptions(hoveredKeyDef)
                         if (bounds != null && options.isNotEmpty()) {
+                            onHapticFeedback()
                             _activePopupState.value =
                                 PopupState(
                                     hoveredKeyDef,
@@ -140,7 +142,7 @@ class KeyboardGestureProcessor(
                                     isLongPress = true,
                                     pointerId = pointerId,
                                 )
-                            virtualAnchorX = 0f
+                            virtualAnchorX = x
                         }
                     }
                 longPressJobs[pointerId] = job
@@ -211,6 +213,9 @@ class KeyboardGestureProcessor(
                     if (shift != 0) {
                         val oldIndex = popup.selectedIndex
                         val newIndex = (oldIndex + shift).coerceIn(0, popup.options.lastIndex)
+                        if (newIndex != oldIndex) {
+                            onHapticFeedback()
+                        }
                         _activePopupState.value = popup.copy(selectedIndex = newIndex)
                         virtualAnchorX = x
                     }
@@ -244,6 +249,7 @@ class KeyboardGestureProcessor(
                         if (abs(accumulatedSpaceDeltaX) >= swipeStepPx) {
                             val steps = (accumulatedSpaceDeltaX / swipeStepPx).toInt()
                             if (steps != 0) {
+                                onHapticFeedback()
                                 val keycode = if (steps < 0) LinuxKeycodes.KEY_LEFT else LinuxKeycodes.KEY_RIGHT
                                 repeat(abs(steps)) {
                                     injector.keyDown(keycode)
@@ -338,6 +344,7 @@ class KeyboardGestureProcessor(
 
         when (resolved.type) {
             KeyType.NORMAL -> {
+                onHapticFeedback()
                 pointerKeyMap[pointerId] = resolved
                 _pressedKeys.value = _pressedKeys.value + id
                 heldKey = resolved
@@ -440,6 +447,7 @@ class KeyboardGestureProcessor(
         keycode: Int,
         isFullLayout: Boolean = false,
     ) {
+        onHapticFeedback()
         modifierBeingHeldId = id
         val code = KeyboardState.onModifierTouchDown(id, keycode, isFullLayout)
         if (code != null) injector.keyDown(code)
@@ -574,6 +582,7 @@ class KeyboardGestureProcessor(
             scope.launch {
                 delay(KB_MODIFIER_HOLD_MS)
                 if (modifierBeingHeldId == id) {
+                    onHapticFeedback()
                     val heldCode = KeyboardState.onModifierLongPress(id, keycode, isFullLayout)
                     if (heldCode != null) injector.keyDown(heldCode)
                 }

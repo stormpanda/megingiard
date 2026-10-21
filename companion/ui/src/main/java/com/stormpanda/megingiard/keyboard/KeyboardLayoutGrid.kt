@@ -129,6 +129,7 @@ internal fun KeyboardLayoutGrid(
                                         PointerEventType.Press -> {
                                             if (!gestureProcessor.isPointerActive(pid)) {
                                                 if (keyId != null && keyId.startsWith("mode_switch")) {
+                                                    gestureProcessor.onHapticFeedback()
                                                     val targetMode =
                                                         when (keyId) {
                                                             "mode_switch" -> KeyboardMode.SYMBOLS_1

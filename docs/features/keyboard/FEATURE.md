@@ -45,6 +45,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - Standard character keys do not repeat on hold; their single keystroke injection is deferred until finger release so long-press popup selection or spacebar cursor dragging can supersede it. When a second pointer presses another character key while a prior character key press is still pending (two-thumb rollover), the prior pointer's character key is immediately committed and injected in press order without waiting for finger lift.
 - Dragging horizontally while a long-press popup is open selects among the available options. Releasing the finger injects the selected character via `KeyboardViewModel.injectPopupSelection` (`LinuxKeycodes.charToKeyMapping`) and dismisses the popup.
 - On the compact full keyboard layout (`KeyboardMode.FULL`), long-pressing keys does not show secondary popup options; only the single-character preview popup is shown, and moving the finger performs slide-to-correct across keys.
+- When haptic feedback is enabled (`TouchpadSettings.touchpadHapticsEnabled`), `KeyboardGestureProcessor.onHapticFeedback` triggers light haptic pulses (`HapticStrength.LIGHT`) on key presses, modifier presses and long-press latches, long-press popup openings and option selection shifts, and spacebar cursor navigation steps.
 
 ### FR-K5: No Special Permissions Required
 

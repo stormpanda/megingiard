@@ -42,6 +42,7 @@ class KeyboardGestureProcessorTest {
     private fun TestScope.createProcessor(
         injector: KeyCodeInjector = TestKeyCodeInjector(),
         onInjectPopupSelection: (KeyDef, String) -> Unit = { _, _ -> },
+        onHapticFeedback: () -> Unit = {},
     ) = KeyboardGestureProcessor(
         scope = this,
         isShiftActive = { false },
@@ -50,6 +51,7 @@ class KeyboardGestureProcessorTest {
         initialDensity = 1.0f,
         onInjectPopupSelection = onInjectPopupSelection,
         injector = injector,
+        onHapticFeedback = onHapticFeedback,
     )
 
     @Test
@@ -377,5 +379,45 @@ class KeyboardGestureProcessorTest {
                 testInjector.calls,
             )
             assertTrue(processor.pressedKeys.value.isEmpty())
+        }
+
+    @Test
+    fun `haptic feedback fires on key press, long-press popup, modifier hold, and spacebar steps`() =
+        runTest(testDispatcher) {
+            KeyboardState.reset()
+            var hapticCount = 0
+            val processor = createProcessor(onHapticFeedback = { hapticCount++ })
+            processor.updateBounds("q", 0f, 0f, 50f, 40f)
+            processor.updateBounds("space", 0f, 50f, 150f, 100f)
+
+            // 1. Key press + long-press popup open + option selection shift
+            processor.onPress(1L, 25f, 20f, grid, isFullLayout = false)
+            assertEquals(1, hapticCount)
+
+            testScheduler.advanceTimeBy(500L)
+            testScheduler.runCurrent()
+            assertEquals(2, hapticCount)
+
+            processor.onMove(1L, 50f, 20f, 25f, 0f, grid, isFullLayout = false)
+            assertEquals(3, hapticCount)
+            processor.onRelease(1L, isFullLayout = false)
+
+            // 2. Spacebar press + cursor steps
+            processor.onPress(2L, 75f, 75f, grid, isFullLayout = false)
+            assertEquals(4, hapticCount)
+            processor.onMove(2L, 50f, 75f, -25f, 0f, grid, isFullLayout = false)
+            assertEquals(5, hapticCount)
+            processor.onMove(2L, 30f, 75f, -20f, 0f, grid, isFullLayout = false)
+            assertEquals(6, hapticCount)
+            processor.onRelease(2L, isFullLayout = false)
+
+            // 3. Modifier press + hold latch
+            processor.onModifierPress("ctrl", LinuxKeycodes.KEY_LEFTCTRL, isFullLayout = false)
+            assertEquals(7, hapticCount)
+            testScheduler.advanceTimeBy(350L)
+            testScheduler.runCurrent()
+            assertEquals(8, hapticCount)
+            processor.onModifierRelease("ctrl", LinuxKeycodes.KEY_LEFTCTRL, isFullLayout = false)
+            KeyboardState.reset()
         }
 }
