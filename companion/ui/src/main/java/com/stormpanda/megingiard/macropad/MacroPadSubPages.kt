@@ -250,6 +250,12 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
 
+    data class ChooseMediaAction(
+        val buttonId: String?,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
     data object ChooseIcon : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }

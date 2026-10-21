@@ -1398,4 +1398,17 @@ Open Settings to create a layout.</string>
     <string name="macropad_touch_tap_x_desc">螢幕水平座標，由左 (0%) 至右 (100%)</string>
     <string name="macropad_touch_tap_y_title">垂直位置 (Y)</string>
     <string name="macropad_touch_tap_y_desc">螢幕垂直座標，由上 (0%) 至下 (100%)</string>
+    <string name="macropad_action_group_media">媒體控制</string>
+    <string name="macropad_action_group_media_desc">播放控制與音訊靜音</string>
+    <string name="macropad_picker_media_title">媒體控制</string>
+    <string name="macropad_action_media_play_pause">播放 / 暫停</string>
+    <string name="macropad_action_media_play_pause_desc">切換媒體播放或暫停</string>
+    <string name="macropad_action_media_next_track">下一首</string>
+    <string name="macropad_action_media_next_track_desc">跳至下一個媒體曲目</string>
+    <string name="macropad_action_media_previous_track">上一首</string>
+    <string name="macropad_action_media_previous_track_desc">返回上一個媒體曲目</string>
+    <string name="macropad_action_media_stop">停止播放</string>
+    <string name="macropad_action_media_stop_desc">停止目前的媒體播放</string>
+    <string name="macropad_action_media_mute">靜音</string>
+    <string name="macropad_action_media_mute_desc">切換系統音訊靜音</string>
 </resources>

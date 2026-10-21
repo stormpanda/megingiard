@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.AdsClick
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Build
@@ -14,10 +15,15 @@ import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.SwapVert
@@ -83,6 +89,11 @@ internal enum class ActionGroup(
         Icons.Rounded.Build,
         R.string.macropad_action_group_tools,
         R.string.macropad_action_group_tools_desc,
+    ),
+    MEDIA(
+        Icons.Rounded.MusicNote,
+        R.string.macropad_action_group_media,
+        R.string.macropad_action_group_media_desc,
     ),
     ;
 
@@ -248,6 +259,36 @@ internal enum class ActionCategory(
         ActionGroup.TOOLS,
         { PadAction.TouchTap() },
     ),
+    MEDIA_PLAY_PAUSE(
+        Icons.Rounded.PlayArrow,
+        R.string.macropad_action_media_play_pause,
+        ActionGroup.MEDIA,
+        { PadAction.MediaControl(MediaControlAction.PLAY_PAUSE) },
+    ),
+    MEDIA_NEXT_TRACK(
+        Icons.Rounded.SkipNext,
+        R.string.macropad_action_media_next_track,
+        ActionGroup.MEDIA,
+        { PadAction.MediaControl(MediaControlAction.NEXT_TRACK) },
+    ),
+    MEDIA_PREVIOUS_TRACK(
+        Icons.Rounded.SkipPrevious,
+        R.string.macropad_action_media_previous_track,
+        ActionGroup.MEDIA,
+        { PadAction.MediaControl(MediaControlAction.PREVIOUS_TRACK) },
+    ),
+    MEDIA_STOP(
+        Icons.Rounded.Stop,
+        R.string.macropad_action_media_stop,
+        ActionGroup.MEDIA,
+        { PadAction.MediaControl(MediaControlAction.STOP) },
+    ),
+    MEDIA_MUTE(
+        Icons.AutoMirrored.Rounded.VolumeOff,
+        R.string.macropad_action_media_mute,
+        ActionGroup.MEDIA,
+        { PadAction.MediaControl(MediaControlAction.MUTE) },
+    ),
     APP_LAUNCHER(
         Icons.Rounded.Apps,
         R.string.macropad_action_app_launcher,
@@ -349,6 +390,16 @@ internal fun PadAction.toCategory(): ActionCategory =
 
         is PadAction.TouchTap -> {
             ActionCategory.TOUCH_TAP
+        }
+
+        is PadAction.MediaControl -> {
+            when (mediaAction) {
+                MediaControlAction.PLAY_PAUSE -> ActionCategory.MEDIA_PLAY_PAUSE
+                MediaControlAction.NEXT_TRACK -> ActionCategory.MEDIA_NEXT_TRACK
+                MediaControlAction.PREVIOUS_TRACK -> ActionCategory.MEDIA_PREVIOUS_TRACK
+                MediaControlAction.STOP -> ActionCategory.MEDIA_STOP
+                MediaControlAction.MUTE -> ActionCategory.MEDIA_MUTE
+            }
         }
 
         is PadAction.AppLauncher -> {
@@ -498,6 +549,16 @@ internal fun PadAction.displayLabel(): String {
                 (normX * PAD_PERCENT_MULTIPLIER).roundToInt(),
                 (normY * PAD_PERCENT_MULTIPLIER).roundToInt(),
             )
+        }
+
+        is PadAction.MediaControl -> {
+            when (mediaAction) {
+                MediaControlAction.PLAY_PAUSE -> context.getString(R.string.macropad_action_media_play_pause)
+                MediaControlAction.NEXT_TRACK -> context.getString(R.string.macropad_action_media_next_track)
+                MediaControlAction.PREVIOUS_TRACK -> context.getString(R.string.macropad_action_media_previous_track)
+                MediaControlAction.STOP -> context.getString(R.string.macropad_action_media_stop)
+                MediaControlAction.MUTE -> context.getString(R.string.macropad_action_media_mute)
+            }
         }
 
         is PadAction.AppLauncher -> {

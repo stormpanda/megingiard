@@ -1397,4 +1397,17 @@ Open Settings to create a layout.</string>
     <string name="macropad_touch_tap_x_desc">Horizontale Bildschirmkoordinate von links (0%) bis rechts (100%)</string>
     <string name="macropad_touch_tap_y_title">Vertikale Position (Y)</string>
     <string name="macropad_touch_tap_y_desc">Vertikale Bildschirmkoordinate von oben (0%) bis unten (100%)</string>
+    <string name="macropad_action_group_media">Mediensteuerung</string>
+    <string name="macropad_action_group_media_desc">Wiedergabesteuerung und Stummschaltung</string>
+    <string name="macropad_picker_media_title">Mediensteuerung</string>
+    <string name="macropad_action_media_play_pause">Wiedergabe / Pause</string>
+    <string name="macropad_action_media_play_pause_desc">Medienwiedergabe starten oder pausieren</string>
+    <string name="macropad_action_media_next_track">Nächster Titel</string>
+    <string name="macropad_action_media_next_track_desc">Zum nächsten Medientitel springen</string>
+    <string name="macropad_action_media_previous_track">Vorheriger Titel</string>
+    <string name="macropad_action_media_previous_track_desc">Zum vorherigen Medientitel zurückkehren</string>
+    <string name="macropad_action_media_stop">Wiedergabe stoppen</string>
+    <string name="macropad_action_media_stop_desc">Aktive Medienwiedergabe beenden</string>
+    <string name="macropad_action_media_mute">Ton stummschalten</string>
+    <string name="macropad_action_media_mute_desc">Systemton stummschalten oder aktivieren</string>
 </resources>

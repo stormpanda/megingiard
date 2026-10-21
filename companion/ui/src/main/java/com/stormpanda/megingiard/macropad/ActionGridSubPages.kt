@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.AdsClick
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.CropFree
@@ -14,7 +15,11 @@ import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.SmartButton
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.TouchApp
@@ -155,6 +160,40 @@ private val LAYOUT_ACTION_ITEMS =
         ),
     )
 
+private val MEDIA_ACTION_ITEMS =
+    listOf(
+        ActionGridItem(
+            PadAction.MediaControl(MediaControlAction.PLAY_PAUSE),
+            R.string.macropad_action_media_play_pause,
+            R.string.macropad_action_media_play_pause_desc,
+            Icons.Rounded.PlayArrow,
+        ),
+        ActionGridItem(
+            PadAction.MediaControl(MediaControlAction.NEXT_TRACK),
+            R.string.macropad_action_media_next_track,
+            R.string.macropad_action_media_next_track_desc,
+            Icons.Rounded.SkipNext,
+        ),
+        ActionGridItem(
+            PadAction.MediaControl(MediaControlAction.PREVIOUS_TRACK),
+            R.string.macropad_action_media_previous_track,
+            R.string.macropad_action_media_previous_track_desc,
+            Icons.Rounded.SkipPrevious,
+        ),
+        ActionGridItem(
+            PadAction.MediaControl(MediaControlAction.STOP),
+            R.string.macropad_action_media_stop,
+            R.string.macropad_action_media_stop_desc,
+            Icons.Rounded.Stop,
+        ),
+        ActionGridItem(
+            PadAction.MediaControl(MediaControlAction.MUTE),
+            R.string.macropad_action_media_mute,
+            R.string.macropad_action_media_mute_desc,
+            Icons.AutoMirrored.Rounded.VolumeOff,
+        ),
+    )
+
 @Composable
 private fun GenericActionGridPickerSubPageContent(
     tag: String,
@@ -222,6 +261,21 @@ internal fun LayoutActionPickerSubPageContent(
     GenericActionGridPickerSubPageContent(
         tag = "LayoutActionPickerSubPageContent",
         items = LAYOUT_ACTION_ITEMS,
+        currentAction = currentAction,
+        onSelectAction = onSelectAction,
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun MediaActionPickerSubPageContent(
+    currentAction: PadAction,
+    onSelectAction: (action: PadAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GenericActionGridPickerSubPageContent(
+        tag = "MediaActionPickerSubPageContent",
+        items = MEDIA_ACTION_ITEMS,
         currentAction = currentAction,
         onSelectAction = onSelectAction,
         modifier = modifier,

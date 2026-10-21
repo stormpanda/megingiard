@@ -62,6 +62,11 @@
   | `Screenshot(BOTH)`      | Screenshot (Both)   | `splitscreen`   |
   | `StopAllMacros`         | Stop All Macros     | `stop_circle`   |
   | `TouchTap`              | Touch Tap           | `ads_click`     |
+  | `MediaControl(PLAY_PAUSE)` | Play / Pause     | `play_pause`    |
+  | `MediaControl(NEXT_TRACK)` | Next Track       | `skip_next`     |
+  | `MediaControl(PREVIOUS_TRACK)` | Previous Track | `skip_previous` |
+  | `MediaControl(STOP)`    | Stop Playback       | `stop`          |
+  | `MediaControl(MUTE)`    | Mute Audio          | `volume_off`    |
   | `Macro`                 | _(from macro name)_ | `smart_button`  |
   | All others              | _(empty)_           | _(null)_        |
 
@@ -70,7 +75,7 @@
 ### FR-P12: Grouped Action Selection in Button Editor
 
 - `PadActionPicker` MUST provide a grouped action selection flow in `EditButtonSubPageContent`.
-- The button type group (`Keyboard`, `Gamepad`, `Mouse`, `App Quick-Switch`, `Macro`, `Layout`, `Mirror`, `Tools`) determines which action sub-page picker opens.
+- The button type group (`Keyboard`, `Gamepad`, `Mouse`, `App Quick-Switch`, `Macro`, `Layout`, `Mirror`, `Tools`, `Media Controls`) determines which action sub-page picker opens.
 - The second dropdown selects the concrete action inside the currently selected group. **If the selected group only has a single enabled concrete action, this second dropdown is hidden, and that action is automatically selected in the background.**
 - Group and action labels MUST come from `strings.xml` resources.
 - Existing action-specific inline editors (keyboard modifier slots, gamepad extra-button slots, macro picker) MUST remain unchanged and appear after action selection.

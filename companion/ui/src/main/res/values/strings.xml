@@ -1397,5 +1397,18 @@ Open Settings to create a layout.</string>
     <string name="macropad_touch_tap_x_desc">Horizontal screen coordinate from left (0%) to right (100%)</string>
     <string name="macropad_touch_tap_y_title">Vertical Position (Y)</string>
     <string name="macropad_touch_tap_y_desc">Vertical screen coordinate from top (0%) to bottom (100%)</string>
+    <string name="macropad_action_group_media">Media Controls</string>
+    <string name="macropad_action_group_media_desc">Playback controls and audio mute</string>
+    <string name="macropad_picker_media_title">Media Controls</string>
+    <string name="macropad_action_media_play_pause">Play / Pause</string>
+    <string name="macropad_action_media_play_pause_desc">Toggle media playback or pause</string>
+    <string name="macropad_action_media_next_track">Next Track</string>
+    <string name="macropad_action_media_next_track_desc">Skip to the next media track</string>
+    <string name="macropad_action_media_previous_track">Previous Track</string>
+    <string name="macropad_action_media_previous_track_desc">Return to the previous media track</string>
+    <string name="macropad_action_media_stop">Stop Playback</string>
+    <string name="macropad_action_media_stop_desc">Stop active media playback</string>
+    <string name="macropad_action_media_mute">Mute Audio</string>
+    <string name="macropad_action_media_mute_desc">Toggle system audio mute</string>
 </resources>
 

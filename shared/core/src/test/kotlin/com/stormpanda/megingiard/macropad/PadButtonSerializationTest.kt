@@ -443,4 +443,28 @@ class PadButtonSerializationTest {
         assertEquals(tapButton, decoded)
         assertEquals("ads_click", PadAction.TouchTap(0.25f, 0.75f).defaultIconName())
     }
+
+    @Test
+    fun `MediaControl action serializes and deserializes across all actions and defaultIconName`() {
+        for (mediaAction in MediaControlAction.entries) {
+            val button =
+                PadButton(
+                    id = "btn-media-${mediaAction.name}",
+                    label = mediaAction.name,
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.MediaControl(mediaAction),
+                )
+            val encoded = json.encodeToString(button)
+            assertTrue(encoded.contains("\"type\":\"media_control\""))
+            val decoded = json.decodeFromString<PadButton>(encoded)
+            assertEquals(button, decoded)
+        }
+
+        assertEquals("play_pause", PadAction.MediaControl(MediaControlAction.PLAY_PAUSE).defaultIconName())
+        assertEquals("skip_next", PadAction.MediaControl(MediaControlAction.NEXT_TRACK).defaultIconName())
+        assertEquals("skip_previous", PadAction.MediaControl(MediaControlAction.PREVIOUS_TRACK).defaultIconName())
+        assertEquals("stop", PadAction.MediaControl(MediaControlAction.STOP).defaultIconName())
+        assertEquals("volume_off", PadAction.MediaControl(MediaControlAction.MUTE).defaultIconName())
+    }
 }

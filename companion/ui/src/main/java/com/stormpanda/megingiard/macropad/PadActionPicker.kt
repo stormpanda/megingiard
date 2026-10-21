@@ -6,6 +6,7 @@ import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -25,6 +26,7 @@ internal fun ActionPicker(
     onOpenMirrorPicker: () -> Unit = {},
     onOpenToolsPicker: () -> Unit = {},
     onOpenLayoutPicker: () -> Unit = {},
+    onOpenMediaPicker: () -> Unit = {},
     onRecordTouchTap: () -> Unit = {},
     isFirstItem: Boolean = false,
     onChange: (PadAction) -> Unit,
@@ -115,6 +117,17 @@ internal fun ActionPicker(
                 actionText = current.displayLabel(),
                 icon = Icons.Rounded.Build,
                 onClick = onOpenToolsPicker,
+                modifier = Modifier.firstDeckItem(isFirstItem),
+            )
+        }
+
+        is PadAction.MediaControl -> {
+            GamepadActionCard(
+                title = stringResource(R.string.macropad_action_group_media),
+                description = stringResource(R.string.macropad_action_group_media_desc),
+                actionText = current.displayLabel(),
+                icon = Icons.Rounded.MusicNote,
+                onClick = onOpenMediaPicker,
                 modifier = Modifier.firstDeckItem(isFirstItem),
             )
         }

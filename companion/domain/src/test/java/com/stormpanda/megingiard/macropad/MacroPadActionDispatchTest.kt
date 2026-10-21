@@ -258,4 +258,23 @@ class MacroPadActionDispatchTest {
             PrivdClient.isConnectedForTest = null
         }
     }
+
+    @Test
+    fun injectActionDownAndUp_mediaControl() {
+        PrivdClient.isConnectedForTest = true
+        PrivdClient.clearQueueForTest()
+        try {
+            for (mediaAction in MediaControlAction.entries) {
+                val action = PadAction.MediaControl(mediaAction)
+                injectActionDown(action)
+                assertEquals("KD ${mediaAction.keycode}\n", PrivdClient.pollCommandForTest())
+
+                injectActionUp(action)
+                assertEquals("KU ${mediaAction.keycode}\n", PrivdClient.pollCommandForTest())
+            }
+        } finally {
+            PrivdClient.clearQueueForTest()
+            PrivdClient.isConnectedForTest = null
+        }
+    }
 }

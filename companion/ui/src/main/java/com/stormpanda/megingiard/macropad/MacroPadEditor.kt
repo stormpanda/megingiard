@@ -1415,6 +1415,14 @@ fun MacroPadEditor(
                                                         ),
                                                     )
                                                 },
+                                                onOpenMediaPicker = { currentDraft ->
+                                                    pushSubPageFromEdit(
+                                                        currentDraft,
+                                                        MacroPadSubPage.ChooseMediaAction(
+                                                            buttonId = currentSubPage.buttonId,
+                                                        ),
+                                                    )
+                                                },
                                                 onOpenMacroPicker = { currentDraft ->
                                                     pushSubPageFromEdit(
                                                         currentDraft,
@@ -1827,6 +1835,48 @@ fun MacroPadEditor(
                                                 ),
                                         ) {
                                             LayoutActionPickerSubPageContent(
+                                                currentAction = effectiveButton.action,
+                                                onSelectAction = { act ->
+                                                    val updatedDraft = applyActionToDraftButton(effectiveButton, act)
+                                                    MacroPadNavState.setButtonDraft(updatedDraft)
+                                                    MacroPadNavState.pop()
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ChooseMediaAction -> {
+                                        val savedButton =
+                                            currentSubPage.buttonId?.let { id ->
+                                                activeLayout?.buttons?.firstOrNull { it.id == id }
+                                            }
+                                        val effectiveButton =
+                                            buttonDraft
+                                                ?: savedButton
+                                                ?: PadButton(
+                                                    id = UUID.randomUUID().toString(),
+                                                    label = stringResource(R.string.macropad_editor_new_button_default_label),
+                                                    posX = 0.5f,
+                                                    posY = 0.5f,
+                                                    action = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
+                                                )
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    effectiveButton.label.ifBlank {
+                                                        stringResource(
+                                                            if (currentSubPage.buttonId != null) {
+                                                                R.string.macropad_editor_section_button_settings
+                                                            } else {
+                                                                R.string.macropad_editor_add_button
+                                                            },
+                                                        )
+                                                    },
+                                                    stringResource(R.string.macropad_picker_media_title),
+                                                ),
+                                        ) {
+                                            MediaActionPickerSubPageContent(
                                                 currentAction = effectiveButton.action,
                                                 onSelectAction = { act ->
                                                     val updatedDraft = applyActionToDraftButton(effectiveButton, act)

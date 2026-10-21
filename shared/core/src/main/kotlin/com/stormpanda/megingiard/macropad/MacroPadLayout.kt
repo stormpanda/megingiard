@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.mirror.VisualAnchorSignature
@@ -172,6 +173,31 @@ sealed class ColorOption {
  */
 @Serializable
 enum class HapticStrength { OFF, LIGHT, MEDIUM, STRONG, CUSTOM }
+
+/**
+ * Media playback and audio mute actions supported by [PadAction.MediaControl].
+ *
+ * @param keycode Standard Linux `KEY_*` evdev code injected via `/dev/uinput`.
+ */
+@Serializable
+enum class MediaControlAction(
+    val keycode: Int,
+) {
+    @SerialName("play_pause")
+    PLAY_PAUSE(LinuxKeycodes.KEY_PLAYPAUSE),
+
+    @SerialName("next_track")
+    NEXT_TRACK(LinuxKeycodes.KEY_NEXTSONG),
+
+    @SerialName("previous_track")
+    PREVIOUS_TRACK(LinuxKeycodes.KEY_PREVIOUSSONG),
+
+    @SerialName("stop")
+    STOP(LinuxKeycodes.KEY_STOPCD),
+
+    @SerialName("mute")
+    MUTE(LinuxKeycodes.KEY_MUTE),
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Action — what happens when a button is pressed / held
@@ -358,6 +384,13 @@ sealed class PadAction {
         val normX: Float = 0.5f,
         val normY: Float = 0.5f,
     ) : PadAction()
+
+    /** Dispatches a media playback or audio mute key event via uinput. */
+    @Serializable
+    @SerialName("media_control")
+    data class MediaControl(
+        val mediaAction: MediaControlAction = MediaControlAction.PLAY_PAUSE,
+    ) : PadAction()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -438,6 +471,16 @@ fun PadAction.defaultIconName(): String? =
 
         is PadAction.TouchTap -> {
             "ads_click"
+        }
+
+        is PadAction.MediaControl -> {
+            when (mediaAction) {
+                MediaControlAction.PLAY_PAUSE -> "play_pause"
+                MediaControlAction.NEXT_TRACK -> "skip_next"
+                MediaControlAction.PREVIOUS_TRACK -> "skip_previous"
+                MediaControlAction.STOP -> "stop"
+                MediaControlAction.MUTE -> "volume_off"
+            }
         }
 
         else -> {

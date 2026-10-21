@@ -392,7 +392,7 @@ internal fun TouchTapPicker(
         valueLabel = "$xPct%",
         icon = Icons.Rounded.Tune,
         onValueChange = { newVal ->
-            val newNormX = (newVal.roundToInt().coerceIn(0, 100)) / TT_PERCENT_DIVISOR
+            val newNormX = (newVal.roundToInt().coerceIn(TT_PERCENT_MIN.toInt(), TT_PERCENT_MAX.toInt())) / TT_PERCENT_DIVISOR
             onChange(current.copy(normX = newNormX))
         },
     )
@@ -407,7 +407,7 @@ internal fun TouchTapPicker(
         valueLabel = "$yPct%",
         icon = Icons.Rounded.Tune,
         onValueChange = { newVal ->
-            val newNormY = (newVal.roundToInt().coerceIn(0, 100)) / TT_PERCENT_DIVISOR
+            val newNormY = (newVal.roundToInt().coerceIn(TT_PERCENT_MIN.toInt(), TT_PERCENT_MAX.toInt())) / TT_PERCENT_DIVISOR
             onChange(current.copy(normY = newNormY))
         },
     )

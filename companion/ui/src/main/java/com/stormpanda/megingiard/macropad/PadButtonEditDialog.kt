@@ -401,6 +401,7 @@ internal fun EditButtonSubPageContent(
     onOpenMirrorPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenToolsPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenLayoutPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenMediaPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenMacroPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onDuplicate: ((PadButton) -> Unit)? = null,
     onCopyToLayout: ((PadButton) -> Unit)? = null,
@@ -699,6 +700,9 @@ internal fun EditButtonSubPageContent(
         },
         onOpenLayoutPicker = {
             onOpenLayoutPicker?.invoke(currentButton)
+        },
+        onOpenMediaPicker = {
+            onOpenMediaPicker?.invoke(currentButton)
         },
         onRecordTouchTap = {
             MacroPadNavState.setButtonDraft(currentButton)

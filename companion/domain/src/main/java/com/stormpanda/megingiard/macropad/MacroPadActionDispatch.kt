@@ -148,6 +148,11 @@ fun injectActionDown(action: PadAction) {
             AppLog.d(TAG, "actionDown: TouchTap normX=$clampedX normY=$clampedY")
             TouchInjector.injectTouch(MP_TOUCH_TAP_SLOT, TouchAction.DOWN, clampedX, clampedY)
         }
+
+        is PadAction.MediaControl -> {
+            AppLog.d(TAG, "actionDown: MediaControl action=${action.mediaAction} keycode=${action.mediaAction.keycode}")
+            KeyInjector.keyDown(action.mediaAction.keycode)
+        }
     }
 }
 
@@ -182,6 +187,11 @@ fun injectActionUp(action: PadAction) {
             val clampedY = action.normY.coerceIn(0f, 1f)
             AppLog.d(TAG, "actionUp: TouchTap normX=$clampedX normY=$clampedY")
             TouchInjector.injectTouch(MP_TOUCH_TAP_SLOT, TouchAction.UP, clampedX, clampedY)
+        }
+
+        is PadAction.MediaControl -> {
+            AppLog.d(TAG, "actionUp: MediaControl action=${action.mediaAction} keycode=${action.mediaAction.keycode}")
+            KeyInjector.keyUp(action.mediaAction.keycode)
         }
 
         else -> { /* All other action types fire or toggle on down; up is no-op */ }
