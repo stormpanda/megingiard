@@ -116,7 +116,7 @@ class KeyboardGestureProcessor(
             AppLog.w(TAG, "onPress called for already-active pointerId=$pointerId; releasing stale state")
             onRelease(pointerId, isFullLayout)
         }
-        if (hoveredKeyDef != null && hoveredKeyDef.isCharacterKey) {
+        if (hoveredKeyDef != null && hoveredKeyDef.type == KeyType.NORMAL && !hoveredKeyDef.id.startsWith("mode_switch")) {
             commitPendingCharKeysOnRollover(excludePointerId = pointerId, isFullLayout = isFullLayout)
         }
         pressPositions[pointerId] = Pair(x, y)
@@ -537,9 +537,7 @@ class KeyboardGestureProcessor(
                     val isCharKey = keyDef.isCharacterKey
                     if (isCharKey && keyDef.linuxKeycode != 0) {
                         injectKeyStroke(keyDef, isFullLayout)
-                        KeyboardState
-                            .releaseStickyModifiers()
-                            .forEach { injector.keyUp(it) }
+                        KeyboardState.releaseStickyModifiers()
                         if ((releasedId == "space" || releasedId == "space_num") &&
                             activeMode() == KeyboardMode.SYMBOLS_1
                         ) {
@@ -547,9 +545,7 @@ class KeyboardGestureProcessor(
                         }
                     } else if (keyDef.linuxKeycode != 0) {
                         releasePointerDownKeycodes(pointerId)
-                        KeyboardState
-                            .releaseStickyModifiers()
-                            .forEach { injector.keyUp(it) }
+                        KeyboardState.releaseStickyModifiers()
                     }
                 }
                 _pressedKeys.value = _pressedKeys.value - releasedId
@@ -673,9 +669,7 @@ class KeyboardGestureProcessor(
             }
             if (otherKeyDef.linuxKeycode != 0) {
                 injectKeyStroke(otherKeyDef, isFullLayout)
-                KeyboardState
-                    .releaseStickyModifiers()
-                    .forEach { injector.keyUp(it) }
+                KeyboardState.releaseStickyModifiers()
                 if ((otherKeyDef.id == "space" || otherKeyDef.id == "space_num") &&
                     activeMode() == KeyboardMode.SYMBOLS_1
                 ) {

@@ -481,7 +481,6 @@ class KeyboardGestureProcessorTest {
                     "down" to LinuxKeycodes.KEY_Q,
                     "up" to LinuxKeycodes.KEY_Q,
                     "up" to LinuxKeycodes.KEY_LEFTSHIFT,
-                    "up" to LinuxKeycodes.KEY_LEFTSHIFT,
                 ),
                 testInjector.calls,
             )
@@ -577,6 +576,46 @@ class KeyboardGestureProcessorTest {
                     "down" to LinuxKeycodes.KEY_BACKSPACE,
                     "up" to LinuxKeycodes.KEY_BACKSPACE,
                     "up" to LinuxKeycodes.KEY_LEFTCTRL,
+                ),
+                testInjector.calls,
+            )
+        }
+
+    @Test
+    fun `two-thumb rollover onto enter commits pending character key before enter`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            val qDef = KeyDef("q", "q", LinuxKeycodes.KEY_Q)
+            val enterDef = KeyDef("enter", "↵", LinuxKeycodes.KEY_ENTER)
+            val enterGrid = listOf(listOf(qDef, enterDef))
+            processor.updateBounds("q", 0f, 0f, 50f, 40f)
+            processor.updateBounds("enter", 50f, 0f, 100f, 40f)
+
+            // Pointer 1 presses 'q' (pending character key, not yet injected)
+            processor.onPress(1L, 25f, 20f, enterGrid, isFullLayout = false)
+            assertTrue(testInjector.calls.isEmpty())
+
+            // Pointer 2 presses 'enter' before pointer 1 lifts -> commits 'q' first, then presses 'enter'
+            processor.onPress(2L, 75f, 20f, enterGrid, isFullLayout = false)
+            assertEquals(
+                listOf(
+                    "down" to LinuxKeycodes.KEY_Q,
+                    "up" to LinuxKeycodes.KEY_Q,
+                    "down" to LinuxKeycodes.KEY_ENTER,
+                ),
+                testInjector.calls,
+            )
+
+            // Releasing pointer 1 should not inject 'q' a second time
+            processor.onRelease(1L, isFullLayout = false)
+            processor.onRelease(2L, isFullLayout = false)
+            assertEquals(
+                listOf(
+                    "down" to LinuxKeycodes.KEY_Q,
+                    "up" to LinuxKeycodes.KEY_Q,
+                    "down" to LinuxKeycodes.KEY_ENTER,
+                    "up" to LinuxKeycodes.KEY_ENTER,
                 ),
                 testInjector.calls,
             )
