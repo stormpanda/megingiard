@@ -251,4 +251,69 @@ class MultiCutoutContainerTest {
         bitmap.recycle()
         MacroPadState.setPreviewLayout(null)
     }
+
+    @Test
+    fun testDispatchDrawWhenAnchorLostWithCachedFrozenFrameStillExecutesFallbackChildTickForLiveSampling() {
+        val context = RuntimeEnvironment.getApplication()
+        val container = MultiCutoutContainer(context, 1920, 1080)
+        var childDrawn = false
+        val child =
+            object : View(context) {
+                override fun draw(canvas: Canvas) {
+                    super.draw(canvas)
+                    childDrawn = true
+                }
+            }
+        container.addView(child)
+
+        container.measure(
+            View.MeasureSpec.makeMeasureSpec(1920, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+        )
+        container.layout(0, 0, 1920, 1080)
+
+        val cutout =
+            ScreenCutout(
+                id = "test_cutout_frozen_cache",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 0.5f,
+                srcHeight = 0.5f,
+                destX = 0f,
+                destY = 0f,
+                destWidth = 0.5f,
+                destHeight = 0.5f,
+            )
+        val anchor = LayoutVisualAnchor(enabled = true)
+        val layout =
+            PadLayout(
+                id = "layout_anchor_lost_cache",
+                name = "Gameplay",
+                visualAnchor = anchor,
+                mirrorCutouts = listOf(cutout),
+            )
+        MacroPadState.setPreviewLayout(layout)
+        AnchorPresenceManager.onHardwareAnchorEvaluated(layout.id, 0.0f)
+
+        val cachedCropBmp = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+        AnchorPresenceManager.setFrozenFrameForTesting(cutout.id, cachedCropBmp)
+
+        container.cutouts = listOf(cutout)
+        container.isFrozen = false
+
+        val bitmap = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+
+        try {
+            container.draw(canvas)
+            assertTrue(
+                "1x1 fallback child draw must still execute when cutouts render cached frozen bitmaps so TextureView stays live",
+                childDrawn,
+            )
+        } finally {
+            bitmap.recycle()
+            AnchorPresenceManager.clearAllBuffers()
+            MacroPadState.setPreviewLayout(null)
+        }
+    }
 }

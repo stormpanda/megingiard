@@ -301,6 +301,7 @@ internal object VisualAutoTuneCoordinator {
         if (ScreenCaptureManager.isFrozen.value) {
             ScreenCaptureManager.setFrozen(false)
         }
+        AnchorPresenceManager.ensureSmootherUnfrozen()
 
         isFinishRequested = false
         isResetRequested = false

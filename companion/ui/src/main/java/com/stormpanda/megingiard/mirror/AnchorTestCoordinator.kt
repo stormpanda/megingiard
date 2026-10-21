@@ -103,6 +103,7 @@ object AnchorTestCoordinator {
         if (ScreenCaptureManager.isFrozen.value) {
             ScreenCaptureManager.setFrozen(false)
         }
+        AnchorPresenceManager.ensureSmootherUnfrozen()
 
         val points = layout.visualAnchor.signature?.points ?: emptyList()
         _uiState.value =

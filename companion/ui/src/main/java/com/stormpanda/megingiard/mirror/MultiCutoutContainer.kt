@@ -397,7 +397,11 @@ internal class MultiCutoutContainer(
     }
 
     private fun updateCutoutTransitions() {
-        val isEditing = isViewportEditActive || AppStateManager.isViewportEditActive.value
+        val isEditing =
+            isViewportEditActive ||
+                AppStateManager.isViewportEditActive.value ||
+                VisualAutoTuneCoordinator.uiState.value.isCalibrating ||
+                AnchorTestCoordinator.uiState.value.isTesting
 
         val activeLayout = MacroPadState.activeLayout.value
         val isLayoutAnchorActive = activeLayout?.visualAnchor?.enabled == true
@@ -478,6 +482,7 @@ internal class MultiCutoutContainer(
     private fun drawFrozenBitmapToCanvas(
         targetCanvas: Canvas,
         frozenBitmapToDraw: Bitmap,
+        isCroppedCutoutBitmap: Boolean,
         dw: Float,
         dh: Float,
         sw: Float,
@@ -486,15 +491,20 @@ internal class MultiCutoutContainer(
         sy: Float,
         paint: Paint,
     ) {
-        val save = targetCanvas.save()
-        try {
-            val scaleX = dw / sw
-            val scaleY = dh / sh
-            targetCanvas.translate(-sx * scaleX, -sy * scaleY)
-            targetCanvas.scale(scaleX, scaleY)
-            targetCanvas.drawBitmap(frozenBitmapToDraw, 0f, 0f, paint)
-        } finally {
-            targetCanvas.restoreToCount(save)
+        if (isCroppedCutoutBitmap) {
+            cutoutDestRect.set(0f, 0f, dw, dh)
+            targetCanvas.drawBitmap(frozenBitmapToDraw, null, cutoutDestRect, paint)
+        } else {
+            val save = targetCanvas.save()
+            try {
+                val scaleX = dw / sw
+                val scaleY = dh / sh
+                targetCanvas.translate(-sx * scaleX, -sy * scaleY)
+                targetCanvas.scale(scaleX, scaleY)
+                targetCanvas.drawBitmap(frozenBitmapToDraw, 0f, 0f, paint)
+            } finally {
+                targetCanvas.restoreToCount(save)
+            }
         }
     }
 
@@ -605,8 +615,16 @@ internal class MultiCutoutContainer(
             val blurAlpha =
                 cutoutBlurAlphas[cutout.id] ?: (if (shouldBlur) FULL_ALPHA_FLOAT else 0f)
 
-            val fullFrozenBitmap = if (effectiveManualFrozen) frozenBitmap else null
-            val hasFrozenBitmap = fullFrozenBitmap != null && !fullFrozenBitmap.isRecycled
+            val cachedFrozenFrame =
+                if (isTargetFrozen && !effectiveManualFrozen) {
+                    AnchorPresenceManager.getFrozenFrame(context, cutout.id)
+                } else {
+                    null
+                }
+            val fullFrozenBitmap = if (cachedFrozenFrame == null && effectiveManualFrozen) frozenBitmap else null
+            val frozenBitmapToDraw = cachedFrozenFrame ?: fullFrozenBitmap
+            val isCropped = cachedFrozenFrame != null
+            val hasFrozenBitmap = frozenBitmapToDraw != null && !frozenBitmapToDraw.isRecycled
 
             val staticAssetBitmap =
                 if (cutout.renderAsStaticAsset && hasTransparencyMask) {
@@ -645,13 +663,14 @@ internal class MultiCutoutContainer(
                 if (isStaticAssetDrawn) {
                     cutoutDestRect.set(0f, 0f, contentW, contentH)
                     canvas.drawBitmap(staticAssetBitmap!!, null, cutoutDestRect, frozenFramePaint)
-                } else if (isTargetFrozen && hasFrozenBitmap && fullFrozenBitmap != null) {
-                    // Manual freeze active: render sharp frozen frame base layer
+                } else if (isTargetFrozen && hasFrozenBitmap && frozenBitmapToDraw != null) {
+                    // Frozen state (anchor lost or manual freeze): render sharp frozen frame base layer
                     if (blurAlpha < FULL_ALPHA_FLOAT) {
                         frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
                         drawFrozenBitmapToCanvas(
                             canvas,
-                            fullFrozenBitmap,
+                            frozenBitmapToDraw,
+                            isCropped,
                             contentW,
                             contentH,
                             sw,
@@ -662,7 +681,7 @@ internal class MultiCutoutContainer(
                         )
                     }
                 } else if (!isTargetFrozen || blurAlpha < FULL_ALPHA_FLOAT) {
-                    // Live or GPU-frozen stream: render directly from TextureView (frozen in VRAM when anchor is lost)
+                    // Live stream fallback
                     val liveSaveCount = canvas.save()
                     try {
                         val scaleX = contentW / sw
@@ -681,6 +700,7 @@ internal class MultiCutoutContainer(
 
                 // 2. Top Frosted Blur Layer (8px blur, opacity = blurAlpha)
                 if (!isStaticAssetDrawn && blurAlpha > MIN_ALPHA_THRESHOLD && (hasFrozenBitmap || masterView != null)) {
+                    val bitmapToBlur = if (hasFrozenBitmap) frozenBitmapToDraw else null
                     val intContentW = contentW.roundToInt().coerceAtLeast(1)
                     val intContentH = contentH.roundToInt().coerceAtLeast(1)
                     val renderNode =
@@ -688,8 +708,8 @@ internal class MultiCutoutContainer(
                             val node =
                                 cutoutRenderNodes.getOrPut(cutout.id) { RenderNode("CutoutBlur_${cutout.id}") }
                             val needsRecord =
-                                !hasFrozenBitmap ||
-                                    cutoutRenderNodeBitmaps[cutout.id] !== fullFrozenBitmap ||
+                                bitmapToBlur == null ||
+                                    cutoutRenderNodeBitmaps[cutout.id] !== bitmapToBlur ||
                                     cutoutRenderNodeWidths[cutout.id] != intContentW ||
                                     cutoutRenderNodeHeights[cutout.id] != intContentH
 
@@ -702,7 +722,7 @@ internal class MultiCutoutContainer(
                                         Shader.TileMode.CLAMP,
                                     )
                                 node.setRenderEffect(
-                                    if (hasFrozenBitmap) {
+                                    if (bitmapToBlur != null) {
                                         blurEffect
                                     } else {
                                         RenderEffect.createChainEffect(
@@ -713,12 +733,13 @@ internal class MultiCutoutContainer(
                                 )
                                 val recCanvas = node.beginRecording()
                                 try {
-                                    if (hasFrozenBitmap && fullFrozenBitmap != null) {
+                                    if (bitmapToBlur != null) {
                                         frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
                                         frozenFramePaint.colorFilter = frozenInactiveColorFilter
                                         drawFrozenBitmapToCanvas(
                                             recCanvas,
-                                            fullFrozenBitmap,
+                                            bitmapToBlur,
+                                            isCropped,
                                             contentW,
                                             contentH,
                                             sw,
@@ -739,8 +760,8 @@ internal class MultiCutoutContainer(
                                     frozenFramePaint.colorFilter = null
                                     node.endRecording()
                                 }
-                                if (hasFrozenBitmap && fullFrozenBitmap != null) {
-                                    cutoutRenderNodeBitmaps[cutout.id] = fullFrozenBitmap
+                                if (bitmapToBlur != null) {
+                                    cutoutRenderNodeBitmaps[cutout.id] = bitmapToBlur
                                 } else {
                                     cutoutRenderNodeBitmaps.remove(cutout.id)
                                 }
@@ -756,13 +777,14 @@ internal class MultiCutoutContainer(
 
                     if (renderNode != null) {
                         canvas.drawRenderNode(renderNode)
-                    } else if (hasFrozenBitmap && fullFrozenBitmap != null) {
+                    } else if (bitmapToBlur != null) {
                         frozenFramePaint.alpha =
                             (blurAlpha * MCC_MAX_ALPHA_FLOAT).roundToInt().coerceIn(0, MCC_MAX_ALPHA_INT)
                         frozenFramePaint.colorFilter = frozenInactiveColorFilter
                         drawFrozenBitmapToCanvas(
                             canvas,
-                            fullFrozenBitmap,
+                            bitmapToBlur,
+                            isCropped,
                             contentW,
                             contentH,
                             sw,
@@ -917,7 +939,11 @@ internal class MultiCutoutContainer(
                 drawBackgroundBitmap(canvas, bg, parentW, parentH)
             }
 
-            val isEditing = isViewportEditActive || AppStateManager.isViewportEditActive.value
+            val isEditing =
+                isViewportEditActive ||
+                    AppStateManager.isViewportEditActive.value ||
+                    VisualAutoTuneCoordinator.uiState.value.isCalibrating ||
+                    AnchorTestCoordinator.uiState.value.isTesting
             val activeLayout = MacroPadState.activeLayout.value
             val isLayoutAnchorActive = activeLayout?.visualAnchor?.enabled == true
             val isLayoutAnchorLost =

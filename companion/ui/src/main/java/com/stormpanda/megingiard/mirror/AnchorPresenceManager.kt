@@ -56,6 +56,11 @@ object AnchorPresenceManager {
 
     private val layoutStates = ConcurrentHashMap<String, AnchorPresenceState>()
     private val layoutConsecutiveCounts = ConcurrentHashMap<String, Int>()
+    private val lastValidFrameBitmaps = ConcurrentHashMap<String, Bitmap>()
+
+    @VisibleForTesting
+    internal val lastValidFrameCount: Int
+        get() = lastValidFrameBitmaps.size
 
     private var lastAutoSwitchTimeMs = 0L
     private var lostStateStartMs = 0L
@@ -76,15 +81,25 @@ object AnchorPresenceManager {
         }
     }
 
+    internal fun ensureSmootherUnfrozen() {
+        activeSmoother?.get()?.setFrozen(false)
+    }
+
+    @VisibleForTesting
+    internal fun isMonitoringSuspended(): Boolean =
+        VisualAutoTuneCoordinator.uiState.value.isCalibrating ||
+            AnchorTestCoordinator.uiState.value.isTesting ||
+            AppStateManager.isEditorActive.value ||
+            AppStateManager.isViewportEditActive.value ||
+            AppStateManager.activePrimaryModal.value != null
+
     private fun updateSmootherTracking() {
         val smoother = activeSmoother?.get() ?: return
         val activeLayout = MacroPadState.activeLayout.value
         val anchor = activeLayout?.visualAnchor
         if (activeLayout != null && anchor != null && anchor.enabled && anchor.isCalibrated) {
-            val isLost = layoutStates[activeLayout.id] == AnchorPresenceState.LOST
-            val shouldFreeze = isLost && anchor.hasEffect(CutoutLostAnchorEffect.FREEZE)
             smoother.updateStreamDelay(anchor.streamDelayFrames)
-            smoother.setFrozen(shouldFreeze)
+            smoother.setFrozen(false)
             smoother.setAnchorTracking(activeLayout.id, anchor) { layoutId, matchRatio ->
                 onHardwareAnchorEvaluated(layoutId, matchRatio)
             }
@@ -100,6 +115,10 @@ object AnchorPresenceManager {
         layoutId: String,
         matchRatio: Float,
     ) {
+        if (isMonitoringSuspended()) {
+            activeSmoother?.get()?.setFrozen(false)
+            return
+        }
         val activeLayout = MacroPadState.activeLayout.value ?: return
         if (layoutId != activeLayout.id) return
 
@@ -117,8 +136,16 @@ object AnchorPresenceManager {
         if (newState != curState) {
             if (newState == AnchorPresenceState.LOST) {
                 lostStateStartMs = SystemClock.uptimeMillis()
-                val shouldFreeze = activeLayout.visualAnchor.hasEffect(CutoutLostAnchorEffect.FREEZE)
-                activeSmoother?.get()?.setFrozen(shouldFreeze)
+                val cutouts = ScreenCaptureManager.cutouts.value.ifEmpty { activeLayout.mirrorCutouts }
+                val shouldFreeze =
+                    activeLayout.visualAnchor.hasEffect(CutoutLostAnchorEffect.FREEZE) &&
+                        cutouts.isNotEmpty()
+                if (shouldFreeze) {
+                    activeSmoother?.get()?.setFrozen(true)
+                    captureOneShotFrozenFrame(activeLayout)
+                } else {
+                    activeSmoother?.get()?.setFrozen(false)
+                }
             } else if (newState == AnchorPresenceState.PRESENT) {
                 lostStateStartMs = 0L
                 activeSmoother?.get()?.setFrozen(false)
@@ -127,6 +154,39 @@ object AnchorPresenceManager {
         }
         layoutStates[layoutId] = newState
         layoutConsecutiveCounts[layoutId] = newCount
+    }
+
+    private fun captureOneShotFrozenFrame(layout: PadLayout) {
+        scope.launch(Dispatchers.Main.immediate) {
+            try {
+                val cutouts = ScreenCaptureManager.cutouts.value.ifEmpty { layout.mirrorCutouts }
+                if (cutouts.isNotEmpty()) {
+                    val fullFrame = MirrorFrameSampler.captureFullFrame()
+                    if (fullFrame != null && fullFrame.width > 0 && fullFrame.height > 0) {
+                        val fw = fullFrame.width
+                        val fh = fullFrame.height
+                        for (cutout in cutouts) {
+                            val effectiveCrop = InteractiveCutoutController.getEffectiveCrop(cutout)
+                            val cx = (effectiveCrop.srcX * fw).roundToInt().coerceIn(0, fw - 1)
+                            val cy = (effectiveCrop.srcY * fh).roundToInt().coerceIn(0, fh - 1)
+                            val cw = (effectiveCrop.srcWidth * fw).roundToInt().coerceIn(1, fw - cx)
+                            val ch = (effectiveCrop.srcHeight * fh).roundToInt().coerceIn(1, fh - cy)
+                            val cropBmp = Bitmap.createBitmap(fullFrame, cx, cy, cw, ch)
+                            val old = lastValidFrameBitmaps.put(cutout.id, cropBmp)
+                            if (old != null && old !== cropBmp && !old.isRecycled) {
+                                old.recycle()
+                            }
+                        }
+                        _presenceRevision.value++
+                    }
+                }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to capture one-shot frozen frame: ${e.message}")
+            } finally {
+                // Always unfreeze smoother so TextureView continues updating for candidate layout scanning
+                activeSmoother?.get()?.setFrozen(false)
+            }
+        }
     }
 
     private val _presenceRevision = MutableStateFlow(0)
@@ -209,10 +269,18 @@ object AnchorPresenceManager {
     }
 
     internal fun clearAllBuffers() {
-        AppLog.d(TAG, "Resetting anchor presence state and unfreezing smoother")
+        AppLog.d(TAG, "Resetting anchor presence state, clearing buffers, and unfreezing smoother")
         lostStateStartMs = 0L
         lastAutoSwitchTimeMs = 0L
         activeSmoother?.get()?.setFrozen(false)
+        layoutStates.clear()
+        layoutConsecutiveCounts.clear()
+        val keys = lastValidFrameBitmaps.keys.toList()
+        for (k in keys) {
+            lastValidFrameBitmaps.remove(k)?.let { bmp ->
+                if (!bmp.isRecycled) bmp.recycle()
+            }
+        }
     }
 
     private suspend fun runMonitoringLoop() {
@@ -223,12 +291,9 @@ object AnchorPresenceManager {
                 continue
             }
 
-            // Suspend presence monitoring and layout auto-switching during calibration or while editor/modal is open
-            if (VisualAutoTuneCoordinator.uiState.value.isCalibrating ||
-                AppStateManager.isEditorActive.value ||
-                AppStateManager.isViewportEditActive.value ||
-                AppStateManager.activePrimaryModal.value != null
-            ) {
+            // Suspend presence monitoring and layout auto-switching during calibration, testing, or while editor/modal is open
+            if (isMonitoringSuspended()) {
+                activeSmoother?.get()?.setFrozen(false)
                 delay(PRESENCE_CHECK_INTERVAL_LOST_FAST_MS)
                 continue
             }
@@ -435,6 +500,33 @@ object AnchorPresenceManager {
     fun getLayoutPresenceState(layoutId: String): AnchorPresenceState? = layoutStates[layoutId]
 
     /**
+     * Retrieves the frozen frame bitmap for cutout [cutoutId].
+     * Prefers the live last-valid frame captured immediately prior to anchor loss,
+     * falling back to the persisted calibration reference frame if none is in memory.
+     */
+    fun getFrozenFrame(
+        context: Context,
+        cutoutId: String,
+    ): Bitmap? {
+        lastValidFrameBitmaps[cutoutId]?.let { bmp ->
+            if (!bmp.isRecycled) return bmp
+            lastValidFrameBitmaps.remove(cutoutId)
+        }
+        return CutoutMaskManager.getFreezeFrame(context, cutoutId)
+    }
+
+    @VisibleForTesting
+    internal fun setFrozenFrameForTesting(
+        cutoutId: String,
+        bitmap: Bitmap,
+    ) {
+        val old = lastValidFrameBitmaps.put(cutoutId, bitmap)
+        if (old != null && old !== bitmap && !old.isRecycled) {
+            old.recycle()
+        }
+    }
+
+    /**
      * Clears presence state for layout [layoutId].
      */
     fun clearLayout(layoutId: String) {
@@ -442,5 +534,14 @@ object AnchorPresenceManager {
         activeSmoother?.get()?.setFrozen(false)
         layoutStates.remove(layoutId)
         layoutConsecutiveCounts.remove(layoutId)
+    }
+
+    /**
+     * Clears cached frozen frame bitmap for cutout [cutoutId].
+     */
+    fun clearCutout(cutoutId: String) {
+        lastValidFrameBitmaps.remove(cutoutId)?.let { bmp ->
+            if (!bmp.isRecycled) bmp.recycle()
+        }
     }
 }

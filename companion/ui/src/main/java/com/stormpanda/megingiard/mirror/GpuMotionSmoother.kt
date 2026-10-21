@@ -11,6 +11,7 @@ import android.opengl.GLES20
 import android.os.Handler
 import android.os.HandlerThread
 import android.view.Surface
+import androidx.annotation.VisibleForTesting
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.LayoutVisualAnchor
 import com.stormpanda.megingiard.macropad.MAX_LAYOUT_STREAM_DELAY_FRAMES
@@ -123,13 +124,14 @@ class GpuMotionSmoother(
     private val height: Int,
     private var strength: Int,
     private var streamDelayFrames: Int = 0,
+    initGl: Boolean = true,
 ) {
     private val glThread = HandlerThread("GpuMotionSmootherGL").apply { start() }
     private val glHandler = Handler(glThread.looper)
 
-    private var eglDisplay: EGLDisplay = EGL14.EGL_NO_DISPLAY
-    private var eglContext: EGLContext = EGL14.EGL_NO_CONTEXT
-    private var eglSurface: EGLSurface = EGL14.EGL_NO_SURFACE
+    private var eglDisplay: EGLDisplay? = EGL14.EGL_NO_DISPLAY
+    private var eglContext: EGLContext? = EGL14.EGL_NO_CONTEXT
+    private var eglSurface: EGLSurface? = EGL14.EGL_NO_SURFACE
     private var blendProgram = 0
     private var drawProgram = 0
     private var passthroughProgram = 0
@@ -177,18 +179,20 @@ class GpuMotionSmoother(
                 position(0)
             }
 
-        val latch = CountDownLatch(1)
-        glHandler.post {
-            try {
-                initGL()
-            } finally {
-                latch.countDown()
+        if (initGl) {
+            val latch = CountDownLatch(1)
+            glHandler.post {
+                try {
+                    initGL()
+                } finally {
+                    latch.countDown()
+                }
             }
-        }
-        try {
-            latch.await(2000, TimeUnit.MILLISECONDS)
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Timed out waiting for GL initialization", e)
+            try {
+                latch.await(2000, TimeUnit.MILLISECONDS)
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Timed out waiting for GL initialization", e)
+            }
         }
     }
 
@@ -228,13 +232,14 @@ class GpuMotionSmoother(
         }
     }
 
+    @VisibleForTesting
+    internal fun isFrozenForTesting(): Boolean = isFrozen
+
     fun setFrozen(frozen: Boolean) {
         if (released) return
-        glHandler.post {
-            if (this.isFrozen != frozen) {
-                AppLog.d(TAG, "GpuMotionSmoother frozen state changed to $frozen")
-                this.isFrozen = frozen
-            }
+        if (this.isFrozen != frozen) {
+            AppLog.d(TAG, "GpuMotionSmoother frozen state changed to $frozen")
+            this.isFrozen = frozen
         }
     }
 
@@ -573,10 +578,10 @@ class GpuMotionSmoother(
                     GLES20.glDeleteFramebuffers(fboFramebuffers.size, fboFramebuffers, 0)
                 }
 
-                if (eglDisplay != EGL14.EGL_NO_DISPLAY) {
+                if (eglDisplay != null && eglDisplay != EGL14.EGL_NO_DISPLAY) {
                     EGL14.eglMakeCurrent(eglDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)
-                    if (eglSurface != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(eglDisplay, eglSurface)
-                    if (eglContext != EGL14.EGL_NO_CONTEXT) EGL14.eglDestroyContext(eglDisplay, eglContext)
+                    if (eglSurface != null && eglSurface != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(eglDisplay, eglSurface)
+                    if (eglContext != null && eglContext != EGL14.EGL_NO_CONTEXT) EGL14.eglDestroyContext(eglDisplay, eglContext)
                     EGL14.eglTerminate(eglDisplay)
                 }
                 AppLog.i(TAG, "GpuMotionSmoother resources released cleanly")

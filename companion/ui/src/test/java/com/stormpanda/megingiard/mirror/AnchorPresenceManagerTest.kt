@@ -2,6 +2,8 @@ package com.stormpanda.megingiard.mirror
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.SurfaceTexture
+import android.view.Surface
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.macropad.LayoutVisualAnchor
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -25,6 +27,7 @@ import org.robolectric.annotation.Config
 class AnchorPresenceManagerTest {
     @After
     fun tearDown() {
+        AnchorTestCoordinator.stopTesting(resumeSuspended = false)
         AnchorPresenceManager.updateMonitoringLoop(false, null, null, CompanionViewMode.MACROPAD)
         AnchorPresenceManager.clearAllBuffers()
         MacroPadState.loadFrom(emptyList(), "")
@@ -305,4 +308,99 @@ class AnchorPresenceManagerTest {
             assertEquals(AnchorPresenceState.PRESENT, AnchorPresenceManager.getLayoutPresenceState("layout_inventory"))
             bmp.recycle()
         }
+
+    @Test
+    fun `onHardwareAnchorEvaluated keeps smoother unfrozen on 0-cutout layout and registerGpuMotionSmoother unfreezes`() {
+        val points = listOf(AnchorPoint(u = 0.5f, v = 0.5f, r = 255, g = 0, b = 0))
+        val sig = VisualAnchorSignature(cutoutId = "layout_gameplay", points = points)
+        val anchor =
+            LayoutVisualAnchor(
+                enabled = true,
+                signature = sig,
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+            )
+        val layout =
+            PadLayout(
+                id = "layout_gameplay",
+                name = "Gameplay",
+                visualAnchor = anchor,
+                mirrorCutouts = emptyList(),
+            )
+        val profile = PadProfile(id = "p1", name = "Profile", layouts = listOf(layout))
+        MacroPadState.loadFrom(listOf(profile), profile.id)
+        MacroPadState.setActiveLayoutId(layout.id)
+
+        val st = SurfaceTexture(0)
+        val surface = Surface(st)
+        val smoother = GpuMotionSmoother(surface, 100, 100, 0, 2, initGl = false)
+        try {
+            AnchorPresenceManager.registerGpuMotionSmoother(smoother)
+            AnchorPresenceManager.onHardwareAnchorEvaluated(layout.id, 0.0f)
+
+            assertTrue(AnchorPresenceManager.isLayoutAnchorLost(layout.id))
+            assertFalse(
+                "Smoother must stay unfrozen when layout has 0 cutouts so candidate scan receives live frames",
+                smoother.isFrozenForTesting(),
+            )
+
+            // Simulate smoother recreation while layout is still LOST (e.g. entering test mode)
+            smoother.setFrozen(true)
+            assertTrue(smoother.isFrozenForTesting())
+            AnchorPresenceManager.registerGpuMotionSmoother(smoother)
+            assertFalse(
+                "Re-registering smoother while layout is LOST must unfreeze smoother",
+                smoother.isFrozenForTesting(),
+            )
+        } finally {
+            AnchorPresenceManager.unregisterGpuMotionSmoother(smoother)
+            smoother.release()
+            surface.release()
+            st.release()
+        }
+    }
+
+    @Test
+    fun `isMonitoringSuspended returns true during anchor testing and suppresses hardware evaluation`() {
+        val context = RuntimeEnvironment.getApplication()
+        val points = listOf(AnchorPoint(u = 0.5f, v = 0.5f, r = 255, g = 0, b = 0))
+        val sig = VisualAnchorSignature(cutoutId = "layout_test_suspend", points = points)
+        val layout =
+            PadLayout(
+                id = "layout_test_suspend",
+                name = "Test Suspend",
+                visualAnchor = LayoutVisualAnchor(enabled = true, signature = sig),
+            )
+        val profile = PadProfile(id = "p1", name = "Profile", layouts = listOf(layout))
+        MacroPadState.loadFrom(listOf(profile), profile.id)
+        MacroPadState.setActiveLayoutId(layout.id)
+
+        AnchorTestCoordinator.startTesting(context, layout)
+        assertTrue(AnchorPresenceManager.isMonitoringSuspended())
+
+        AnchorPresenceManager.onHardwareAnchorEvaluated(layout.id, 0.0f)
+        assertFalse(
+            "Hardware anchor evaluation must be ignored while interactive anchor testing is active",
+            AnchorPresenceManager.isLayoutAnchorLost(layout.id),
+        )
+
+        AnchorTestCoordinator.stopTesting(resumeSuspended = false)
+        assertFalse(AnchorPresenceManager.isMonitoringSuspended())
+    }
+
+    @Test
+    fun `getFrozenFrame and clearCutout manage cached cutout frozen bitmaps`() {
+        val context = RuntimeEnvironment.getApplication()
+        val bmp = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888)
+        AnchorPresenceManager.setFrozenFrameForTesting("cutout_test_cache", bmp)
+
+        assertEquals(1, AnchorPresenceManager.lastValidFrameCount)
+        assertNotNull(AnchorPresenceManager.getFrozenFrame(context, "cutout_test_cache"))
+
+        AnchorPresenceManager.clearCutout("cutout_test_cache")
+        assertEquals(0, AnchorPresenceManager.lastValidFrameCount)
+        assertTrue(bmp.isRecycled)
+    }
 }
