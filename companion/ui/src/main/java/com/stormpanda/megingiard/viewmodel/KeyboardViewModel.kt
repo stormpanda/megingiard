@@ -27,6 +27,7 @@ class KeyboardViewModel : ViewModel() {
     val kbLayout: StateFlow<KbLayout> = KeyboardSettings.kbLayout
     val kbTouchpadEnabled: StateFlow<Boolean> = KeyboardSettings.kbTouchpadEnabled
     val kbAutoOpenOnFocus: StateFlow<Boolean> = KeyboardSettings.kbAutoOpenOnFocus
+    val kbAutoHideOnFocusLoss: StateFlow<Boolean> = KeyboardSettings.kbAutoHideOnFocusLoss
     val isQuickMenuOpen: StateFlow<Boolean> = AppStateManager.isQuickMenuOpen
 
     private val _keyboardMode = MutableStateFlow(KeyboardMode.LETTERS)
@@ -47,6 +48,8 @@ class KeyboardViewModel : ViewModel() {
     fun setKbTouchpadEnabled(value: Boolean) = KeyboardSettings.setKbTouchpadEnabled(value)
 
     fun setKbAutoOpenOnFocus(value: Boolean) = KeyboardSettings.setKbAutoOpenOnFocus(value)
+
+    fun setKbAutoHideOnFocusLoss(value: Boolean) = KeyboardSettings.setKbAutoHideOnFocusLoss(value)
 
     private fun sendCtrlCombo(keyCode: Int) {
         KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)

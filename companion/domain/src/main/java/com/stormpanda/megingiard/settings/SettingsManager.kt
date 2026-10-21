@@ -198,20 +198,7 @@ object SettingsManager {
                 .catch { emit(emptyPreferences()) }
                 .collect { prefs ->
                     AppLog.i(TAG, "settings loaded from DataStore")
-
-                    applyBootstrapPrefs(prefs)
-                    prefs[KEY_EXCLUDE_FROM_RECENTS]?.let { _excludeFromRecents.value = it }
-                    prefs[KEY_OVERLAY_AT_BOTTOM]?.let { _overlayAtBottom.value = it }
-                    prefs[KEY_OVERLAY_FADE_OUT]?.let { _overlayFadeOut.value = it }
-
-                    prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION]?.let { _welcomeTourCompletedVersion.value = it }
-                    MirrorSettings.loadFrom(prefs)
-                    KeyboardSettings.loadFrom(prefs)
-                    TouchpadSettings.loadFrom(prefs)
-                    prefs[KEY_APP_LANGUAGE]?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } }?.let {
-                        _appLanguage.value = it
-                    }
-                    UpdateManager.loadFrom(prefs)
+                    applyLoadedPrefs(prefs)
 
                     if (!isInternalBackupsLoaded) {
                         isInternalBackupsLoaded = true
@@ -220,6 +207,22 @@ object SettingsManager {
                     }
                 }
         }
+    }
+
+    private fun applyLoadedPrefs(prefs: Preferences) {
+        applyBootstrapPrefs(prefs)
+        prefs[KEY_EXCLUDE_FROM_RECENTS]?.let { _excludeFromRecents.value = it }
+        prefs[KEY_OVERLAY_AT_BOTTOM]?.let { _overlayAtBottom.value = it }
+        prefs[KEY_OVERLAY_FADE_OUT]?.let { _overlayFadeOut.value = it }
+
+        prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION]?.let { _welcomeTourCompletedVersion.value = it }
+        MirrorSettings.loadFrom(prefs)
+        KeyboardSettings.loadFrom(prefs)
+        TouchpadSettings.loadFrom(prefs)
+        prefs[KEY_APP_LANGUAGE]?.let { name -> AppLanguage.entries.firstOrNull { it.name == name } }?.let {
+            _appLanguage.value = it
+        }
+        UpdateManager.loadFrom(prefs)
     }
 
     private fun applyBootstrapPrefs(prefs: Preferences) {
@@ -375,36 +378,38 @@ object SettingsManager {
      */
     suspend fun importGroupedSettingsAwait(sections: Map<String, Map<String, JsonElement>>) {
         AppLog.i(TAG, "importGroupedSettingsAwait: sections=${sections.keys}")
-        dataStore.edit { prefs ->
-            for ((_, entries) in sections) {
-                for ((keyName, element) in entries) {
-                    if (element !is JsonPrimitive) continue
-                    val key = KEY_BY_NAME[keyName]
-                    if (key == null) {
-                        AppLog.w(TAG, "importGroupedSettings: unknown key '$keyName', skipping")
-                        continue
-                    }
-                    @Suppress("UNCHECKED_CAST")
-                    when (key) {
-                        in BOOLEAN_KEYS -> {
-                            element.booleanOrNull?.let { prefs[key as Preferences.Key<Boolean>] = it }
+        val updatedPrefs =
+            dataStore.edit { prefs ->
+                for ((_, entries) in sections) {
+                    for ((keyName, element) in entries) {
+                        if (element !is JsonPrimitive) continue
+                        val key = KEY_BY_NAME[keyName]
+                        if (key == null) {
+                            AppLog.w(TAG, "importGroupedSettings: unknown key '$keyName', skipping")
+                            continue
                         }
+                        @Suppress("UNCHECKED_CAST")
+                        when (key) {
+                            in BOOLEAN_KEYS -> {
+                                element.booleanOrNull?.let { prefs[key as Preferences.Key<Boolean>] = it }
+                            }
 
-                        in INT_KEYS -> {
-                            element.intOrNull?.let { prefs[key as Preferences.Key<Int>] = it }
-                        }
+                            in INT_KEYS -> {
+                                element.intOrNull?.let { prefs[key as Preferences.Key<Int>] = it }
+                            }
 
-                        in FLOAT_KEYS -> {
-                            element.floatOrNull?.let { prefs[key as Preferences.Key<Float>] = it }
-                        }
+                            in FLOAT_KEYS -> {
+                                element.floatOrNull?.let { prefs[key as Preferences.Key<Float>] = it }
+                            }
 
-                        in STRING_KEYS -> {
-                            element.contentOrNull?.let { prefs[key as Preferences.Key<String>] = it }
+                            in STRING_KEYS -> {
+                                element.contentOrNull?.let { prefs[key as Preferences.Key<String>] = it }
+                            }
                         }
                     }
                 }
             }
-        }
+        applyLoadedPrefs(updatedPrefs)
     }
 
     private fun decodeBackups(jsonStr: String?): List<InternalBackup> {

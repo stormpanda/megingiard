@@ -26,11 +26,13 @@ fun InputSettingsTab(
     kbLayout: KbLayout,
     kbTouchpadEnabled: Boolean,
     kbAutoOpenOnFocus: Boolean,
+    kbAutoHideOnFocusLoss: Boolean,
     onGamepadSwapFaceButtonsChange: (Boolean) -> Unit,
     onOpenDeadzones: () -> Unit,
     onKbLayoutChange: (KbLayout) -> Unit,
     onKbTouchpadEnabledChange: (Boolean) -> Unit,
     onKbAutoOpenOnFocusChange: (Boolean) -> Unit,
+    onKbAutoHideOnFocusLossChange: (Boolean) -> Unit,
 ) {
     val colors = LocalAppColors.current
 
@@ -70,9 +72,11 @@ fun InputSettingsTab(
         kbLayout = kbLayout,
         kbTouchpadEnabled = kbTouchpadEnabled,
         kbAutoOpenOnFocus = kbAutoOpenOnFocus,
+        kbAutoHideOnFocusLoss = kbAutoHideOnFocusLoss,
         onKbLayoutChange = onKbLayoutChange,
         onKbTouchpadEnabledChange = onKbTouchpadEnabledChange,
         onKbAutoOpenOnFocusChange = onKbAutoOpenOnFocusChange,
+        onKbAutoHideOnFocusLossChange = onKbAutoHideOnFocusLossChange,
     )
 }
 

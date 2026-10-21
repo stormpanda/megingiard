@@ -80,6 +80,7 @@ fun GlobalSettingsScreen(
     val kbLayout by KeyboardSettings.kbLayout.collectAsStateWithLifecycle()
     val kbTouchpadEnabled by KeyboardSettings.kbTouchpadEnabled.collectAsStateWithLifecycle()
     val kbAutoOpenOnFocus by KeyboardSettings.kbAutoOpenOnFocus.collectAsStateWithLifecycle()
+    val kbAutoHideOnFocusLoss by KeyboardSettings.kbAutoHideOnFocusLoss.collectAsStateWithLifecycle()
     val privdState by PrivdManager.state.collectAsStateWithLifecycle()
     val deadzoneLeft by MacroPadSettings.deadzoneLeft.collectAsStateWithLifecycle()
     val deadzoneRight by MacroPadSettings.deadzoneRight.collectAsStateWithLifecycle()
@@ -225,11 +226,13 @@ fun GlobalSettingsScreen(
                                         kbLayout = kbLayout,
                                         kbTouchpadEnabled = kbTouchpadEnabled,
                                         kbAutoOpenOnFocus = kbAutoOpenOnFocus,
+                                        kbAutoHideOnFocusLoss = kbAutoHideOnFocusLoss,
                                         onGamepadSwapFaceButtonsChange = { MacroPadSettings.setGamepadSwapFaceButtons(it) },
                                         onOpenDeadzones = { subPageStack = listOf(SettingsSubPage.DEADZONES) },
                                         onKbLayoutChange = { KeyboardSettings.setKbLayout(it) },
                                         onKbTouchpadEnabledChange = { KeyboardSettings.setKbTouchpadEnabled(it) },
                                         onKbAutoOpenOnFocusChange = { KeyboardSettings.setKbAutoOpenOnFocus(it) },
+                                        onKbAutoHideOnFocusLossChange = { KeyboardSettings.setKbAutoHideOnFocusLoss(it) },
                                     )
                                 }
 

@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.keyboard
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.KeyboardHide
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.runtime.Composable
@@ -29,6 +30,7 @@ fun KeyboardSettingsOverlay(viewModel: KeyboardViewModel = viewModel()) {
     val currentLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
     val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsStateWithLifecycle()
     val kbAutoOpenOnFocus by viewModel.kbAutoOpenOnFocus.collectAsStateWithLifecycle()
+    val kbAutoHideOnFocusLoss by viewModel.kbAutoHideOnFocusLoss.collectAsStateWithLifecycle()
 
     DisposableEffect(Unit) {
         AppLog.d(TAG, "KeyboardSettingsOverlay composed")
@@ -45,9 +47,11 @@ fun KeyboardSettingsOverlay(viewModel: KeyboardViewModel = viewModel()) {
             kbLayout = currentLayout,
             kbTouchpadEnabled = kbTouchpadEnabled,
             kbAutoOpenOnFocus = kbAutoOpenOnFocus,
+            kbAutoHideOnFocusLoss = kbAutoHideOnFocusLoss,
             onKbLayoutChange = viewModel::setKbLayout,
             onKbTouchpadEnabledChange = viewModel::setKbTouchpadEnabled,
             onKbAutoOpenOnFocusChange = viewModel::setKbAutoOpenOnFocus,
+            onKbAutoHideOnFocusLossChange = viewModel::setKbAutoHideOnFocusLoss,
             isFirstItem = true,
         )
     }
@@ -58,9 +62,11 @@ fun KeyboardSettingsCards(
     kbLayout: KbLayout,
     kbTouchpadEnabled: Boolean,
     kbAutoOpenOnFocus: Boolean,
+    kbAutoHideOnFocusLoss: Boolean,
     onKbLayoutChange: (KbLayout) -> Unit,
     onKbTouchpadEnabledChange: (Boolean) -> Unit,
     onKbAutoOpenOnFocusChange: (Boolean) -> Unit,
+    onKbAutoHideOnFocusLossChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     isFirstItem: Boolean = false,
 ) {
@@ -88,5 +94,13 @@ fun KeyboardSettingsCards(
         checked = kbAutoOpenOnFocus,
         icon = Icons.Rounded.TouchApp,
         onCheckedChange = onKbAutoOpenOnFocusChange,
+    )
+
+    GamepadToggleCard(
+        title = stringResource(R.string.settings_kb_auto_hide_on_focus_loss),
+        description = stringResource(R.string.settings_kb_auto_hide_on_focus_loss_desc),
+        checked = kbAutoHideOnFocusLoss,
+        icon = Icons.Rounded.KeyboardHide,
+        onCheckedChange = onKbAutoHideOnFocusLossChange,
     )
 }

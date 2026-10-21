@@ -70,6 +70,12 @@ class KeyboardViewModelTest {
 
         vm.setKbTouchpadEnabled(false)
         assertFalse(vm.kbTouchpadEnabled.value)
+
+        vm.setKbAutoOpenOnFocus(false)
+        assertFalse(vm.kbAutoOpenOnFocus.value)
+
+        vm.setKbAutoHideOnFocusLoss(false)
+        assertFalse(vm.kbAutoHideOnFocusLoss.value)
     }
 
     @Test

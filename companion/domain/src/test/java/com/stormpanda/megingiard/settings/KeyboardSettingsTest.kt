@@ -98,4 +98,33 @@ class KeyboardSettingsTest {
             testScheduler.advanceUntilIdle()
             assertTrue(KeyboardSettings.kbAutoOpenOnFocus.value)
         }
+
+    @Test
+    fun testKeyboardAutoHideOnFocusLossSetting() =
+        runTest(testDispatcher) {
+            val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
+            val testDataStore =
+                PreferenceDataStoreFactory.create(
+                    produceFile = { tempFile },
+                    scope = testScope,
+                )
+
+            KeyboardSettings.init(testDataStore, testScope)
+
+            // 1. Verify default value: auto-hide is true by default
+            assertTrue(KeyboardSettings.kbAutoHideOnFocusLoss.value)
+
+            // 2. Disable auto-hide and verify persistence
+            KeyboardSettings.setKbAutoHideOnFocusLoss(false)
+            testScheduler.advanceUntilIdle()
+            assertFalse(KeyboardSettings.kbAutoHideOnFocusLoss.value)
+
+            val prefs = testDataStore.data.first()
+            assertTrue(prefs[KEY_KB_AUTO_HIDE_ON_FOCUS_LOSS] == false)
+
+            // 3. Reset
+            KeyboardSettings.setKbAutoHideOnFocusLoss(true)
+            testScheduler.advanceUntilIdle()
+            assertTrue(KeyboardSettings.kbAutoHideOnFocusLoss.value)
+        }
 }

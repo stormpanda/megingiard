@@ -107,10 +107,12 @@ class SettingsManagerTest {
                     "keyboard" to
                         mapOf(
                             "kb_auto_open_on_focus" to JsonPrimitive(true),
+                            "kb_auto_hide_on_focus_loss" to JsonPrimitive(false),
                         ),
                 )
             SettingsManager.importGroupedSettingsAwait(payload)
             testDispatcher.scheduler.advanceUntilIdle()
             assertTrue(KeyboardSettings.kbAutoOpenOnFocus.value)
+            assertFalse(KeyboardSettings.kbAutoHideOnFocusLoss.value)
         }
 }

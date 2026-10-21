@@ -75,10 +75,11 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 ### FR-K9: Keyboard Settings Toolbar Button & Screen
 
 - Tapping the Settings gear button in `KeyboardBottomToolbar` MUST open `KeyboardSettingsOverlay` on the primary (top) display while the virtual keyboard remains active, visible, and interactive on the secondary (bottom) display.
-- `KeyboardSettingsOverlay` MUST present three settings cards matching Global Settings (under the Input category):
+- `KeyboardSettingsOverlay` MUST present four settings cards matching Global Settings (under the Input category):
   1. **Keyboard Layout:** choice card selecting between **QWERTZ**, **QWERTY**, and **AZERTY**.
   2. **Keyboard Touchpad:** toggle enabling or disabling the touchpad area above the keyboard (`kb_touchpad_enabled`).
   3. **Auto-Open on Text Focus:** toggle enabling or disabling accessibility-driven auto-open (`kb_auto_open_on_focus`).
+  4. **Auto-Hide on Focus Loss:** toggle enabling or disabling automatic dismissal of an auto-opened keyboard when focus leaves a text field or the top-screen app changes (`kb_auto_hide_on_focus_loss`).
 - Switching regional layout updates `KeyboardSettings.kbLayout` and resets `KeyboardState`.
 - Closing or collapsing the virtual keyboard while `KeyboardSettingsOverlay` is open MUST automatically close the Keyboard Settings overlay.
 
@@ -101,12 +102,12 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - Dual-symbol non-letter keys in Compact Full Keyboard Mode display both their shifted and primary symbols stacked vertically on the key cap, highlighting the active symbol and dimming the inactive one.
 - Holding a character key in Compact Full Keyboard Mode shows only the single-character preview popup (no long-press multi-option popup), and dragging across keys performs slide-to-correct, injecting the final hovered key upon release.
 
-### FR-K12: Auto-Open on Top-Screen Text Focus (Accessibility-Driven)
+### FR-K12: Auto-Open & Auto-Hide on Top-Screen Text Focus (Accessibility-Driven)
 
-- The virtual keyboard MUST support an optional **Auto-Open on Text Focus** mode, configurable via Settings (`KeyboardSettings.kbAutoOpenOnFocus`, enabled by default).
-- When enabled, `MegingiardAccessibilityService` monitors `AccessibilityEvent.TYPE_VIEW_FOCUSED` and `TYPE_VIEW_CLICKED` on the primary display (`Display.DEFAULT_DISPLAY`) and delegates focus state transitions to `AutoKeyboardFocusCoordinator`.
-- Focusing or tapping any editable text input field (`AccessibilityNodeInfo.isEditable == true`) on the primary display automatically opens Megingiard's virtual keyboard on the secondary display via `AppStateManager.setFullscreenKeyboardActive(true)`.
-- Focusing a non-editable element or navigating away from the current application package to a different app/launcher on the primary display automatically dismisses the virtual keyboard. Transient window transitions, suggestion dropdowns, or popup dialogs within the same active package do not dismiss the virtual keyboard.
+- The virtual keyboard MUST support optional **Auto-Open on Text Focus** (`KeyboardSettings.kbAutoOpenOnFocus`, enabled by default) and **Auto-Hide on Focus Loss** (`KeyboardSettings.kbAutoHideOnFocusLoss`, enabled by default) modes, independently configurable via Settings.
+- When Auto-Open is enabled, `MegingiardAccessibilityService` monitors `AccessibilityEvent.TYPE_VIEW_FOCUSED` and `TYPE_VIEW_CLICKED` on the primary display (`Display.DEFAULT_DISPLAY`) and delegates focus state transitions to `AutoKeyboardFocusCoordinator`.
+- Focusing or tapping any editable text input field (`AccessibilityNodeInfo.isEditable == true`) on the primary display automatically opens Megingiard's virtual keyboard on the secondary display via `AppStateManager.setFullscreenKeyboardActive(true)` and marks the session as auto-opened (`AutoKeyboardFocusCoordinator.isKeyboardAutoOpened = true`).
+- When Auto-Hide is enabled (`kbAutoHideOnFocusLoss == true`), focusing a non-editable element or navigating away from the current application package to a different app/launcher on the primary display automatically dismisses an auto-opened virtual keyboard. When Auto-Hide is disabled (`kbAutoHideOnFocusLoss == false`), the coordinator clears its active session tracking on focus loss or package change while keeping the virtual keyboard open on the secondary display until manually dismissed. Keyboards that were opened manually by the user are never closed by Auto-Hide. Transient window transitions, suggestion dropdowns, or popup dialogs within the same active package do not dismiss the virtual keyboard.
 - If the user manually collapses or dismisses the virtual keyboard while an editable field remains focused, `AutoKeyboardFocusCoordinator` records hysteresis (`userDismissedFieldId`, using `AccessibilityNodeInfo.uniqueId`) to avoid re-opening the keyboard until focus moves to another field or the user explicitly taps the field again.
 - Megingiard relies on Android's native hardware keyboard detection (`show_ime_with_hard_keyboard = 0`) to keep the top-screen soft keyboard hidden without tearing down the application's active `InputConnection`.
 
@@ -205,11 +206,12 @@ data class KeyDef(
 
 ### Settings
 
-| Setting            | DataStore Key           | Default  | Description                                              |
-| ------------------ | ----------------------- | -------- | -------------------------------------------------------- |
-| Keyboard Layout    | `kb_layout`             | `QWERTZ` | Regional layout variant (`QWERTZ`, `QWERTY`, `AZERTY`)   |
-| Keyboard Touchpad  | `kb_touchpad_enabled`   | `true`   | Show relative touchpad area above the keyboard container |
-| Auto-Open on Focus | `kb_auto_open_on_focus` | `true`   | Auto-open bottom keyboard when top text field is focused |
+| Setting                 | DataStore Key               | Default  | Description                                                                   |
+| ----------------------- | --------------------------- | -------- | ----------------------------------------------------------------------------- |
+| Keyboard Layout         | `kb_layout`                 | `QWERTZ` | Regional layout variant (`QWERTZ`, `QWERTY`, `AZERTY`)                        |
+| Keyboard Touchpad       | `kb_touchpad_enabled`       | `true`   | Show relative touchpad area above the keyboard container                      |
+| Auto-Open on Focus      | `kb_auto_open_on_focus`     | `true`   | Auto-open bottom keyboard when top text field is focused                      |
+| Auto-Hide on Focus Loss | `kb_auto_hide_on_focus_loss`| `true`   | Auto-close an auto-opened keyboard when focus leaves a text field or switches |
 
 ### Source Files
 

@@ -39,6 +39,7 @@ internal val KEY_MACROPAD_ACTIVE_PROFILE_ID = stringPreferencesKey("macropad_act
 internal val KEY_KB_LAYOUT = stringPreferencesKey("kb_layout")
 internal val KEY_KB_TOUCHPAD_ENABLED = booleanPreferencesKey("kb_touchpad_enabled")
 internal val KEY_KB_AUTO_OPEN_ON_FOCUS = booleanPreferencesKey("kb_auto_open_on_focus")
+internal val KEY_KB_AUTO_HIDE_ON_FOCUS_LOSS = booleanPreferencesKey("kb_auto_hide_on_focus_loss")
 
 // Language
 internal val KEY_APP_LANGUAGE = stringPreferencesKey("app_language")
@@ -124,6 +125,7 @@ private val KEYBOARD_KEYS: Set<Preferences.Key<*>> =
         KEY_KB_LAYOUT,
         KEY_KB_TOUCHPAD_ENABLED,
         KEY_KB_AUTO_OPEN_ON_FOCUS,
+        KEY_KB_AUTO_HIDE_ON_FOCUS_LOSS,
     )
 private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> =
     setOf(
@@ -167,6 +169,7 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_MIRROR_SNAP_ALIGNMENT,
         KEY_KB_TOUCHPAD_ENABLED,
         KEY_KB_AUTO_OPEN_ON_FOCUS,
+        KEY_KB_AUTO_HIDE_ON_FOCUS_LOSS,
         KEY_TOUCHPAD_USE_MOUSE,
         KEY_TOUCHPAD_TAP_TO_CLICK,
         KEY_TOUCHPAD_TWO_FINGER_TAP,
