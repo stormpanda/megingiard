@@ -58,9 +58,7 @@ import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.dimColorFilter
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -197,7 +195,8 @@ internal fun LayerImageSettingsEditor(
     var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var loadedImagePath by remember { mutableStateOf<String?>(null) }
     var isSaving by remember { mutableStateOf(false) }
-    val isLoadingBitmap = currentImagePath != null && loadedImagePath != currentImagePath
+    val pickedUri by BackgroundPickerManager.pickedUri.collectAsStateWithLifecycle()
+    val isLoadingBitmap = pickedUri != null || (currentImagePath != null && loadedImagePath != currentImagePath)
 
     fun updateDraft(transform: (PadLayout) -> PadLayout) {
         val base = MacroPadState.previewLayout.value?.takeIf { it.id == layout.id } ?: layout
@@ -240,10 +239,7 @@ internal fun LayerImageSettingsEditor(
             isCropActive = false
             return@LaunchedEffect
         }
-        val bitmap =
-            withContext(Dispatchers.IO) {
-                MacroPadMediaRepository.loadScaledBitmap(context, currentImagePath)
-            }
+        val bitmap = MacroPadMediaRepository.loadScaledBitmap(context, currentImagePath)
         previewBitmap = bitmap?.asImageBitmap()
         loadedImagePath = currentImagePath
         if (bitmap == null) {
@@ -251,7 +247,6 @@ internal fun LayerImageSettingsEditor(
         }
     }
 
-    val pickedUri by BackgroundPickerManager.pickedUri.collectAsStateWithLifecycle()
     LaunchedEffect(pickedUri) {
         val uri = pickedUri ?: return@LaunchedEffect
         AppLog.d(TAG, "$kind image picked from system picker: $uri")
