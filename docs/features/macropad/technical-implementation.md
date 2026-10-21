@@ -144,6 +144,11 @@ PadProfile
         │     ScrollWheel
         │     TrackpointMove(size: TrackpointSize = MEDIUM, mode: TrackpointMode) — legacy size deprecated; sized via PadButton.widthDp/heightDp
         │     Screenshot(target: ScreenshotTarget = TOP)
+        │     SwitchToLayout(layoutId: String = "", holdToShift: Boolean = false)
+        │     SwitchToHub
+        │     StopAllMacros
+        │     TouchTap(normX: Float = 0.5f, normY: Float = 0.5f)
+        │     MediaControl(mediaAction: MediaControlAction = PLAY_PAUSE)
         └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG | CUSTOM, default OFF)
 ```
 

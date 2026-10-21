@@ -30,8 +30,8 @@
 | `PadButtonEditDialog.kt` | In-deck button create/edit sub-page (`EditButtonSubPageContent`), `ButtonColorSubPageContent`, and `ColorPreviewInfoBox` |
 | `PadActionPicker.kt` | Action category selector card and dispatcher to action-specific sub-pickers in the button editor |
 | `PadActionDisplay.kt` | Action type enums (`ActionGroup`, `ActionCategory`), string mappings, and localized gamepad button formatting/label templates |
-| `PadActionSubPickers.kt` | Sub-widgets for configuring action details: `KeyboardKeyPicker`, `GamepadButtonPicker`, `MouseActionPicker`, `TrackpointPicker`, and `MacroPicker` |
-| `ActionGridSubPages.kt` | Shared `ActionGridItem` model and 2-column grid sub-pages (`ChooseButtonTypeSubPageContent`, `MirrorActionPickerSubPageContent`, `ToolsActionPickerSubPageContent`, `LayoutActionPickerSubPageContent`, `MacroActionPickerSubPageContent`) |
+| `PadActionSubPickers.kt` | Sub-widgets for configuring action details: `KeyboardKeyPicker`, `GamepadButtonPicker`, `MouseActionPicker`, `TrackpointPicker`, `MacroPicker`, `SwitchToLayoutPicker`, and `TouchTapPicker` |
+| `ActionGridSubPages.kt` | Shared `ActionGridItem` model and 2-column grid sub-pages (`ChooseButtonTypeSubPageContent`, `MirrorActionPickerSubPageContent`, `ToolsActionPickerSubPageContent`, `LayoutActionPickerSubPageContent`, `MediaActionPickerSubPageContent`, `MacroActionPickerSubPageContent`) |
 | `VisualKeyboardPicker.kt` | Interactive virtual keyboard sub-page (`VisualKeyboardPicker`) with 2D D-pad spatial navigation |
 | `VisualGamepadPicker.kt` | Interactive virtual AYN Thor controller sub-page (`VisualGamepadPicker`) with 2D D-pad spatial navigation |
 | `VisualMousePicker.kt` | 2-column mouse action picker sub-page (`VisualMousePicker`) |

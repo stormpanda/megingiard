@@ -25,6 +25,7 @@ private fun defaultInitialName(): String =
 private fun PadButton.cloneWithMacroMapping(
     macroMapping: Map<String, String>,
     layoutMapping: Map<String, String> = emptyMap(),
+    fallbackLayoutId: String? = null,
 ): PadButton {
     val updatedAction =
         when (val action = this.action) {
@@ -34,7 +35,7 @@ private fun PadButton.cloneWithMacroMapping(
             }
 
             is PadAction.SwitchToLayout -> {
-                val newLayoutId = layoutMapping[action.layoutId] ?: action.layoutId
+                val newLayoutId = layoutMapping[action.layoutId] ?: fallbackLayoutId ?: action.layoutId
                 action.copy(layoutId = newLayoutId)
             }
 
@@ -51,7 +52,8 @@ private fun PadButton.cloneWithMacroMapping(
 private fun List<PadButton>.cloneWithMacroMapping(
     macroMapping: Map<String, String>,
     layoutMapping: Map<String, String> = emptyMap(),
-): List<PadButton> = map { it.cloneWithMacroMapping(macroMapping, layoutMapping) }
+    fallbackLayoutId: String? = null,
+): List<PadButton> = map { it.cloneWithMacroMapping(macroMapping, layoutMapping, fallbackLayoutId) }
 
 /**
  * Runtime state holder for the MacroPad-centric UI.
@@ -883,11 +885,19 @@ object MacroPadState {
             }
 
         val newLayoutId = UUID.randomUUID().toString()
+        val crossProfile = sourceProfileId != targetProfileId
+        val layoutMapping = if (crossProfile) mapOf(layout.id to newLayoutId) else emptyMap()
+        val fallbackLayoutId =
+            if (crossProfile) {
+                targetProfile.activeLayoutId ?: targetProfile.layouts.firstOrNull()?.id ?: newLayoutId
+            } else {
+                null
+            }
         val copiedLayout =
             layout.copy(
                 id = newLayoutId,
                 name = uniqueName,
-                buttons = layout.buttons.cloneWithMacroMapping(macroMapping),
+                buttons = layout.buttons.cloneWithMacroMapping(macroMapping, layoutMapping, fallbackLayoutId),
                 mirrorCutouts = copiedCutouts,
                 backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$newLayoutId" },
                 backgroundImageVersion = 0,
@@ -935,6 +945,9 @@ object MacroPadState {
                     "copyButtonToLayout: copied referenced macro sourceId=$macroId targetId=$targetMacroId name='$targetMacroName'",
                 )
             }
+        } else if (button.action is PadAction.SwitchToLayout && sourceProfileId != targetProfileId) {
+            val switchAction = button.action as PadAction.SwitchToLayout
+            updatedAction = switchAction.copy(layoutId = targetLayout.id)
         }
 
         val clonedButton =

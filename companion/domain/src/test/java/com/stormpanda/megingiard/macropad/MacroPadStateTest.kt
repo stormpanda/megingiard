@@ -1154,4 +1154,42 @@ class MacroPadStateTest {
         assertNotEquals("cutout-orig", duplicatedCutout.id)
         assertEquals("HUD", duplicatedCutout.name)
     }
+
+    @Test
+    fun `copyLayoutToProfile and copyButtonToLayout remap SwitchToLayout across profiles`() {
+        val selfSwitchBtn =
+            testButton(
+                id = "btn-self",
+                action = PadAction.SwitchToLayout(layoutId = "l1-a", holdToShift = true),
+            )
+        val otherSwitchBtn =
+            testButton(
+                id = "btn-other",
+                action = PadAction.SwitchToLayout(layoutId = "l1-b", holdToShift = false),
+            )
+        val l1a = testLayout(id = "l1-a", name = "SourceA", buttons = listOf(selfSwitchBtn, otherSwitchBtn))
+        val l1b = testLayout(id = "l1-b", name = "SourceB")
+        val p1 = testProfile(id = "p1", name = "Profile1", layouts = listOf(l1a, l1b), activeLayoutId = "l1-a")
+
+        val l2 = testLayout(id = "l2-main", name = "TargetMain")
+        val p2 = testProfile(id = "p2", name = "Profile2", layouts = listOf(l2), activeLayoutId = "l2-main")
+        loadProfiles(p1, p2, activeId = "p1")
+
+        val copiedLayoutId = MacroPadState.copyLayoutToProfile(l1a, "p1", "p2")
+        assertNotNull(copiedLayoutId)
+
+        val targetAfterLayoutCopy = MacroPadState.profiles.value.first { it.id == "p2" }
+        val copiedLayout = targetAfterLayoutCopy.layouts.first { it.id == copiedLayoutId }
+        val copiedSelfAction = copiedLayout.buttons[0].action as PadAction.SwitchToLayout
+        val copiedOtherAction = copiedLayout.buttons[1].action as PadAction.SwitchToLayout
+        assertEquals(copiedLayoutId, copiedSelfAction.layoutId)
+        assertTrue(copiedSelfAction.holdToShift)
+        assertEquals("l2-main", copiedOtherAction.layoutId)
+
+        MacroPadState.copyButtonToLayout(otherSwitchBtn, "p1", "p2", "l2-main")
+        val targetAfterButtonCopy = MacroPadState.profiles.value.first { it.id == "p2" }
+        val mainLayout = targetAfterButtonCopy.layouts.first { it.id == "l2-main" }
+        val copiedButtonAction = mainLayout.buttons.single().action as PadAction.SwitchToLayout
+        assertEquals("l2-main", copiedButtonAction.layoutId)
+    }
 }
