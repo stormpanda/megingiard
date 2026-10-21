@@ -518,4 +518,34 @@ class KeyboardGestureProcessorTest {
             )
             assertEquals(KeyboardMode.LETTERS, currentMode)
         }
+
+    @Test
+    fun `spacebar cursor slide supports vertical up and down arrow steps after activating horizontal drag`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            processor.updateBounds("space", 0f, 50f, 150f, 100f)
+
+            processor.onPress(1L, 75f, 75f, grid, isFullLayout = false)
+            // Exceed 16dp horizontal threshold to activate isSpaceDragging
+            processor.onMove(1L, 50f, 75f, -25f, 0f, grid, isFullLayout = false)
+            assertTrue(processor.isSpaceDragging)
+            testInjector.calls.clear()
+
+            // Move up by 10dp (exceeds 8dp step) -> KEY_UP
+            processor.onMove(1L, 50f, 65f, 0f, -10f, grid, isFullLayout = false)
+            // Move down by 16dp (two 8dp steps, plus -2dp remainder = +14dp -> 1 step) -> KEY_DOWN
+            processor.onMove(1L, 50f, 81f, 0f, 16f, grid, isFullLayout = false)
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertEquals(
+                listOf(
+                    "down" to LinuxKeycodes.KEY_UP,
+                    "up" to LinuxKeycodes.KEY_UP,
+                    "down" to LinuxKeycodes.KEY_DOWN,
+                    "up" to LinuxKeycodes.KEY_DOWN,
+                ),
+                testInjector.calls,
+            )
+        }
 }

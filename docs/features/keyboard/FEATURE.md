@@ -66,7 +66,9 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 - Pressing and holding the spacebar key (`"space"` or `"space_num"`) in ergonomic modes and dragging horizontally MUST trigger cursor navigation.
 - If the horizontal drag distance exceeds **16 dp** (`KB_SWIPE_THRESHOLD_DP`), cursor sliding mode is activated and no space character will be typed on finger release.
-- Moving the finger horizontally during cursor sliding mode by every **8 dp** (`KB_SWIPE_STEP_DP`) MUST inject a `KEY_LEFT` (for leftward swipe) or `KEY_RIGHT` (for rightward swipe) tap.
+- Moving the finger during cursor sliding mode by every **8 dp** (`KB_SWIPE_STEP_DP`) MUST inject:
+  - Horizontally: a `KEY_LEFT` (for leftward swipe) or `KEY_RIGHT` (for rightward swipe) tap.
+  - Vertically: a `KEY_UP` (for upward swipe) or `KEY_DOWN` (for downward swipe) tap.
 - If the finger is released without exceeding the **16 dp** drag threshold, a normal space keystroke MUST be injected on release.
 
 ### FR-K9: Keyboard Settings Toolbar Button & Screen

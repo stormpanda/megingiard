@@ -56,8 +56,10 @@ class KeyboardGestureProcessor(
     val longPressJobs = mutableMapOf<Long, Job>()
     val pressPositions = mutableMapOf<Long, Pair<Float, Float>>()
     var spaceDragStartX = 0f
+    var spaceDragStartY = 0f
     var isSpaceDragging = false
     var accumulatedSpaceDeltaX = 0f
+    var accumulatedSpaceDeltaY = 0f
     var spaceDragPointerId: Long? = null
     private var modeSwitchSlidePointerId: Long? = null
     private var modeSwitchSlideMoved = false
@@ -171,8 +173,10 @@ class KeyboardGestureProcessor(
         if (keyId == "space" || keyId == "space_num") {
             spaceDragPointerId = pointerId
             spaceDragStartX = x
+            spaceDragStartY = y
             isSpaceDragging = false
             accumulatedSpaceDeltaX = 0f
+            accumulatedSpaceDeltaY = 0f
         }
 
         onKeyDown(pointerId, hoveredKeyDef, isFullLayout)
@@ -258,12 +262,17 @@ class KeyboardGestureProcessor(
                     if (!isSpaceDragging && abs(dragDeltaX) > swipeThresholdPx) {
                         isSpaceDragging = true
                         spaceDragStartX = x
+                        spaceDragStartY = y
                         accumulatedSpaceDeltaX = 0f
+                        accumulatedSpaceDeltaY = 0f
                     }
 
                     if (isSpaceDragging) {
+                        val dragDeltaY = y - spaceDragStartY
                         accumulatedSpaceDeltaX += dragDeltaX
+                        accumulatedSpaceDeltaY += dragDeltaY
                         spaceDragStartX = x
+                        spaceDragStartY = y
 
                         if (abs(accumulatedSpaceDeltaX) >= swipeStepPx) {
                             val steps = (accumulatedSpaceDeltaX / swipeStepPx).toInt()
@@ -275,6 +284,19 @@ class KeyboardGestureProcessor(
                                     injector.keyUp(keycode)
                                 }
                                 accumulatedSpaceDeltaX -= steps * swipeStepPx
+                            }
+                        }
+
+                        if (abs(accumulatedSpaceDeltaY) >= swipeStepPx) {
+                            val steps = (accumulatedSpaceDeltaY / swipeStepPx).toInt()
+                            if (steps != 0) {
+                                onHapticFeedback()
+                                val keycode = if (steps < 0) LinuxKeycodes.KEY_UP else LinuxKeycodes.KEY_DOWN
+                                repeat(abs(steps)) {
+                                    injector.keyDown(keycode)
+                                    injector.keyUp(keycode)
+                                }
+                                accumulatedSpaceDeltaY -= steps * swipeStepPx
                             }
                         }
                     }
@@ -359,6 +381,7 @@ class KeyboardGestureProcessor(
         spaceDragPointerId = null
         isSpaceDragging = false
         accumulatedSpaceDeltaX = 0f
+        accumulatedSpaceDeltaY = 0f
         modeSwitchSlidePointerId = null
         modeSwitchSlideMoved = false
     }
@@ -537,6 +560,7 @@ class KeyboardGestureProcessor(
         spaceDragPointerId = null
         isSpaceDragging = false
         accumulatedSpaceDeltaX = 0f
+        accumulatedSpaceDeltaY = 0f
         modeSwitchSlidePointerId = null
         modeSwitchSlideMoved = false
     }
