@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.keyboard
 
+import android.os.Vibrator
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -20,17 +21,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.macropad.HapticStrength
+import com.stormpanda.megingiard.macropad.triggerHaptic
+import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.touchpad.rememberGlobalTouchpadProcessor
 import com.stormpanda.megingiard.touchpad.touchpadSurfaceInput
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -38,13 +44,21 @@ import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 
 private const val TAG = "KeyboardScreen"
+private val KS_CONTAINER_HEIGHT_FULL = 270.dp
+private val KS_CONTAINER_HEIGHT_ERGO = 262.dp
+private val KS_MACRO_ROW_HEIGHT = 36.dp
+private const val KS_TRANSITION_DURATION_MS = 300
 
 @Composable
 fun KeyboardScreen(modifier: Modifier = Modifier) {
     val viewModel: KeyboardViewModel = viewModel()
+    val context = LocalContext.current
     val density = LocalDensity.current
+    val vibrator = remember { context.getSystemService(Vibrator::class.java) }
     val kbLayout by viewModel.kbLayout.collectAsStateWithLifecycle()
     val isQuickMenuOpen by viewModel.isQuickMenuOpen.collectAsStateWithLifecycle()
+    val hapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsStateWithLifecycle()
+    val currentHapticsEnabled by rememberUpdatedState(hapticsEnabled)
     val colors = LocalAppColors.current
 
     val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsStateWithLifecycle()
@@ -52,18 +66,18 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     // Sub-mode and layout tracking
     val keyboardMode by viewModel.keyboardMode.collectAsStateWithLifecycle()
     val isMacroRowVisible by viewModel.isMacroRowVisible.collectAsStateWithLifecycle()
-    val baseContainerHeight = if (keyboardMode == KeyboardMode.FULL) 270.dp else 262.dp
+    val baseContainerHeight = if (keyboardMode == KeyboardMode.FULL) KS_CONTAINER_HEIGHT_FULL else KS_CONTAINER_HEIGHT_ERGO
     val targetContainerHeight =
         if (isMacroRowVisible &&
             keyboardMode != KeyboardMode.FULL
         ) {
-            baseContainerHeight + 36.dp
+            baseContainerHeight + KS_MACRO_ROW_HEIGHT
         } else {
             baseContainerHeight
         }
     val animatedContainerHeight by animateDpAsState(
         targetValue = targetContainerHeight,
-        animationSpec = tween(300),
+        animationSpec = tween(KS_TRANSITION_DURATION_MS),
         label = "containerHeight",
     )
 
@@ -76,9 +90,17 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
     val isCapsActive = capsState != ModifierState.INACTIVE
     val isAltGrActive = altGrState != ModifierState.INACTIVE
 
-    DisposableEffect(Unit) {
+    val gestureProcessor = viewModel.gestureProcessor
+
+    DisposableEffect(gestureProcessor, vibrator) {
+        gestureProcessor.onHapticFeedback = {
+            if (currentHapticsEnabled && vibrator != null) {
+                triggerHaptic(vibrator, HapticStrength.LIGHT)
+            }
+        }
         onDispose {
             AppLog.d(TAG, "KeyboardScreen disposed: resetting controller and state")
+            gestureProcessor.onHapticFeedback = {}
             viewModel.stopAndReset()
             if (AppStateManager.isKeyboardSettingsOpen.value) {
                 AppStateManager.setKeyboardSettingsOpen(false)
@@ -97,7 +119,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
             KeyboardLayoutState(keyboardMode, grid)
         }
 
-    val gestureProcessor = viewModel.gestureProcessor
     val pressedKeys by gestureProcessor.pressedKeys.collectAsStateWithLifecycle()
 
     val densityVal = density.density
@@ -112,7 +133,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
         Crossfade(
             targetState = kbTouchpadEnabled,
             modifier = Modifier.fillMaxWidth().weight(1f),
-            animationSpec = tween(300),
+            animationSpec = tween(KS_TRANSITION_DURATION_MS),
             label = "Touchpad Switch",
         ) { enabled ->
             if (enabled) {
@@ -160,36 +181,38 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                     ),
         ) {
             Crossfade(
-                targetState = layoutState,
+                targetState = layoutState.mode == KeyboardMode.FULL,
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                animationSpec = tween(300),
+                animationSpec = tween(KS_TRANSITION_DURATION_MS),
                 label = "Layout Switch",
-            ) { activeState ->
-                key(activeState.mode) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-                    ) {
-                        KeyboardTopToolbar(
-                            activeState = activeState,
-                        )
+            ) { isFullMode ->
+                val lastMatchingState = remember { mutableStateOf(layoutState) }
+                if (isFullMode == (layoutState.mode == KeyboardMode.FULL)) {
+                    lastMatchingState.value = layoutState
+                }
+                val activeState = lastMatchingState.value
+                Column(
+                    modifier = Modifier.fillMaxWidth().fillMaxHeight(),
+                ) {
+                    KeyboardTopToolbar(
+                        activeState = activeState,
+                    )
 
-                        KeyboardMacroQuickRow(
-                            visible = isMacroRowVisible && activeState.mode != KeyboardMode.FULL,
-                        )
+                    KeyboardMacroQuickRow(
+                        visible = isMacroRowVisible && !isFullMode,
+                    )
 
-                        KeyboardLayoutGrid(
-                            activeState = activeState,
-                            gestureProcessor = gestureProcessor,
-                            pressedKeys = pressedKeys,
-                            isShiftActive = isShiftActive,
-                            isCapsActive = isCapsActive,
-                            isAltGrActive = isAltGrActive,
-                            isQuickMenuOpen = isQuickMenuOpen,
-                            onCloseQuickMenu = { viewModel.closeQuickMenu() },
-                            onModeChange = { nextMode -> viewModel.setKeyboardMode(nextMode) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
+                    KeyboardLayoutGrid(
+                        activeState = activeState,
+                        gestureProcessor = gestureProcessor,
+                        pressedKeys = pressedKeys,
+                        isShiftActive = isShiftActive,
+                        isCapsActive = isCapsActive,
+                        isAltGrActive = isAltGrActive,
+                        isQuickMenuOpen = isQuickMenuOpen,
+                        onCloseQuickMenu = { viewModel.closeQuickMenu() },
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
 

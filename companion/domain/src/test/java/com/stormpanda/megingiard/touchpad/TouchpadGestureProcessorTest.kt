@@ -299,4 +299,97 @@ class TouchpadGestureProcessorTest {
 
             processor.release(2L, 130f, 225f)
         }
+
+    @Test
+    fun `relative mode accumulates sub-pixel movement remainders across slow frames`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor(useMouse = { true })
+
+            processor.press(1L, 100f, 200f)
+            // Each move adds 0.2 * 2.0 = 0.4 px; 3 frames accumulate to 1.2 px -> 1 px move
+            processor.move(1L, 100.2f, 200.2f, dx = 0.2f, dy = 0.2f)
+            assertEquals(null, PrivdClient.pollCommandForTest())
+
+            processor.move(1L, 100.4f, 200.4f, dx = 0.2f, dy = 0.2f)
+            assertEquals(null, PrivdClient.pollCommandForTest())
+
+            processor.move(1L, 100.6f, 200.6f, dx = 0.2f, dy = 0.2f)
+            assertEquals("MM 1 1\n", PrivdClient.pollCommandForTest())
+
+            processor.release(1L, 100.6f, 200.6f)
+        }
+
+    @Test
+    fun `lifting one finger after two-finger scroll suppresses cursor jump until all fingers lift`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor(useMouse = { true })
+
+            processor.press(1L, 100f, 200f)
+            processor.press(2L, 120f, 220f)
+            processor.move(1L, 100f, 224f, dx = 0f, dy = 24f)
+            assertEquals("MW 2\n", PrivdClient.pollCommandForTest())
+
+            // Lift finger 1 first; remaining finger 2 moves slightly while lifting -> no MM cursor jump
+            processor.release(1L, 100f, 224f)
+            processor.move(2L, 130f, 230f, dx = 10f, dy = 6f)
+            assertEquals(null, PrivdClient.pollCommandForTest())
+
+            processor.release(2L, 130f, 230f)
+
+            // Subsequent single-finger gesture moves cursor normally
+            processor.press(3L, 100f, 200f)
+            processor.move(3L, 110f, 205f, dx = 10f, dy = 5f)
+            assertEquals("MM 20 10\n", PrivdClient.pollCommandForTest())
+            processor.release(3L, 110f, 205f)
+        }
+
+    @Test
+    fun `two-finger flick triggers inertial scroll fling and stops when touched again`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor(useMouse = { true }, naturalScrollEnabled = true, scrollSpeed = 1.0f)
+
+            processor.press(1L, 100f, 200f)
+            processor.press(2L, 120f, 220f)
+            // Two fast downward scroll frames (dy = 30f each -> smoothed velocity = 25.2f >= 15f)
+            processor.move(1L, 100f, 230f, dx = 0f, dy = 30f)
+            processor.move(1L, 100f, 260f, dx = 0f, dy = 30f)
+            PrivdClient.clearQueueForTest()
+
+            processor.release(1L, 100f, 260f)
+            processor.release(2L, 120f, 280f)
+
+            // Advance 2 fling frames (32ms) -> inertial wheel steps emitted
+            testScheduler.advanceTimeBy(32L)
+            testScheduler.runCurrent()
+            assertEquals("MW 1\n", PrivdClient.pollCommandForTest())
+            assertEquals("MW 2\n", PrivdClient.pollCommandForTest())
+
+            // Touching the touchpad immediately cancels the ongoing fling
+            processor.press(3L, 100f, 200f)
+            PrivdClient.clearQueueForTest()
+            testScheduler.advanceTimeBy(200L)
+            testScheduler.runCurrent()
+            assertEquals(null, PrivdClient.pollCommandForTest())
+            processor.release(3L, 100f, 200f)
+        }
+
+    @Test
+    fun `two-finger horizontal scroll dispatches MH commands and supports horizontal fling`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor(useMouse = { true }, naturalScrollEnabled = true, scrollSpeed = 1.0f)
+
+            processor.press(1L, 100f, 200f)
+            processor.press(2L, 120f, 220f)
+            processor.move(1L, 130f, 200f, dx = 30f, dy = 0f)
+            assertEquals("MH 2\n", PrivdClient.pollCommandForTest())
+            processor.move(1L, 160f, 200f, dx = 30f, dy = 0f)
+            assertEquals("MH 3\n", PrivdClient.pollCommandForTest())
+
+            processor.release(1L, 160f, 200f)
+            processor.release(2L, 180f, 220f)
+
+            testScheduler.advanceTimeBy(16L)
+            testScheduler.runCurrent()
+            assertEquals("MH 1\n", PrivdClient.pollCommandForTest())
+        }
 }

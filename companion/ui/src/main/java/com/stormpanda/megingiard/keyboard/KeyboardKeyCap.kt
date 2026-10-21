@@ -68,7 +68,6 @@ private val SPECIAL_KEY_IDS =
 
 private val KEY_CORNER = 5.dp
 private val KEY_SHAPE = RoundedCornerShape(KEY_CORNER)
-private val KEY_PADDING_V = 3.dp
 
 private val KC_ICON_SIZE = 18.dp
 private val KC_SUPER_PADDING_TOP = 2.dp
@@ -82,6 +81,9 @@ private val KC_DUAL_PRIMARY_FONT_SIZE = 11.sp
 private val KC_DUAL_SHIFT_FONT_SIZE = 10.sp
 private val KC_SUPER_LABEL_FONT_SIZE = 8.sp
 private const val KC_WIDE_KEY_WEIGHT = 1.5f
+private const val KC_PRESSED_ALPHA = 0.8f
+private const val KC_ACTIVE_MODIFIER_ALPHA = 0.7f
+private const val KC_DIMMED_ALPHA = 0.5f
 
 @Composable
 internal fun KeyCap(
@@ -109,13 +111,13 @@ internal fun KeyCap(
 
     val bg =
         when {
-            isEnterKey -> if (isPressed) colors.accent.copy(alpha = 0.8f) else colors.accent
+            isEnterKey -> if (isPressed) colors.accent.copy(alpha = KC_PRESSED_ALPHA) else colors.accent
 
-            isPressed -> if (isSpecialKey) colors.keyPressed.copy(alpha = 0.8f) else colors.keyPressed
+            isPressed -> if (isSpecialKey) colors.keyPressed.copy(alpha = KC_PRESSED_ALPHA) else colors.keyPressed
 
-            isBgActive -> colors.accent.copy(alpha = 0.7f)
+            isBgActive -> colors.accent.copy(alpha = KC_ACTIVE_MODIFIER_ALPHA)
 
-            isSpecialKey -> colors.keyBackground.copy(alpha = 0.5f)
+            isSpecialKey -> colors.keyBackground.copy(alpha = KC_DIMMED_ALPHA)
 
             // Darker modifier keycap surface
             else -> colors.keyBackground // Normal letter/number surface
@@ -126,20 +128,19 @@ internal fun KeyCap(
             isEnterKey -> colors.appBackground
             isPressed -> colors.onSurface
             isModifierActive -> colors.onSurface
-            isSpecialKey -> colors.onSurface.copy(alpha = 0.8f)
+            isSpecialKey -> colors.onSurface.copy(alpha = KC_PRESSED_ALPHA)
             else -> colors.onSurface
         }
 
     Box(
         modifier =
             modifier
-                .padding(vertical = KEY_PADDING_V)
                 .fillMaxSize()
-                .clip(KEY_SHAPE)
-                .background(bg)
                 .onGloballyPositioned { coords ->
                     onBoundsUpdate(coords)
-                },
+                }.padding(horizontal = KB_KEY_PADDING_H, vertical = KB_KEY_PADDING_V)
+                .clip(KEY_SHAPE)
+                .background(bg),
         contentAlignment = Alignment.Center,
     ) {
         KeyCapContent(
@@ -228,8 +229,8 @@ private fun KeyCapContent(
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         val useShiftLabel = isShiftActive || isCapsActive
-                        val shiftColor = if (useShiftLabel) contentColor else contentColor.copy(alpha = 0.5f)
-                        val normalColor = if (!useShiftLabel) contentColor else contentColor.copy(alpha = 0.5f)
+                        val shiftColor = if (useShiftLabel) contentColor else contentColor.copy(alpha = KC_DIMMED_ALPHA)
+                        val normalColor = if (!useShiftLabel) contentColor else contentColor.copy(alpha = KC_DIMMED_ALPHA)
                         val shiftWeight = if (useShiftLabel) FontWeight.Bold else FontWeight.Normal
                         val normalWeight = if (!useShiftLabel) FontWeight.Bold else FontWeight.Normal
 
@@ -276,7 +277,7 @@ private fun KeyCapContent(
                 ) {
                     Text(
                         text = superLabel,
-                        color = contentColor.copy(alpha = 0.5f),
+                        color = contentColor.copy(alpha = KC_DIMMED_ALPHA),
                         fontSize = KC_SUPER_LABEL_FONT_SIZE,
                         fontWeight = FontWeight.Light,
                     )

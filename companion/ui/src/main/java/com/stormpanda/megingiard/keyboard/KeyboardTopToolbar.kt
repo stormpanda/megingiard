@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -32,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +61,13 @@ private val KTT_BUTTON_SHAPE = RoundedCornerShape(4.dp)
 private val KTT_BUTTON_HEIGHT = 28.dp
 private val KTT_BUTTON_WIDTH = 54.dp
 private val KTT_BUTTON_BORDER_WIDTH = 1.dp
+private val KTT_BUTTON_TOUCH_PADDING_H = 4.dp
+private val KTT_TOOLBAR_PADDING_START = 4.dp
+private val KTT_TOOLBAR_PADDING_END = 8.dp
+private val KTT_ACTION_SPACING = 8.dp
+private val KTT_ICON_OFFSET_Y = 2.dp
+
+// §16.1 documented exception: compact toolbar badge label below 11sp
 private val KTT_BUTTON_FONT_SIZE = 10.sp
 private const val KTT_ACTIVE_ALPHA = 0.7f
 private const val KTT_INACTIVE_BORDER_ALPHA = 0.35f
@@ -79,21 +88,23 @@ internal fun KeyboardTopToolbar(
             modifier
                 .fillMaxWidth()
                 .height(KB_TOOLBAR_HEIGHT)
-                .padding(horizontal = 8.dp),
+                .padding(start = KTT_TOOLBAR_PADDING_START, end = KTT_TOOLBAR_PADDING_END),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Modifier buttons on the left
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxHeight(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ToolbarKeyButton(
                 label = "ESC",
                 keycode = KEY_ESC,
+                gestureProcessor = gestureProcessor,
             )
             ToolbarKeyButton(
                 label = "TAB",
                 keycode = KEY_TAB,
+                gestureProcessor = gestureProcessor,
             )
             ModifierButton(
                 id = "ctrl",
@@ -114,7 +125,7 @@ internal fun KeyboardTopToolbar(
         // Action icons on the right
         val isMacroRowVisible by viewModel.isMacroRowVisible.collectAsStateWithLifecycle()
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            horizontalArrangement = Arrangement.spacedBy(KTT_ACTION_SPACING, Alignment.End),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ToolbarIcon(
@@ -161,7 +172,7 @@ private fun ToolbarIcon(
         modifier =
             Modifier
                 .size(KB_CLOSE_BUTTON_SIZE)
-                .offset(y = 2.dp)
+                .offset(y = KTT_ICON_OFFSET_Y)
                 .clip(CircleShape)
                 .background(if (isPressed) colors.keyPressed else Color.Transparent)
                 .clickable(
@@ -217,6 +228,7 @@ private fun ModifierButton(
 private fun ToolbarKeyButton(
     label: String,
     keycode: Int,
+    gestureProcessor: KeyboardGestureProcessor,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -234,6 +246,7 @@ private fun ToolbarKeyButton(
         modifier = modifier,
         onPress = { _ ->
             isPressed = true
+            gestureProcessor.onHapticFeedback()
             KeyInjector.keyDown(keycode)
             try {
                 awaitRelease()
@@ -254,31 +267,39 @@ private fun BaseToolbarButton(
     onPress: suspend PressGestureScope.(Offset) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val currentOnPress by rememberUpdatedState(onPress)
     Box(
         modifier =
             modifier
-                .height(KTT_BUTTON_HEIGHT)
-                .width(KTT_BUTTON_WIDTH)
-                .border(
-                    width = KTT_BUTTON_BORDER_WIDTH,
-                    color = borderColor,
-                    shape = KTT_BUTTON_SHAPE,
-                ).clip(KTT_BUTTON_SHAPE)
-                .background(bg)
-                .pointerInput(onPress) {
-                    detectTapGestures(onPress = onPress)
-                },
+                .fillMaxHeight()
+                .pointerInput(Unit) {
+                    detectTapGestures(onPress = { offset -> currentOnPress(offset) })
+                }.padding(horizontal = KTT_BUTTON_TOUCH_PADDING_H),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = label,
-            color = contentColor,
-            textAlign = TextAlign.Center,
-            style =
-                MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = KTT_BUTTON_FONT_SIZE,
-                ),
-        )
+        Box(
+            modifier =
+                Modifier
+                    .height(KTT_BUTTON_HEIGHT)
+                    .width(KTT_BUTTON_WIDTH)
+                    .border(
+                        width = KTT_BUTTON_BORDER_WIDTH,
+                        color = borderColor,
+                        shape = KTT_BUTTON_SHAPE,
+                    ).clip(KTT_BUTTON_SHAPE)
+                    .background(bg),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = label,
+                color = contentColor,
+                textAlign = TextAlign.Center,
+                style =
+                    MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = KTT_BUTTON_FONT_SIZE,
+                    ),
+            )
+        }
     }
 }

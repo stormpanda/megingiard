@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -27,6 +28,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private const val KB_NUMERIC_GRID_ROW_COUNT = 3
 private const val KB_DEFAULT_BOX_WIDTH_PX = 1240
+private const val KB_NUMERIC_TOP_ROW_WEIGHT = 3f
+private const val KB_NUMERIC_OPS_COL_WEIGHT = 1.3f
+private const val KB_NUMERIC_DIGITS_COL_WEIGHT = 7.3f
+private val KB_GRID_HEIGHT_FULL = 220.dp
+private val KB_GRID_HEIGHT_ERGO = 168.dp
+private val KB_GRID_PADDING_H = 4.dp
+private val KB_GRID_PADDING_V = 2.dp
 
 @Composable
 internal fun KeyboardLayoutGrid(
@@ -38,11 +46,12 @@ internal fun KeyboardLayoutGrid(
     isAltGrActive: Boolean,
     isQuickMenuOpen: Boolean,
     onCloseQuickMenu: () -> Unit,
-    onModeChange: (KeyboardMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isQuickMenuOpenState = rememberUpdatedState(isQuickMenuOpen)
-    val gridHeight = if (activeState.mode == KeyboardMode.FULL) 220.dp else 168.dp
+    val activeStateRef = rememberUpdatedState(activeState)
+    val isFullLayoutMode = activeState.mode == KeyboardMode.FULL
+    val gridHeight = if (isFullLayoutMode) KB_GRID_HEIGHT_FULL else KB_GRID_HEIGHT_ERGO
     val boxCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
     val activePopupState = gestureProcessor.activePopupState.collectAsStateWithLifecycle().value
     val density = LocalDensity.current
@@ -79,13 +88,15 @@ internal fun KeyboardLayoutGrid(
             modifier
                 .fillMaxWidth()
                 .height(gridHeight)
-                .padding(horizontal = 4.dp, vertical = 2.dp)
+                .padding(horizontal = KB_GRID_PADDING_H, vertical = KB_GRID_PADDING_V)
                 .onGloballyPositioned { boxCoords.value = it }
-                .pointerInput(activeState) {
+                .pointerInput(isFullLayoutMode) {
                     try {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Main)
+                                val currentState = activeStateRef.value
+                                val isFull = currentState.mode == KeyboardMode.FULL
                                 if (isQuickMenuOpenState.value) {
                                     if (event.type == PointerEventType.Press) {
                                         if (event.changes.none { it.isConsumed }) {
@@ -99,69 +110,51 @@ internal fun KeyboardLayoutGrid(
                                 for (change in event.changes) {
                                     val pid = change.id.value
 
+                                    if (!change.pressed && gestureProcessor.isPointerActive(pid)) {
+                                        gestureProcessor.onRelease(
+                                            pointerId = pid,
+                                            isFullLayout = isFull,
+                                        )
+                                        change.consume()
+                                        continue
+                                    }
+
                                     if (change.isConsumed) continue
 
                                     val hoveredKey =
                                         gestureProcessor.findKeyAt(
-                                            activeState.grid,
+                                            currentState.grid,
                                             change.position.x,
                                             change.position.y,
                                         )
-                                    val keyId = hoveredKey?.id
 
                                     when (event.type) {
                                         PointerEventType.Press -> {
                                             if (!gestureProcessor.isPointerActive(pid)) {
-                                                if (keyId != null && keyId.startsWith("mode_switch")) {
-                                                    val targetMode =
-                                                        when (keyId) {
-                                                            "mode_switch" -> KeyboardMode.SYMBOLS_1
-                                                            "mode_switch_abc" -> KeyboardMode.LETTERS
-                                                            "mode_switch_1234" -> KeyboardMode.NUMERIC
-                                                            else -> KeyboardMode.LETTERS
-                                                        }
-                                                    onModeChange(targetMode)
-                                                    change.consume()
-                                                } else {
-                                                    gestureProcessor.onPress(
-                                                        pointerId = pid,
-                                                        x = change.position.x,
-                                                        y = change.position.y,
-                                                        grid = activeState.grid,
-                                                        isFullLayout = activeState.mode == KeyboardMode.FULL,
-                                                        hoveredKeyDef = hoveredKey,
-                                                    )
-                                                    change.consume()
-                                                }
+                                                gestureProcessor.onPress(
+                                                    pointerId = pid,
+                                                    x = change.position.x,
+                                                    y = change.position.y,
+                                                    grid = currentState.grid,
+                                                    isFullLayout = isFull,
+                                                    hoveredKeyDef = hoveredKey,
+                                                )
+                                                change.consume()
                                             }
                                         }
 
                                         PointerEventType.Move -> {
                                             if (gestureProcessor.isPointerActive(pid)) {
                                                 val delta = change.positionChange()
-                                                if (keyId != null && keyId.startsWith("mode_switch")) {
-                                                    change.consume()
-                                                } else {
-                                                    gestureProcessor.onMove(
-                                                        pointerId = pid,
-                                                        x = change.position.x,
-                                                        y = change.position.y,
-                                                        dx = delta.x,
-                                                        dy = delta.y,
-                                                        grid = activeState.grid,
-                                                        isFullLayout = activeState.mode == KeyboardMode.FULL,
-                                                        hoveredKeyDef = hoveredKey,
-                                                    )
-                                                    change.consume()
-                                                }
-                                            }
-                                        }
-
-                                        PointerEventType.Release -> {
-                                            if (!change.pressed && gestureProcessor.isPointerActive(pid)) {
-                                                gestureProcessor.onRelease(
+                                                gestureProcessor.onMove(
                                                     pointerId = pid,
-                                                    isFullLayout = activeState.mode == KeyboardMode.FULL,
+                                                    x = change.position.x,
+                                                    y = change.position.y,
+                                                    dx = delta.x,
+                                                    dy = delta.y,
+                                                    grid = currentState.grid,
+                                                    isFullLayout = isFull,
+                                                    hoveredKeyDef = hoveredKey,
                                                 )
                                                 change.consume()
                                             }
@@ -171,89 +164,84 @@ internal fun KeyboardLayoutGrid(
                             }
                         }
                     } finally {
-                        gestureProcessor.onCancel(isFullLayout = activeState.mode == KeyboardMode.FULL)
+                        gestureProcessor.onCancel(isFullLayout = activeStateRef.value.mode == KeyboardMode.FULL)
                     }
                 },
     ) {
-        val isNumericLayout = activeState.mode == KeyboardMode.NUMERIC
-        if (isNumericLayout) {
-            val ops = activeState.grid.map { it.first() }
-            val gridRows = activeState.grid.take(KB_NUMERIC_GRID_ROW_COUNT).map { it.drop(1) }
-            val bottomRow = activeState.grid.last().drop(1)
+        key(activeState.mode) {
+            val isNumericLayout = activeState.mode == KeyboardMode.NUMERIC
+            if (isNumericLayout) {
+                val ops = activeState.grid.map { it.first() }
+                val gridRows = activeState.grid.take(KB_NUMERIC_GRID_ROW_COUNT).map { it.drop(1) }
+                val bottomRow = activeState.grid.last().drop(1)
 
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_V),
-            ) {
-                Row(
-                    modifier =
-                        Modifier
-                            .weight(3f)
-                            .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
+                Column(
+                    modifier = Modifier.fillMaxSize(),
                 ) {
-                    Column(
+                    Row(
                         modifier =
                             Modifier
-                                .weight(1.3f)
-                                .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_V),
+                                .weight(KB_NUMERIC_TOP_ROW_WEIGHT)
+                                .fillMaxWidth(),
                     ) {
-                        ops.forEach { key ->
-                            renderKey(key, Modifier.weight(1f))
+                        Column(
+                            modifier =
+                                Modifier
+                                    .weight(KB_NUMERIC_OPS_COL_WEIGHT)
+                                    .fillMaxHeight(),
+                        ) {
+                            ops.forEach { key ->
+                                renderKey(key, Modifier.weight(1f))
+                            }
                         }
-                    }
 
-                    Column(
-                        modifier =
-                            Modifier
-                                .weight(7.3f)
-                                .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_V),
-                    ) {
-                        gridRows.forEach { row ->
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
-                            ) {
-                                row.forEach { key ->
-                                    renderKey(key, Modifier.weight(key.widthWeight))
+                        Column(
+                            modifier =
+                                Modifier
+                                    .weight(KB_NUMERIC_DIGITS_COL_WEIGHT)
+                                    .fillMaxHeight(),
+                        ) {
+                            gridRows.forEach { row ->
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth(),
+                                ) {
+                                    row.forEach { key ->
+                                        renderKey(key, Modifier.weight(key.widthWeight))
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                Row(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
-                ) {
-                    bottomRow.forEach { key ->
-                        renderKey(key, Modifier.weight(key.widthWeight))
-                    }
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceEvenly,
-            ) {
-                activeState.grid.forEach { row ->
                     Row(
                         modifier =
                             Modifier
                                 .weight(1f)
                                 .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
                     ) {
-                        row.forEach { key ->
+                        bottomRow.forEach { key ->
                             renderKey(key, Modifier.weight(key.widthWeight))
+                        }
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    activeState.grid.forEach { row ->
+                        Row(
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                        ) {
+                            row.forEach { key ->
+                                renderKey(key, Modifier.weight(key.widthWeight))
+                            }
                         }
                     }
                 }

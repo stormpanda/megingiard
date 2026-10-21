@@ -20,6 +20,8 @@ import androidx.compose.ui.test.performScrollTo
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.paletteFor
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -34,6 +36,7 @@ import java.io.File
  * Unit tests verifying save and discard lifecycle transitions in [LayoutBackgroundSubPageContent]
  * and [LayoutMaskSubPageContent].
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class BackgroundMaskSettingsEditorTest {
@@ -42,6 +45,7 @@ class BackgroundMaskSettingsEditorTest {
 
     @Before
     fun setUp() {
+        MacroPadMediaRepository.ioDispatcher = UnconfinedTestDispatcher()
         BackgroundPickerManager.clearPickedUri()
         MacroPadState.setPreviewLayout(null)
         MacroPadState.setCroppingBackground(false)
@@ -50,6 +54,7 @@ class BackgroundMaskSettingsEditorTest {
 
     @After
     fun tearDown() {
+        MacroPadMediaRepository.resetForTesting()
         BackgroundPickerManager.clearPickedUri()
         MacroPadState.setPreviewLayout(null)
         MacroPadState.setCroppingBackground(false)
@@ -128,16 +133,17 @@ class BackgroundMaskSettingsEditorTest {
             BackgroundPickerManager.setPickedUri(testUri)
             composeTestRule.waitForIdle()
 
-            // Wait for image pick to propagate and Save button to become enabled
+            // Wait for image pick to propagate, preview bitmap controls to appear, and Save button to become enabled
             composeTestRule.waitUntil(10_000) {
                 try {
+                    composeTestRule.onNodeWithText("Dimming").assertExists()
                     composeTestRule.onNodeWithText("Save").performScrollTo().assertIsEnabled()
                     true
                 } catch (_: AssertionError) {
                     false
                 }
             }
-            composeTestRule.onNodeWithText("Save").performClick()
+            composeTestRule.onNodeWithText("Save").performScrollTo().performClick()
             composeTestRule.waitUntil(30_000) { confirmCallCount == 1 }
             composeTestRule.waitForIdle()
 
@@ -187,16 +193,17 @@ class BackgroundMaskSettingsEditorTest {
             BackgroundPickerManager.setPickedUri(testUri)
             composeTestRule.waitForIdle()
 
-            // Wait for mask pick to propagate and Save button to become enabled
+            // Wait for mask pick to propagate, preview bitmap controls to appear, and Save button to become enabled
             composeTestRule.waitUntil(10_000) {
                 try {
+                    composeTestRule.onNodeWithText("Dimming").assertExists()
                     composeTestRule.onNodeWithText("Save").performScrollTo().assertIsEnabled()
                     true
                 } catch (_: AssertionError) {
                     false
                 }
             }
-            composeTestRule.onNodeWithText("Save").performClick()
+            composeTestRule.onNodeWithText("Save").performScrollTo().performClick()
             composeTestRule.waitUntil(30_000) { confirmCallCount == 1 }
             composeTestRule.waitForIdle()
 

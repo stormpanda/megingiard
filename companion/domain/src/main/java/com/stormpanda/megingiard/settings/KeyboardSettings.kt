@@ -36,6 +36,9 @@ object KeyboardSettings {
     private val _kbAutoOpenOnFocus = MutableStateFlow(true)
     val kbAutoOpenOnFocus: StateFlow<Boolean> = _kbAutoOpenOnFocus.asStateFlow()
 
+    private val _kbAutoHideOnFocusLoss = MutableStateFlow(true)
+    val kbAutoHideOnFocusLoss: StateFlow<Boolean> = _kbAutoHideOnFocusLoss.asStateFlow()
+
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -48,6 +51,7 @@ object KeyboardSettings {
         _kbLayout.value = KbLayout.QWERTZ
         _kbTouchpadEnabled.value = true
         _kbAutoOpenOnFocus.value = true
+        _kbAutoHideOnFocusLoss.value = true
     }
 
     internal fun loadFrom(prefs: Preferences) {
@@ -56,6 +60,7 @@ object KeyboardSettings {
         }
         prefs[KEY_KB_TOUCHPAD_ENABLED]?.let { _kbTouchpadEnabled.value = it }
         prefs[KEY_KB_AUTO_OPEN_ON_FOCUS]?.let { _kbAutoOpenOnFocus.value = it }
+        prefs[KEY_KB_AUTO_HIDE_ON_FOCUS_LOSS]?.let { _kbAutoHideOnFocusLoss.value = it }
     }
 
     private val optionalDataStore: DataStore<Preferences>?
@@ -81,6 +86,18 @@ object KeyboardSettings {
             optionalDataStore,
             TAG,
             "setKbAutoOpenOnFocus",
+        )
+    }
+
+    fun setKbAutoHideOnFocusLoss(value: Boolean) {
+        updateSettingPref(
+            KEY_KB_AUTO_HIDE_ON_FOCUS_LOSS,
+            value,
+            _kbAutoHideOnFocusLoss,
+            optionalScope,
+            optionalDataStore,
+            TAG,
+            "setKbAutoHideOnFocusLoss",
         )
     }
 }

@@ -21,6 +21,27 @@ class KeyBoundsAndPopupStateTest {
     }
 
     @Test
+    fun keyBounds_distanceSquaredTo() {
+        val bounds = KeyBounds(left = 10f, top = 20f, right = 50f, bottom = 60f)
+
+        // Inside and on edges -> 0f
+        assertEquals(0f, bounds.distanceSquaredTo(10f, 20f), 0.001f)
+        assertEquals(0f, bounds.distanceSquaredTo(30f, 40f), 0.001f)
+        assertEquals(0f, bounds.distanceSquaredTo(50f, 60f), 0.001f)
+
+        // Left / right outside
+        assertEquals(9f, bounds.distanceSquaredTo(7f, 40f), 0.001f)
+        assertEquals(16f, bounds.distanceSquaredTo(54f, 40f), 0.001f)
+
+        // Top / bottom outside
+        assertEquals(25f, bounds.distanceSquaredTo(30f, 15f), 0.001f)
+        assertEquals(36f, bounds.distanceSquaredTo(30f, 66f), 0.001f)
+
+        // Diagonal outside (dx = 3, dy = 4 -> 25)
+        assertEquals(25f, bounds.distanceSquaredTo(7f, 16f), 0.001f)
+    }
+
+    @Test
     fun popupState_dataModel() {
         val bounds = KeyBounds(left = 0f, top = 0f, right = 100f, bottom = 50f)
         val keyDef = KeyDef(id = "a", label = "a", linuxKeycode = 30)

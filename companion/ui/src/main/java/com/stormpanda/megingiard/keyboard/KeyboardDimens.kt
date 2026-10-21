@@ -3,8 +3,8 @@ package com.stormpanda.megingiard.keyboard
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 
-internal val KB_KEY_PADDING_H = 2.dp
-internal val KB_KEY_PADDING_V = 2.dp
+internal val KB_KEY_PADDING_H = 1.dp
+internal val KB_KEY_PADDING_V = 3.dp
 
 internal val KB_TOOLBAR_HEIGHT = 44.dp
 internal val KB_BOTTOM_BAR_HEIGHT = 50.dp

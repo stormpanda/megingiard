@@ -42,14 +42,23 @@ class KeyboardGestureProcessorTest {
     private fun TestScope.createProcessor(
         injector: KeyCodeInjector = TestKeyCodeInjector(),
         onInjectPopupSelection: (KeyDef, String) -> Unit = { _, _ -> },
+        onHapticFeedback: () -> Unit = {},
+        onModeChange: (KeyboardMode) -> Unit = {},
+        activeMode: () -> KeyboardMode = { KeyboardMode.LETTERS },
     ) = KeyboardGestureProcessor(
         scope = this,
-        isShiftActive = { false },
-        isCapsActive = { false },
-        isAltGrActive = { false },
+        isShiftActive = {
+            KeyboardState.stateFor("lshift").value != ModifierState.INACTIVE ||
+                KeyboardState.stateFor("rshift").value != ModifierState.INACTIVE
+        },
+        isCapsActive = { KeyboardState.stateFor("caps").value != ModifierState.INACTIVE },
+        isAltGrActive = { KeyboardState.stateFor("altgr").value != ModifierState.INACTIVE },
         initialDensity = 1.0f,
         onInjectPopupSelection = onInjectPopupSelection,
         injector = injector,
+        onHapticFeedback = onHapticFeedback,
+        onModeChange = onModeChange,
+        activeMode = activeMode,
     )
 
     @Test
@@ -300,5 +309,339 @@ class KeyboardGestureProcessorTest {
                 testInjector.calls,
             )
             KeyboardState.reset()
+        }
+
+    @Test
+    fun `findKeyAt resolves gaps and outer margins to nearest key rectangle edge`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor()
+            processor.updateBounds("q", 0f, 0f, 50f, 40f)
+            processor.updateBounds("w", 54f, 0f, 104f, 40f)
+            processor.updateBounds("space", 0f, 46f, 150f, 86f)
+
+            // Horizontal gutter between q (right=50) and w (left=54)
+            assertEquals("q", processor.findKeyAt(grid, 51f, 20f)?.id)
+            assertEquals("w", processor.findKeyAt(grid, 53f, 20f)?.id)
+
+            // Vertical gutter near left end of wide spacebar (x=10 is far from space center=75,
+            // but y=44 is 2px from space top=46 vs 4px from q bottom=40)
+            assertEquals("space", processor.findKeyAt(grid, 10f, 44f)?.id)
+            assertEquals("q", processor.findKeyAt(grid, 10f, 41f)?.id)
+
+            // Outer left margin snaps to q
+            assertEquals("q", processor.findKeyAt(grid, -3f, 20f)?.id)
+        }
+
+    @Test
+    fun `onPress on already-active pointerId releases stale pointer before new press`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            processor.updateBounds("q", 0f, 0f, 50f, 40f)
+            processor.updateBounds("w", 50f, 0f, 100f, 40f)
+
+            // Simulate pointer 1L pressing q and never receiving onRelease (e.g. cancelled event)
+            processor.onPress(1L, 25f, 20f, grid, isFullLayout = false)
+            assertTrue(processor.isPointerActive(1L))
+
+            // Next tap with same pointerId 1L on w should clean up q and press w
+            processor.onPress(1L, 75f, 20f, grid, isFullLayout = false)
+            assertEquals(setOf("w"), processor.pressedKeys.value)
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertTrue(processor.pressedKeys.value.isEmpty())
+            assertFalse(processor.isPointerActive(1L))
+        }
+
+    @Test
+    fun `two-thumb rollover commits first character key immediately when second character key is pressed`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            processor.updateBounds("q", 0f, 0f, 50f, 40f)
+            processor.updateBounds("w", 50f, 0f, 100f, 40f)
+
+            // Thumb 1 presses 'q'
+            processor.onPress(1L, 25f, 20f, grid, isFullLayout = false)
+            assertTrue(testInjector.calls.isEmpty())
+
+            // Before Thumb 1 lifts, Thumb 2 presses 'w' -> 'q' is committed immediately
+            processor.onPress(2L, 75f, 20f, grid, isFullLayout = false)
+            assertEquals(
+                listOf("down" to LinuxKeycodes.KEY_Q, "up" to LinuxKeycodes.KEY_Q),
+                testInjector.calls,
+            )
+
+            // Even if Thumb 2 lifts before Thumb 1, 'w' is injected after 'q' and Thumb 1's release does not double-inject 'q'
+            processor.onRelease(2L, isFullLayout = false)
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertEquals(
+                listOf(
+                    "down" to LinuxKeycodes.KEY_Q,
+                    "up" to LinuxKeycodes.KEY_Q,
+                    "down" to LinuxKeycodes.KEY_W,
+                    "up" to LinuxKeycodes.KEY_W,
+                ),
+                testInjector.calls,
+            )
+            assertTrue(processor.pressedKeys.value.isEmpty())
+        }
+
+    @Test
+    fun `haptic feedback fires on key press, long-press popup, modifier hold, and spacebar steps`() =
+        runTest(testDispatcher) {
+            KeyboardState.reset()
+            var hapticCount = 0
+            val processor = createProcessor(onHapticFeedback = { hapticCount++ })
+            processor.updateBounds("q", 0f, 0f, 50f, 40f)
+            processor.updateBounds("space", 0f, 50f, 150f, 100f)
+
+            // 1. Key press + long-press popup open + option selection shift
+            processor.onPress(1L, 25f, 20f, grid, isFullLayout = false)
+            assertEquals(1, hapticCount)
+
+            testScheduler.advanceTimeBy(500L)
+            testScheduler.runCurrent()
+            assertEquals(2, hapticCount)
+
+            processor.onMove(1L, 50f, 20f, 25f, 0f, grid, isFullLayout = false)
+            assertEquals(3, hapticCount)
+            processor.onRelease(1L, isFullLayout = false)
+
+            // 2. Spacebar press + cursor steps
+            processor.onPress(2L, 75f, 75f, grid, isFullLayout = false)
+            assertEquals(4, hapticCount)
+            processor.onMove(2L, 50f, 75f, -25f, 0f, grid, isFullLayout = false)
+            assertEquals(5, hapticCount)
+            processor.onMove(2L, 30f, 75f, -20f, 0f, grid, isFullLayout = false)
+            assertEquals(6, hapticCount)
+            processor.onRelease(2L, isFullLayout = false)
+
+            // 3. Modifier press + hold latch
+            processor.onModifierPress("ctrl", LinuxKeycodes.KEY_LEFTCTRL, isFullLayout = false)
+            assertEquals(7, hapticCount)
+            testScheduler.advanceTimeBy(350L)
+            testScheduler.runCurrent()
+            assertEquals(8, hapticCount)
+            processor.onModifierRelease("ctrl", LinuxKeycodes.KEY_LEFTCTRL, isFullLayout = false)
+            KeyboardState.reset()
+        }
+
+    @Test
+    fun `tapping space in SYMBOLS_1 mode injects space and auto-returns to LETTERS mode`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            var currentMode = KeyboardMode.SYMBOLS_1
+            val processor =
+                createProcessor(
+                    injector = testInjector,
+                    onModeChange = { currentMode = it },
+                    activeMode = { currentMode },
+                )
+            processor.updateBounds("space", 0f, 50f, 150f, 100f)
+
+            processor.onPress(1L, 75f, 75f, grid, isFullLayout = false)
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertEquals(
+                listOf("down" to LinuxKeycodes.KEY_SPACE, "up" to LinuxKeycodes.KEY_SPACE),
+                testInjector.calls,
+            )
+            assertEquals(KeyboardMode.LETTERS, currentMode)
+        }
+
+    @Test
+    fun `hold and slide from lshift onto letter key injects shifted letter and resets sticky shift`() =
+        runTest(testDispatcher) {
+            KeyboardState.reset()
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            val lshiftDef = KeyDef("lshift", "Shift", LinuxKeycodes.KEY_LEFTSHIFT, type = KeyType.MODIFIER)
+            val qDef = KeyDef("q", "q", LinuxKeycodes.KEY_Q)
+            val slideGrid = listOf(listOf(lshiftDef, qDef))
+            processor.updateBounds("lshift", 0f, 0f, 50f, 40f)
+            processor.updateBounds("q", 50f, 0f, 100f, 40f)
+
+            processor.onPress(1L, 25f, 20f, slideGrid, isFullLayout = false)
+            processor.onMove(1L, 75f, 20f, 50f, 0f, slideGrid, isFullLayout = false)
+            assertEquals(ModifierState.STICKY, KeyboardState.stateFor("lshift").value)
+            assertEquals(
+                "Q",
+                processor.activePopupState.value
+                    ?.options
+                    ?.firstOrNull(),
+            )
+
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertEquals(
+                listOf(
+                    "down" to LinuxKeycodes.KEY_LEFTSHIFT,
+                    "down" to LinuxKeycodes.KEY_Q,
+                    "up" to LinuxKeycodes.KEY_Q,
+                    "up" to LinuxKeycodes.KEY_LEFTSHIFT,
+                ),
+                testInjector.calls,
+            )
+            assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("lshift").value)
+            KeyboardState.reset()
+        }
+
+    @Test
+    fun `hold and slide from mode_switch onto symbol key injects symbol and returns to LETTERS mode`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            var currentMode = KeyboardMode.LETTERS
+            val processor =
+                createProcessor(
+                    injector = testInjector,
+                    onModeChange = { currentMode = it },
+                    activeMode = { currentMode },
+                )
+            val modeSwitchDef = KeyDef("mode_switch", "?123", 0)
+            val num1Def = KeyDef("1", "1", LinuxKeycodes.KEY_1)
+            val slideGrid = listOf(listOf(modeSwitchDef, num1Def))
+            processor.updateBounds("mode_switch", 0f, 0f, 50f, 40f)
+            processor.updateBounds("1", 50f, 0f, 100f, 40f)
+
+            processor.onPress(1L, 25f, 20f, slideGrid, isFullLayout = false)
+            assertEquals(KeyboardMode.SYMBOLS_1, currentMode)
+
+            processor.onMove(1L, 75f, 20f, 50f, 0f, slideGrid, isFullLayout = false)
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertEquals(
+                listOf("down" to LinuxKeycodes.KEY_1, "up" to LinuxKeycodes.KEY_1),
+                testInjector.calls,
+            )
+            assertEquals(KeyboardMode.LETTERS, currentMode)
+        }
+
+    @Test
+    fun `spacebar cursor slide supports vertical up and down arrow steps after activating horizontal drag`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            processor.updateBounds("space", 0f, 50f, 150f, 100f)
+
+            processor.onPress(1L, 75f, 75f, grid, isFullLayout = false)
+            // Exceed 16dp horizontal threshold to activate isSpaceDragging
+            processor.onMove(1L, 50f, 75f, -25f, 0f, grid, isFullLayout = false)
+            assertTrue(processor.isSpaceDragging)
+            testInjector.calls.clear()
+
+            // Move up by 10dp (exceeds 8dp step) -> KEY_UP
+            processor.onMove(1L, 50f, 65f, 0f, -10f, grid, isFullLayout = false)
+            // Move down by 16dp (two 8dp steps, plus -2dp remainder = +14dp -> 1 step) -> KEY_DOWN
+            processor.onMove(1L, 50f, 81f, 0f, 16f, grid, isFullLayout = false)
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertEquals(
+                listOf(
+                    "down" to LinuxKeycodes.KEY_UP,
+                    "up" to LinuxKeycodes.KEY_UP,
+                    "down" to LinuxKeycodes.KEY_DOWN,
+                    "up" to LinuxKeycodes.KEY_DOWN,
+                ),
+                testInjector.calls,
+            )
+        }
+
+    @Test
+    fun `sliding left from bksp key deletes whole words with Ctrl+Backspace`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            val mDef = KeyDef("m", "m", LinuxKeycodes.KEY_M)
+            val bkspDef = KeyDef("bksp", "⌫", LinuxKeycodes.KEY_BACKSPACE)
+            val bkspGrid = listOf(listOf(mDef, bkspDef))
+            processor.updateBounds("m", 0f, 0f, 50f, 40f)
+            processor.updateBounds("bksp", 50f, 0f, 100f, 40f)
+
+            // Press bksp -> immediate KEY_BACKSPACE down
+            processor.onPress(1L, 80f, 20f, bkspGrid, isFullLayout = false)
+            assertEquals(listOf("down" to LinuxKeycodes.KEY_BACKSPACE), testInjector.calls)
+
+            // Slide left by 30dp (exceeds 16dp threshold and 24dp word step) -> releases initial bksp and injects Ctrl+Backspace
+            processor.onMove(1L, 50f, 20f, -30f, 0f, bkspGrid, isFullLayout = false)
+            assertTrue(processor.isBkspDragging)
+            processor.onRelease(1L, isFullLayout = false)
+
+            assertEquals(
+                listOf(
+                    "down" to LinuxKeycodes.KEY_BACKSPACE,
+                    "up" to LinuxKeycodes.KEY_BACKSPACE,
+                    "down" to LinuxKeycodes.KEY_LEFTCTRL,
+                    "down" to LinuxKeycodes.KEY_BACKSPACE,
+                    "up" to LinuxKeycodes.KEY_BACKSPACE,
+                    "up" to LinuxKeycodes.KEY_LEFTCTRL,
+                ),
+                testInjector.calls,
+            )
+        }
+
+    @Test
+    fun `two-thumb rollover onto enter commits pending character key before enter`() =
+        runTest(testDispatcher) {
+            val testInjector = TestKeyCodeInjector()
+            val processor = createProcessor(injector = testInjector)
+            val qDef = KeyDef("q", "q", LinuxKeycodes.KEY_Q)
+            val enterDef = KeyDef("enter", "↵", LinuxKeycodes.KEY_ENTER)
+            val enterGrid = listOf(listOf(qDef, enterDef))
+            processor.updateBounds("q", 0f, 0f, 50f, 40f)
+            processor.updateBounds("enter", 50f, 0f, 100f, 40f)
+
+            // Pointer 1 presses 'q' (pending character key, not yet injected)
+            processor.onPress(1L, 25f, 20f, enterGrid, isFullLayout = false)
+            assertTrue(testInjector.calls.isEmpty())
+
+            // Pointer 2 presses 'enter' before pointer 1 lifts -> commits 'q' first, then presses 'enter'
+            processor.onPress(2L, 75f, 20f, enterGrid, isFullLayout = false)
+            assertEquals(
+                listOf(
+                    "down" to LinuxKeycodes.KEY_Q,
+                    "up" to LinuxKeycodes.KEY_Q,
+                    "down" to LinuxKeycodes.KEY_ENTER,
+                ),
+                testInjector.calls,
+            )
+
+            // Releasing pointer 1 should not inject 'q' a second time
+            processor.onRelease(1L, isFullLayout = false)
+            processor.onRelease(2L, isFullLayout = false)
+            assertEquals(
+                listOf(
+                    "down" to LinuxKeycodes.KEY_Q,
+                    "up" to LinuxKeycodes.KEY_Q,
+                    "down" to LinuxKeycodes.KEY_ENTER,
+                    "up" to LinuxKeycodes.KEY_ENTER,
+                ),
+                testInjector.calls,
+            )
+        }
+
+    @Test
+    fun `sliding onto mode_switch key clears character preview popup`() =
+        runTest(testDispatcher) {
+            val processor = createProcessor()
+            val qDef = KeyDef("q", "q", LinuxKeycodes.KEY_Q)
+            val modeSwitchDef = KeyDef("mode_switch", "?123", 0)
+            val slideGrid = listOf(listOf(qDef, modeSwitchDef))
+            processor.updateBounds("q", 0f, 0f, 50f, 40f)
+            processor.updateBounds("mode_switch", 50f, 0f, 100f, 40f)
+
+            processor.onPress(1L, 25f, 20f, slideGrid, isFullLayout = false)
+            assertEquals(
+                "q",
+                processor.activePopupState.value
+                    ?.keyDef
+                    ?.id,
+            )
+
+            processor.onMove(1L, 75f, 20f, 50f, 0f, slideGrid, isFullLayout = false)
+            assertNull(processor.activePopupState.value)
+
+            processor.onRelease(1L, isFullLayout = false)
         }
 }

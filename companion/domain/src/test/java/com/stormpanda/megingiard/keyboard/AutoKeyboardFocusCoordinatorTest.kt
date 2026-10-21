@@ -160,4 +160,46 @@ class AutoKeyboardFocusCoordinatorTest {
             assertTrue(AutoKeyboardFocusCoordinator.isKeyboardAutoOpened.value)
             assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
         }
+
+    @Test
+    fun testNonEditableFocusKeepsKeyboardOpenWhenAutoHideDisabled() =
+        runTest(testDispatcher) {
+            AutoKeyboardFocusCoordinator.onTextFieldFocused(
+                fieldId = "field1",
+                isClicked = false,
+                autoOpenEnabled = true,
+            )
+
+            assertTrue(AutoKeyboardFocusCoordinator.isKeyboardAutoOpened.value)
+            assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
+
+            // Focus shifts to non-editable element while auto-hide is disabled
+            AutoKeyboardFocusCoordinator.onNonEditableFocused(autoHideEnabled = false)
+
+            assertFalse(AutoKeyboardFocusCoordinator.isKeyboardAutoOpened.value)
+            assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
+        }
+
+    @Test
+    fun testWindowStateChangeKeepsKeyboardOpenWhenAutoHideDisabled() =
+        runTest(testDispatcher) {
+            AutoKeyboardFocusCoordinator.onTextFieldFocused(
+                fieldId = "com.android.chrome:field1",
+                packageName = "com.android.chrome",
+                isClicked = true,
+                autoOpenEnabled = true,
+            )
+
+            assertTrue(AutoKeyboardFocusCoordinator.isKeyboardAutoOpened.value)
+            assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
+
+            // Package change while auto-hide is disabled keeps keyboard open
+            AutoKeyboardFocusCoordinator.onWindowStateChanged(
+                newPackage = "com.android.launcher3",
+                autoHideEnabled = false,
+            )
+
+            assertFalse(AutoKeyboardFocusCoordinator.isKeyboardAutoOpened.value)
+            assertTrue(AppStateManager.isFullscreenKeyboardActive.value)
+        }
 }

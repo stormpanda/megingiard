@@ -112,6 +112,9 @@ class FeatureSettingsTest {
 
         KeyboardSettings.setKbAutoOpenOnFocus(false)
         assertFalse(KeyboardSettings.kbAutoOpenOnFocus.value)
+
+        KeyboardSettings.setKbAutoHideOnFocusLoss(false)
+        assertFalse(KeyboardSettings.kbAutoHideOnFocusLoss.value)
     }
 
     @Test

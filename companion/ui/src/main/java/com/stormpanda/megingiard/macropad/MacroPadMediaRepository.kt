@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.BitmapUtils
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -19,6 +20,13 @@ private const val MASK_PREFIX = "mask_"
  * Encapsulates filesystem and bitmap storage operations for MacroPad layout backgrounds and masks.
  */
 object MacroPadMediaRepository {
+    @Volatile
+    internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
+    fun resetForTesting() {
+        ioDispatcher = Dispatchers.IO
+    }
+
     /**
      * Reads and decodes a scaled bitmap for the given path or URI (relative path under `context.filesDir`,
      * absolute filesystem path, or `content://`/`file://` URI).
@@ -27,7 +35,7 @@ object MacroPadMediaRepository {
         context: Context,
         pathOrUri: String,
     ): Bitmap? =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
             when {
                 pathOrUri.startsWith("content://") || pathOrUri.startsWith("file://") -> {
@@ -122,7 +130,7 @@ object MacroPadMediaRepository {
         layoutId: String,
         srcUri: Uri,
     ): String? =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val dir = File(context.filesDir, dirName)
             if (!dir.exists()) {
                 dir.mkdirs()
@@ -153,7 +161,7 @@ object MacroPadMediaRepository {
         filePrefix: String,
         layoutId: String,
     ): Boolean =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val dir = File(context.filesDir, dirName)
             val destFile = File(dir, "$filePrefix$layoutId")
             if (destFile.exists()) {
@@ -175,7 +183,7 @@ object MacroPadMediaRepository {
         originalLayoutId: String,
         newLayoutId: String,
     ): String? =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val dir = File(context.filesDir, dirName)
             val srcFile = File(dir, "$filePrefix$originalLayoutId")
             if (srcFile.exists()) {

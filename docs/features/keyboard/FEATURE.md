@@ -27,6 +27,8 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
   - **NUMERIC (`KeyboardMode.NUMERIC`):** 4-row split numeric keypad with arithmetic operators on the left column and a 3×3 digit grid + bottom row on the right, accessed via the `1234` switcher key (`mode_switch_1234`).
   - **COMPACT FULL (`KeyboardMode.FULL`):** 6-row physical-style keyboard layout (`FR-K11`), toggled via the mode switch pill in `KeyboardBottomToolbar`.
 - Tapping switcher keys (`?123`, `ABC`, `1234`) switches the active sub-mode and resets active sticky/held modifiers.
+- Pressing `?123` (`mode_switch`), sliding onto a symbol/number key in `KeyboardMode.SYMBOLS_1`, and releasing injects that key and automatically returns to `KeyboardMode.LETTERS` (`ABC`). Tapping `Space` while in `KeyboardMode.SYMBOLS_1` also injects a space keystroke and automatically returns to `KeyboardMode.LETTERS`.
+- Pressing a modifier key (such as `Shift`) in ergonomic modes, sliding onto a character key, and releasing transitions the modifier to `STICKY` for the slide (`KeyboardState.activateStickyFromSlide`), injects the modified character on release, and resets the sticky modifier back to `INACTIVE`.
 - Shift and AltGr alternate labels MUST be shown on individual keys when the respective modifier is active (`KeyDef.resolveDisplayLabel`).
 
 ### FR-K2: Modifier Keys
@@ -42,9 +44,10 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 - Holding the backspace key (`"bksp"`) triggers an initial key injection on press, followed after **500 ms** by repeated keystrokes every **30 ms** until released.
 - Holding a character key in ergonomic modes triggers a long-press popup options bubble (`CharPopupOverlay`) after **400 ms** if the key defines secondary options (`getPopupOptions(keyDef)`).
-- Standard character keys do not repeat on hold; their single keystroke injection is deferred until finger release so long-press popup selection or spacebar cursor dragging can supersede it.
+- Standard character keys do not repeat on hold; their single keystroke injection is deferred until finger release so long-press popup selection or spacebar cursor dragging can supersede it. When a second pointer presses another non-mode-switch normal key (character key, `Enter`, or `Backspace`) while a prior character key press is still pending (two-thumb rollover), the prior pointer's character key is immediately committed and injected in press order without waiting for finger lift.
 - Dragging horizontally while a long-press popup is open selects among the available options. Releasing the finger injects the selected character via `KeyboardViewModel.injectPopupSelection` (`LinuxKeycodes.charToKeyMapping`) and dismisses the popup.
 - On the compact full keyboard layout (`KeyboardMode.FULL`), long-pressing keys does not show secondary popup options; only the single-character preview popup is shown, and moving the finger performs slide-to-correct across keys.
+- When haptic feedback is enabled (`TouchpadSettings.touchpadHapticsEnabled`), `KeyboardGestureProcessor.onHapticFeedback` triggers light haptic pulses (`HapticStrength.LIGHT`) on key presses, modifier presses and long-press latches, long-press popup openings and option selection shifts, and spacebar cursor navigation steps.
 
 ### FR-K5: No Special Permissions Required
 
@@ -59,20 +62,24 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
   - From the top down if the Quick Menu is configured at the top.
 - While the keyboard is active, the QuickKeyboardBar MUST be hidden. Swiping from the edge closes the keyboard overlay.
 
-### FR-K8: Spacebar Cursor Navigation
+### FR-K8: Spacebar Cursor Navigation & Backspace Word-Delete Slide
 
 - Pressing and holding the spacebar key (`"space"` or `"space_num"`) in ergonomic modes and dragging horizontally MUST trigger cursor navigation.
 - If the horizontal drag distance exceeds **16 dp** (`KB_SWIPE_THRESHOLD_DP`), cursor sliding mode is activated and no space character will be typed on finger release.
-- Moving the finger horizontally during cursor sliding mode by every **8 dp** (`KB_SWIPE_STEP_DP`) MUST inject a `KEY_LEFT` (for leftward swipe) or `KEY_RIGHT` (for rightward swipe) tap.
+- Moving the finger during cursor sliding mode by every **8 dp** (`KB_SWIPE_STEP_DP`) MUST inject:
+  - Horizontally: a `KEY_LEFT` (for leftward swipe) or `KEY_RIGHT` (for rightward swipe) tap.
+  - Vertically: a `KEY_UP` (for upward swipe) or `KEY_DOWN` (for downward swipe) tap.
 - If the finger is released without exceeding the **16 dp** drag threshold, a normal space keystroke MUST be injected on release.
+- Pressing and holding the Backspace key (`"bksp"`) in ergonomic modes and sliding leftward beyond **16 dp** (`KB_SWIPE_THRESHOLD_DP`) MUST cancel single-character backspace repeat, release the initial `KEY_BACKSPACE` down state, and inject a word-delete chord (`KEY_LEFTCTRL` + `KEY_BACKSPACE`) with haptic feedback for every **24 dp** (`KB_BKSP_WORD_STEP_DP`) of leftward movement without activating hovered character keys.
 
 ### FR-K9: Keyboard Settings Toolbar Button & Screen
 
 - Tapping the Settings gear button in `KeyboardBottomToolbar` MUST open `KeyboardSettingsOverlay` on the primary (top) display while the virtual keyboard remains active, visible, and interactive on the secondary (bottom) display.
-- `KeyboardSettingsOverlay` MUST present three settings cards matching Global Settings (under the Input category):
+- `KeyboardSettingsOverlay` MUST present four settings cards matching Global Settings (under the Input category):
   1. **Keyboard Layout:** choice card selecting between **QWERTZ**, **QWERTY**, and **AZERTY**.
   2. **Keyboard Touchpad:** toggle enabling or disabling the touchpad area above the keyboard (`kb_touchpad_enabled`).
   3. **Auto-Open on Text Focus:** toggle enabling or disabling accessibility-driven auto-open (`kb_auto_open_on_focus`).
+  4. **Auto-Hide on Focus Loss:** toggle enabling or disabling automatic dismissal of an auto-opened keyboard when focus leaves a text field or the top-screen app changes (`kb_auto_hide_on_focus_loss`).
 - Switching regional layout updates `KeyboardSettings.kbLayout` and resets `KeyboardState`.
 - Closing or collapsing the virtual keyboard while `KeyboardSettingsOverlay` is open MUST automatically close the Keyboard Settings overlay.
 
@@ -95,12 +102,12 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - Dual-symbol non-letter keys in Compact Full Keyboard Mode display both their shifted and primary symbols stacked vertically on the key cap, highlighting the active symbol and dimming the inactive one.
 - Holding a character key in Compact Full Keyboard Mode shows only the single-character preview popup (no long-press multi-option popup), and dragging across keys performs slide-to-correct, injecting the final hovered key upon release.
 
-### FR-K12: Auto-Open on Top-Screen Text Focus (Accessibility-Driven)
+### FR-K12: Auto-Open & Auto-Hide on Top-Screen Text Focus (Accessibility-Driven)
 
-- The virtual keyboard MUST support an optional **Auto-Open on Text Focus** mode, configurable via Settings (`KeyboardSettings.kbAutoOpenOnFocus`, enabled by default).
-- When enabled, `MegingiardAccessibilityService` monitors `AccessibilityEvent.TYPE_VIEW_FOCUSED` and `TYPE_VIEW_CLICKED` on the primary display (`Display.DEFAULT_DISPLAY`) and delegates focus state transitions to `AutoKeyboardFocusCoordinator`.
-- Focusing or tapping any editable text input field (`AccessibilityNodeInfo.isEditable == true`) on the primary display automatically opens Megingiard's virtual keyboard on the secondary display via `AppStateManager.setFullscreenKeyboardActive(true)`.
-- Focusing a non-editable element or navigating away from the current application package to a different app/launcher on the primary display automatically dismisses the virtual keyboard. Transient window transitions, suggestion dropdowns, or popup dialogs within the same active package do not dismiss the virtual keyboard.
+- The virtual keyboard MUST support optional **Auto-Open on Text Focus** (`KeyboardSettings.kbAutoOpenOnFocus`, enabled by default) and **Auto-Hide on Focus Loss** (`KeyboardSettings.kbAutoHideOnFocusLoss`, enabled by default) modes, independently configurable via Settings.
+- When Auto-Open is enabled, `MegingiardAccessibilityService` monitors `AccessibilityEvent.TYPE_VIEW_FOCUSED` and `TYPE_VIEW_CLICKED` on the primary display (`Display.DEFAULT_DISPLAY`) and delegates focus state transitions to `AutoKeyboardFocusCoordinator`.
+- Focusing or tapping any editable text input field (`AccessibilityNodeInfo.isEditable == true`) on the primary display automatically opens Megingiard's virtual keyboard on the secondary display via `AppStateManager.setFullscreenKeyboardActive(true)` and marks the session as auto-opened (`AutoKeyboardFocusCoordinator.isKeyboardAutoOpened = true`).
+- When Auto-Hide is enabled (`kbAutoHideOnFocusLoss == true`), focusing a non-editable element or navigating away from the current application package to a different app/launcher on the primary display automatically dismisses an auto-opened virtual keyboard. When Auto-Hide is disabled (`kbAutoHideOnFocusLoss == false`), the coordinator clears its active session tracking on focus loss or package change while keeping the virtual keyboard open on the secondary display until manually dismissed. Keyboards that were opened manually by the user are never closed by Auto-Hide. Transient window transitions, suggestion dropdowns, or popup dialogs within the same active package do not dismiss the virtual keyboard.
 - If the user manually collapses or dismisses the virtual keyboard while an editable field remains focused, `AutoKeyboardFocusCoordinator` records hysteresis (`userDismissedFieldId`, using `AccessibilityNodeInfo.uniqueId`) to avoid re-opening the keyboard until focus moves to another field or the user explicitly taps the field again.
 - Megingiard relies on Android's native hardware keyboard detection (`show_ime_with_hard_keyboard = 0`) to keep the top-screen soft keyboard hidden without tearing down the application's active `InputConnection`.
 
@@ -181,6 +188,7 @@ data class KeyDef(
 
 - **Ergonomic modes (`LETTERS`, `SYMBOLS_1`, `NUMERIC`):** 4 rows per layout, paired with `KeyboardTopToolbar` (`ESC`, `TAB`, `CTRL`, `ALT`, macro row toggle, and clipboard shortcuts `Select All`, `Cut`, `Copy`, `Paste`).
 - **Compact Full mode (`FULL`):** 6 rows per layout with uniform `15.0f` row weight, sharing a common top function row (`Esc`, `F1–F12`, `Print`, `Del`) and bottom bar (`Ctrl`, `Meta`, `Alt`, `Space`, `AltGr`, `RCtrl`, `Left`, `Up`, `Down`, `Right`).
+- **Gapless Hit-Testing:** Each `KeyCap` records `KeyBounds` on its unpadded outer layout cell (while applying `1 dp` horizontal and `3 dp` vertical visual inset padding inside the cell), so adjacent key touch targets tile edge-to-edge. For touches on outer grid margins or fractional-pixel boundaries, `KeyboardGestureProcessor.findKeyAt` falls back to the key with the minimum squared distance to its `KeyBounds` rectangle (`KeyBounds.distanceSquaredTo`), eliminating dead spots across the keyboard grid.
 
 ### Modifier State Machine
 
@@ -198,11 +206,12 @@ data class KeyDef(
 
 ### Settings
 
-| Setting            | DataStore Key           | Default  | Description                                              |
-| ------------------ | ----------------------- | -------- | -------------------------------------------------------- |
-| Keyboard Layout    | `kb_layout`             | `QWERTZ` | Regional layout variant (`QWERTZ`, `QWERTY`, `AZERTY`)   |
-| Keyboard Touchpad  | `kb_touchpad_enabled`   | `true`   | Show relative touchpad area above the keyboard container |
-| Auto-Open on Focus | `kb_auto_open_on_focus` | `true`   | Auto-open bottom keyboard when top text field is focused |
+| Setting                 | DataStore Key               | Default  | Description                                                                   |
+| ----------------------- | --------------------------- | -------- | ----------------------------------------------------------------------------- |
+| Keyboard Layout         | `kb_layout`                 | `QWERTZ` | Regional layout variant (`QWERTZ`, `QWERTY`, `AZERTY`)                        |
+| Keyboard Touchpad       | `kb_touchpad_enabled`       | `true`   | Show relative touchpad area above the keyboard container                      |
+| Auto-Open on Focus      | `kb_auto_open_on_focus`     | `true`   | Auto-open bottom keyboard when top text field is focused                      |
+| Auto-Hide on Focus Loss | `kb_auto_hide_on_focus_loss`| `true`   | Auto-close an auto-opened keyboard when focus leaves a text field or switches |
 
 ### Source Files
 
@@ -226,8 +235,8 @@ data class KeyDef(
 | **`:companion:domain`** | [MouseInjector.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/input/MouseInjector.kt) | Shared facade for relative mouse movements, clicks, and scroll events over `PrivdClient` |
 | **`:shared:core`** | [KeyboardLayout.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/KeyboardLayout.kt) | `KeyDef`, `KeyboardMode`, `KbLayout`, QWERTZ/QWERTY/AZERTY layout builders, and `resolveDisplayLabel` |
 | **`:shared:core`** | [LinuxKeycodes.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/LinuxKeycodes.kt) | Linux `input-event-codes.h` `KEY_*` constants and `charToKeyMapping` lookup table |
-| **`:shared:core`** | [PopupState.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/PopupState.kt) | Immutable model representing an active key preview or long-press character popup |
-| **`:shared:core`** | [KeyBounds.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/keyboard/KeyBounds.kt) | Bounding-box model for key hit-testing and popup positioning |
+| **`:companion:domain`** | [PopupState.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/PopupState.kt) | Immutable model representing an active key preview or long-press character popup |
+| **`:companion:domain`** | [KeyBounds.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/keyboard/KeyBounds.kt) | Bounding-box model for key hit-testing (`contains`, `distanceSquaredTo`) and popup positioning |
 | Native Source | `companion/ui/src/main/cpp/megingiard_privd.c` | Megingiard System Service daemon handling `/dev/uinput` keyboard and mouse devices |
 | Binary Asset | `companion/ui/src/main/assets/megingiard_privd_arm64` | Pre-built Megingiard System Service daemon executable |
 

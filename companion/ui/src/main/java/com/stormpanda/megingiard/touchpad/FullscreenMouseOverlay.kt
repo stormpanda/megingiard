@@ -92,6 +92,31 @@ private val TP_MOUSE_4_5_MARGIN_HORIZONTAL = 4.dp
 // resulting in a visual top margin of 4.dp (matching the horizontal one).
 private val TP_MOUSE_4_5_MARGIN_TOP = 6.dp
 private val TP_MOUSE_4_5_SIZE = 56.dp
+private val TP_MOUSE_BUTTON_ROW_HEIGHT = 56.dp
+private val TP_MOUSE_BUTTON_ROW_PADDING_H = 4.dp
+private val TP_MOUSE_BUTTON_ROW_PADDING_BOTTOM = 2.dp
+private val TP_MOUSE_BUTTON_ROW_SPACING = 4.dp
+private const val TP_MOUSE_PRIMARY_BTN_WEIGHT = 1.2f
+private const val TP_MOUSE_MIDDLE_BTN_WEIGHT = 0.4f
+private const val TP_PERCENT_DIVISOR = 100f
+private const val TP_MODE_CROSSFADE_DURATION_MS = 300
+private val TP_BOTTOM_BAR_PADDING_H = 16.dp
+private val TP_TOOLBAR_RIGHT_SPACING = 4.dp
+private val TP_TOOLBAR_BUTTON_OFFSET_Y = (-3).dp
+private const val TP_TOOLBAR_ICON_ALPHA = 0.7f
+private const val TP_MOUSE_BTN_DEPTH_ALPHA = 0.55f
+private val TP_ZERO_DP = 0.dp
+private val TP_MOUSE_BTN_UNPRESSED_OFFSET_Y = (-2).dp
+private val TP_MOUSE_BTN_BORDER_WIDTH = 0.5.dp
+private const val TP_MUTED_ALPHA = 0.5f
+private const val TP_MODE_THUMB_ALPHA = 0.6f
+private val TP_MODE_THUMB_WIDTH = 83.dp
+private const val TP_MODE_THUMB_ANIM_DURATION_MS = 200
+private val TP_MODE_TOGGLE_WIDTH = 170.dp
+private val TP_MODE_TOGGLE_HEIGHT = 36.dp
+private val TP_MODE_TOGGLE_PADDING = 2.dp
+private val TP_MODE_SEGMENT_ICON_SIZE = 16.dp
+private val TP_MODE_SEGMENT_ICON_SPACING = 6.dp
 
 @Composable
 fun rememberGlobalTouchpadProcessor(forceMouseMode: Boolean = false): TouchpadGestureProcessor {
@@ -163,56 +188,56 @@ fun Modifier.touchpadSurfaceInput(
                         val clampedY = localPos.y.coerceIn(0f, sh)
                         val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
 
-                        when (event.type) {
-                            PointerEventType.Press -> {
-                                if (!change.previousPressed && isInside && !change.isConsumed) {
-                                    processor.onPress(
-                                        pointerId = id,
-                                        x = clampedX,
-                                        y = clampedY,
-                                        surfaceW = sw,
-                                        surfaceH = sh,
-                                    )
-                                }
+                        if (!change.pressed) {
+                            if (change.previousPressed) {
+                                processor.onRelease(
+                                    pointerId = id,
+                                    x = clampedX,
+                                    y = clampedY,
+                                    surfaceW = sw,
+                                    surfaceH = sh,
+                                )
                             }
-
-                            PointerEventType.Move -> {
-                                if (!isInside && !useMouse) {
-                                    processor.onRelease(
-                                        pointerId = id,
-                                        x = clampedX,
-                                        y = clampedY,
-                                        surfaceW = sw,
-                                        surfaceH = sh,
-                                    )
-                                } else if (!change.isConsumed) {
-                                    val delta = change.positionChange()
-                                    processor.onMove(
-                                        pointerId = id,
-                                        x = clampedX,
-                                        y = clampedY,
-                                        deltaX = delta.x,
-                                        deltaY = delta.y,
-                                        surfaceW = sw,
-                                        surfaceH = sh,
-                                    )
+                        } else {
+                            when (event.type) {
+                                PointerEventType.Press -> {
+                                    if (!change.previousPressed && isInside && !change.isConsumed) {
+                                        processor.onPress(
+                                            pointerId = id,
+                                            x = clampedX,
+                                            y = clampedY,
+                                            surfaceW = sw,
+                                            surfaceH = sh,
+                                        )
+                                    }
                                 }
-                            }
 
-                            PointerEventType.Release -> {
-                                if (!change.pressed) {
-                                    processor.onRelease(
-                                        pointerId = id,
-                                        x = clampedX,
-                                        y = clampedY,
-                                        surfaceW = sw,
-                                        surfaceH = sh,
-                                    )
+                                PointerEventType.Move -> {
+                                    if (!isInside && !useMouse) {
+                                        processor.onRelease(
+                                            pointerId = id,
+                                            x = clampedX,
+                                            y = clampedY,
+                                            surfaceW = sw,
+                                            surfaceH = sh,
+                                        )
+                                    } else if (!change.isConsumed) {
+                                        val delta = change.positionChange()
+                                        processor.onMove(
+                                            pointerId = id,
+                                            x = clampedX,
+                                            y = clampedY,
+                                            deltaX = delta.x,
+                                            deltaY = delta.y,
+                                            surfaceW = sw,
+                                            surfaceH = sh,
+                                        )
+                                    }
                                 }
-                            }
 
-                            else -> {
-                                Unit
+                                else -> {
+                                    Unit
+                                }
                             }
                         }
                         change.consume()
@@ -251,7 +276,7 @@ fun FullscreenMouseOverlay() {
         Crossfade(
             targetState = touchpadUseMouse,
             modifier = Modifier.fillMaxSize(),
-            animationSpec = tween(300),
+            animationSpec = tween(TP_MODE_CROSSFADE_DURATION_MS),
             label = "Touchpad Switch",
         ) { useMouse ->
             Box(
@@ -297,24 +322,28 @@ fun FullscreenMouseOverlay() {
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .height(56.dp)
-                                        .padding(start = 4.dp, end = 4.dp, bottom = 2.dp),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        .height(TP_MOUSE_BUTTON_ROW_HEIGHT)
+                                        .padding(
+                                            start = TP_MOUSE_BUTTON_ROW_PADDING_H,
+                                            end = TP_MOUSE_BUTTON_ROW_PADDING_H,
+                                            bottom = TP_MOUSE_BUTTON_ROW_PADDING_BOTTOM,
+                                        ),
+                                horizontalArrangement = Arrangement.spacedBy(TP_MOUSE_BUTTON_ROW_SPACING),
                             ) {
                                 TouchpadMouseButton(
                                     onDown = { MouseInjector.leftDown() },
                                     onUp = { MouseInjector.leftUp() },
-                                    modifier = Modifier.weight(1.2f).fillMaxHeight(),
+                                    modifier = Modifier.weight(TP_MOUSE_PRIMARY_BTN_WEIGHT).fillMaxHeight(),
                                 )
                                 TouchpadMouseButton(
                                     onDown = { MouseInjector.middleDown() },
                                     onUp = { MouseInjector.middleUp() },
-                                    modifier = Modifier.weight(0.4f).fillMaxHeight(),
+                                    modifier = Modifier.weight(TP_MOUSE_MIDDLE_BTN_WEIGHT).fillMaxHeight(),
                                 )
                                 TouchpadMouseButton(
                                     onDown = { MouseInjector.rightDown() },
                                     onUp = { MouseInjector.rightUp() },
-                                    modifier = Modifier.weight(1.2f).fillMaxHeight(),
+                                    modifier = Modifier.weight(TP_MOUSE_PRIMARY_BTN_WEIGHT).fillMaxHeight(),
                                 )
                             }
 
@@ -357,7 +386,7 @@ fun FullscreenMouseOverlay() {
                             modifier =
                                 Modifier
                                     .fillMaxSize()
-                                    .background(Color.Black.copy(alpha = touchpadMirrorDim / 100f)),
+                                    .background(Color.Black.copy(alpha = touchpadMirrorDim / TP_PERCENT_DIVISOR)),
                         )
                     }
                 }
@@ -371,7 +400,7 @@ fun FullscreenMouseOverlay() {
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .height(TP_BOTTOM_BAR_HEIGHT)
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = TP_BOTTOM_BAR_PADDING_H),
         ) {
             // Left-aligned: Collapse button
             Row(
@@ -401,7 +430,7 @@ fun FullscreenMouseOverlay() {
             Row(
                 modifier = Modifier.fillMaxHeight().align(Alignment.CenterEnd),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(TP_TOOLBAR_RIGHT_SPACING),
             ) {
                 if (!touchpadUseMouse) {
                     TouchpadToolbarButton(
@@ -439,7 +468,7 @@ private fun TouchpadToolbarButton(
             modifier
                 .fillMaxHeight()
                 .width(TP_GLOBE_BUTTON_WIDTH)
-                .offset(y = (-3).dp)
+                .offset(y = TP_TOOLBAR_BUTTON_OFFSET_Y)
                 .clip(TP_ROUNDED_8)
                 .background(if (isPressed) colors.keyPressed else Color.Transparent)
                 .clickable(
@@ -453,7 +482,7 @@ private fun TouchpadToolbarButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = colors.onSurface.copy(alpha = 0.7f),
+            tint = colors.onSurface.copy(alpha = TP_TOOLBAR_ICON_ALPHA),
             modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
         )
     }
@@ -472,7 +501,7 @@ private fun TouchpadMouseButton(
     val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
     val surfaceColor = if (pressed) colors.keyPressed else colors.keyBackground
-    val depthColor = Color.Black.copy(alpha = 0.55f)
+    val depthColor = Color.Black.copy(alpha = TP_MOUSE_BTN_DEPTH_ALPHA)
 
     val buttonBezelBrush = rememberBezelBrush()
 
@@ -504,7 +533,7 @@ private fun TouchpadMouseButton(
         )
 
         // 2. Active button surface layer (animated translation)
-        val offsetY = if (pressed) 0.dp else (-2).dp
+        val offsetY = if (pressed) TP_ZERO_DP else TP_MOUSE_BTN_UNPRESSED_OFFSET_Y
         Box(
             modifier =
                 Modifier
@@ -512,7 +541,7 @@ private fun TouchpadMouseButton(
                     .offset(y = offsetY)
                     .background(surfaceColor, TP_ROUNDED_8)
                     .border(
-                        width = 0.5.dp,
+                        width = TP_MOUSE_BTN_BORDER_WIDTH,
                         brush = buttonBezelBrush,
                         shape = TP_ROUNDED_8,
                     ),
@@ -522,7 +551,7 @@ private fun TouchpadMouseButton(
                 Text(
                     text = text,
                     style = MaterialTheme.typography.labelSmall,
-                    color = colors.onSurface.copy(alpha = 0.5f),
+                    color = colors.onSurface.copy(alpha = TP_MUTED_ALPHA),
                 )
             }
         }
@@ -536,34 +565,33 @@ private fun ModeToggleButton(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    val containerBg = colors.keyBackground.copy(alpha = 0.5f)
-    val thumbBg = colors.keyPressed.copy(alpha = 0.6f)
+    val containerBg = colors.keyBackground.copy(alpha = TP_MUTED_ALPHA)
+    val thumbBg = colors.keyPressed.copy(alpha = TP_MODE_THUMB_ALPHA)
 
-    val thumbWidth = 83.dp
     val thumbOffset by animateDpAsState(
-        targetValue = if (useMouse) 0.dp else thumbWidth,
-        animationSpec = tween(durationMillis = 200),
+        targetValue = if (useMouse) TP_ZERO_DP else TP_MODE_THUMB_WIDTH,
+        animationSpec = tween(durationMillis = TP_MODE_THUMB_ANIM_DURATION_MS),
         label = "ThumbOffset",
     )
 
-    val mouseColor = if (useMouse) colors.onSurface else colors.onSurfaceSecondary.copy(alpha = 0.5f)
-    val touchColor = if (!useMouse) colors.onSurface else colors.onSurfaceSecondary.copy(alpha = 0.5f)
+    val mouseColor = if (useMouse) colors.onSurface else colors.onSurfaceSecondary.copy(alpha = TP_MUTED_ALPHA)
+    val touchColor = if (!useMouse) colors.onSurface else colors.onSurfaceSecondary.copy(alpha = TP_MUTED_ALPHA)
 
     Box(
         modifier =
             modifier
-                .width(170.dp)
-                .height(36.dp)
+                .width(TP_MODE_TOGGLE_WIDTH)
+                .height(TP_MODE_TOGGLE_HEIGHT)
                 .clip(TP_ROUNDED_18)
                 .background(containerBg)
                 .clickable(onClick = onToggle)
-                .padding(2.dp),
+                .padding(TP_MODE_TOGGLE_PADDING),
     ) {
         Box(
             modifier =
                 Modifier
                     .offset(x = thumbOffset)
-                    .width(thumbWidth)
+                    .width(TP_MODE_THUMB_WIDTH)
                     .fillMaxHeight()
                     .clip(TP_ROUNDED_16)
                     .background(thumbBg),
@@ -623,16 +651,16 @@ private fun ModeSegment(
                     imageVector = icon,
                     contentDescription = contentDescription,
                     tint = color,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(TP_MODE_SEGMENT_ICON_SIZE),
                 )
             }
             if (iconAfterText) {
                 label()
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(TP_MODE_SEGMENT_ICON_SPACING))
                 iconWidget()
             } else {
                 iconWidget()
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(TP_MODE_SEGMENT_ICON_SPACING))
                 label()
             }
         }

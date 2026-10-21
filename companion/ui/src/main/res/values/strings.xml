@@ -57,6 +57,8 @@
     <string name="settings_kb_touchpad_desc">Show touchpad on top of the keyboard</string>
     <string name="settings_kb_auto_open_on_focus">Auto-open on text focus</string>
     <string name="settings_kb_auto_open_on_focus_desc">Automatically open Megingiard\'s keyboard on the bottom screen when a text field is focused on the top screen</string>
+    <string name="settings_kb_auto_hide_on_focus_loss">Auto-hide on focus loss</string>
+    <string name="settings_kb_auto_hide_on_focus_loss_desc">Automatically close the auto-opened keyboard when focus leaves a text field or switches apps on the top screen</string>
 
     <!-- Input method (touchpad + keyboard trackpoint) -->
 

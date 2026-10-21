@@ -64,15 +64,19 @@ object AutoKeyboardFocusCoordinator {
     /**
      * Called when focus on the primary display shifts to a non-editable element.
      */
-    fun onNonEditableFocused() {
+    fun onNonEditableFocused(autoHideEnabled: Boolean = KeyboardSettings.kbAutoHideOnFocusLoss.value) {
         lastFocusedFieldId = null
         userDismissedFieldId = null
         activePackage = null
 
         if (_isKeyboardAutoOpened.value) {
-            AppLog.d(TAG, "onNonEditableFocused: closing auto-opened keyboard")
             _isKeyboardAutoOpened.value = false
-            AppStateManager.setFullscreenKeyboardActive(false)
+            if (autoHideEnabled) {
+                AppLog.d(TAG, "onNonEditableFocused: closing auto-opened keyboard")
+                AppStateManager.setFullscreenKeyboardActive(false)
+            } else {
+                AppLog.d(TAG, "onNonEditableFocused: keeping auto-opened keyboard open (autoHideEnabled=false)")
+            }
         }
     }
 
@@ -83,18 +87,29 @@ object AutoKeyboardFocusCoordinator {
      * If [newPackage] matches the current [activePackage], the keyboard is kept open to avoid
      * flickering on intra-app popups, suggestion dropdowns, or dialogs.
      */
-    fun onWindowStateChanged(newPackage: String? = null) {
+    fun onWindowStateChanged(
+        newPackage: String? = null,
+        autoHideEnabled: Boolean = KeyboardSettings.kbAutoHideOnFocusLoss.value,
+    ) {
         if (_isKeyboardAutoOpened.value) {
             if (newPackage != null && activePackage != null && newPackage == activePackage) {
                 AppLog.d(TAG, "onWindowStateChanged: intra-app window change in $newPackage, keeping keyboard open")
                 return
             }
-            AppLog.d(TAG, "onWindowStateChanged: closing auto-opened keyboard due to package change (from=$activePackage to=$newPackage)")
+            val prevPackage = activePackage
             _isKeyboardAutoOpened.value = false
             lastFocusedFieldId = null
             userDismissedFieldId = null
             activePackage = null
-            AppStateManager.setFullscreenKeyboardActive(false)
+            if (autoHideEnabled) {
+                AppLog.d(TAG, "onWindowStateChanged: closing auto-opened keyboard due to package change (from=$prevPackage to=$newPackage)")
+                AppStateManager.setFullscreenKeyboardActive(false)
+            } else {
+                AppLog.d(
+                    TAG,
+                    "onWindowStateChanged: keeping auto-opened keyboard open after package change (from=$prevPackage to=$newPackage, autoHideEnabled=false)",
+                )
+            }
         }
     }
 

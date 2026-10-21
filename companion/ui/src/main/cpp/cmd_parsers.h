@@ -73,6 +73,7 @@ static inline void release_all_active_touch_slots(int fd, int* active_slots_mask
  *   MB <L|R|M|4|5> <D|U>
  *   MM <dx> <dy>
  *   MW <delta>
+ *   MH <delta>
  * Returns 1 if handled, 0 otherwise.
  */
 static inline int parse_mouse_command(const char* line, int fd) {
@@ -105,6 +106,13 @@ static inline int parse_mouse_command(const char* line, int fd) {
         int delta;
         if (sscanf(line, "MW %d", &delta) == 1) {
             write_event(fd, EV_REL, REL_WHEEL, delta);
+            write_event(fd, EV_SYN, SYN_REPORT, 0);
+            return 1;
+        }
+    } else if (line[0] == 'M' && line[1] == 'H') {
+        int delta;
+        if (sscanf(line, "MH %d", &delta) == 1) {
+            write_event(fd, EV_REL, REL_HWHEEL, delta);
             write_event(fd, EV_SYN, SYN_REPORT, 0);
             return 1;
         }

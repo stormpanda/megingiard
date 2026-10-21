@@ -44,6 +44,7 @@ struct input_event {
 
 #define REL_X 0x00
 #define REL_Y 0x01
+#define REL_HWHEEL 0x06
 #define REL_WHEEL 0x08
 
 #define ABS_X 0x00
