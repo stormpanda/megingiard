@@ -467,11 +467,14 @@ fun FocusTopLauncherScreen(
             )
         }
 
+    val backgroundIconVersion =
+        backgroundApp?.let { if (it.isRom) it.logoLastModified else it.lastUpdateTime } ?: 0L
     val activePalette by produceState(
         initialValue = backgroundApp?.let { AppPaletteExtractor.getCachedColorsOrNull(it) } ?: defaultPalette,
-        key1 = backgroundApp?.packageName,
-        key2 = backgroundApp?.coverPath,
-        key3 = backgroundApp?.coverLastModified,
+        backgroundApp?.packageName,
+        backgroundApp?.coverPath,
+        backgroundApp?.coverLastModified,
+        backgroundIconVersion,
     ) {
         val cached = backgroundApp?.let { AppPaletteExtractor.getCachedColorsOrNull(it) }
         if (cached != null) {
@@ -976,38 +979,58 @@ fun FocusTopLauncherScreen(
 
 internal object FocusImageCache {
     private const val MAX_ICON_DIMENSION_PX = 256
+    private const val SUBDIR_ROM_LOGOS = "gamefocus_logos"
+    private const val SUBDIR_APP_ICONS = "gamefocus_icons"
+    private const val MS_PER_SECOND = 1_000L
+    private const val ICON_PNG_COMPRESS_QUALITY = 90
     private val coverCache = LruCache<String, ImageBitmap>(80)
     private val iconCache = LruCache<String, ImageBitmap>(80)
     private val missingIconKeys = ConcurrentHashMap.newKeySet<String>()
     private val missingLibraryIconKeys = ConcurrentHashMap.newKeySet<String>()
 
-    /** Separates package name and logo timestamp in versioned ROM icon cache keys. */
+    /** Separates package name and version timestamp in versioned icon cache keys. */
     private const val ICON_KEY_VERSION_SEPARATOR = ":"
 
-    /** ROM icons are keyed by logo timestamp so a newly scraped logo bypasses stale (negative) entries. */
-    private fun iconCacheKey(appInfo: InstalledAppInfo): String =
-        if (appInfo.isRom) {
-            "${appInfo.packageName}$ICON_KEY_VERSION_SEPARATOR${appInfo.logoLastModified}"
+    /**
+     * Icons are keyed by version timestamp ([InstalledAppInfo.logoLastModified] for ROMs,
+     * [InstalledAppInfo.lastUpdateTime] for Android apps) so newly scraped ROM logos and
+     * updated Android packages automatically bypass stale in-memory and negative cache entries.
+     */
+    internal fun iconCacheKey(appInfo: InstalledAppInfo): String {
+        val version = if (appInfo.isRom) appInfo.logoLastModified else appInfo.lastUpdateTime
+        return if (version > 0L) {
+            "${appInfo.packageName}$ICON_KEY_VERSION_SEPARATOR$version"
         } else {
             appInfo.packageName
         }
+    }
 
-    /** Removes ROM icon entries keyed by an older logo timestamp so versioned keys do not accumulate. */
+    /** Removes icon entries keyed by an older version timestamp so stale versions do not accumulate. */
     private fun evictStaleIconVersions(
         appInfo: InstalledAppInfo,
         currentKey: String,
     ) {
-        if (!appInfo.isRom) return
-        val prefix = "${appInfo.packageName}$ICON_KEY_VERSION_SEPARATOR"
+        val packageName = appInfo.packageName
+        val prefix = "$packageName$ICON_KEY_VERSION_SEPARATOR"
         val staleKeys =
-            iconCache.snapshot().keys.filter { it.startsWith(prefix) && it != currentKey } +
-                missingIconKeys.filter { it.startsWith(prefix) && it != currentKey }
+            iconCache.snapshot().keys.filter { (it == packageName || it.startsWith(prefix)) && it != currentKey } +
+                missingIconKeys.filter { (it == packageName || it.startsWith(prefix)) && it != currentKey }
         if (staleKeys.isEmpty()) return
         staleKeys.forEach {
             iconCache.remove(it)
             missingIconKeys.remove(it)
         }
-        AppLog.d(TAG, "Evicted ${staleKeys.size} stale icon cache entries for ${appInfo.packageName}")
+        AppLog.d(TAG, "Evicted ${staleKeys.size} stale icon cache entries for $packageName")
+    }
+
+    internal fun appIconFileFor(
+        context: Context,
+        packageName: String,
+        isRom: Boolean = false,
+    ): File {
+        val subDirName = if (isRom) SUBDIR_ROM_LOGOS else SUBDIR_APP_ICONS
+        val fileDir = File(context.cacheDir, subDirName).apply { mkdirs() }
+        return File(fileDir, "$packageName.png")
     }
 
     fun getAppIcon(
@@ -1144,8 +1167,14 @@ internal object FocusImageCache {
                 .forEach { iconCache.remove(it) }
             missingLibraryIconKeys.removeAll { it.startsWith(prefix) }
         }
-        iconCache.remove(packageName)
+        val iconPrefix = "$packageName$ICON_KEY_VERSION_SEPARATOR"
+        iconCache
+            .snapshot()
+            .keys
+            .filter { it == packageName || it.startsWith(iconPrefix) }
+            .forEach { iconCache.remove(it) }
         missingIconKeys.remove(packageName)
+        missingIconKeys.removeAll { it.startsWith(iconPrefix) }
     }
 
     fun invalidateIcon(packageName: String) {
@@ -1158,6 +1187,20 @@ internal object FocusImageCache {
         missingIconKeys.remove(packageName)
         missingIconKeys.removeAll { it.startsWith(prefix) }
         invalidateLibraryIcon(packageName)
+    }
+
+    internal fun deleteDiskCachedIcon(
+        context: Context,
+        packageName: String,
+    ) {
+        val diskIcon = appIconFileFor(context, packageName, isRom = false)
+        if (diskIcon.exists()) {
+            if (diskIcon.delete()) {
+                AppLog.d(TAG, "Deleted disk-cached icon file for $packageName")
+            } else {
+                AppLog.w(TAG, "Failed to delete disk-cached icon file ${diskIcon.absolutePath}")
+            }
+        }
     }
 
     @VisibleForTesting
@@ -1247,9 +1290,22 @@ internal object FocusImageCache {
         context: Context,
         appInfo: InstalledAppInfo,
     ): Bitmap? {
-        val subDirName = if (appInfo.isRom) "gamefocus_logos" else "gamefocus_icons"
-        val fileDir = File(context.cacheDir, subDirName).apply { mkdirs() }
-        val iconFile = File(fileDir, "${appInfo.packageName}.png")
+        val iconFile = appIconFileFor(context, appInfo.packageName, appInfo.isRom)
+        val isStaleAndroidIcon =
+            !appInfo.isRom &&
+                appInfo.lastUpdateTime > 0L &&
+                iconFile.exists() &&
+                iconFile.lastModified() < appInfo.lastUpdateTime
+        if (isStaleAndroidIcon) {
+            AppLog.i(
+                TAG,
+                "Evicting stale disk-cached icon for ${appInfo.packageName} " +
+                    "(cachedAt=${iconFile.lastModified()}, lastUpdateTime=${appInfo.lastUpdateTime})",
+            )
+            if (!iconFile.delete()) {
+                AppLog.w(TAG, "Failed to delete stale disk-cached icon ${iconFile.absolutePath}")
+            }
+        }
         if (iconFile.exists() && iconFile.length() > 0) {
             val startTime = System.currentTimeMillis()
             val bitmap = decodeSampledIconBitmap(iconFile)
@@ -1268,7 +1324,13 @@ internal object FocusImageCache {
 
         try {
             FileOutputStream(iconFile).use { out ->
-                androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
+                androidBmp.compress(Bitmap.CompressFormat.PNG, ICON_PNG_COMPRESS_QUALITY, out)
+            }
+            if (!appInfo.isRom && appInfo.lastUpdateTime > 0L && iconFile.lastModified() < appInfo.lastUpdateTime) {
+                // Round up to the next whole second so filesystems with 1-second mtime resolution
+                // never report lastModified() < appInfo.lastUpdateTime after writing.
+                val alignedTimestamp = ((appInfo.lastUpdateTime / MS_PER_SECOND) + 1L) * MS_PER_SECOND
+                iconFile.setLastModified(alignedTimestamp)
             }
         } catch (e: Exception) {
             AppLog.w(TAG, "Failed to cache icon PNG for ${appInfo.label}: ${e.message}")
@@ -1413,12 +1475,14 @@ internal fun rememberIconBitmap(
     enabled: Boolean = true,
 ): ImageBitmap? {
     val context = LocalContext.current
+    val iconVersion = if (appInfo.isRom) appInfo.logoLastModified else appInfo.lastUpdateTime
     val state =
         produceState<ImageBitmap?>(
             initialValue = FocusImageCache.getCachedIconBitmap(appInfo),
-            key1 = appInfo.packageName,
-            key2 = appInfo.logoLastModified,
-            key3 = enabled,
+            appInfo.packageName,
+            appInfo.activityName,
+            iconVersion,
+            enabled,
         ) {
             if (!enabled) {
                 value = null
@@ -1499,12 +1563,14 @@ internal fun rememberAppPalette(
     enabled: Boolean = true,
 ): ExtractedAppPalette? {
     val appColors = LocalAppColors.current
+    val iconVersion = if (appInfo.isRom) appInfo.logoLastModified else appInfo.lastUpdateTime
     val state =
         produceState<ExtractedAppPalette?>(
             initialValue = if (enabled) AppPaletteExtractor.getCachedColorsOrNull(appInfo) else null,
             appInfo.packageName,
             appInfo.coverPath,
             appInfo.coverLastModified,
+            iconVersion,
             enabled,
         ) {
             if (!enabled) {

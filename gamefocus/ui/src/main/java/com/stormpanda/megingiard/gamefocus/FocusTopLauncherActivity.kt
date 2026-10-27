@@ -1,7 +1,9 @@
 package com.stormpanda.megingiard.gamefocus
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -25,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -60,6 +63,7 @@ import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -70,9 +74,26 @@ private const val INITIAL_REPEAT_DELAY_MS = 220L
 private const val REPEAT_INTERVAL_MS = 70L
 private const val JOYSTICK_THRESHOLD = 0.5f
 private const val JOYSTICK_NEGATIVE_THRESHOLD = -0.5f
+private const val PACKAGE_DATA_SCHEME = "package"
 
 internal const val LIBRARY_APP_ACTIONS_COUNT = 4
 internal const val LIBRARY_ROM_ACTIONS_COUNT = 2
+
+internal fun shouldHandlePackageBroadcast(
+    action: String?,
+    isReplacing: Boolean,
+): Boolean =
+    when (action) {
+        Intent.ACTION_PACKAGE_ADDED,
+        Intent.ACTION_PACKAGE_REMOVED,
+        -> !isReplacing
+
+        Intent.ACTION_PACKAGE_REPLACED,
+        Intent.ACTION_PACKAGE_CHANGED,
+        -> true
+
+        else -> false
+    }
 
 private fun Context?.resolveMenuString(resId: Int): String = this?.getString(resId) ?: ""
 
@@ -314,6 +335,31 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     private var activeCategories: List<GameFocusCategory> = GameFocusCategory.builtIns
     private var launchedTopScreenPackage: String? = null
+    private var isPackageReceiverRegistered = false
+
+    private val packageChangeReceiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context,
+                intent: Intent,
+            ) {
+                val action = intent.action
+                val isReplacing = intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)
+                if (!shouldHandlePackageBroadcast(action, isReplacing)) return
+                val pkg = intent.data?.schemeSpecificPart
+                AppLog.i(TAG, "Package broadcast handled: action=$action, package=$pkg, isReplacing=$isReplacing")
+                if (!pkg.isNullOrBlank()) {
+                    FocusImageCache.invalidateIcon(pkg)
+                    AppPaletteExtractor.invalidatePalette(pkg)
+                }
+                lifecycleScope.launch(Dispatchers.IO) {
+                    if (!pkg.isNullOrBlank()) {
+                        FocusImageCache.deleteDiskCachedIcon(this@FocusTopLauncherActivity, pkg)
+                    }
+                    InstalledAppsManager.loadInstalledApps(this@FocusTopLauncherActivity)
+                }
+            }
+        }
 
     private val openDocumentTreeLauncher =
         registerForActivityResult(
@@ -637,6 +683,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         viewModel.setStarted(true)
+        registerPackageChangeReceiver()
     }
 
     override fun onResume() {
@@ -653,6 +700,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        unregisterPackageChangeReceiver()
         viewModel.setStarted(false)
         if (launchedTopScreenPackage == null) {
             MegingiardSettingsClient.updateClientState(this, isActive = false, focusedPackage = null)
@@ -661,7 +709,39 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        unregisterPackageChangeReceiver()
         MegingiardSettingsClient.updateClientState(this, isActive = false, focusedPackage = null)
+    }
+
+    private fun registerPackageChangeReceiver() {
+        if (isPackageReceiverRegistered) return
+        val filter =
+            IntentFilter().apply {
+                addAction(Intent.ACTION_PACKAGE_ADDED)
+                addAction(Intent.ACTION_PACKAGE_REPLACED)
+                addAction(Intent.ACTION_PACKAGE_REMOVED)
+                addAction(Intent.ACTION_PACKAGE_CHANGED)
+                addDataScheme(PACKAGE_DATA_SCHEME)
+            }
+        ContextCompat.registerReceiver(
+            this,
+            packageChangeReceiver,
+            filter,
+            ContextCompat.RECEIVER_EXPORTED,
+        )
+        isPackageReceiverRegistered = true
+        AppLog.d(TAG, "Registered package change BroadcastReceiver")
+    }
+
+    private fun unregisterPackageChangeReceiver() {
+        if (!isPackageReceiverRegistered) return
+        try {
+            unregisterReceiver(packageChangeReceiver)
+        } catch (e: IllegalArgumentException) {
+            AppLog.w(TAG, "Package change BroadcastReceiver was already unregistered: ${e.message}")
+        }
+        isPackageReceiverRegistered = false
+        AppLog.d(TAG, "Unregistered package change BroadcastReceiver")
     }
 
     private fun launchGalleryTopApp(appInfo: InstalledAppInfo) {

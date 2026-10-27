@@ -615,6 +615,31 @@ class InstalledAppsManagerTest {
         assertEquals(listOf("com.droiddeck.launcher"), PcEmulators.getInstalledEmulators(context).map { it.packageName })
     }
 
+    @Test
+    fun testResolvePackageLastUpdateTime_returnsTimestampOrZeroWhenMissing() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val shadowPm = shadowOf(context.packageManager)
+        val pkg = "com.test.updatedapp"
+        val expectedUpdateTime = 1_700_000_123_456L
+
+        assertEquals(0L, InstalledAppsManager.resolvePackageLastUpdateTime(context.packageManager, pkg))
+
+        shadowPm.installPackage(
+            PackageInfo().apply {
+                packageName = pkg
+                lastUpdateTime = expectedUpdateTime
+            },
+        )
+        assertEquals(expectedUpdateTime, InstalledAppsManager.resolvePackageLastUpdateTime(context.packageManager, pkg))
+
+        val enriched =
+            InstalledAppsManager.enrichAppInfo(
+                seedApp().copy(lastUpdateTime = expectedUpdateTime),
+                context,
+            )
+        assertEquals(expectedUpdateTime, enriched.lastUpdateTime)
+    }
+
     private fun seedApp() =
         InstalledAppInfo(
             packageName = PKG_GAME,

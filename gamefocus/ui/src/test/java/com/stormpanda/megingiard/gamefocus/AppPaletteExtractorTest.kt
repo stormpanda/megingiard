@@ -131,6 +131,62 @@ class AppPaletteExtractorTest {
             // Invalidation
             AppPaletteExtractor.invalidatePalette("com.test.appicon")
             assertNull(AppPaletteExtractor.getCachedColorsOrNull(app))
+            iconFile.delete()
+        }
+
+    @Test
+    fun testExtractColorsWithAppIcon_bypassesAndEvictsStaleCacheWhenLastUpdateTimeChanges() =
+        runTest {
+            val context = RuntimeEnvironment.getApplication()
+            AppPaletteExtractor.init(context)
+
+            val pkg = "com.test.versionedicon"
+            val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+            val iconFile = File(iconsDir, "$pkg.png")
+            val v1Time = 1_000_000L
+            val bmpV1 = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+            bmpV1.eraseColor(android.graphics.Color.BLUE)
+            FileOutputStream(iconFile).use { out ->
+                bmpV1.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            bmpV1.recycle()
+            iconFile.setLastModified(v1Time + 5_000L)
+
+            try {
+                val appV1 =
+                    InstalledAppInfo(
+                        packageName = pkg,
+                        activityName = "MainActivity",
+                        label = "Versioned Icon App",
+                        lastUpdateTime = v1Time,
+                    )
+
+                val paletteV1 = AppPaletteExtractor.extractColors(appV1, defaultPrimary, defaultSecondary)
+                assertTrue(paletteV1.isExtracted)
+                assertNotNull(AppPaletteExtractor.getCachedColorsOrNull(appV1))
+
+                // Update icon on disk to green and advance lastUpdateTime
+                val v2Time = 2_000_000L
+                val bmpV2 = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
+                bmpV2.eraseColor(android.graphics.Color.GREEN)
+                FileOutputStream(iconFile).use { out ->
+                    bmpV2.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+                bmpV2.recycle()
+                iconFile.setLastModified(v2Time + 5_000L)
+
+                val appV2 = appV1.copy(lastUpdateTime = v2Time)
+                assertNull(AppPaletteExtractor.getCachedColorsOrNull(appV2))
+
+                val paletteV2 = AppPaletteExtractor.extractColors(appV2, defaultPrimary, defaultSecondary)
+                assertTrue(paletteV2.isExtracted)
+                assertTrue(paletteV1.primaryColor != paletteV2.primaryColor)
+                // Stale v1 entry is evicted when v2 is stored
+                assertNull(AppPaletteExtractor.getCachedColorsOrNull(appV1))
+                assertNotNull(AppPaletteExtractor.getCachedColorsOrNull(appV2))
+            } finally {
+                iconFile.delete()
+            }
         }
 
     @Test

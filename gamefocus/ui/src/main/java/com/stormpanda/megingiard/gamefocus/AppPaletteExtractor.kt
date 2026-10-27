@@ -188,7 +188,44 @@ object AppPaletteExtractor {
                 }
             return "${appInfo.packageName}:$coverPath:$modTime"
         }
-        return "${appInfo.packageName}:${if (appInfo.isRom) "logo" else "icon"}"
+        val kind = if (appInfo.isRom) "logo" else "icon"
+        val version = if (appInfo.isRom) appInfo.logoLastModified else appInfo.lastUpdateTime
+        return if (version > 0L) {
+            "${appInfo.packageName}:$kind:$version"
+        } else {
+            "${appInfo.packageName}:$kind"
+        }
+    }
+
+    private fun evictStaleIconPalettes(
+        appInfo: InstalledAppInfo,
+        currentKey: String,
+    ) {
+        if (appInfo.coverPath != null) return
+        val kind = if (appInfo.isRom) "logo" else "icon"
+        val baseKey = "${appInfo.packageName}:$kind"
+        val versionPrefix = "$baseKey:"
+        val staleMemKeys =
+            paletteCache
+                .snapshot()
+                .keys
+                .filter { (it == baseKey || it.startsWith(versionPrefix)) && it != currentKey }
+        staleMemKeys.forEach { paletteCache.remove(it) }
+
+        val context = appContext ?: return
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val stalePrefKeys =
+                prefs.all.keys.filter { (it == baseKey || it.startsWith(versionPrefix)) && it != currentKey }
+            if (stalePrefKeys.isNotEmpty()) {
+                val editor = prefs.edit()
+                stalePrefKeys.forEach { editor.remove(it) }
+                editor.apply()
+                AppLog.d(TAG, "Evicted ${stalePrefKeys.size} stale persisted icon palette entries for ${appInfo.packageName}")
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to evict stale icon palettes for ${appInfo.packageName}: ${e.message}")
+        }
     }
 
     suspend fun extractColorsAsync(
@@ -212,6 +249,7 @@ object AppPaletteExtractor {
 
         val palette = extractColorsInternal(appInfo, defaultPrimary, defaultSecondary)
         if (palette.isExtracted) {
+            evictStaleIconPalettes(appInfo, cacheKey)
             paletteCache.put(cacheKey, palette)
             persistPalette(cacheKey, palette)
         }
