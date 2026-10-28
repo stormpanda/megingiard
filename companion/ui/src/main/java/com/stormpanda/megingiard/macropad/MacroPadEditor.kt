@@ -315,6 +315,7 @@ fun MacroPadEditor(
                         MacroPadNavState.pop()
                     },
                     navigationKey = subPageStack,
+                    categoryKey = selectedSection,
                     savedFocusKeys = savedFocusKeys,
                     onRecordFocusedKey = { depth, key -> MacroPadNavState.recordFocusedKey(depth, key) },
                     onRemoveFocusedKey = { depth -> MacroPadNavState.removeFocusedKey(depth) },

@@ -10,12 +10,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -27,8 +29,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.abs
 
 private const val TAG = "PrimaryOvlyInputBridge"
@@ -38,6 +43,7 @@ private const val REPEAT_START_DELAY_MS = 120L
 private const val REPEAT_MIN_DELAY_MS = 60L
 private const val REPEAT_ACCEL_FACTOR = 0.90f
 private val FOCUS_BORDER_WIDTH = 2.dp
+private val ZERO_BORDER_WIDTH = 0.dp
 private val FOCUS_CORNER_RADIUS = 8.dp
 private val DEFAULT_FOCUS_SHAPE = RoundedCornerShape(FOCUS_CORNER_RADIUS)
 
@@ -72,13 +78,38 @@ object PrimaryOverlayInputBridge {
     private val _focusRecoveryEvents = MutableSharedFlow<Int>(extraBufferCapacity = 16)
     val focusRecoveryEvents: SharedFlow<Int> = _focusRecoveryEvents.asSharedFlow()
 
+    private val _isGamepadInputActive = MutableStateFlow(true)
+    val isGamepadInputActive: StateFlow<Boolean> = _isGamepadInputActive.asStateFlow()
+
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var repeatJob: Job? = null
     private var lastJoystickKeyCode = 0
     private var lastL2Pressed = false
     private var lastR2Pressed = false
 
+    /**
+     * Marks hardware gamepad or directional keyboard navigation as the active input modality.
+     */
+    fun notifyGamepadInput() {
+        if (!_isGamepadInputActive.value) {
+            AppLog.d(TAG, "notifyGamepadInput: switching active input mode to gamepad")
+            _isGamepadInputActive.value = true
+        }
+    }
+
+    /**
+     * Marks direct touch or pointer interaction as the active input modality so sub-page
+     * transitions do not force keyboard focus mode.
+     */
+    fun notifyTouchInput() {
+        if (_isGamepadInputActive.value) {
+            AppLog.d(TAG, "notifyTouchInput: switching active input mode to touch")
+            _isGamepadInputActive.value = false
+        }
+    }
+
     fun sendBumper(direction: BumperDirection) {
+        notifyGamepadInput()
         AppLog.d(TAG, "sendBumper: direction=$direction")
         _bumperEvents.tryEmit(direction)
     }
@@ -88,6 +119,7 @@ object PrimaryOverlayInputBridge {
      * (e.g. after touch/mouse pointer interaction cleared Compose focus).
      */
     fun sendFocusRecovery(keyCode: Int) {
+        notifyGamepadInput()
         AppLog.d(TAG, "sendFocusRecovery: keyCode=$keyCode")
         _focusRecoveryEvents.tryEmit(keyCode)
     }
@@ -116,6 +148,7 @@ object PrimaryOverlayInputBridge {
         val isL2Pressed = brake > STICK_DEADZONE || ltrigger > STICK_DEADZONE
 
         if (isL2Pressed != lastL2Pressed) {
+            notifyGamepadInput()
             lastL2Pressed = isL2Pressed
             onDpadKey(if (isL2Pressed) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_L2)
         }
@@ -125,6 +158,7 @@ object PrimaryOverlayInputBridge {
         val isR2Pressed = gas > STICK_DEADZONE || rtrigger > STICK_DEADZONE
 
         if (isR2Pressed != lastR2Pressed) {
+            notifyGamepadInput()
             lastR2Pressed = isR2Pressed
             onDpadKey(if (isR2Pressed) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BUTTON_R2)
         }
@@ -160,6 +194,7 @@ object PrimaryOverlayInputBridge {
         }
 
         if (targetKeyCode != 0) {
+            notifyGamepadInput()
             lastJoystickKeyCode = targetKeyCode
             onDpadKey(KeyEvent.ACTION_DOWN, targetKeyCode)
             repeatJob =
@@ -178,7 +213,7 @@ object PrimaryOverlayInputBridge {
     }
 
     /**
-     * Resets the joystick state tracker.
+     * Resets the joystick and input-modality state tracker.
      */
     fun resetJoystickState() {
         AppLog.d(TAG, "resetJoystickState")
@@ -187,17 +222,20 @@ object PrimaryOverlayInputBridge {
         lastJoystickKeyCode = 0
         lastL2Pressed = false
         lastR2Pressed = false
+        _isGamepadInputActive.value = true
     }
 }
 
 /**
  * Modifier that equips any composable on the primary screen overlay with:
- * 1. 2D Focus capability ([Modifier.focusable]).
+ * 1. A single 2D focus target ([Modifier.clickable] when touch-clickable, or [Modifier.focusable] otherwise).
  * 2. Visual focus ring indicator using the theme's accent color when focused.
- * 3. Gamepad Button A ([KeyEvent.KEYCODE_BUTTON_A]) and Enter activation for [onClick].
+ * 3. Top-down [Modifier.onPreviewKeyEvent] activation for Gamepad Button A, D-Pad Center, and Enter,
+ *    decoupled from direct pointer taps ([onTouchClick]).
  */
 fun Modifier.primaryOverlayFocusable(
     onClick: (() -> Unit)? = null,
+    onTouchClick: (() -> Unit)? = onClick,
     shape: Shape = DEFAULT_FOCUS_SHAPE,
     borderWidth: Dp = FOCUS_BORDER_WIDTH,
     interactionSource: MutableInteractionSource? = null,
@@ -207,9 +245,10 @@ fun Modifier.primaryOverlayFocusable(
         val colors = LocalAppColors.current
         val effectiveInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
         val isFocused by effectiveInteractionSource.collectIsFocusedAsState()
+        var lastActionDownKeyCode by remember { mutableIntStateOf(0) }
 
         val focusBorderModifier =
-            if (isFocused) {
+            if (isFocused && borderWidth > ZERO_BORDER_WIDTH) {
                 Modifier.border(borderWidth, colors.accent, shape)
             } else {
                 Modifier
@@ -217,15 +256,27 @@ fun Modifier.primaryOverlayFocusable(
 
         val keyHandlerModifier =
             if (onClick != null) {
-                Modifier.onKeyEvent { keyEvent ->
-                    if (keyEvent.type == KeyEventType.KeyUp &&
-                        (
-                            keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_A ||
-                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER
-                        )
-                    ) {
-                        onClick()
+                Modifier.onPreviewKeyEvent { keyEvent ->
+                    val keyCode = keyEvent.nativeKeyEvent.keyCode
+                    val isActivationKey =
+                        keyCode == KeyEvent.KEYCODE_BUTTON_A ||
+                            keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                            keyCode == KeyEvent.KEYCODE_ENTER ||
+                            keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
+                    if (!isActivationKey) {
+                        if (keyEvent.type == KeyEventType.KeyDown) {
+                            lastActionDownKeyCode = 0
+                        }
+                        false
+                    } else if (keyEvent.type == KeyEventType.KeyDown) {
+                        lastActionDownKeyCode = keyCode
+                        true
+                    } else if (keyEvent.type == KeyEventType.KeyUp) {
+                        val wasDownOnNode = lastActionDownKeyCode == keyCode
+                        lastActionDownKeyCode = 0
+                        if (wasDownOnNode && enabled) {
+                            onClick()
+                        }
                         true
                     } else {
                         false
@@ -236,12 +287,12 @@ fun Modifier.primaryOverlayFocusable(
             }
 
         val focusableOrClickModifier =
-            if (onClick != null) {
+            if (onTouchClick != null) {
                 Modifier.clickable(
                     enabled = enabled,
                     interactionSource = effectiveInteractionSource,
                     indication = null,
-                    onClick = onClick,
+                    onClick = onTouchClick,
                 )
             } else {
                 Modifier.focusable(
@@ -251,7 +302,7 @@ fun Modifier.primaryOverlayFocusable(
             }
 
         this
-            .then(focusableOrClickModifier)
             .then(focusBorderModifier)
             .then(keyHandlerModifier)
+            .then(focusableOrClickModifier)
     }

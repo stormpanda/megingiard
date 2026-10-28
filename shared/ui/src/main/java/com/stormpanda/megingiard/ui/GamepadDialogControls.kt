@@ -31,12 +31,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -59,6 +61,10 @@ import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 private const val TAG = "GamepadDialogControls"
 private const val GC_SPLIT_ANIM_DURATION_MS = 220
 private const val GC_SIDEBAR_FOCUS_RETRY_MS = 50L
+private const val GC_ROW_FOCUS_SETTLE_DELAY_MS = 100L
+private const val GC_SPLIT_PROMPT_THRESHOLD = 0.05f
+private const val GC_SPLIT_VISIBLE_EPSILON = 0.001f
+private val GC_ZERO_WIDTH = 0.dp
 
 /**
  * State holder for in-flight changes exit confirmation prompt.
@@ -220,7 +226,7 @@ fun GamepadSaveExitActionRow(
     LaunchedEffect(isRowFocused, showExitPrompt) {
         if (showExitPrompt && !isRowFocused) {
             // Debounce to allow focus traversal between Save and Discard siblings to settle
-            delay(100)
+            delay(GC_ROW_FOCUS_SETTLE_DELAY_MS)
             if (showExitPrompt && !isSaveFocused && !isDiscardFocused) {
                 AppLog.d(TAG, "GamepadSaveExitActionRow focus settled outside -> dismissing prompt")
                 onDismissPrompt?.invoke()
@@ -234,7 +240,7 @@ fun GamepadSaveExitActionRow(
         label = "saveExitSplitFraction",
     )
 
-    val isPromptActive = showExitPrompt || splitFraction > 0.05f
+    val isPromptActive = showExitPrompt || splitFraction > GC_SPLIT_PROMPT_THRESHOLD
     val effectiveTitle =
         if (isPromptActive) {
             stringResource(R.string.gamepad_action_save_and_exit)
@@ -252,21 +258,21 @@ fun GamepadSaveExitActionRow(
         modifier = modifier.then(bivrModifier).fillMaxWidth().animateContentSize(),
     ) {
         val totalWidth = maxWidth
-        val targetCardWidth = ((totalWidth - GC_SPACING_10) / 2f).coerceAtLeast(0.dp)
+        val targetCardWidth = ((totalWidth - GC_SPACING_10) / 2f).coerceAtLeast(GC_ZERO_WIDTH)
         val currentSpacing = GC_SPACING_10 * splitFraction
         val card2VisibleWidth = targetCardWidth * splitFraction
         val card1VisibleWidth =
             (
                 totalWidth - (
                     if (splitFraction >
-                        0.001f
+                        GC_SPLIT_VISIBLE_EPSILON
                     ) {
                         card2VisibleWidth + currentSpacing
                     } else {
-                        0.dp
+                        GC_ZERO_WIDTH
                     }
                 )
-            ).coerceAtLeast(0.dp)
+            ).coerceAtLeast(GC_ZERO_WIDTH)
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -288,7 +294,7 @@ fun GamepadSaveExitActionRow(
                         .onFocusChanged { isSaveFocused = it.hasFocus },
             )
 
-            if (splitFraction > 0.001f) {
+            if (splitFraction > GC_SPLIT_VISIBLE_EPSILON) {
                 Spacer(modifier = Modifier.width(currentSpacing))
 
                 Box(
@@ -298,6 +304,8 @@ fun GamepadSaveExitActionRow(
                             .clipToBounds()
                             .graphicsLayer {
                                 alpha = splitFraction
+                            }.focusProperties {
+                                canFocus = showExitPrompt
                             },
                     contentAlignment = Alignment.CenterStart,
                 ) {
@@ -340,14 +348,17 @@ fun GamepadTwoStepConfirmCard(
     itemKey: Any? = title,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
 ) {
-    var isConfirming by remember { mutableStateOf(false) }
+    var isConfirming by rememberSaveable { mutableStateOf(false) }
 
     GamepadFocusCard(
         onClick = {
             if (enabled) {
                 if (!isConfirming) {
+                    AppLog.d(TAG, "GamepadTwoStepConfirmCard: '$title' armed for confirmation")
                     isConfirming = true
                 } else {
+                    AppLog.d(TAG, "GamepadTwoStepConfirmCard: '$title' confirmed")
+                    isConfirming = false
                     onConfirm()
                 }
             }

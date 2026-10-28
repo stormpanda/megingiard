@@ -181,6 +181,7 @@ For external applications (such as the standalone Megingiard Game Focus launcher
 - Accent color selection provides an inline palette card (`GamepadColorPaletteCard`) containing preset swatches (`GS_ACCENT_PALETTE_PRESETS`, backed by `AppPalettes.accentPresets`) and an action card opening a dedicated custom accent sub-page (`CustomAccentSubPage`) with Hue, Saturation, and Brightness (HSV) sliders and a Save action card.
 - The custom accent color is persisted independently (`KEY_CUSTOM_ACCENT_COLOR` / `customAccentColor`), retaining the user's custom HSV values and preview swatch even when a `GS_ACCENT_PALETTE_PRESETS` preset is actively selected.
 - The accent swatch still shows the stored user accent even when the currently active theme may ignore it.
+- `GlobalSettingsScreen` and Tier-2 adjustable cards (`GamepadChoiceCard`, `GamepadStepperCard`, `GamepadSliderCard`, `GamepadColorPaletteCard`) persist `selectedCategory`, `savedFocusKeys`, `lastActivePaneIsDeck`, and `isAdjusting` across Activity recreations via `rememberSaveable`, keeping in-place theme cycling intact even if an external IPC consumer triggers an OS configuration/overlay change mid-adjustment.
 
 ### Separators — `AppDivider`
 

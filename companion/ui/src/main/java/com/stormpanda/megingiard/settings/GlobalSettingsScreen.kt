@@ -58,6 +58,7 @@ import com.stormpanda.megingiard.ui.launchUrlOnPrimaryDisplay
 import com.stormpanda.megingiard.update.UpdateManager
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.launch
+import java.io.Serializable
 
 private const val TAG = "GlobalSettingsScreen"
 
@@ -116,7 +117,9 @@ fun GlobalSettingsScreen(
     }
     val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
-    var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
+    var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.GENERAL) }
+    var savedFocusKeys by rememberSaveable { mutableStateOf<Map<Int, Serializable>>(emptyMap()) }
+    var lastAppliedPayloadKey by rememberSaveable { mutableStateOf<String?>(null) }
     var hasTriggeredManualCheck by rememberSaveable { mutableStateOf(false) }
 
     val categoryList = remember { SettingsCategory.entries }
@@ -125,8 +128,15 @@ fun GlobalSettingsScreen(
     LaunchedEffect(activePrimaryModal) {
         val payload = activePrimaryModal?.payload as? PrimaryModalPayload.GlobalSettings
         if (payload != null) {
-            selectedCategory = payload.category
-            subPageStack = payload.subPage?.let { listOf(it) } ?: emptyList()
+            val payloadKey = "${payload.category.name}:${payload.subPage?.name}"
+            if (lastAppliedPayloadKey != payloadKey) {
+                lastAppliedPayloadKey = payloadKey
+                selectedCategory = payload.category
+                subPageStack = payload.subPage?.let { listOf(it) } ?: emptyList()
+                savedFocusKeys = emptyMap()
+            }
+        } else {
+            lastAppliedPayloadKey = null
         }
     }
 
@@ -134,6 +144,9 @@ fun GlobalSettingsScreen(
         val parsed = pendingInAppParsedImport
         if (parsed != null) {
             lastReviewExport = parsed.export
+            if (selectedCategory != SettingsCategory.CONFIGURATION) {
+                savedFocusKeys = emptyMap()
+            }
             selectedCategory = SettingsCategory.CONFIGURATION
             subPageStack = listOf(SettingsSubPage.RESTORE_BACKUP, SettingsSubPage.RESTORE_REVIEW)
         }
@@ -141,7 +154,11 @@ fun GlobalSettingsScreen(
 
     LaunchedEffect(Unit) {
         PrimaryOverlayInputBridge.bumperEvents.collect { direction ->
-            selectedCategory = categoryList.cycle(selectedCategory, direction)
+            val nextCategory = categoryList.cycle(selectedCategory, direction)
+            if (nextCategory != selectedCategory) {
+                savedFocusKeys = emptyMap()
+            }
+            selectedCategory = nextCategory
             subPageStack = emptyList()
         }
     }
@@ -153,6 +170,18 @@ fun GlobalSettingsScreen(
             subPageStack = subPageStack.dropLast(1)
         },
         navigationKey = subPageStack,
+        categoryKey = selectedCategory,
+        savedFocusKeys = savedFocusKeys,
+        onRecordFocusedKey = { depth, key ->
+            if (key is Serializable) {
+                savedFocusKeys = HashMap(savedFocusKeys).apply { put(depth, key) }
+            }
+        },
+        onRemoveFocusedKey = { depth ->
+            if (savedFocusKeys.containsKey(depth)) {
+                savedFocusKeys = HashMap(savedFocusKeys).apply { remove(depth) }
+            }
+        },
         sidebarContent = {
             SettingsCategory.entries.forEach { category ->
                 GamepadCategoryTile(
@@ -160,6 +189,9 @@ fun GlobalSettingsScreen(
                     icon = category.icon,
                     selected = (currentSubPage?.parentCategory ?: selectedCategory) == category,
                     onClick = {
+                        if (selectedCategory != category) {
+                            savedFocusKeys = emptyMap()
+                        }
                         selectedCategory = category
                         subPageStack = emptyList()
                     },
