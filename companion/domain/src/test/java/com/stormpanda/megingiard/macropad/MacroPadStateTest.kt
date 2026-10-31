@@ -1192,4 +1192,37 @@ class MacroPadStateTest {
         val copiedButtonAction = mainLayout.buttons.single().action as PadAction.SwitchToLayout
         assertEquals("l2-main", copiedButtonAction.layoutId)
     }
+
+    @Test
+    fun `beginHoldToShiftLayout and endHoldToShiftLayout keep persisted activeLayoutId unchanged`() {
+        val l1 = testLayout(id = "l1", name = "Base")
+        val l2 = testLayout(id = "l2", name = "Shift")
+        val l3 = testLayout(id = "l3", name = "Extra")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1, l2, l3), activeLayoutId = "l1"))
+
+        MacroPadState.beginHoldToShiftLayout("l2")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+        assertEquals("l1", MacroPadState.activeProfile.value?.activeLayoutId)
+        assertEquals(
+            "l1",
+            MacroPadState.profiles.value
+                .single()
+                .activeLayoutId,
+        )
+
+        MacroPadState.endHoldToShiftLayout("l2")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+        assertEquals("l1", MacroPadState.activeProfile.value?.activeLayoutId)
+
+        // Permanent switchToLayout back to base layout while shifted clears shift override
+        MacroPadState.beginHoldToShiftLayout("l2")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+        MacroPadState.switchToLayout("l1")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+        assertEquals("l1", MacroPadState.activeProfile.value?.activeLayoutId)
+
+        // Subsequent endHoldToShiftLayout after permanent switch is a safe no-op
+        MacroPadState.endHoldToShiftLayout("l2")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+    }
 }

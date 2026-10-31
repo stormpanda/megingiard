@@ -342,6 +342,13 @@ internal fun PadSurface(
         }
     }
 
+    DisposableEffect(bgTouchpadProcessor) {
+        onDispose {
+            AppLog.d(TAG, "Disposing bgTouchpadProcessor for layout=${currentLayout.id}")
+            bgTouchpadProcessor.onCancel()
+        }
+    }
+
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier.fillMaxSize(),

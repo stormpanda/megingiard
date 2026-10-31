@@ -19,6 +19,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.io.File
 import java.io.FileOutputStream
+import android.graphics.Color as AndroidColor
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -102,7 +103,7 @@ class AppPaletteExtractorTest {
             val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
             val iconFile = File(iconsDir, "com.test.appicon.png")
             val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
-            bitmap.eraseColor(android.graphics.Color.BLUE)
+            bitmap.eraseColor(AndroidColor.BLUE)
             FileOutputStream(iconFile).use { out ->
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             }
@@ -145,7 +146,7 @@ class AppPaletteExtractorTest {
             val iconFile = File(iconsDir, "$pkg.png")
             val v1Time = 1_000_000L
             val bmpV1 = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
-            bmpV1.eraseColor(android.graphics.Color.BLUE)
+            bmpV1.eraseColor(AndroidColor.BLUE)
             FileOutputStream(iconFile).use { out ->
                 bmpV1.compress(Bitmap.CompressFormat.PNG, 100, out)
             }
@@ -168,7 +169,7 @@ class AppPaletteExtractorTest {
                 // Update icon on disk to green and advance lastUpdateTime
                 val v2Time = 2_000_000L
                 val bmpV2 = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
-                bmpV2.eraseColor(android.graphics.Color.GREEN)
+                bmpV2.eraseColor(AndroidColor.GREEN)
                 FileOutputStream(iconFile).use { out ->
                     bmpV2.compress(Bitmap.CompressFormat.PNG, 100, out)
                 }
@@ -198,7 +199,7 @@ class AppPaletteExtractorTest {
             // Create a fake PNG cover bitmap
             val coverFile = File(context.cacheDir, "test_cover.png")
             val bitmap = Bitmap.createBitmap(64, 64, Bitmap.Config.ARGB_8888)
-            bitmap.eraseColor(android.graphics.Color.RED)
+            bitmap.eraseColor(AndroidColor.RED)
             FileOutputStream(coverFile).use { out ->
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             }

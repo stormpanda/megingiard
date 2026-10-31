@@ -284,4 +284,64 @@ class MacroPadHitTestEngineTest {
         assertEquals("GU 304\n", PrivdClient.pollCommandForTest())
         assertFalse(engine.isPointerTracked(7L))
     }
+
+    @Test
+    fun `concurrent TouchTap buttons allocate distinct slots and release independently`() {
+        val tapLeft =
+            PadButton(
+                id = "btn-tap-left",
+                label = "Left Tap",
+                posX = 0.2f,
+                posY = 0.5f,
+                action = PadAction.TouchTap(normX = 0.25f, normY = 0.5f),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val tapRight =
+            PadButton(
+                id = "btn-tap-right",
+                label = "Right Tap",
+                posX = 0.8f,
+                posY = 0.5f,
+                action = PadAction.TouchTap(normX = 0.75f, normY = 0.5f),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val buttons = listOf(tapLeft, tapRight)
+
+        // Finger 1 holds Left Tap (slot 8)
+        assertTrue(engine.onPress(1L, 200f, 500f, canvasW, canvasH, buttons, false))
+        val down1 = PrivdClient.pollCommandForTest()
+        assertNotNull(down1)
+        assertTrue("Expected slot 8 DOWN, got $down1", down1!!.startsWith("D 8 "))
+
+        // Finger 2 holds Right Tap simultaneously (slot 9, without colliding with slot 8)
+        assertTrue(engine.onPress(2L, 800f, 500f, canvasW, canvasH, buttons, false))
+        val down2 = PrivdClient.pollCommandForTest()
+        assertNotNull(down2)
+        assertTrue("Expected slot 9 DOWN, got $down2", down2!!.startsWith("D 9 "))
+        assertEquals(setOf("btn-tap-left", "btn-tap-right"), engine.pressedIds.value)
+
+        // Finger 1 lifts Left Tap -> releases slot 8 while slot 9 remains held
+        engine.onRelease(1L, buttons)
+        assertEquals("U 8\n", PrivdClient.pollCommandForTest())
+        assertNull(PrivdClient.pollCommandForTest())
+        assertEquals(setOf("btn-tap-right"), engine.pressedIds.value)
+
+        // Finger 3 presses Left Tap again -> reuses freed slot 8
+        assertTrue(engine.onPress(3L, 200f, 500f, canvasW, canvasH, buttons, false))
+        val down3 = PrivdClient.pollCommandForTest()
+        assertNotNull(down3)
+        assertTrue("Expected freed slot 8 DOWN, got $down3", down3!!.startsWith("D 8 "))
+
+        // releaseAll lifts both active TouchTap slots (9 and 8)
+        engine.releaseAll(buttons)
+        val releasedCommands =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(setOf("U 8\n", "U 9\n"), releasedCommands.toSet())
+        assertTrue(engine.pressedIds.value.isEmpty())
+    }
 }

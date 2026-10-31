@@ -641,7 +641,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_app_launcher">App Quick-Switch</string>
     <string name="macropad_action_group_app_launcher_desc">Quickly switch between Megingiard and another app</string>
     <string name="macropad_action_group_tools">Tools</string>
-    <string name="macropad_action_group_tools_desc">Open fullscreen mouse and keyboard overlays or take screenshots</string>
+    <string name="macropad_action_group_tools_desc">Open fullscreen mouse and keyboard overlays, take screenshots, tap coordinates, or stop macros</string>
     <string name="macropad_editor_button_type">Button Type</string>
 
     <!-- Log report export -->

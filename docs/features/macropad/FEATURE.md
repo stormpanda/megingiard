@@ -70,7 +70,7 @@ Each button supports one of the following actions:
 | `SwitchToLayout` | Direct layout jump or temporary Hold-to-Shift (`MacroPadState.switchToLayout` / `beginHoldToShiftLayout`) | _(none)_ |
 | `SwitchToHub` | Open Companion Hub (`AppStateManager.setCompanionViewMode(DASHBOARD)`) | _(none)_ |
 | `StopAllMacros` | Cancel all running macros and release held keys/buttons (`MacroExecutor.stopAll()`) | `megingiard_privd` (Privd) |
-| `TouchTap` | Direct primary-screen touch at normalized `(normX, normY)` while held (`TouchInjector.injectTouch` on slot 8) | `megingiard_privd` (Privd) |
+| `TouchTap` | Direct primary-screen touch at normalized `(normX, normY)` while held (`TouchInjector.injectTouch` across multi-touch slot pool `5..9`, default slot `8`) | `megingiard_privd` (Privd) |
 | `MediaControl` | Linux media/audio keycode (`KEY_PLAYPAUSE`, `KEY_NEXTSONG`, `KEY_PREVIOUSSONG`, `KEY_STOPCD`, `KEY_MUTE`) via uinput | `megingiard_privd` (Privd) |
 
 - `KeyboardKey` actions use `KeyInjector` from the keyboard package, which routes directly to `PrivdClient`. Each `KeyboardKey` action MAY carry up to **2 optional modifier keycodes** (`modifiers: List<Int>`, default empty). On button-down, modifiers are pressed in order before the base key; on button-up, the base key is released first, then modifiers in reverse order. Available modifiers: Ctrl L/R, Shift L/R, Alt, AltGr, Meta/Win, Fn (Linux keycode 464). `KeyInjector` transmits keycodes in the range **1–464** (including Fn) to `megingiard_privd`.

@@ -90,6 +90,12 @@ object MacroPadState {
     val activeLayout: StateFlow<PadLayout?> = _activeLayout.asStateFlow()
 
     private var shiftReturnLayoutId: String? = null
+    private var shiftActiveLayoutId: String? = null
+
+    private fun clearShiftState() {
+        shiftReturnLayoutId = null
+        shiftActiveLayoutId = null
+    }
 
     private inline fun updateState(
         persist: Boolean = true,
@@ -117,7 +123,11 @@ object MacroPadState {
             } else if (prof == null) {
                 null
             } else {
-                val layId = prof.activeLayoutId
+                val shiftedId =
+                    shiftActiveLayoutId?.takeIf { candidate ->
+                        prof.layouts.any { it.id == candidate }
+                    }
+                val layId = shiftedId ?: prof.activeLayoutId
                 prof.layouts.firstOrNull { it.id == layId } ?: prof.layouts.firstOrNull()
             }
     }
@@ -398,6 +408,16 @@ object MacroPadState {
     fun updateProfile(profile: PadProfile) {
         AppLog.d(TAG, "updateProfile id=${profile.id}")
         updateState {
+            val currentActive = _activeProfile.value
+            if (currentActive?.id == profile.id) {
+                val activeIdChanged = currentActive.activeLayoutId != profile.activeLayoutId
+                val shiftTargetsMissing =
+                    (shiftActiveLayoutId != null && profile.layouts.none { it.id == shiftActiveLayoutId }) ||
+                        (shiftReturnLayoutId != null && profile.layouts.none { it.id == shiftReturnLayoutId })
+                if (activeIdChanged || shiftTargetsMissing) {
+                    clearShiftState()
+                }
+            }
             _profiles.value = _profiles.value.map { if (it.id == profile.id) profile else it }
         }
     }
@@ -471,7 +491,7 @@ object MacroPadState {
     private fun assignActiveProfileId(id: String?) {
         val previousId = _activeProfileId.value
         _activeProfileId.value = id
-        shiftReturnLayoutId = null
+        clearShiftState()
         if (previousId != null && previousId != id) {
             AppLog.d(TAG, "assignActiveProfileId: profile changed $previousId → $id, stopping running macros")
             MacroExecutor.stopAll()
@@ -572,7 +592,7 @@ object MacroPadState {
         val profile = activeProfile.value ?: return
         AppLog.d(TAG, "setActiveLayoutId: profileId=${profile.id} layoutId=$layoutId")
         updateState {
-            shiftReturnLayoutId = null
+            clearShiftState()
             _previewLayout.value = null
             _profiles.value =
                 _profiles.value.map {
@@ -586,49 +606,47 @@ object MacroPadState {
         if (layoutId.isBlank()) return
         val profile = activeProfile.value ?: return
         val target = profile.layouts.firstOrNull { it.id == layoutId } ?: return
-        if (profile.activeLayoutId == layoutId) return
+        if (profile.activeLayoutId == layoutId && shiftActiveLayoutId == null) return
         AppLog.d(TAG, "switchToLayout: ${target.name} ($layoutId)")
         setActiveLayoutId(layoutId)
     }
 
     /**
-     * Temporarily switches to [targetLayoutId] while a Hold-to-Shift button is held,
-     * recording the previous layout ID so [endHoldToShiftLayout] can restore it.
+     * Temporarily switches [activeLayout] to [targetLayoutId] in transient in-memory state while
+     * a Hold-to-Shift button is held, without mutating persisted [PadProfile.activeLayoutId] or
+     * triggering DataStore writes.
      */
     fun beginHoldToShiftLayout(targetLayoutId: String) {
         if (targetLayoutId.isBlank()) return
-        updateState {
+        updateState(persist = false) {
             val profile = activeProfile.value ?: return
             if (profile.layouts.none { it.id == targetLayoutId }) return
-            val currentId = profile.activeLayoutId ?: profile.layouts.firstOrNull()?.id ?: return
+            val baseId =
+                profile.activeLayoutId?.takeIf { candidate -> profile.layouts.any { it.id == candidate } }
+                    ?: profile.layouts.firstOrNull()?.id
+                    ?: return
+            val currentId =
+                shiftActiveLayoutId?.takeIf { candidate -> profile.layouts.any { it.id == candidate } }
+                    ?: baseId
             if (currentId == targetLayoutId) return
             if (shiftReturnLayoutId == null) {
                 shiftReturnLayoutId = currentId
             }
+            shiftActiveLayoutId = targetLayoutId
             AppLog.d(TAG, "beginHoldToShiftLayout: $currentId -> $targetLayoutId (return=$shiftReturnLayoutId)")
             _previewLayout.value = null
-            _profiles.value =
-                _profiles.value.map {
-                    if (it.id == profile.id) it.copy(activeLayoutId = targetLayoutId) else it
-                }
         }
     }
 
     /**
-     * Restores the layout that was active prior to [beginHoldToShiftLayout].
+     * Clears the transient Hold-to-Shift layout override and restores the base [activeLayout].
      */
     fun endHoldToShiftLayout(targetLayoutId: String) {
-        updateState {
+        updateState(persist = false) {
             val returnId = shiftReturnLayoutId ?: return
-            shiftReturnLayoutId = null
-            val profile = activeProfile.value ?: return
-            if (profile.layouts.none { it.id == returnId }) return
+            clearShiftState()
             AppLog.d(TAG, "endHoldToShiftLayout: $targetLayoutId -> $returnId")
             _previewLayout.value = null
-            _profiles.value =
-                _profiles.value.map {
-                    if (it.id == profile.id) it.copy(activeLayoutId = returnId) else it
-                }
         }
     }
 
@@ -742,7 +760,8 @@ object MacroPadState {
         val profile = activeProfile.value ?: return
         val layouts = profile.layouts
         if (layouts.size <= 1) return
-        val currentIndex = layouts.indexOfFirst { it.id == profile.activeLayoutId }
+        val effectiveLayoutId = shiftActiveLayoutId ?: profile.activeLayoutId
+        val currentIndex = layouts.indexOfFirst { it.id == effectiveLayoutId }
         val nextIndex = (currentIndex + 1) % layouts.size
         AppLog.d(TAG, "nextLayout: ${layouts[nextIndex].name}")
         setActiveLayoutId(layouts[nextIndex].id)
@@ -753,7 +772,8 @@ object MacroPadState {
         val profile = activeProfile.value ?: return
         val layouts = profile.layouts
         if (layouts.size <= 1) return
-        val currentIndex = layouts.indexOfFirst { it.id == profile.activeLayoutId }
+        val effectiveLayoutId = shiftActiveLayoutId ?: profile.activeLayoutId
+        val currentIndex = layouts.indexOfFirst { it.id == effectiveLayoutId }
         val prevIndex = if (currentIndex <= 0) layouts.size - 1 else currentIndex - 1
         AppLog.d(TAG, "previousLayout: ${layouts[prevIndex].name}")
         setActiveLayoutId(layouts[prevIndex].id)

@@ -710,16 +710,25 @@ object ConfigManager {
                     macro.copy(id = newId)
                 }
 
-            // Remap macro references in button actions and handle background/mask image copying/extraction
+            val layoutIdPairs = profile.layouts.map { layout -> layout to UUID.randomUUID().toString() }
+            val layoutIdMap = layoutIdPairs.associate { (oldLayout, newId) -> oldLayout.id to newId }
+            val fallbackLayoutId = layoutIdPairs.firstOrNull()?.second
+
+            // Remap macro and layout references in button actions and handle background/mask image copying/extraction
             val remappedLayouts =
-                profile.layouts.map { layout ->
+                layoutIdPairs.map { (layout, newLayoutId) ->
                     val oldLayoutId = layout.id
-                    val newLayoutId = UUID.randomUUID().toString()
                     val remappedButtons =
                         layout.buttons.map { button ->
                             button.copy(
                                 id = UUID.randomUUID().toString(),
-                                action = remapMacroAction(button.action, macroIdMap),
+                                action =
+                                    remapImportedAction(
+                                        action = button.action,
+                                        macroIdMap = macroIdMap,
+                                        layoutIdMap = layoutIdMap,
+                                        fallbackLayoutId = fallbackLayoutId,
+                                    ),
                             )
                         }
 
@@ -798,7 +807,6 @@ object ConfigManager {
                 }
 
             // Preserve the source profile's active layout selection when possible.
-            val layoutIdMap = profile.layouts.zip(remappedLayouts).associate { (old, new) -> old.id to new.id }
             val preservedActiveLayoutId =
                 layoutIdMap[profile.activeLayoutId]
                     ?: remappedLayouts.firstOrNull()?.id
@@ -817,14 +825,27 @@ object ConfigManager {
         }
     }
 
-    private fun remapMacroAction(
+    private fun remapImportedAction(
         action: PadAction,
         macroIdMap: Map<String, String>,
-    ): PadAction {
-        if (action !is PadAction.Macro) return action
-        val newMacroId = macroIdMap[action.macroId] ?: action.macroId
-        return PadAction.Macro(macroId = newMacroId)
-    }
+        layoutIdMap: Map<String, String>,
+        fallbackLayoutId: String?,
+    ): PadAction =
+        when (action) {
+            is PadAction.Macro -> {
+                val newMacroId = macroIdMap[action.macroId] ?: action.macroId
+                PadAction.Macro(macroId = newMacroId)
+            }
+
+            is PadAction.SwitchToLayout -> {
+                val newLayoutId = layoutIdMap[action.layoutId] ?: fallbackLayoutId ?: action.layoutId
+                action.copy(layoutId = newLayoutId)
+            }
+
+            else -> {
+                action
+            }
+        }
 
     // ── Checksum ─────────────────────────────────────────────────────────────
 

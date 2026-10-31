@@ -60,6 +60,7 @@ class MacroPadHitTestEngine(
     // Per-pointer tracking
     private val pointerMap = mutableMapOf<Long, String>()
     private val pointerButtonMap = mutableMapOf<Long, PadButton>()
+    private val pointerTouchSlotMap = mutableMapOf<Long, Int>()
     private val scrollStartY = mutableMapOf<Long, Float>()
     private var virtualCursorX = 0.5f
     private var virtualCursorY = 0.5f
@@ -67,6 +68,18 @@ class MacroPadHitTestEngine(
     private var unclampedCursorY = 0.5f
     private var lastDxSign = 0f
     private var lastDySign = 0f
+
+    private fun allocateTouchTapSlot(pointerId: Long): Int? {
+        pointerTouchSlotMap[pointerId]?.let { existing -> return existing }
+        val inUse = pointerTouchSlotMap.values
+        val freeSlot = MP_TOUCH_TAP_SLOT_POOL.firstOrNull { it !in inUse }
+        if (freeSlot == null) {
+            AppLog.w(TAG, "No free TouchTap slot available for pointer=$pointerId")
+            return null
+        }
+        pointerTouchSlotMap[pointerId] = freeSlot
+        return freeSlot
+    }
 
     private fun isPointInsideButton(
         btn: PadButton,
@@ -161,6 +174,15 @@ class MacroPadHitTestEngine(
                     val by = hitButton.posY * canvasH
                     AppLog.d(TAG, "AppLauncher button center at ($bx, $by)")
                     AppStateManager.requestAppLaunch(act.packageName, bx, by)
+                }
+                triggerHaptic(hitButton)
+            }
+
+            hitButton.action is PadAction.TouchTap -> {
+                val slot = allocateTouchTapSlot(pointerId)
+                _pressedIds.value = _pressedIds.value + hitButton.id
+                if (slot != null) {
+                    injectActionDown(hitButton.action, touchSlot = slot)
                 }
                 triggerHaptic(hitButton)
             }
@@ -285,6 +307,7 @@ class MacroPadHitTestEngine(
     ) {
         val mapped = pointerMap.remove(pointerId) ?: return
         val cachedBtn = pointerButtonMap.remove(pointerId)
+        val touchSlot = pointerTouchSlotMap.remove(pointerId)
         val btn = buttons.firstOrNull { it.id == mapped } ?: cachedBtn ?: return
 
         when {
@@ -299,8 +322,19 @@ class MacroPadHitTestEngine(
                 scrollStartY.remove(pointerId)
             }
 
+            btn.action is PadAction.TouchTap -> {
+                if (pointerMap.values.none { it == mapped }) {
+                    _pressedIds.value = _pressedIds.value - mapped
+                }
+                if (touchSlot != null) {
+                    injectActionUp(btn.action, touchSlot = touchSlot)
+                }
+            }
+
             else -> {
-                _pressedIds.value = _pressedIds.value - mapped
+                if (pointerMap.values.none { it == mapped }) {
+                    _pressedIds.value = _pressedIds.value - mapped
+                }
                 injectActionUp(btn.action)
             }
         }
@@ -310,6 +344,7 @@ class MacroPadHitTestEngine(
     fun reset() {
         pointerMap.clear()
         pointerButtonMap.clear()
+        pointerTouchSlotMap.clear()
         _pressedIds.value = emptySet()
         scrollStartY.clear()
         unclampedCursorX = virtualCursorX
@@ -323,11 +358,19 @@ class MacroPadHitTestEngine(
         val activeIds = _pressedIds.value
         val pointerMappedIds = pointerMap.values.toSet()
         val cachedButtonsById = pointerButtonMap.values.associateBy { it.id }
+        val activeTouchReleases =
+            pointerTouchSlotMap.entries.mapNotNull { (pid, slot) ->
+                val buttonId = pointerMap[pid] ?: return@mapNotNull null
+                val btn = buttons.firstOrNull { it.id == buttonId } ?: pointerButtonMap[pid]
+                val tapAction = btn?.action as? PadAction.TouchTap ?: return@mapNotNull null
+                Triple(buttonId, slot, tapAction)
+            }
         val allActiveIds = activeIds + pointerMappedIds
 
         _pressedIds.value = emptySet()
         pointerMap.clear()
         pointerButtonMap.clear()
+        pointerTouchSlotMap.clear()
         scrollStartY.clear()
 
         val upX = unclampedCursorX
@@ -338,23 +381,29 @@ class MacroPadHitTestEngine(
         lastDxSign = 0f
         lastDySign = 0f
 
+        activeTouchReleases.forEach { release ->
+            AppLog.d(TAG, "Releasing TouchTap button=${release.first} slot=${release.second} due to gesture cancellation")
+            injectActionUp(release.third, touchSlot = release.second)
+        }
+
         allActiveIds.forEach { buttonId ->
             val btn = buttons.firstOrNull { it.id == buttonId } ?: cachedButtonsById[buttonId]
             if (btn != null) {
-                AppLog.d(TAG, "Releasing button due to gesture cancellation: $buttonId")
                 when {
                     btn.action is PadAction.TrackpointMove -> {
+                        AppLog.d(TAG, "Releasing button due to gesture cancellation: $buttonId")
                         val tpAction = btn.action as PadAction.TrackpointMove
                         if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
                             TouchInjector.injectTouch(TouchAction.UP, upX, upY)
                         }
                     }
 
-                    btn.action is PadAction.ScrollWheel -> {
-                        // no-op
+                    btn.action is PadAction.ScrollWheel || btn.action is PadAction.TouchTap -> {
+                        // ScrollWheel is no-op; TouchTap is released per active slot above
                     }
 
                     else -> {
+                        AppLog.d(TAG, "Releasing button due to gesture cancellation: $buttonId")
                         injectActionUp(btn.action)
                     }
                 }

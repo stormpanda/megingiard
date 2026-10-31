@@ -248,9 +248,9 @@ When MacroPad data is imported, `ConfigManager.importMacroPadData()`:
 
 1. For each imported `PadProfile`, assigns a new UUID and clears device-specific transient flags (`skipAutoRestoration`, `assignedRomId`, `assignedRomTitle`).
 2. For each macro inside the profile, assigns a new UUID and builds `macroIdMap` (old → new).
-3. Remaps every `PadButton` whose action is `PadAction.Macro` via `macroIdMap`
-   (falls back to original ID if not mapped).
-4. For each layout containing custom background images or mask overlay images (stored in the ZIP archive under `backgrounds/bg_<layoutId>` and `backgrounds/mask_<layoutId>`, normalized in-memory to keys `bg_<layoutId>` and `mask_<layoutId>`), extracts or copies the media files into the target directories (`filesDir/backgrounds/bg_<newLayoutId>` and `filesDir/masks/mask_<newLayoutId>`) under new UUID paths. For legacy archives with `useBackgroundImageAsMask = true`, automatically migrates the background image and adjustment properties into `filesDir/masks/mask_<newLayoutId>` and clears `useBackgroundImageAsMask`.
+3. For each layout inside the profile, pre-assigns a new UUID and builds `layoutIdMap` (old → new), preserving the profile's `activeLayoutId` via `layoutIdMap`.
+4. Remaps every `PadButton` whose action is `PadAction.Macro` via `macroIdMap` (falls back to original ID if not mapped) and every `PadAction.SwitchToLayout` via `layoutIdMap` (falls back to the imported profile's first layout UUID if the referenced layout was absent).
+5. For each layout containing custom background images or mask overlay images (stored in the ZIP archive under `backgrounds/bg_<layoutId>` and `backgrounds/mask_<layoutId>`, normalized in-memory to keys `bg_<layoutId>` and `mask_<layoutId>`), extracts or copies the media files into the target directories (`filesDir/backgrounds/bg_<newLayoutId>` and `filesDir/masks/mask_<newLayoutId>`) under new UUID paths. For legacy archives with `useBackgroundImageAsMask = true`, automatically migrates the background image and adjustment properties into `filesDir/masks/mask_<newLayoutId>` and clears `useBackgroundImageAsMask`.
 
 This guarantees imported data never collides with existing data even when re-importing the same
 file multiple times.

@@ -13,12 +13,27 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 
 private const val TAG = "MacroPadActionDispatch"
 internal const val MP_TOUCH_TAP_SLOT = 8
+private const val MP_TOUCH_TAP_SLOT_ALT_1 = 9
+private const val MP_TOUCH_TAP_SLOT_ALT_2 = 7
+private const val MP_TOUCH_TAP_SLOT_ALT_3 = 6
+private const val MP_TOUCH_TAP_SLOT_ALT_4 = 5
+internal val MP_TOUCH_TAP_SLOT_POOL =
+    intArrayOf(
+        MP_TOUCH_TAP_SLOT,
+        MP_TOUCH_TAP_SLOT_ALT_1,
+        MP_TOUCH_TAP_SLOT_ALT_2,
+        MP_TOUCH_TAP_SLOT_ALT_3,
+        MP_TOUCH_TAP_SLOT_ALT_4,
+    )
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Injection helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-fun injectActionDown(action: PadAction) {
+fun injectActionDown(
+    action: PadAction,
+    touchSlot: Int = MP_TOUCH_TAP_SLOT,
+) {
     when (action) {
         is PadAction.KeyboardKey -> {
             AppLog.d(TAG, "actionDown: KeyboardKey keycode=${action.keycode} modifiers=${action.modifiers}")
@@ -145,8 +160,8 @@ fun injectActionDown(action: PadAction) {
         is PadAction.TouchTap -> {
             val clampedX = action.normX.coerceIn(0f, 1f)
             val clampedY = action.normY.coerceIn(0f, 1f)
-            AppLog.d(TAG, "actionDown: TouchTap normX=$clampedX normY=$clampedY")
-            TouchInjector.injectTouch(MP_TOUCH_TAP_SLOT, TouchAction.DOWN, clampedX, clampedY)
+            AppLog.d(TAG, "actionDown: TouchTap slot=$touchSlot normX=$clampedX normY=$clampedY")
+            TouchInjector.injectTouch(touchSlot, TouchAction.DOWN, clampedX, clampedY)
         }
 
         is PadAction.MediaControl -> {
@@ -156,7 +171,10 @@ fun injectActionDown(action: PadAction) {
     }
 }
 
-fun injectActionUp(action: PadAction) {
+fun injectActionUp(
+    action: PadAction,
+    touchSlot: Int = MP_TOUCH_TAP_SLOT,
+) {
     when (action) {
         is PadAction.KeyboardKey -> {
             AppLog.d(TAG, "actionUp: KeyboardKey keycode=${action.keycode} modifiers=${action.modifiers}")
@@ -185,8 +203,8 @@ fun injectActionUp(action: PadAction) {
         is PadAction.TouchTap -> {
             val clampedX = action.normX.coerceIn(0f, 1f)
             val clampedY = action.normY.coerceIn(0f, 1f)
-            AppLog.d(TAG, "actionUp: TouchTap normX=$clampedX normY=$clampedY")
-            TouchInjector.injectTouch(MP_TOUCH_TAP_SLOT, TouchAction.UP, clampedX, clampedY)
+            AppLog.d(TAG, "actionUp: TouchTap slot=$touchSlot normX=$clampedX normY=$clampedY")
+            TouchInjector.injectTouch(touchSlot, TouchAction.UP, clampedX, clampedY)
         }
 
         is PadAction.MediaControl -> {

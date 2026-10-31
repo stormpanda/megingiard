@@ -640,7 +640,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_app_launcher">App Quick-Switch</string>
     <string name="macropad_action_group_app_launcher_desc">在 Megingiard 與其他應用程式之間快速切換</string>
     <string name="macropad_action_group_tools">工具</string>
-    <string name="macropad_action_group_tools_desc">開啟全螢幕滑鼠與鍵盤覆蓋層或擷取螢幕截圖</string>
+    <string name="macropad_action_group_tools_desc">開啟全螢幕滑鼠與鍵盤覆蓋層、擷取螢幕截圖、點擊螢幕座標或停止所有巨集</string>
     <string name="macropad_editor_button_type">按鈕類型</string>
 
     <!-- Log report export -->
