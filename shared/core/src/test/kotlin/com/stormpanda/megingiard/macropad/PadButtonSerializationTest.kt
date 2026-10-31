@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -335,5 +336,135 @@ class PadButtonSerializationTest {
         assertEquals(75f, updated.widthDp, 0.001f)
         assertEquals(95f, updated.heightDp, 0.001f)
         assertEquals(ButtonShape.ICON_ONLY, updated.buttonShape)
+    }
+
+    @Test
+    fun `Screenshot action serializes and deserializes across all targets and defaults`() {
+        for (target in ScreenshotTarget.entries) {
+            val button =
+                PadButton(
+                    id = "btn-screenshot-${target.name}",
+                    label = "Shot ${target.name}",
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.Screenshot(target),
+                )
+            val encoded = json.encodeToString(button)
+            assertTrue(encoded.contains("\"type\":\"screenshot\""))
+            val decoded = json.decodeFromString<PadButton>(encoded)
+            assertEquals(button, decoded)
+        }
+
+        val defaultTargetJson =
+            """
+            {
+                "id": "btn-screenshot-default",
+                "label": "Shot Default",
+                "posX": 0.5,
+                "posY": 0.5,
+                "action": { "type": "screenshot" }
+            }
+            """.trimIndent()
+        val decodedDefault = json.decodeFromString<PadButton>(defaultTargetJson)
+        assertEquals(PadAction.Screenshot(ScreenshotTarget.TOP), decodedDefault.action)
+    }
+
+    @Test
+    fun `Screenshot action defaultIconName returns matching splitscreen symbol for each target`() {
+        assertEquals("splitscreen_bottom", PadAction.Screenshot(ScreenshotTarget.TOP).defaultIconName())
+        assertEquals("splitscreen_top", PadAction.Screenshot(ScreenshotTarget.BOTTOM).defaultIconName())
+        assertEquals("splitscreen", PadAction.Screenshot(ScreenshotTarget.BOTH).defaultIconName())
+    }
+
+    @Test
+    fun `SwitchToLayout and SwitchToHub actions serialize and deserialize with defaultIconName`() {
+        for (hold in listOf(false, true)) {
+            val button =
+                PadButton(
+                    id = "btn-switch-layout-$hold",
+                    label = "Switch Layout",
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.SwitchToLayout(layoutId = "layout-target-1", holdToShift = hold),
+                )
+            val encoded = json.encodeToString(button)
+            assertTrue(encoded.contains("\"type\":\"switch_to_layout\""))
+            val decoded = json.decodeFromString<PadButton>(encoded)
+            assertEquals(button, decoded)
+        }
+
+        val hubButton =
+            PadButton(
+                id = "btn-switch-hub",
+                label = "Hub",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.SwitchToHub,
+            )
+        val encodedHub = json.encodeToString(hubButton)
+        assertTrue(encodedHub.contains("\"type\":\"switch_to_hub\""))
+        val decodedHub = json.decodeFromString<PadButton>(encodedHub)
+        assertEquals(hubButton, decodedHub)
+
+        assertEquals("view_quilt", PadAction.SwitchToLayout("layout-1", holdToShift = false).defaultIconName())
+        assertEquals("dashboard", PadAction.SwitchToHub.defaultIconName())
+    }
+
+    @Test
+    fun `StopAllMacros action serializes and deserializes with defaultIconName`() {
+        val stopButton =
+            PadButton(
+                id = "btn-stop-macros",
+                label = "Stop Macros",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.StopAllMacros,
+            )
+        val encoded = json.encodeToString(stopButton)
+        assertTrue(encoded.contains("\"type\":\"stop_all_macros\""))
+        val decoded = json.decodeFromString<PadButton>(encoded)
+        assertEquals(stopButton, decoded)
+        assertEquals("stop_circle", PadAction.StopAllMacros.defaultIconName())
+    }
+
+    @Test
+    fun `TouchTap action serializes and deserializes with defaultIconName`() {
+        val tapButton =
+            PadButton(
+                id = "btn-touch-tap",
+                label = "Tap",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.TouchTap(normX = 0.25f, normY = 0.75f),
+            )
+        val encoded = json.encodeToString(tapButton)
+        assertTrue(encoded.contains("\"type\":\"touch_tap\""))
+        val decoded = json.decodeFromString<PadButton>(encoded)
+        assertEquals(tapButton, decoded)
+        assertEquals("ads_click", PadAction.TouchTap(0.25f, 0.75f).defaultIconName())
+    }
+
+    @Test
+    fun `MediaControl action serializes and deserializes across all actions and defaultIconName`() {
+        for (mediaAction in MediaControlAction.entries) {
+            val button =
+                PadButton(
+                    id = "btn-media-${mediaAction.name}",
+                    label = mediaAction.name,
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.MediaControl(mediaAction),
+                )
+            val encoded = json.encodeToString(button)
+            assertTrue(encoded.contains("\"type\":\"media_control\""))
+            val decoded = json.decodeFromString<PadButton>(encoded)
+            assertEquals(button, decoded)
+        }
+
+        assertEquals("play_pause", PadAction.MediaControl(MediaControlAction.PLAY_PAUSE).defaultIconName())
+        assertEquals("skip_next", PadAction.MediaControl(MediaControlAction.NEXT_TRACK).defaultIconName())
+        assertEquals("skip_previous", PadAction.MediaControl(MediaControlAction.PREVIOUS_TRACK).defaultIconName())
+        assertEquals("stop", PadAction.MediaControl(MediaControlAction.STOP).defaultIconName())
+        assertEquals("volume_off", PadAction.MediaControl(MediaControlAction.MUTE).defaultIconName())
     }
 }

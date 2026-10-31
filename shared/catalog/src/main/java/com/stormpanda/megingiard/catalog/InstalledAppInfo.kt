@@ -36,6 +36,8 @@ data class InstalledAppInfo(
     val defaultEmulatorPackage: String? = null,
     /** Explicit per-game emulator package or RetroArch core override, or null when using folder defaults. */
     val customRomRunner: String? = null,
+    /** Package last-update timestamp ([android.content.pm.PackageInfo.lastUpdateTime]) for Android apps, or 0L for ROMs. */
+    val lastUpdateTime: Long = 0L,
 ) {
     /** True when the user has overridden [defaultLabel] with a custom display name. */
     val hasCustomLabel: Boolean

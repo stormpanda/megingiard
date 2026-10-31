@@ -254,4 +254,65 @@ class FocusImageCacheTest {
             }
         }
     }
+
+    @Test
+    fun testAndroidAppIcon_invalidatesStaleDiskAndMemoryCacheWhenLastUpdateTimeAdvances() {
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            FocusImageCache.clearForTesting()
+
+            val pkg = "com.test.updatable"
+            val iconFile = FocusImageCache.appIconFileFor(context, pkg, isRom = false)
+            val oldBmp = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888)
+            FileOutputStream(iconFile).use { out ->
+                oldBmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            oldBmp.recycle()
+            val v1Timestamp = 1_000_000L
+            iconFile.setLastModified(v1Timestamp)
+
+            try {
+                val appV1 =
+                    InstalledAppInfo(
+                        packageName = pkg,
+                        activityName = "MainActivity",
+                        label = "Updatable App",
+                        lastUpdateTime = v1Timestamp,
+                    )
+
+                // V1 loads from disk cache and populates memory cache under versioned key
+                val loadedV1 = FocusImageCache.getIconBitmapAsync(context, appV1)
+                assertNotNull(loadedV1)
+                assertNotNull(FocusImageCache.getCachedIconBitmap(appV1))
+                assertTrue(iconFile.exists())
+
+                // Simulate app update: lastUpdateTime advances beyond iconFile.lastModified()
+                // Package is not installed in PackageManager, so stale disk file is deleted and reload returns null
+                val v2Timestamp = v1Timestamp + 60_000L
+                val appV2 = appV1.copy(lastUpdateTime = v2Timestamp)
+
+                assertNull(FocusImageCache.getCachedIconBitmap(appV2))
+                val loadedV2 = FocusImageCache.getIconBitmapAsync(context, appV2)
+                assertNull(loadedV2)
+                assertTrue(!iconFile.exists())
+                // V1 entry was evicted from memory cache
+                assertNull(FocusImageCache.getCachedIconBitmap(appV1))
+            } finally {
+                iconFile.delete()
+            }
+        }
+    }
+
+    @Test
+    fun testDeleteDiskCachedIcon_deletesDiskCachedIconFile() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        FocusImageCache.clearForTesting()
+        val pkg = "com.test.diskdelete"
+        val iconFile = FocusImageCache.appIconFileFor(context, pkg, isRom = false)
+        iconFile.writeBytes(byteArrayOf(1, 2, 3))
+        assertTrue(iconFile.exists())
+
+        FocusImageCache.deleteDiskCachedIcon(context, pkg)
+        assertTrue(!iconFile.exists())
+    }
 }

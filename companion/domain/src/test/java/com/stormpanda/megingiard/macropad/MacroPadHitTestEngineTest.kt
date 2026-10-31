@@ -2,6 +2,11 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.privd.PrivdClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,7 +16,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MacroPadHitTestEngineTest {
+    private val testDispatcher = UnconfinedTestDispatcher()
     private val engine = MacroPadHitTestEngine(buttonUnitDpToPx = { it })
     private val canvasW = 1000f
     private val canvasH = 1000f
@@ -48,6 +55,7 @@ class MacroPadHitTestEngineTest {
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         PrivdClient.isConnectedForTest = true
         PrivdClient.clearQueueForTest()
     }
@@ -56,6 +64,7 @@ class MacroPadHitTestEngineTest {
     fun tearDown() {
         PrivdClient.clearQueueForTest()
         PrivdClient.isConnectedForTest = null
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -262,5 +271,144 @@ class MacroPadHitTestEngineTest {
         assertTrue(engine.onPress(1L, 475f, 525f, canvasW, canvasH, buttons, false))
         assertEquals(setOf("btn-tri-up"), engine.pressedIds.value)
         engine.onRelease(1L, buttons)
+    }
+
+    @Test
+    fun `button pressed on layout A still dispatches release when layout B buttons are passed to onRelease`() {
+        val btnA =
+            centeredButton(PadAction.GamepadButton(btnCode = 304, label = "A")).copy(
+                id = "btn-layout-a",
+            )
+        val layoutAButtons = listOf(btnA)
+        val layoutBButtons =
+            listOf(
+                centeredButton(PadAction.GamepadButton(btnCode = 305, label = "B")).copy(id = "btn-layout-b"),
+            )
+
+        assertTrue(engine.onPress(7L, 500f, 500f, canvasW, canvasH, layoutAButtons, false))
+        assertEquals("GD 304\n", PrivdClient.pollCommandForTest())
+
+        // Release occurs while layout B is active (layoutBButtons does not contain btnA)
+        engine.onRelease(7L, layoutBButtons)
+        assertEquals("GU 304\n", PrivdClient.pollCommandForTest())
+        assertFalse(engine.isPointerTracked(7L))
+    }
+
+    @Test
+    fun `concurrent TouchTap buttons allocate distinct slots and release independently`() {
+        val tapLeft =
+            PadButton(
+                id = "btn-tap-left",
+                label = "Left Tap",
+                posX = 0.2f,
+                posY = 0.5f,
+                action = PadAction.TouchTap(normX = 0.25f, normY = 0.5f),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val tapRight =
+            PadButton(
+                id = "btn-tap-right",
+                label = "Right Tap",
+                posX = 0.8f,
+                posY = 0.5f,
+                action = PadAction.TouchTap(normX = 0.75f, normY = 0.5f),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val buttons = listOf(tapLeft, tapRight)
+
+        // Finger 1 holds Left Tap (slot 8)
+        assertTrue(engine.onPress(1L, 200f, 500f, canvasW, canvasH, buttons, false))
+        val down1 = PrivdClient.pollCommandForTest()
+        assertNotNull(down1)
+        assertTrue("Expected slot 8 DOWN, got $down1", down1!!.startsWith("D 8 "))
+
+        // Finger 2 holds Right Tap simultaneously (slot 9, without colliding with slot 8)
+        assertTrue(engine.onPress(2L, 800f, 500f, canvasW, canvasH, buttons, false))
+        val down2 = PrivdClient.pollCommandForTest()
+        assertNotNull(down2)
+        assertTrue("Expected slot 9 DOWN, got $down2", down2!!.startsWith("D 9 "))
+        assertEquals(setOf("btn-tap-left", "btn-tap-right"), engine.pressedIds.value)
+
+        // Finger 1 lifts Left Tap -> releases slot 8 while slot 9 remains held
+        engine.onRelease(1L, buttons)
+        assertEquals("U 8\n", PrivdClient.pollCommandForTest())
+        assertNull(PrivdClient.pollCommandForTest())
+        assertEquals(setOf("btn-tap-right"), engine.pressedIds.value)
+
+        // Finger 3 presses Left Tap again -> reuses freed slot 8
+        assertTrue(engine.onPress(3L, 200f, 500f, canvasW, canvasH, buttons, false))
+        val down3 = PrivdClient.pollCommandForTest()
+        assertNotNull(down3)
+        assertTrue("Expected freed slot 8 DOWN, got $down3", down3!!.startsWith("D 8 "))
+
+        // releaseAll lifts both active TouchTap slots (9 and 8)
+        engine.releaseAll(buttons)
+        val releasedCommands =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(setOf("U 8\n", "U 9\n"), releasedCommands.toSet())
+        assertTrue(engine.pressedIds.value.isEmpty())
+    }
+
+    @Test
+    fun `multi-pointer press on same HoldToShift button pops all stacked entries on releaseAll`() {
+        val baseLayout = PadLayout(id = "l-base", name = "Base")
+        val shiftBtn =
+            centeredButton(
+                PadAction.SwitchToLayout(layoutId = "l-shift", holdToShift = true),
+            ).copy(id = "btn-hold-shift")
+        val shiftLayout = PadLayout(id = "l-shift", name = "Shift", buttons = listOf(shiftBtn))
+        val profile =
+            PadProfile(
+                id = "p-shift",
+                name = "ShiftProfile",
+                layouts = listOf(baseLayout, shiftLayout),
+                activeLayoutId = "l-base",
+            )
+        MacroPadState.loadFrom(listOf(profile), "p-shift")
+
+        // Two pointers press the same Hold-to-Shift button -> stack depth becomes 2
+        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, listOf(shiftBtn), false))
+        assertTrue(engine.onPress(2L, 505f, 505f, canvasW, canvasH, listOf(shiftBtn), false))
+        assertEquals("l-shift", MacroPadState.activeLayout.value?.id)
+
+        // releaseAll must pop both Hold-to-Shift entries and restore the base layout
+        engine.releaseAll(listOf(shiftBtn))
+        assertEquals("l-base", MacroPadState.activeLayout.value?.id)
+        assertTrue(engine.pressedIds.value.isEmpty())
+    }
+
+    @Test
+    fun `multi-pointer press on same KeyboardKey button keeps key held until last pointer lifts`() {
+        val keyBtn =
+            centeredButton(
+                PadAction.KeyboardKey(keycode = 30, label = "A"),
+            ).copy(id = "btn-key-a")
+        val buttons = listOf(keyBtn)
+
+        // First pointer presses -> sends KD 30
+        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, buttons, false))
+        assertEquals("KD 30\n", PrivdClient.pollCommandForTest())
+        assertNull(PrivdClient.pollCommandForTest())
+
+        // Second pointer presses same button -> stays pressed without duplicate KD 30
+        assertTrue(engine.onPress(2L, 505f, 505f, canvasW, canvasH, buttons, false))
+        assertNull(PrivdClient.pollCommandForTest())
+        assertEquals(setOf("btn-key-a"), engine.pressedIds.value)
+
+        // First pointer lifts while second still holds -> key stays held (no premature KU 30)
+        engine.onRelease(1L, buttons)
+        assertNull(PrivdClient.pollCommandForTest())
+        assertEquals(setOf("btn-key-a"), engine.pressedIds.value)
+
+        // Second pointer lifts -> sends KU 30 and clears pressedIds
+        engine.onRelease(2L, buttons)
+        assertEquals("KU 30\n", PrivdClient.pollCommandForTest())
+        assertNull(PrivdClient.pollCommandForTest())
+        assertTrue(engine.pressedIds.value.isEmpty())
     }
 }

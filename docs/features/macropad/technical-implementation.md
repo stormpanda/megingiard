@@ -143,6 +143,12 @@ PadProfile
         │     MouseButton(button: MouseButton enum)
         │     ScrollWheel
         │     TrackpointMove(size: TrackpointSize = MEDIUM, mode: TrackpointMode) — legacy size deprecated; sized via PadButton.widthDp/heightDp
+        │     Screenshot(target: ScreenshotTarget = TOP)
+        │     SwitchToLayout(layoutId: String = "", holdToShift: Boolean = false)
+        │     SwitchToHub
+        │     StopAllMacros
+        │     TouchTap(normX: Float = 0.5f, normY: Float = 0.5f)
+        │     MediaControl(mediaAction: MediaControlAction = PLAY_PAUSE)
         └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG | CUSTOM, default OFF)
 ```
 
@@ -158,6 +164,7 @@ PadProfile
 | `subPageStack: StateFlow<List<MacroPadSubPage>>` | Active stack of nested subpages, preserving deep subpages (e.g. `MacroTimeline`, `EditButtonPositions`, `EditLayout`) across suspension and remounting. |
 | `buttonDraft: StateFlow<PadButton?>` / `setButtonDraft(draft)` | Authoritative in-flight `PadButton` draft while editing or creating a button; automatically synchronizes `MacroPadState.previewButton`. |
 | `macroDraft: StateFlow<Macro?>` / `setMacroDraft(draft)` | Authoritative in-flight `Macro` draft while creating or editing a macro across `MacroTimeline`, `ManualMacroSteps`, `ReorderMacroSteps`, and `MacroStepEdit`. |
+| `awaitingButtonTapRecording: StateFlow<Boolean>` / `setAwaitingButtonTapRecording(awaiting)` | Tracks whether `PadButtonEditDialog` initiated a single-tap Display 0 coordinate capture (`TouchTapCaptureTarget.BUTTON_ACTION`), preventing unrelated tap results from overwriting button drafts across suspension/resumption. |
 | `selectSection(section)` | Selects a top-level category and resets the subpage stack and drafts. |
 | `push(subPage)` / `pop()` | Appends or drops the top subpage in the stack, clearing drafts when their owning subpage is popped. |
 | `reset()` | Restores default state (`QUICK_ACTIONS`, empty stack, null drafts) upon explicit editor exit (`onDone`). |
@@ -234,9 +241,9 @@ All input events from MacroPad actions (keyboard, mouse, gamepad, and touch) are
 
 `MacroPadState` is an `object` singleton following the project-wide pattern:
 
-- Private `MutableStateFlow` backing fields: `_profiles`, `_activeProfileId`, `_activeLayoutId`, `_activeProfile`, `_activeLayout`
+- Private `MutableStateFlow` backing fields: `_profiles`, `_activeProfileId`, `_activeProfile`, `_activeLayout`, plus a transient in-memory `activeShiftLayoutStack` / `shiftReturnLayoutId` supporting concurrent stacked `Hold-to-Shift` (`PadAction.SwitchToLayout(holdToShift = true)`) layout overrides without mutating persisted `PadProfile.activeLayoutId`
 - Public read-only `StateFlow`: `profiles`, `activeProfile`, `activeLayout`
-- All state mutations run inside a centralized `updateState(persist = true) { ... }` helper guarded by `stateLock` that atomically recomputes `_activeProfile` and `_activeLayout` before optionally scheduling a debounced asynchronous save (`MACROPAD_SAVE_DEBOUNCE_MS = 250L`) via `MacroPadSettings.saveMacroPadData()` (with `flushMacroPadDataNow()` for immediate flushes in config export and unit tests).
+- All state mutations run inside a centralized `updateState(persist = true) { ... }` helper guarded by `stateLock` that atomically recomputes `_activeProfile` and `_activeLayout` (resolving the top valid `activeShiftLayoutStack` entry over `PadProfile.activeLayoutId`) before optionally scheduling a debounced asynchronous save (`MACROPAD_SAVE_DEBOUNCE_MS = 250L`) via `MacroPadSettings.saveMacroPadData()` (with `flushMacroPadDataNow()` for immediate flushes in config export and unit tests).
 
 ### Injector Lifecycle
 
@@ -288,7 +295,7 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
 - **Right Content Deck:** Dynamically presents gamepad-first cards (`GamepadChoiceCard`, `GamepadToggleCard`, `GamepadActionCard`, `GamepadColorPaletteCard`, `GamepadSliderCard`) wrapped in unified `GamepadDeck` containers with automatic category header dividers.
 - **In-App Deep-Linking & Modal Suspension/Resumption:**
   - `MacroPadEditor` reacts to `AppStateManager.activePrimaryModal` and `PrimaryModalPayload` (`MacroPad`, `ProfileSettings`) to deep-link directly into targeted categories, sub-pages, or macro steps. When creating a profile from external triggers (such as the Companion Hub Hero Card), `PrimaryModalPayload.ProfileSettings(isNewProfile = true, presetName = ..., association = ...)` opens the editor directly into the `NewProfile` sub-page with the title preset and the game association bound without prematurely committing an unconfirmed profile to storage.
-  - During Touch or Physical Gamepad Macro Recording, `MacroTimelineEditor` calls `AppStateManager.suspendCurrentAndDismiss()` to close the editor overlay while recording directly on the running game/emulator with companion monitoring on `TouchRecordingSheet` or `PhysicalGamepadRecordingSheet` on Display 4, and upon recording finish/cancellation calls `AppStateManager.resumeSuspended()` to immediately restore the timeline editor.
+  - During Touch or Physical Gamepad Macro Recording (`MacroTimelineEditor`) or single-tap `PadAction.TouchTap` coordinate capture (`PadButtonEditDialog` via `TouchTapCaptureTarget.BUTTON_ACTION`), the editor calls `AppStateManager.suspendCurrentAndDismiss()` to close the primary overlay while recording directly on the running game/emulator with companion monitoring on `TouchRecordingSheet` or `PhysicalGamepadRecordingSheet` on Display 4, and upon recording finish/cancellation calls `AppStateManager.resumeSuspended()` to immediately restore the suspended editor sub-page and in-flight draft.
 - **In-Flight Changes Exit Confirmation:** Sub-pages with editable draft states (Button Settings, Layout Appearance, Profile Settings, Macro Timeline, Macro Step Edit, Background/Mask Settings, Background Touchpad) use `rememberSaveExitPromptState` and `GamepadSaveExitActionRow`. When unsaved changes exist and the user attempts to exit (via Gamepad B button, Escape, or system Back gesture), navigation is intercepted: the single Save button splits dynamically into side-by-side **Save & Exit** (accent highlighted) and **Discard & Exit** (destructive) buttons, scrolls automatically into view via `BringIntoViewRequester`, and shifts focus to Save & Exit. Pressing B a second time cancels the prompt and keeps the editor open.
 - **Auto Switch Reactivation Prompt on Editor Exit:** If Automatic Profile Switching was active (`CompanionViewMode.AUTO`) when opening the MacroPad editor and is subsequently deactivated during the editor session (e.g. by creating a new profile which sets `companionViewMode` to `MACROPAD`, or by manually switching modes), `AppStateManager.wasAutoSwitchDeactivatedInEditor` tracks this transition. When the user exits the editor (via Gamepad `B` button at the root stack, header close button `✕`, or outer scrim click), `PrimaryOverlayContainer` closes right away so no dialogs are stacked on top of each other. Once the primary overlay dismisses, `PrimaryModalHost` dispatches a standalone top-screen modal (`PrimaryModalType.REACTIVATE_AUTO_SWITCH`) via `GamepadConfirmModal`:
   - **Visual Alignment:** The dialog visually mirrors `PrimaryOverlayContainer`'s design tokens: a structured header bar (`colors.surfaceVariant.copy(alpha = 0.8f)`, 56 dp height, 20 dp padding, 18 sp SemiBold title in `onSurface`, accent icon, and header close button `✕`), content area matching the editor deck background (`colors.appBackground`), and card border framed with `rememberBezelBrush()` on a 16 dp rounded surface with 16 dp shadow elevation. Focus is strictly trapped within the card (`focusGroup()`, `focusProperties { exit = { FocusRequester.Cancel } }`).

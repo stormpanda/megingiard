@@ -65,10 +65,11 @@ fun PrimaryModalHost(
                             Modifier
                                 .height(PMH_KOFI_BUTTON_HEIGHT)
                                 .clip(PMH_KOFI_SHAPE)
+                                .focusProperties { canFocus = false }
                                 .clickable {
                                     launchUrlOnPrimaryDisplay(context, "https://ko-fi.com/stormpanda")
                                     onDismiss()
-                                }.focusProperties { canFocus = false },
+                                },
                     )
                 },
             ) {

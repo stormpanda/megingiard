@@ -51,6 +51,7 @@ import kotlinx.coroutines.delay
 private const val TAG = "GamepadDialogs"
 
 private val GCM_DIALOG_MAX_WIDTH = 480.dp
+private const val GCM_DIALOG_WIDTH_FRACTION = 0.9f
 private val GCM_DIALOG_CORNER_RADIUS = 16.dp
 private val GCM_DIALOG_SHAPE = RoundedCornerShape(GCM_DIALOG_CORNER_RADIUS)
 private val GCM_DIALOG_BORDER_WIDTH = 1.dp
@@ -123,7 +124,8 @@ fun GamepadConfirmModal(
                     } else {
                         false
                     }
-                }.clickable(
+                }.focusProperties { canFocus = false }
+                .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {
@@ -137,17 +139,18 @@ fun GamepadConfirmModal(
             modifier =
                 Modifier
                     .widthIn(max = GCM_DIALOG_MAX_WIDTH)
-                    .fillMaxWidth(0.9f)
+                    .fillMaxWidth(GCM_DIALOG_WIDTH_FRACTION)
                     .shadow(GCM_DIALOG_SHADOW_ELEVATION, GCM_DIALOG_SHAPE)
                     .clip(GCM_DIALOG_SHAPE)
                     .border(
                         GCM_DIALOG_BORDER_WIDTH,
                         brush = rememberBezelBrush(),
                         shape = GCM_DIALOG_SHAPE,
-                    ).focusGroup()
-                    .focusProperties {
+                    ).focusProperties {
                         exit = { FocusRequester.Cancel }
-                    }.clickable(
+                    }.focusGroup()
+                    .focusProperties { canFocus = false }
+                    .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {}, // Absorb clicks inside dialog card

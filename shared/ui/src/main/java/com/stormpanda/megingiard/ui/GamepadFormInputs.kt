@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,8 +59,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.shared.ui.R
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
+
+private const val TAG = "GamepadFormInputs"
 
 private val GC_STEPPER_BTN_SIZE = 32.dp
 private val GC_SLIDER_HEIGHT = 24.dp
@@ -70,6 +74,8 @@ private const val GC_SLIDER_TRACK_BORDER_ALPHA = 0.25f
 private const val GC_DEFAULT_SLIDER_STEP = 0.05f
 private val GC_CORNER_4 = 4.dp
 private val GC_CORNER_4_SHAPE = RoundedCornerShape(GC_CORNER_4)
+private val GC_CAPSULE_BORDER_ADJUSTING = 2.dp
+private val GC_CAPSULE_BORDER_DEFAULT = 1.dp
 
 @Composable
 fun CapsuleArrowButton(
@@ -86,6 +92,7 @@ fun CapsuleArrowButton(
             modifier
                 .size(size)
                 .clip(CircleShape)
+                .focusProperties { canFocus = false }
                 .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -112,7 +119,7 @@ fun GamepadAdjustableCapsule(
 ) {
     val colors = LocalAppColors.current
     val capsuleBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
-    val capsuleBorderWidth = if (isAdjusting) 2.dp else 1.dp
+    val capsuleBorderWidth = if (isAdjusting) GC_CAPSULE_BORDER_ADJUSTING else GC_CAPSULE_BORDER_DEFAULT
     val capsuleBg = if (isAdjusting) colors.accent.copy(alpha = GC_ACCENT_TINT_ALPHA) else colors.surfaceVariant
     val arrowTint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary
 
@@ -223,6 +230,7 @@ fun GamepadTextFieldCard(
     }
 
     val commitAndExitEditing: () -> Unit = {
+        AppLog.d(TAG, "GamepadTextFieldCard: '$title' committed edit")
         onValueChange(draftValue.text.trim())
         isEditing = false
     }
@@ -273,6 +281,7 @@ fun GamepadTextFieldCard(
         onClick = {
             if (enabled) {
                 if (!isEditing) {
+                    AppLog.d(TAG, "GamepadTextFieldCard: '$title' entering edit mode")
                     draftValue = TextFieldValue(text = value, selection = TextRange(0, value.length))
                     isEditing = true
                 } else {
@@ -357,7 +366,10 @@ fun GamepadTextFieldCard(
                             GamepadPill(
                                 text = stringResource(R.string.gamepad_action_save),
                                 isAccent = true,
-                                modifier = Modifier.clickable(onClick = commitAndExitEditing),
+                                modifier =
+                                    Modifier
+                                        .focusProperties { canFocus = false }
+                                        .clickable(onClick = commitAndExitEditing),
                             )
                         }
                     }
@@ -409,9 +421,10 @@ fun GamepadSliderCard(
     trackBrush: Brush? = null,
     thumbColor: Color? = null,
     enabled: Boolean = true,
+    itemKey: Any? = title,
 ) {
     val colors = LocalAppColors.current
-    var isAdjusting by remember { mutableStateOf(false) }
+    var isAdjusting by rememberSaveable { mutableStateOf(false) }
     var isL2Held by remember { mutableStateOf(false) }
 
     val hasFineStep = fineStep != null && fineStep < step
@@ -433,11 +446,17 @@ fun GamepadSliderCard(
 
     GamepadFocusCard(
         onClick = {
-            isAdjusting = !isAdjusting
-            if (!isAdjusting) {
-                isL2Held = false
+            if (enabled) {
+                val nextState = !isAdjusting
+                AppLog.d(TAG, "GamepadSliderCard: '$title' adjustment mode=$nextState")
+                isAdjusting = nextState
+                if (!nextState) {
+                    isL2Held = false
+                }
             }
         },
+        onTouchClick = null,
+        itemKey = itemKey,
         modifier = modifier,
         enabled = enabled,
         isAdjusting = isAdjusting,
@@ -531,7 +550,10 @@ fun GamepadSliderCard(
                                 activeTrackColor = Color.Transparent,
                                 inactiveTrackColor = Color.Transparent,
                             ),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .focusProperties { canFocus = false },
                     )
                 }
             } else {
@@ -550,7 +572,8 @@ fun GamepadSliderCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(GC_SLIDER_HEIGHT),
+                            .height(GC_SLIDER_HEIGHT)
+                            .focusProperties { canFocus = false },
                 )
             }
         }

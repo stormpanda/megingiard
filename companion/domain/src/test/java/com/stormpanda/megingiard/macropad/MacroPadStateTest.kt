@@ -1154,4 +1154,164 @@ class MacroPadStateTest {
         assertNotEquals("cutout-orig", duplicatedCutout.id)
         assertEquals("HUD", duplicatedCutout.name)
     }
+
+    @Test
+    fun `copyLayoutToProfile and copyButtonToLayout remap SwitchToLayout across profiles`() {
+        val selfSwitchBtn =
+            testButton(
+                id = "btn-self",
+                action = PadAction.SwitchToLayout(layoutId = "l1-a", holdToShift = true),
+            )
+        val otherSwitchBtn =
+            testButton(
+                id = "btn-other",
+                action = PadAction.SwitchToLayout(layoutId = "l1-b", holdToShift = false),
+            )
+        val l1a = testLayout(id = "l1-a", name = "SourceA", buttons = listOf(selfSwitchBtn, otherSwitchBtn))
+        val l1b = testLayout(id = "l1-b", name = "SourceB")
+        val p1 = testProfile(id = "p1", name = "Profile1", layouts = listOf(l1a, l1b), activeLayoutId = "l1-a")
+
+        val l2 = testLayout(id = "l2-main", name = "TargetMain")
+        val p2 = testProfile(id = "p2", name = "Profile2", layouts = listOf(l2), activeLayoutId = "l2-main")
+        loadProfiles(p1, p2, activeId = "p1")
+
+        val copiedLayoutId = MacroPadState.copyLayoutToProfile(l1a, "p1", "p2")
+        assertNotNull(copiedLayoutId)
+
+        val targetAfterLayoutCopy = MacroPadState.profiles.value.first { it.id == "p2" }
+        val copiedLayout = targetAfterLayoutCopy.layouts.first { it.id == copiedLayoutId }
+        val copiedSelfAction = copiedLayout.buttons[0].action as PadAction.SwitchToLayout
+        val copiedOtherAction = copiedLayout.buttons[1].action as PadAction.SwitchToLayout
+        assertEquals(copiedLayoutId, copiedSelfAction.layoutId)
+        assertTrue(copiedSelfAction.holdToShift)
+        assertEquals("l2-main", copiedOtherAction.layoutId)
+
+        MacroPadState.copyButtonToLayout(otherSwitchBtn, "p1", "p2", "l2-main")
+        val targetAfterButtonCopy = MacroPadState.profiles.value.first { it.id == "p2" }
+        val mainLayout = targetAfterButtonCopy.layouts.first { it.id == "l2-main" }
+        val copiedButtonAction = mainLayout.buttons.single().action as PadAction.SwitchToLayout
+        assertEquals(copiedLayoutId, copiedButtonAction.layoutId)
+
+        // Single-layout target profile falls back cleanly to that sole layout; stale activeLayoutId falls back to first layout
+        val l3 = testLayout(id = "l3-only", name = "TargetOnly")
+        val p3 = testProfile(id = "p3", name = "Profile3", layouts = listOf(l3), activeLayoutId = "stale-nonexistent-id")
+        MacroPadState.addProfile(p3)
+
+        MacroPadState.copyButtonToLayout(otherSwitchBtn, "p1", "p3", "l3-only")
+        val p3AfterButtonCopy = MacroPadState.profiles.value.first { it.id == "p3" }
+        val l3ButtonAction =
+            p3AfterButtonCopy.layouts
+                .first { it.id == "l3-only" }
+                .buttons
+                .single()
+                .action as PadAction.SwitchToLayout
+        assertEquals("l3-only", l3ButtonAction.layoutId)
+
+        val p3CopiedLayoutId = MacroPadState.copyLayoutToProfile(l1a, "p1", "p3")
+        assertNotNull(p3CopiedLayoutId)
+        val p3AfterLayoutCopy = MacroPadState.profiles.value.first { it.id == "p3" }
+        val p3CopiedLayout = p3AfterLayoutCopy.layouts.first { it.id == p3CopiedLayoutId }
+        val p3FallbackAction = p3CopiedLayout.buttons[1].action as PadAction.SwitchToLayout
+        assertEquals("l3-only", p3FallbackAction.layoutId)
+    }
+
+    @Test
+    fun `beginHoldToShiftLayout and endHoldToShiftLayout keep persisted activeLayoutId unchanged`() {
+        val l1 = testLayout(id = "l1", name = "Base")
+        val l2 = testLayout(id = "l2", name = "Shift")
+        val l3 = testLayout(id = "l3", name = "Extra")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1, l2, l3), activeLayoutId = "l1"))
+
+        MacroPadState.beginHoldToShiftLayout("l2")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+        assertEquals("l1", MacroPadState.activeProfile.value?.activeLayoutId)
+        assertEquals(
+            "l1",
+            MacroPadState.profiles.value
+                .single()
+                .activeLayoutId,
+        )
+
+        MacroPadState.endHoldToShiftLayout("l2")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+        assertEquals("l1", MacroPadState.activeProfile.value?.activeLayoutId)
+
+        // Permanent switchToLayout back to base layout while shifted clears shift override
+        MacroPadState.beginHoldToShiftLayout("l2")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+        MacroPadState.switchToLayout("l1")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+        assertEquals("l1", MacroPadState.activeProfile.value?.activeLayoutId)
+
+        // Subsequent endHoldToShiftLayout after permanent switch is a safe no-op
+        MacroPadState.endHoldToShiftLayout("l2")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+    }
+
+    @Test
+    fun `stacked HoldToShift supports LIFO and out-of-order release across multiple layouts`() {
+        val l1 = testLayout(id = "l1", name = "Base")
+        val l2 = testLayout(id = "l2", name = "Shift1")
+        val l3 = testLayout(id = "l3", name = "Shift2")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1, l2, l3), activeLayoutId = "l1"))
+
+        // LIFO release: l1 -> hold l2 -> hold l3 -> release l3 -> release l2
+        MacroPadState.beginHoldToShiftLayout("l2")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+        MacroPadState.beginHoldToShiftLayout("l3")
+        assertEquals("l3", MacroPadState.activeLayout.value?.id)
+        assertEquals("l1", MacroPadState.activeProfile.value?.activeLayoutId)
+
+        MacroPadState.endHoldToShiftLayout("l3")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.endHoldToShiftLayout("l2")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+
+        // Out-of-order release: l1 -> hold l2 -> hold l3 -> release l2 first -> l3 stays active -> release l3 -> l1
+        MacroPadState.beginHoldToShiftLayout("l2")
+        MacroPadState.beginHoldToShiftLayout("l3")
+        assertEquals("l3", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.endHoldToShiftLayout("l2")
+        assertEquals("l3", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.endHoldToShiftLayout("l3")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+    }
+
+    @Test
+    fun `stacked HoldToShift keeps target layout active when two buttons hold the same target until both release`() {
+        val l1 = testLayout(id = "l1", name = "Base")
+        val l2 = testLayout(id = "l2", name = "Shift")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1, l2), activeLayoutId = "l1"))
+
+        MacroPadState.beginHoldToShiftLayout("l2")
+        MacroPadState.beginHoldToShiftLayout("l2")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.endHoldToShiftLayout("l2")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.endHoldToShiftLayout("l2")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+    }
+
+    @Test
+    fun `deleteLayout prunes deleted intermediate shift layout while preserving remaining held shift`() {
+        val l1 = testLayout(id = "l1", name = "Base")
+        val l2 = testLayout(id = "l2", name = "Shift1")
+        val l3 = testLayout(id = "l3", name = "Shift2")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1, l2, l3), activeLayoutId = "l1"))
+
+        MacroPadState.beginHoldToShiftLayout("l2")
+        MacroPadState.beginHoldToShiftLayout("l3")
+        assertEquals("l3", MacroPadState.activeLayout.value?.id)
+
+        assertTrue(MacroPadState.deleteLayout("l2"))
+        assertEquals("l3", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.endHoldToShiftLayout("l3")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+    }
 }

@@ -96,21 +96,32 @@ fun Color.darken(factor: Float = CARD_BG_DARKEN_FACTOR): Color {
 }
 
 object AppPaletteExtractor {
+    private val initLock = Any()
     private val paletteCache = LruCache<String, ExtractedAppPalette>(PALETTE_CACHE_SIZE)
+
+    @Volatile
     private var isInitialized = false
+
+    @Volatile
     private var appContext: Context? = null
 
     fun init(context: Context) {
-        if (isInitialized && appContext == context.applicationContext) return
-        appContext = context.applicationContext
-        loadPersistedPalettes(context.applicationContext)
-        isInitialized = true
+        if (isInitialized) return
+        val resolvedAppContext = context.applicationContext
+        synchronized(initLock) {
+            if (isInitialized) return
+            appContext = resolvedAppContext
+            loadPersistedPalettes(resolvedAppContext)
+            isInitialized = true
+        }
     }
 
     internal fun resetForTesting() {
-        paletteCache.evictAll()
-        isInitialized = false
-        appContext = null
+        synchronized(initLock) {
+            paletteCache.evictAll()
+            isInitialized = false
+            appContext = null
+        }
     }
 
     private fun loadPersistedPalettes(context: Context) {
@@ -188,7 +199,44 @@ object AppPaletteExtractor {
                 }
             return "${appInfo.packageName}:$coverPath:$modTime"
         }
-        return "${appInfo.packageName}:${if (appInfo.isRom) "logo" else "icon"}"
+        val kind = if (appInfo.isRom) "logo" else "icon"
+        val version = if (appInfo.isRom) appInfo.logoLastModified else appInfo.lastUpdateTime
+        return if (version > 0L) {
+            "${appInfo.packageName}:$kind:$version"
+        } else {
+            "${appInfo.packageName}:$kind"
+        }
+    }
+
+    private fun evictStaleIconPalettes(
+        appInfo: InstalledAppInfo,
+        currentKey: String,
+    ) {
+        if (appInfo.coverPath != null) return
+        val kind = if (appInfo.isRom) "logo" else "icon"
+        val baseKey = "${appInfo.packageName}:$kind"
+        val versionPrefix = "$baseKey:"
+        val staleMemKeys =
+            paletteCache
+                .snapshot()
+                .keys
+                .filter { (it == baseKey || it.startsWith(versionPrefix)) && it != currentKey }
+        staleMemKeys.forEach { paletteCache.remove(it) }
+
+        val context = appContext ?: return
+        try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val stalePrefKeys =
+                prefs.all.keys.filter { (it == baseKey || it.startsWith(versionPrefix)) && it != currentKey }
+            if (stalePrefKeys.isNotEmpty()) {
+                val editor = prefs.edit()
+                stalePrefKeys.forEach { editor.remove(it) }
+                editor.apply()
+                AppLog.d(TAG, "Evicted ${stalePrefKeys.size} stale persisted icon palette entries for ${appInfo.packageName}")
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to evict stale icon palettes for ${appInfo.packageName}: ${e.message}")
+        }
     }
 
     suspend fun extractColorsAsync(
@@ -212,6 +260,7 @@ object AppPaletteExtractor {
 
         val palette = extractColorsInternal(appInfo, defaultPrimary, defaultSecondary)
         if (palette.isExtracted) {
+            evictStaleIconPalettes(appInfo, cacheKey)
             paletteCache.put(cacheKey, palette)
             persistPalette(cacheKey, palette)
         }

@@ -12,10 +12,13 @@ import android.os.Looper
 import android.provider.Settings
 import android.view.Display
 import android.view.Gravity
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.FrameLayout
 import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.fillMaxSize
@@ -80,6 +83,35 @@ internal fun releasePrimaryOverlayMirrorFreeze(wasFrozenForModal: Boolean): Bool
     return false
 }
 
+internal fun isDirectionalDpadKey(keyCode: Int): Boolean =
+    when (keyCode) {
+        KeyEvent.KEYCODE_DPAD_UP,
+        KeyEvent.KEYCODE_DPAD_DOWN,
+        KeyEvent.KEYCODE_DPAD_LEFT,
+        KeyEvent.KEYCODE_DPAD_RIGHT,
+        -> true
+
+        else -> false
+    }
+
+internal fun isGamepadNavigationKey(keyCode: Int): Boolean =
+    isDirectionalDpadKey(keyCode) ||
+        keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+        keyCode == KeyEvent.KEYCODE_ENTER ||
+        keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER ||
+        KeyEvent.isGamepadButton(keyCode)
+
+internal fun notifyPrimaryOverlayTouchEvent(event: MotionEvent) {
+    val isGamepadOrJoystick =
+        event.isFromSource(InputDevice.SOURCE_JOYSTICK) ||
+            event.isFromSource(InputDevice.SOURCE_GAMEPAD)
+    if (!isGamepadOrJoystick &&
+        (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_POINTER_DOWN)
+    ) {
+        PrimaryOverlayInputBridge.notifyTouchInput()
+    }
+}
+
 internal fun dispatchPrimaryOverlayGenericMotionEvent(
     motionEvent: MotionEvent,
     dispatchKey: (KeyEvent) -> Boolean,
@@ -100,6 +132,7 @@ internal fun dispatchPrimaryOverlayKeyEvent(
 ): Boolean =
     when {
         action == KeyEvent.ACTION_DOWN && isBackKey(keyCode) -> {
+            PrimaryOverlayInputBridge.notifyGamepadInput()
             AppLog.i(TAG, "Back / B-Button pressed in PrimaryOverlay -> handling back")
             if (backDispatcherOwner.onBackPressedDispatcher.hasEnabledCallbacks()) {
                 backDispatcherOwner.onBackPressedDispatcher.onBackPressed()
@@ -124,6 +157,7 @@ internal fun dispatchPrimaryOverlayKeyEvent(
         }
 
         action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_BUTTON_A -> {
+            PrimaryOverlayInputBridge.notifyGamepadInput()
             AppLog.d(TAG, "Button A down -> Forwarding as DPAD_CENTER down")
             dispatchKey(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
             true
@@ -196,6 +230,55 @@ internal fun PrimaryOverlayRootContent(
     }
 }
 
+private class PrimaryOverlayHostView(
+    context: Context,
+    private val backDispatcherOwner: OnBackPressedDispatcherOwner,
+) : FrameLayout(context) {
+    private var isForwardingTranslatedKey = false
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        notifyPrimaryOverlayTouchEvent(ev)
+        return super.dispatchTouchEvent(ev)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (dispatchPrimaryOverlayGenericMotionEvent(event, ::dispatchKeyEvent)) {
+            return true
+        }
+        return super.dispatchGenericMotionEvent(event)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && isGamepadNavigationKey(event.keyCode)) {
+            PrimaryOverlayInputBridge.notifyGamepadInput()
+        }
+        if (super.dispatchKeyEvent(event)) {
+            return true
+        }
+        if (!isForwardingTranslatedKey) {
+            isForwardingTranslatedKey = true
+            try {
+                if (dispatchPrimaryOverlayKeyEvent(
+                        action = event.action,
+                        keyCode = event.keyCode,
+                        backDispatcherOwner = backDispatcherOwner,
+                        dispatchKey = ::dispatchKeyEvent,
+                    )
+                ) {
+                    return true
+                }
+            } finally {
+                isForwardingTranslatedKey = false
+            }
+        }
+        if (event.action == KeyEvent.ACTION_DOWN && isDirectionalDpadKey(event.keyCode)) {
+            PrimaryOverlayInputBridge.sendFocusRecovery(event.keyCode)
+            return true
+        }
+        return false
+    }
+}
+
 /**
  * Manages rendering of deep configuration dialogs, inspectors, setup wizards, and tutorials
  * on the Primary Display (Display 0) as non-Activity WindowManager overlays.
@@ -208,7 +291,7 @@ internal fun PrimaryOverlayRootContent(
 object PrimaryOverlayManager {
     private var application: Application? = null
     private var scope: CoroutineScope? = null
-    private var overlayView: ComposeView? = null
+    private var overlayView: View? = null
     private var overlayWindowManager: WindowManager? = null
     private var lifecycleOwner: WindowOverlayLifecycleOwner? = null
     private var wasFrozenForModal = false
@@ -259,7 +342,9 @@ object PrimaryOverlayManager {
             overlayView?.post {
                 overlayView?.requestFocus()
             }
-            PrimaryOverlayInputBridge.sendFocusRecovery(KeyEvent.KEYCODE_DPAD_DOWN)
+            if (PrimaryOverlayInputBridge.isGamepadInputActive.value) {
+                PrimaryOverlayInputBridge.sendFocusRecovery(KeyEvent.KEYCODE_DPAD_DOWN)
+            }
             return
         }
 
@@ -320,26 +405,15 @@ object PrimaryOverlayManager {
                     gravity = Gravity.CENTER
                 }
 
-            val view =
+            val composeView =
                 ComposeView(windowContext).apply {
                     layoutParams =
-                        ViewGroup.LayoutParams(
+                        FrameLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT,
                         )
-                    setViewTreeLifecycleOwner(owner)
-                    setViewTreeSavedStateRegistryOwner(owner)
-                    setViewTreeViewModelStoreOwner(owner)
                     isFocusable = true
                     isFocusableInTouchMode = true
-
-                    setOnGenericMotionListener { _, motionEvent ->
-                        dispatchPrimaryOverlayGenericMotionEvent(motionEvent, ::dispatchKeyEvent)
-                    }
-
-                    setOnKeyListener { _, keyCode, event ->
-                        dispatchPrimaryOverlayKeyEvent(event.action, keyCode, owner, ::dispatchKeyEvent)
-                    }
 
                     setContent {
                         PrimaryOverlayRootContent(
@@ -349,11 +423,24 @@ object PrimaryOverlayManager {
                     }
                 }
 
-            wm.addView(view, params)
-            view.post {
-                view.requestFocus()
+            val hostView =
+                PrimaryOverlayHostView(windowContext, owner).apply {
+                    layoutParams =
+                        ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                        )
+                    setViewTreeLifecycleOwner(owner)
+                    setViewTreeSavedStateRegistryOwner(owner)
+                    setViewTreeViewModelStoreOwner(owner)
+                    addView(composeView)
+                }
+
+            wm.addView(hostView, params)
+            composeView.post {
+                composeView.requestFocus()
             }
-            overlayView = view
+            overlayView = hostView
             AppLog.i(TAG, "Primary overlay window successfully attached to Display 0 WindowManager (non-activity)")
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to attach primary overlay window: ${e.message}", e)

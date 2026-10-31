@@ -44,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -63,6 +64,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
@@ -109,6 +111,8 @@ val LocalDeckCardRegistry = compositionLocalOf<((key: Any, requester: FocusReque
 val LocalResetLastFocusedTracker = compositionLocalOf<(() -> Unit)?> { null }
 val LocalDeckBackInterceptor = compositionLocalOf<((interceptor: () -> Boolean, active: Boolean) -> Unit)?> { null }
 val LocalBreadcrumbConsumer = compositionLocalOf<((List<String>) -> Unit)?> { null }
+val LocalSidebarFocusEnabled = compositionLocalOf { true }
+val LocalSuppressCategoryAutoSelect = compositionLocalOf { false }
 
 /**
  * Modifier extension to mark a composable card as the primary focus target when entering the right deck from the sidebar.
@@ -209,17 +213,23 @@ fun GamepadDeck(
 
     if (parentRequester == null) {
         LaunchedEffect(Unit) {
+            if (!PrimaryOverlayInputBridge.isGamepadInputActive.value) {
+                AppLog.d(TAG, "GamepadDeck: skipping standalone initial focus while touch input active")
+                return@LaunchedEffect
+            }
             inputModeManager.requestInputMode(InputMode.Keyboard)
             try {
                 effectiveRequester.requestFocus()
                 AppLog.d(TAG, "GamepadDeck: standalone deck initial focus requested")
             } catch (_: IllegalStateException) {
                 delay(GS_INITIAL_FOCUS_DELAY_MS)
-                try {
-                    effectiveRequester.requestFocus()
-                    AppLog.d(TAG, "GamepadDeck: standalone deck initial focus retry succeeded")
-                } catch (_: IllegalStateException) {
-                    AppLog.d(TAG, "GamepadDeck: focus requester unattached on standalone deck initial focus")
+                if (PrimaryOverlayInputBridge.isGamepadInputActive.value) {
+                    try {
+                        effectiveRequester.requestFocus()
+                        AppLog.d(TAG, "GamepadDeck: standalone deck initial focus retry succeeded")
+                    } catch (_: IllegalStateException) {
+                        AppLog.d(TAG, "GamepadDeck: focus requester unattached on standalone deck initial focus")
+                    }
                 }
             }
         }
@@ -248,7 +258,7 @@ fun GamepadDeck(
                     .then(if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier)
                     .padding(
                         horizontal = GS_DECK_PADDING_H,
-                        vertical = if (showLocalHeader) GS_DECK_PADDING_V else 0.dp,
+                        vertical = if (showLocalHeader) GS_DECK_PADDING_V else GS_ZERO_BORDER_WIDTH,
                     ),
             verticalArrangement = Arrangement.spacedBy(GS_DECK_SPACING),
         ) {
@@ -296,6 +306,8 @@ fun GamepadCategoryTile(
     val isFocused by interactionSource.collectIsFocusedAsState()
     val activeCategoryRequester = LocalActiveCategoryRequester.current
     val resetLastFocused = LocalResetLastFocusedTracker.current
+    val sidebarFocusEnabled = LocalSidebarFocusEnabled.current
+    val currentSuppressAutoSelect by rememberUpdatedState(LocalSuppressCategoryAutoSelect.current)
 
     val animatedBg by animateColorAsState(
         targetValue =
@@ -348,15 +360,17 @@ fun GamepadCategoryTile(
                             style = Stroke(width = stroke),
                         )
                     }
+                }.focusProperties {
+                    canFocus = sidebarFocusEnabled
                 }.onFocusChanged { focusState ->
                     if (focusState.isFocused) {
-                        if (!selected) {
+                        if (!selected && !currentSuppressAutoSelect && PrimaryOverlayInputBridge.isGamepadInputActive.value) {
                             resetLastFocused?.invoke()
                             onClick()
                         }
                     }
                 }.then(requesterModifier)
-                .onKeyEvent { keyEvent ->
+                .onPreviewKeyEvent { keyEvent ->
                     val keyCode = keyEvent.nativeKeyEvent.keyCode
                     if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
                         if (keyEvent.type == KeyEventType.KeyDown) {
@@ -368,6 +382,7 @@ fun GamepadCategoryTile(
                     }
                 }.primaryOverlayFocusable(
                     onClick = wrappedOnClick,
+                    onTouchClick = onClick,
                     shape = GS_SIDEBAR_SHAPE,
                     borderWidth = GS_ZERO_BORDER_WIDTH,
                     interactionSource = interactionSource,
@@ -422,6 +437,7 @@ fun GamepadTwoPaneScaffold(
     breadcrumbs: List<String> = emptyList(),
     isCustomBackActive: Boolean = false,
     onCustomBack: (() -> Unit)? = null,
+    categoryKey: Any? = null,
     navigationKey: Any? = null,
     savedFocusKeys: Map<Int, Any>? = null,
     onRecordFocusedKey: ((depth: Int, key: Any) -> Unit)? = null,
@@ -439,8 +455,16 @@ fun GamepadTwoPaneScaffold(
     var currentDepth by remember { mutableIntStateOf(initialDepth) }
     var isDeckFocused by remember { mutableStateOf(false) }
     var isSidebarFocused by remember { mutableStateOf(false) }
+    var lastActivePaneIsDeck by rememberSaveable { mutableStateOf(isCustomBackActive) }
+    var suppressCategoryAutoSelect by remember { mutableStateOf(false) }
     var registeredBreadcrumbs by remember { mutableStateOf<List<String>>(emptyList()) }
     val effectiveBreadcrumbs = if (breadcrumbs.isNotEmpty()) breadcrumbs else registeredBreadcrumbs
+
+    LaunchedEffect(savedFocusKeys) {
+        if (savedFocusKeys != null) {
+            savedFocusKeyByDepth.putAll(savedFocusKeys)
+        }
+    }
 
     fun tryRequestFocus(requester: FocusRequester): Boolean =
         try {
@@ -511,6 +535,7 @@ fun GamepadTwoPaneScaffold(
             onCustomBack()
             true
         } else if (isDeckFocused && tryRequestFocus(activeCategoryRequester)) {
+            lastActivePaneIsDeck = false
             AppLog.d(TAG, "GamepadTwoPaneScaffold: back navigated from deck to sidebar category")
             true
         } else {
@@ -523,6 +548,16 @@ fun GamepadTwoPaneScaffold(
     }
 
     val bringIntoViewSpec = rememberGamepadBringIntoViewSpec()
+    val effectiveNavKey = navigationKey ?: isCustomBackActive
+    var hasInitializedFocus by rememberSaveable { mutableStateOf(false) }
+    var hasMountedThisInstance by remember { mutableStateOf(false) }
+    var previousNavKey by remember { mutableStateOf(effectiveNavKey) }
+    var previousCategoryKey by remember { mutableStateOf(categoryKey) }
+    val isTransitionPending =
+        !hasMountedThisInstance ||
+            categoryKey != previousCategoryKey ||
+            effectiveNavKey != previousNavKey
+    val effectiveSuppressAutoSelect = suppressCategoryAutoSelect || isTransitionPending
 
     CompositionLocalProvider(
         LocalActiveCategoryRequester provides activeCategoryRequester,
@@ -554,29 +589,98 @@ fun GamepadTwoPaneScaffold(
             savedFocusKeyByDepth.remove(currentDepth)
             onRemoveFocusedKey?.invoke(currentDepth)
         },
+        LocalSidebarFocusEnabled provides !isCustomBackActive,
+        LocalSuppressCategoryAutoSelect provides effectiveSuppressAutoSelect,
         LocalBringIntoViewSpec provides bringIntoViewSpec,
     ) {
-        val effectiveNavKey = navigationKey ?: isCustomBackActive
-        var hasInitializedFocus by remember { mutableStateOf(false) }
-        var previousNavKey by remember { mutableStateOf(effectiveNavKey) }
-
-        LaunchedEffect(effectiveNavKey) {
-            if (!hasInitializedFocus) {
+        LaunchedEffect(effectiveNavKey, categoryKey) {
+            if (!hasMountedThisInstance) {
+                val wasPreviouslyInitialized = hasInitializedFocus
+                hasMountedThisInstance = true
                 hasInitializedFocus = true
-                delay(GS_INITIAL_FOCUS_DELAY_MS)
-                inputModeManager.requestInputMode(InputMode.Keyboard)
-                if (isCustomBackActive) {
-                    focusDeck(depth = currentDepth, restoreSaved = true, allowCardFallback = true, allowSidebarFallback = false)
-                } else if (tryRequestFocus(activeCategoryRequester)) {
-                    AppLog.d(TAG, "GamepadTwoPaneScaffold: initial focus requested on active category")
+                previousNavKey = effectiveNavKey
+                previousCategoryKey = categoryKey
+
+                if (!PrimaryOverlayInputBridge.isGamepadInputActive.value) {
+                    AppLog.d(TAG, "GamepadTwoPaneScaffold: skipping initial focus request while touch input active")
                 } else {
-                    AppLog.d(TAG, "GamepadTwoPaneScaffold: focus requester unattached on initial focus")
+                    suppressCategoryAutoSelect = true
+                    try {
+                        delay(GS_INITIAL_FOCUS_DELAY_MS)
+                        if (PrimaryOverlayInputBridge.isGamepadInputActive.value) {
+                            inputModeManager.requestInputMode(InputMode.Keyboard)
+                            if (isCustomBackActive || (wasPreviouslyInitialized && lastActivePaneIsDeck)) {
+                                focusDeck(
+                                    depth = currentDepth,
+                                    restoreSaved = true,
+                                    allowCardFallback = true,
+                                    allowSidebarFallback = !isCustomBackActive,
+                                )
+                            } else if (tryRequestFocus(activeCategoryRequester)) {
+                                AppLog.d(TAG, "GamepadTwoPaneScaffold: initial focus requested on active category")
+                            } else {
+                                AppLog.d(TAG, "GamepadTwoPaneScaffold: focus requester unattached on initial focus")
+                            }
+                        }
+                    } finally {
+                        suppressCategoryAutoSelect = false
+                    }
+                }
+            } else if (categoryKey != previousCategoryKey) {
+                previousCategoryKey = categoryKey
+                previousNavKey = effectiveNavKey
+                val newDepth = resolveNavigationDepth(effectiveNavKey, isCustomBackActive)
+                currentDepth = newDepth
+
+                val depthsToClear = savedFocusKeyByDepth.keys.toList()
+                savedFocusKeyByDepth.clear()
+                depthsToClear.forEach { depth -> onRemoveFocusedKey?.invoke(depth) }
+
+                if (!PrimaryOverlayInputBridge.isGamepadInputActive.value) {
+                    AppLog.d(TAG, "GamepadTwoPaneScaffold: category changed via touch, skipping keyboard focus request")
+                } else {
+                    suppressCategoryAutoSelect = true
+                    try {
+                        if (isCustomBackActive || lastActivePaneIsDeck) {
+                            if (!focusDeck(
+                                    depth = newDepth,
+                                    restoreSaved = false,
+                                    allowCardFallback = false,
+                                    allowSidebarFallback = false,
+                                )
+                            ) {
+                                delay(GS_INITIAL_FOCUS_DELAY_MS)
+                                if (PrimaryOverlayInputBridge.isGamepadInputActive.value) {
+                                    focusDeck(
+                                        depth = newDepth,
+                                        restoreSaved = false,
+                                        allowCardFallback = true,
+                                        allowSidebarFallback = !isCustomBackActive,
+                                    )
+                                }
+                            }
+                        } else {
+                            inputModeManager.requestInputMode(InputMode.Keyboard)
+                            if (!tryRequestFocus(activeCategoryRequester)) {
+                                delay(GS_INITIAL_FOCUS_DELAY_MS)
+                                if (PrimaryOverlayInputBridge.isGamepadInputActive.value) {
+                                    tryRequestFocus(activeCategoryRequester)
+                                }
+                            }
+                            AppLog.d(TAG, "GamepadTwoPaneScaffold: focused active sidebar category on categoryKey change")
+                        }
+                    } finally {
+                        suppressCategoryAutoSelect = false
+                    }
                 }
             } else if (effectiveNavKey != previousNavKey) {
                 previousNavKey = effectiveNavKey
                 val newDepth = resolveNavigationDepth(effectiveNavKey, isCustomBackActive)
                 val isBackTransition = newDepth < currentDepth
                 currentDepth = newDepth
+                if (isCustomBackActive) {
+                    lastActivePaneIsDeck = true
+                }
 
                 // Clean up deeper depth key references when backing out
                 savedFocusKeyByDepth.keys.filter { it > newDepth }.forEach { deeperDepth ->
@@ -584,20 +688,34 @@ fun GamepadTwoPaneScaffold(
                     onRemoveFocusedKey?.invoke(deeperDepth)
                 }
 
-                if (!focusDeck(
-                        depth = newDepth,
-                        restoreSaved = isBackTransition,
-                        allowCardFallback = false,
-                        allowSidebarFallback = false,
+                if (!PrimaryOverlayInputBridge.isGamepadInputActive.value) {
+                    AppLog.d(
+                        TAG,
+                        "GamepadTwoPaneScaffold: sub-page transition via touch (depth=$newDepth), skipping keyboard focus",
                     )
-                ) {
-                    delay(GS_INITIAL_FOCUS_DELAY_MS)
-                    focusDeck(
-                        depth = newDepth,
-                        restoreSaved = isBackTransition,
-                        allowCardFallback = true,
-                        allowSidebarFallback = isBackTransition,
-                    )
+                } else {
+                    suppressCategoryAutoSelect = true
+                    try {
+                        if (!focusDeck(
+                                depth = newDepth,
+                                restoreSaved = isBackTransition,
+                                allowCardFallback = false,
+                                allowSidebarFallback = false,
+                            )
+                        ) {
+                            delay(GS_INITIAL_FOCUS_DELAY_MS)
+                            if (PrimaryOverlayInputBridge.isGamepadInputActive.value) {
+                                focusDeck(
+                                    depth = newDepth,
+                                    restoreSaved = isBackTransition,
+                                    allowCardFallback = true,
+                                    allowSidebarFallback = isBackTransition,
+                                )
+                            }
+                        }
+                    } finally {
+                        suppressCategoryAutoSelect = false
+                    }
                 }
             }
         }
@@ -614,16 +732,21 @@ fun GamepadTwoPaneScaffold(
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 // Only recover focus if focus was completely lost (neither deck nor sidebar is currently focused)
                 if (!isDeckFocused && !isSidebarFocused) {
-                    if (currentIsCustomBackActive) {
-                        currentTransferFocusToDeck()
-                        AppLog.d(TAG, "GamepadTwoPaneScaffold: focus recovered to sub-page deck")
-                    } else {
-                        try {
-                            activeCategoryRequester.requestFocus()
-                            AppLog.d(TAG, "GamepadTwoPaneScaffold: focus recovered to active category")
-                        } catch (_: IllegalStateException) {
-                            AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on focus recovery")
+                    suppressCategoryAutoSelect = true
+                    try {
+                        if (currentIsCustomBackActive || lastActivePaneIsDeck) {
+                            currentTransferFocusToDeck()
+                            AppLog.d(TAG, "GamepadTwoPaneScaffold: focus recovered to deck")
+                        } else {
+                            try {
+                                activeCategoryRequester.requestFocus()
+                                AppLog.d(TAG, "GamepadTwoPaneScaffold: focus recovered to active category")
+                            } catch (_: IllegalStateException) {
+                                AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on focus recovery")
+                            }
                         }
+                    } finally {
+                        suppressCategoryAutoSelect = false
                     }
                 }
             }
@@ -655,8 +778,18 @@ fun GamepadTwoPaneScaffold(
                             .padding(GS_SIDEBAR_PADDING)
                             .onFocusChanged { focusState ->
                                 isSidebarFocused = focusState.hasFocus
+                                if (focusState.hasFocus && !effectiveSuppressAutoSelect) {
+                                    lastActivePaneIsDeck = false
+                                }
                             }.focusProperties {
                                 canFocus = !isCustomBackActive
+                                enter = {
+                                    if (!isCustomBackActive) {
+                                        FocusRequester.Default
+                                    } else {
+                                        FocusRequester.Cancel
+                                    }
+                                }
                                 exit = { direction ->
                                     if (direction == FocusDirection.Right || direction == FocusDirection.Left) {
                                         FocusRequester.Cancel
@@ -707,16 +840,18 @@ fun GamepadTwoPaneScaffold(
                                 .weight(1f)
                                 .fillMaxWidth()
                                 .padding(
-                                    horizontal = if (scrollableDeck) GS_DECK_PADDING_H else 0.dp,
+                                    horizontal = if (scrollableDeck) GS_DECK_PADDING_H else GS_ZERO_BORDER_WIDTH,
                                     vertical =
                                         if (scrollableDeck) {
-                                            (if (effectiveBreadcrumbs.isNotEmpty()) 0.dp else GS_DECK_PADDING_V)
+                                            if (effectiveBreadcrumbs.isNotEmpty()) GS_ZERO_BORDER_WIDTH else GS_DECK_PADDING_V
                                         } else {
-                                            0
-                                                .dp
+                                            GS_ZERO_BORDER_WIDTH
                                         },
                                 ).onFocusChanged { focusState ->
                                     isDeckFocused = focusState.hasFocus
+                                    if (focusState.hasFocus) {
+                                        lastActivePaneIsDeck = true
+                                    }
                                 }.focusProperties {
                                     exit = { direction ->
                                         if (direction == FocusDirection.Left) {

@@ -22,12 +22,21 @@ private fun defaultInitialName(): String =
         else -> "Default"
     }
 
-private fun PadButton.cloneWithMacroMapping(macroMapping: Map<String, String>): PadButton {
+private fun PadButton.cloneWithMacroMapping(
+    macroMapping: Map<String, String>,
+    layoutMapping: Map<String, String> = emptyMap(),
+    fallbackLayoutId: String? = null,
+): PadButton {
     val updatedAction =
         when (val action = this.action) {
             is PadAction.Macro -> {
                 val newMacroId = macroMapping[action.macroId] ?: action.macroId
                 PadAction.Macro(newMacroId)
+            }
+
+            is PadAction.SwitchToLayout -> {
+                val newLayoutId = layoutMapping[action.layoutId] ?: fallbackLayoutId ?: action.layoutId
+                action.copy(layoutId = newLayoutId)
             }
 
             else -> {
@@ -40,8 +49,11 @@ private fun PadButton.cloneWithMacroMapping(macroMapping: Map<String, String>): 
     )
 }
 
-private fun List<PadButton>.cloneWithMacroMapping(macroMapping: Map<String, String>): List<PadButton> =
-    map { it.cloneWithMacroMapping(macroMapping) }
+private fun List<PadButton>.cloneWithMacroMapping(
+    macroMapping: Map<String, String>,
+    layoutMapping: Map<String, String> = emptyMap(),
+    fallbackLayoutId: String? = null,
+): List<PadButton> = map { it.cloneWithMacroMapping(macroMapping, layoutMapping, fallbackLayoutId) }
 
 /**
  * Runtime state holder for the MacroPad-centric UI.
@@ -77,6 +89,17 @@ object MacroPadState {
     private val _activeLayout = MutableStateFlow<PadLayout?>(null)
     val activeLayout: StateFlow<PadLayout?> = _activeLayout.asStateFlow()
 
+    private var shiftReturnLayoutId: String? = null
+    private val activeShiftLayoutStack = mutableListOf<String>()
+
+    private val shiftActiveLayoutId: String?
+        get() = activeShiftLayoutStack.lastOrNull()
+
+    private fun clearShiftState() {
+        shiftReturnLayoutId = null
+        activeShiftLayoutStack.clear()
+    }
+
     private inline fun updateState(
         persist: Boolean = true,
         block: () -> Unit,
@@ -103,7 +126,11 @@ object MacroPadState {
             } else if (prof == null) {
                 null
             } else {
-                val layId = prof.activeLayoutId
+                val shiftedId =
+                    activeShiftLayoutStack.lastOrNull { candidate ->
+                        prof.layouts.any { it.id == candidate }
+                    }
+                val layId = shiftedId ?: prof.activeLayoutId
                 prof.layouts.firstOrNull { it.id == layId } ?: prof.layouts.firstOrNull()
             }
     }
@@ -381,10 +408,28 @@ object MacroPadState {
         }
     }
 
+    private fun applyProfileUpdateLocked(profile: PadProfile) {
+        val currentActive = _activeProfile.value
+        if (currentActive?.id == profile.id) {
+            val activeIdChanged = currentActive.activeLayoutId != profile.activeLayoutId
+            val returnTargetMissing =
+                shiftReturnLayoutId != null && profile.layouts.none { it.id == shiftReturnLayoutId }
+            if (activeIdChanged || returnTargetMissing) {
+                clearShiftState()
+            } else if (activeShiftLayoutStack.isNotEmpty()) {
+                activeShiftLayoutStack.removeAll { id -> profile.layouts.none { it.id == id } }
+                if (activeShiftLayoutStack.isEmpty()) {
+                    clearShiftState()
+                }
+            }
+        }
+        _profiles.value = _profiles.value.map { if (it.id == profile.id) profile else it }
+    }
+
     fun updateProfile(profile: PadProfile) {
         AppLog.d(TAG, "updateProfile id=${profile.id}")
         updateState {
-            _profiles.value = _profiles.value.map { if (it.id == profile.id) profile else it }
+            applyProfileUpdateLocked(profile)
         }
     }
 
@@ -457,6 +502,7 @@ object MacroPadState {
     private fun assignActiveProfileId(id: String?) {
         val previousId = _activeProfileId.value
         _activeProfileId.value = id
+        clearShiftState()
         if (previousId != null && previousId != id) {
             AppLog.d(TAG, "assignActiveProfileId: profile changed $previousId → $id, stopping running macros")
             MacroExecutor.stopAll()
@@ -519,7 +565,7 @@ object MacroPadState {
                         }
                     layout.copy(
                         id = targetLayoutId,
-                        buttons = layout.buttons.cloneWithMacroMapping(macroMapping),
+                        buttons = layout.buttons.cloneWithMacroMapping(macroMapping, mappedLayouts),
                         mirrorCutouts = copiedCutouts,
                         backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$targetLayoutId" },
                         backgroundImageVersion = 0,
@@ -553,15 +599,89 @@ object MacroPadState {
     // Layout CRUD (within the active profile)
     // ─────────────────────────────────────────────────────────────────────────
 
+    private fun applyActiveLayoutIdLocked(
+        profile: PadProfile,
+        layoutId: String,
+    ) {
+        clearShiftState()
+        _previewLayout.value = null
+        _profiles.value =
+            _profiles.value.map {
+                if (it.id == profile.id) it.copy(activeLayoutId = layoutId) else it
+            }
+    }
+
     fun setActiveLayoutId(layoutId: String) {
-        val profile = activeProfile.value ?: return
-        AppLog.d(TAG, "setActiveLayoutId: profileId=${profile.id} layoutId=$layoutId")
         updateState {
+            val profile = _activeProfile.value ?: return
+            AppLog.d(TAG, "setActiveLayoutId: profileId=${profile.id} layoutId=$layoutId")
+            applyActiveLayoutIdLocked(profile, layoutId)
+        }
+    }
+
+    /** Switches directly to [layoutId] if it exists in the active profile. */
+    fun switchToLayout(layoutId: String) {
+        if (layoutId.isBlank()) return
+        updateState {
+            val profile = _activeProfile.value ?: return
+            val target = profile.layouts.firstOrNull { it.id == layoutId } ?: return
+            if (profile.activeLayoutId == layoutId && shiftActiveLayoutId == null) return
+            AppLog.d(TAG, "switchToLayout: ${target.name} ($layoutId)")
+            applyActiveLayoutIdLocked(profile, layoutId)
+        }
+    }
+
+    /**
+     * Temporarily pushes [targetLayoutId] onto the transient in-memory Hold-to-Shift stack while
+     * a Hold-to-Shift button is held, without mutating persisted [PadProfile.activeLayoutId] or
+     * triggering DataStore writes. Supports concurrent / chained multi-touch shifts.
+     */
+    fun beginHoldToShiftLayout(targetLayoutId: String) {
+        if (targetLayoutId.isBlank()) return
+        updateState(persist = false) {
+            val profile = _activeProfile.value ?: return
+            if (profile.layouts.none { it.id == targetLayoutId }) return
+            val baseId =
+                profile.activeLayoutId?.takeIf { candidate -> profile.layouts.any { it.id == candidate } }
+                    ?: profile.layouts.firstOrNull()?.id
+                    ?: return
+            if (activeShiftLayoutStack.isEmpty() && baseId == targetLayoutId) return
+            val currentId =
+                activeShiftLayoutStack.lastOrNull { candidate -> profile.layouts.any { it.id == candidate } }
+                    ?: baseId
+            if (shiftReturnLayoutId == null) {
+                shiftReturnLayoutId = baseId
+            }
+            activeShiftLayoutStack.add(targetLayoutId)
+            AppLog.d(
+                TAG,
+                "beginHoldToShiftLayout: $currentId -> $targetLayoutId (depth=${activeShiftLayoutStack.size}, return=$shiftReturnLayoutId)",
+            )
             _previewLayout.value = null
-            _profiles.value =
-                _profiles.value.map {
-                    if (it.id == profile.id) it.copy(activeLayoutId = layoutId) else it
-                }
+        }
+    }
+
+    /**
+     * Releases one Hold-to-Shift instance for [targetLayoutId] from the transient shift stack,
+     * restoring the previous held shift layout (or the base [activeLayout] once all held shift
+     * buttons are released).
+     */
+    fun endHoldToShiftLayout(targetLayoutId: String) {
+        if (targetLayoutId.isBlank()) return
+        updateState(persist = false) {
+            if (activeShiftLayoutStack.isEmpty()) return
+            val idx = activeShiftLayoutStack.lastIndexOf(targetLayoutId)
+            if (idx < 0) return
+            activeShiftLayoutStack.removeAt(idx)
+            val restoredTarget = activeShiftLayoutStack.lastOrNull() ?: shiftReturnLayoutId
+            if (activeShiftLayoutStack.isEmpty()) {
+                shiftReturnLayoutId = null
+            }
+            AppLog.d(
+                TAG,
+                "endHoldToShiftLayout: $targetLayoutId -> $restoredTarget (remainingDepth=${activeShiftLayoutStack.size})",
+            )
+            _previewLayout.value = null
         }
     }
 
@@ -672,24 +792,36 @@ object MacroPadState {
 
     /** Switch to the next layout, wrapping around. */
     fun nextLayout() {
-        val profile = activeProfile.value ?: return
-        val layouts = profile.layouts
-        if (layouts.size <= 1) return
-        val currentIndex = layouts.indexOfFirst { it.id == profile.activeLayoutId }
-        val nextIndex = (currentIndex + 1) % layouts.size
-        AppLog.d(TAG, "nextLayout: ${layouts[nextIndex].name}")
-        setActiveLayoutId(layouts[nextIndex].id)
+        updateState {
+            val profile = _activeProfile.value ?: return
+            val layouts = profile.layouts
+            if (layouts.size <= 1) return
+            val effectiveLayoutId =
+                activeShiftLayoutStack.lastOrNull { candidate -> layouts.any { it.id == candidate } }
+                    ?: profile.activeLayoutId
+            val currentIndex = layouts.indexOfFirst { it.id == effectiveLayoutId }
+            val nextIndex = (currentIndex + 1) % layouts.size
+            val nextLayout = layouts[nextIndex]
+            AppLog.d(TAG, "nextLayout: ${nextLayout.name}")
+            applyActiveLayoutIdLocked(profile, nextLayout.id)
+        }
     }
 
     /** Switch to the previous layout, wrapping around. */
     fun previousLayout() {
-        val profile = activeProfile.value ?: return
-        val layouts = profile.layouts
-        if (layouts.size <= 1) return
-        val currentIndex = layouts.indexOfFirst { it.id == profile.activeLayoutId }
-        val prevIndex = if (currentIndex <= 0) layouts.size - 1 else currentIndex - 1
-        AppLog.d(TAG, "previousLayout: ${layouts[prevIndex].name}")
-        setActiveLayoutId(layouts[prevIndex].id)
+        updateState {
+            val profile = _activeProfile.value ?: return
+            val layouts = profile.layouts
+            if (layouts.size <= 1) return
+            val effectiveLayoutId =
+                activeShiftLayoutStack.lastOrNull { candidate -> layouts.any { it.id == candidate } }
+                    ?: profile.activeLayoutId
+            val currentIndex = layouts.indexOfFirst { it.id == effectiveLayoutId }
+            val prevIndex = if (currentIndex <= 0) layouts.size - 1 else currentIndex - 1
+            val prevLayout = layouts[prevIndex]
+            AppLog.d(TAG, "previousLayout: ${prevLayout.name}")
+            applyActiveLayoutIdLocked(profile, prevLayout.id)
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -779,19 +911,95 @@ object MacroPadState {
         sourceProfileId: String,
         targetProfileId: String,
     ): String? {
-        val sourceProfile = _profiles.value.firstOrNull { it.id == sourceProfileId } ?: return null
-        val targetProfile = _profiles.value.firstOrNull { it.id == targetProfileId } ?: return null
+        var createdLayoutId: String? = null
+        updateState {
+            val sourceProfile = _profiles.value.firstOrNull { it.id == sourceProfileId } ?: return null
+            val targetProfile = _profiles.value.firstOrNull { it.id == targetProfileId } ?: return null
 
-        val existingNames = targetProfile.layouts.map { it.name }
-        val desiredName = layout.name
-        val uniqueName = existingNames.nextUniqueName(desiredName, "Layout")
+            val existingNames = targetProfile.layouts.map { it.name }
+            val desiredName = layout.name
+            val uniqueName = existingNames.nextUniqueName(desiredName, "Layout")
 
-        val macroMapping = mutableMapOf<String, String>() // source macro ID -> target macro ID
-        var updatedTargetProfile = targetProfile
+            val macroMapping = mutableMapOf<String, String>() // source macro ID -> target macro ID
+            var updatedTargetProfile = targetProfile
 
-        if (sourceProfileId != targetProfileId) {
-            val referencedMacroIds = layout.buttons.mapNotNull { (it.action as? PadAction.Macro)?.macroId }.distinct()
-            for (macroId in referencedMacroIds) {
+            if (sourceProfileId != targetProfileId) {
+                val referencedMacroIds = layout.buttons.mapNotNull { (it.action as? PadAction.Macro)?.macroId }.distinct()
+                for (macroId in referencedMacroIds) {
+                    val sourceMacro = sourceProfile.macros.firstOrNull { it.id == macroId }
+                    if (sourceMacro != null) {
+                        val targetExistingMacroNames = updatedTargetProfile.macros.map { it.name }
+                        val targetMacroName = targetExistingMacroNames.nextUniqueName(sourceMacro.name, "Macro")
+                        val targetMacroId = UUID.randomUUID().toString()
+                        val copiedMacro =
+                            sourceMacro.copy(
+                                id = targetMacroId,
+                                name = targetMacroName,
+                            )
+                        macroMapping[macroId] = targetMacroId
+                        updatedTargetProfile = updatedTargetProfile.copy(macros = updatedTargetProfile.macros + copiedMacro)
+                        AppLog.d(
+                            TAG,
+                            "copyLayoutToProfile: copied referenced macro sourceId=$macroId targetId=$targetMacroId name='$targetMacroName'",
+                        )
+                    }
+                }
+            }
+
+            val copiedCutouts =
+                layout.mirrorCutouts.map { cutout ->
+                    cutout.copy(id = UUID.randomUUID().toString())
+                }
+
+            val newLayoutId = UUID.randomUUID().toString()
+            val crossProfile = sourceProfileId != targetProfileId
+            val layoutMapping = if (crossProfile) mapOf(layout.id to newLayoutId) else emptyMap()
+            val fallbackLayoutId =
+                if (crossProfile) {
+                    targetProfile.activeLayoutId?.takeIf { candidate ->
+                        targetProfile.layouts.any { it.id == candidate }
+                    } ?: targetProfile.layouts.firstOrNull()?.id ?: newLayoutId
+                } else {
+                    null
+                }
+            val copiedLayout =
+                layout.copy(
+                    id = newLayoutId,
+                    name = uniqueName,
+                    buttons = layout.buttons.cloneWithMacroMapping(macroMapping, layoutMapping, fallbackLayoutId),
+                    mirrorCutouts = copiedCutouts,
+                    backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$newLayoutId" },
+                    backgroundImageVersion = 0,
+                    maskImagePath = layout.maskImagePath?.let { "masks/mask_$newLayoutId" },
+                    maskImageVersion = 0,
+                    visualAnchor = layout.visualAnchor,
+                )
+
+            AppLog.d(TAG, "copyLayoutToProfile layoutId=${layout.id} name='$uniqueName' to profileId=$targetProfileId")
+            updatedTargetProfile = updatedTargetProfile.copy(layouts = updatedTargetProfile.layouts + copiedLayout)
+            applyProfileUpdateLocked(updatedTargetProfile)
+            createdLayoutId = newLayoutId
+        }
+        return createdLayoutId
+    }
+
+    /** Copy a single button to a layout in any profile, copying its referenced macro if cross-profile. */
+    fun copyButtonToLayout(
+        button: PadButton,
+        sourceProfileId: String,
+        targetProfileId: String,
+        targetLayoutId: String,
+    ) {
+        updateState {
+            val sourceProfile = _profiles.value.firstOrNull { it.id == sourceProfileId } ?: return
+            val targetProfile = _profiles.value.firstOrNull { it.id == targetProfileId } ?: return
+            val targetLayout = targetProfile.layouts.firstOrNull { it.id == targetLayoutId } ?: return
+
+            var updatedTargetProfile = targetProfile
+            var updatedAction = button.action
+
+            if (button.action is PadAction.Macro && sourceProfileId != targetProfileId) {
+                val macroId = (button.action as PadAction.Macro).macroId
                 val sourceMacro = sourceProfile.macros.firstOrNull { it.id == macroId }
                 if (sourceMacro != null) {
                     val targetExistingMacroNames = updatedTargetProfile.macros.map { it.name }
@@ -802,93 +1010,39 @@ object MacroPadState {
                             id = targetMacroId,
                             name = targetMacroName,
                         )
-                    macroMapping[macroId] = targetMacroId
+                    updatedAction = PadAction.Macro(targetMacroId)
                     updatedTargetProfile = updatedTargetProfile.copy(macros = updatedTargetProfile.macros + copiedMacro)
                     AppLog.d(
                         TAG,
-                        "copyLayoutToProfile: copied referenced macro sourceId=$macroId targetId=$targetMacroId name='$targetMacroName'",
+                        "copyButtonToLayout: copied referenced macro sourceId=$macroId targetId=$targetMacroId name='$targetMacroName'",
                     )
                 }
+            } else if (button.action is PadAction.SwitchToLayout && sourceProfileId != targetProfileId) {
+                val switchAction = button.action as PadAction.SwitchToLayout
+                val remappedLayoutId =
+                    targetProfile.layouts.firstOrNull { it.id != targetLayout.id }?.id
+                        ?: targetLayout.id
+                updatedAction = switchAction.copy(layoutId = remappedLayoutId)
             }
-        }
 
-        val copiedCutouts =
-            layout.mirrorCutouts.map { cutout ->
-                cutout.copy(id = UUID.randomUUID().toString())
-            }
-
-        val newLayoutId = UUID.randomUUID().toString()
-        val copiedLayout =
-            layout.copy(
-                id = newLayoutId,
-                name = uniqueName,
-                buttons = layout.buttons.cloneWithMacroMapping(macroMapping),
-                mirrorCutouts = copiedCutouts,
-                backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$newLayoutId" },
-                backgroundImageVersion = 0,
-                maskImagePath = layout.maskImagePath?.let { "masks/mask_$newLayoutId" },
-                maskImageVersion = 0,
-                visualAnchor = layout.visualAnchor,
-            )
-
-        AppLog.d(TAG, "copyLayoutToProfile layoutId=${layout.id} name='$uniqueName' to profileId=$targetProfileId")
-        updatedTargetProfile = updatedTargetProfile.copy(layouts = updatedTargetProfile.layouts + copiedLayout)
-        updateProfile(updatedTargetProfile)
-        return newLayoutId
-    }
-
-    /** Copy a single button to a layout in any profile, copying its referenced macro if cross-profile. */
-    fun copyButtonToLayout(
-        button: PadButton,
-        sourceProfileId: String,
-        targetProfileId: String,
-        targetLayoutId: String,
-    ) {
-        val sourceProfile = _profiles.value.firstOrNull { it.id == sourceProfileId } ?: return
-        val targetProfile = _profiles.value.firstOrNull { it.id == targetProfileId } ?: return
-        val targetLayout = targetProfile.layouts.firstOrNull { it.id == targetLayoutId } ?: return
-
-        var updatedTargetProfile = targetProfile
-        var updatedAction = button.action
-
-        if (button.action is PadAction.Macro && sourceProfileId != targetProfileId) {
-            val macroId = (button.action as PadAction.Macro).macroId
-            val sourceMacro = sourceProfile.macros.firstOrNull { it.id == macroId }
-            if (sourceMacro != null) {
-                val targetExistingMacroNames = updatedTargetProfile.macros.map { it.name }
-                val targetMacroName = targetExistingMacroNames.nextUniqueName(sourceMacro.name, "Macro")
-                val targetMacroId = UUID.randomUUID().toString()
-                val copiedMacro =
-                    sourceMacro.copy(
-                        id = targetMacroId,
-                        name = targetMacroName,
-                    )
-                updatedAction = PadAction.Macro(targetMacroId)
-                updatedTargetProfile = updatedTargetProfile.copy(macros = updatedTargetProfile.macros + copiedMacro)
-                AppLog.d(
-                    TAG,
-                    "copyButtonToLayout: copied referenced macro sourceId=$macroId targetId=$targetMacroId name='$targetMacroName'",
+            val clonedButton =
+                button.copy(
+                    id = UUID.randomUUID().toString(),
+                    action = updatedAction,
                 )
-            }
-        }
 
-        val clonedButton =
-            button.copy(
-                id = UUID.randomUUID().toString(),
-                action = updatedAction,
-            )
-
-        val updatedLayouts =
-            updatedTargetProfile.layouts.map { layout ->
-                if (layout.id == targetLayoutId) {
-                    layout.copy(buttons = layout.buttons + clonedButton)
-                } else {
-                    layout
+            val updatedLayouts =
+                updatedTargetProfile.layouts.map { layout ->
+                    if (layout.id == targetLayoutId) {
+                        layout.copy(buttons = layout.buttons + clonedButton)
+                    } else {
+                        layout
+                    }
                 }
-            }
 
-        AppLog.d(TAG, "copyButtonToLayout buttonId=${button.id} to profileId=$targetProfileId layoutId=$targetLayoutId")
-        updateProfile(updatedTargetProfile.copy(layouts = updatedLayouts))
+            AppLog.d(TAG, "copyButtonToLayout buttonId=${button.id} to profileId=$targetProfileId layoutId=$targetLayoutId")
+            applyProfileUpdateLocked(updatedTargetProfile.copy(layouts = updatedLayouts))
+        }
     }
 
     private inline fun updateLayoutInProfiles(

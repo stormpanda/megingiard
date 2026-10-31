@@ -400,6 +400,7 @@ object TouchRecordingManager {
         synchronized(recordingLock) {
             AppLog.d(TAG, "resetState")
             TouchScreenObserver.stop(CLIENT_TOKEN)
+            _recordedTap.value = null
             isGestureSegmentRecording = false
             recordedGestureSteps.clear()
             activePointers.clear()

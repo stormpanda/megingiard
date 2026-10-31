@@ -20,10 +20,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
+
+private const val TAG = "AppModalDialog"
 
 val APP_DIALOG_CORNER = 16.dp
 val APP_DIALOG_ELEVATION = 8.dp
@@ -31,6 +35,7 @@ val APP_DIALOG_PADDING = 20.dp
 const val APP_DIALOG_SCRIM_ALPHA = 0.5f
 const val APP_DIALOG_WIDTH_FRACTION = 0.85f
 
+private val APP_DIALOG_BORDER_WIDTH = 1.dp
 private val APP_DIALOG_ICON_BOTTOM_PADDING = 12.dp
 private val APP_DIALOG_TITLE_BOTTOM_PADDING = 12.dp
 private val APP_DIALOG_TEXT_BOTTOM_PADDING = 20.dp
@@ -70,15 +75,20 @@ fun AppModalDialog(
                 .background(Color.Black.copy(alpha = scrimAlpha))
                 .onPreviewKeyEvent { keyEvent ->
                     if (keyEvent.isBackKeyDown()) {
+                        AppLog.d(TAG, "AppModalDialog: back key pressed, dismissing")
                         onDismiss()
                         true
                     } else {
                         false
                     }
-                }.clickable(
+                }.focusProperties { canFocus = false }
+                .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = onDismiss,
+                    onClick = {
+                        AppLog.d(TAG, "AppModalDialog: scrim clicked, dismissing")
+                        onDismiss()
+                    },
                 ),
         contentAlignment = Alignment.Center,
     ) {
@@ -88,8 +98,9 @@ fun AppModalDialog(
                     .fillMaxWidth(widthFraction)
                     .shadow(APP_DIALOG_ELEVATION, shape)
                     .background(colors.surface, shape)
-                    .border(1.dp, brush = rememberBezelBrush(), shape = shape)
+                    .border(APP_DIALOG_BORDER_WIDTH, brush = rememberBezelBrush(), shape = shape)
                     .blockPointerEvents()
+                    .focusProperties { canFocus = false }
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,

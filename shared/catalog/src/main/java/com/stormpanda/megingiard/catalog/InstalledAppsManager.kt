@@ -516,6 +516,21 @@ object InstalledAppsManager {
         packageName: String,
     ): File = File(File(context.cacheDir, DIR_LOGOS), "$packageName$COVER_FILE_EXTENSION")
 
+    internal fun resolvePackageLastUpdateTime(
+        packageManager: PackageManager,
+        packageName: String,
+    ): Long =
+        try {
+            packageManager
+                .getPackageInfo(
+                    packageName,
+                    PackageManager.PackageInfoFlags.of(0L),
+                ).lastUpdateTime
+        } catch (e: PackageManager.NameNotFoundException) {
+            AppLog.w(TAG, "Failed to resolve lastUpdateTime for $packageName: ${e.message}")
+            0L
+        }
+
     @Suppress("DEPRECATION")
     fun isPackageAGame(
         appInfo: ApplicationInfo,
@@ -574,6 +589,7 @@ object InstalledAppsManager {
 
                 File(context.cacheDir, DIR_COVERS).mkdirs()
 
+                val lastUpdateTimesByPackage = mutableMapOf<String, Long>()
                 val apps =
                     resolveInfoList
                         .filter { resolveInfo ->
@@ -588,6 +604,10 @@ object InstalledAppsManager {
                             val defaultLabel = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
                             val activityName = resolveInfo.activityInfo.name
                             val isGame = isPackageAGame(appInfo, gamePackagesFromIntent)
+                            val lastUpdateTime =
+                                lastUpdateTimesByPackage.getOrPut(packageName) {
+                                    resolvePackageLastUpdateTime(packageManager, packageName)
+                                }
 
                             enrichAppInfo(
                                 InstalledAppInfo(
@@ -596,6 +616,7 @@ object InstalledAppsManager {
                                     label = defaultLabel,
                                     isGame = isGame,
                                     defaultLabel = defaultLabel,
+                                    lastUpdateTime = lastUpdateTime,
                                 ),
                                 context,
                             )

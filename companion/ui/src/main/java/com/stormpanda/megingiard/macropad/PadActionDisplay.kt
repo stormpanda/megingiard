@@ -5,16 +5,26 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
+import androidx.compose.material.icons.rounded.AdsClick
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PauseCircle
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.TouchApp
@@ -28,9 +38,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
+import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import kotlin.math.roundToInt
 
 private const val TAG = "PadActionDisplay"
+private const val PAD_PERCENT_MULTIPLIER = 100f
 
 internal enum class ActionGroup(
     val icon: ImageVector,
@@ -72,10 +85,15 @@ internal enum class ActionGroup(
         R.string.macropad_action_group_mirror,
         R.string.macropad_action_group_mirror_desc,
     ),
-    OTHER(
-        Icons.Rounded.Layers,
-        R.string.macropad_action_group_other,
-        R.string.macropad_action_group_other_desc,
+    TOOLS(
+        Icons.Rounded.Build,
+        R.string.macropad_action_group_tools,
+        R.string.macropad_action_group_tools_desc,
+    ),
+    MEDIA(
+        Icons.Rounded.MusicNote,
+        R.string.macropad_action_group_media,
+        R.string.macropad_action_group_media_desc,
     ),
     ;
 
@@ -149,11 +167,31 @@ internal enum class ActionCategory(
         ActionGroup.LAYOUT,
         { PadAction.LayoutPrevious },
     ),
+    SWITCH_TO_LAYOUT(
+        Icons.AutoMirrored.Rounded.ViewQuilt,
+        R.string.macropad_action_switch_to_layout,
+        ActionGroup.LAYOUT,
+        {
+            val profile = MacroPadState.activeProfile.value
+            val activeId = MacroPadState.activeLayout.value?.id
+            val defaultTargetId =
+                profile?.layouts?.firstOrNull { it.id != activeId }?.id
+                    ?: profile?.layouts?.firstOrNull()?.id
+                    ?: ""
+            PadAction.SwitchToLayout(layoutId = defaultTargetId, holdToShift = false)
+        },
+    ),
     PROFILE_SWITCHER(
         Icons.Rounded.SwapHoriz,
         R.string.macropad_action_profile_switcher,
         ActionGroup.LAYOUT,
         { PadAction.ProfileSwitcher },
+    ),
+    SWITCH_TO_HUB(
+        Icons.Rounded.Dashboard,
+        R.string.macropad_action_switch_to_hub,
+        ActionGroup.LAYOUT,
+        { PadAction.SwitchToHub },
     ),
     MIRROR_PLAY_STOP(
         Icons.Rounded.Cast,
@@ -182,14 +220,74 @@ internal enum class ActionCategory(
     FULLSCREEN_MOUSE(
         Icons.Rounded.Mouse,
         R.string.macropad_action_fullscreen_mouse,
-        ActionGroup.OTHER,
+        ActionGroup.TOOLS,
         { PadAction.FullScreenMouse() },
     ),
     FULLSCREEN_KEYBOARD(
         Icons.Rounded.Keyboard,
         R.string.macropad_action_fullscreen_keyboard,
-        ActionGroup.OTHER,
+        ActionGroup.TOOLS,
         { PadAction.FullScreenKeyboard() },
+    ),
+    SCREENSHOT_TOP(
+        Icons.Rounded.PhotoCamera,
+        R.string.macropad_action_screenshot_top,
+        ActionGroup.TOOLS,
+        { PadAction.Screenshot(ScreenshotTarget.TOP) },
+    ),
+    SCREENSHOT_BOTTOM(
+        Icons.Rounded.PhotoCamera,
+        R.string.macropad_action_screenshot_bottom,
+        ActionGroup.TOOLS,
+        { PadAction.Screenshot(ScreenshotTarget.BOTTOM) },
+    ),
+    SCREENSHOT_BOTH(
+        Icons.Rounded.PhotoCamera,
+        R.string.macropad_action_screenshot_both,
+        ActionGroup.TOOLS,
+        { PadAction.Screenshot(ScreenshotTarget.BOTH) },
+    ),
+    STOP_ALL_MACROS(
+        Icons.Rounded.StopCircle,
+        R.string.macropad_action_stop_all_macros,
+        ActionGroup.TOOLS,
+        { PadAction.StopAllMacros },
+    ),
+    TOUCH_TAP(
+        Icons.Rounded.AdsClick,
+        R.string.macropad_action_touch_tap,
+        ActionGroup.TOOLS,
+        { PadAction.TouchTap() },
+    ),
+    MEDIA_PLAY_PAUSE(
+        Icons.Rounded.PlayArrow,
+        R.string.macropad_action_media_play_pause,
+        ActionGroup.MEDIA,
+        { PadAction.MediaControl(MediaControlAction.PLAY_PAUSE) },
+    ),
+    MEDIA_NEXT_TRACK(
+        Icons.Rounded.SkipNext,
+        R.string.macropad_action_media_next_track,
+        ActionGroup.MEDIA,
+        { PadAction.MediaControl(MediaControlAction.NEXT_TRACK) },
+    ),
+    MEDIA_PREVIOUS_TRACK(
+        Icons.Rounded.SkipPrevious,
+        R.string.macropad_action_media_previous_track,
+        ActionGroup.MEDIA,
+        { PadAction.MediaControl(MediaControlAction.PREVIOUS_TRACK) },
+    ),
+    MEDIA_STOP(
+        Icons.Rounded.Stop,
+        R.string.macropad_action_media_stop,
+        ActionGroup.MEDIA,
+        { PadAction.MediaControl(MediaControlAction.STOP) },
+    ),
+    MEDIA_MUTE(
+        Icons.AutoMirrored.Rounded.VolumeOff,
+        R.string.macropad_action_media_mute,
+        ActionGroup.MEDIA,
+        { PadAction.MediaControl(MediaControlAction.MUTE) },
     ),
     APP_LAUNCHER(
         Icons.Rounded.Apps,
@@ -206,23 +304,107 @@ internal fun PadAction.categoryResId(): Int = toCategory().labelResId
 
 internal fun PadAction.toCategory(): ActionCategory =
     when (this) {
-        is PadAction.KeyboardKey -> ActionCategory.KEYBOARD_KEY
-        is PadAction.GamepadButton -> ActionCategory.GAMEPAD_BUTTON
-        is PadAction.MouseButton -> ActionCategory.MOUSE_BUTTON
-        is PadAction.ScrollWheel -> ActionCategory.SCROLL_WHEEL
-        is PadAction.TrackpointMove -> ActionCategory.TRACKPOINT
-        is PadAction.Macro -> ActionCategory.MACRO
-        is PadAction.BackgroundPeek -> ActionCategory.BACKGROUND_PEEK
-        is PadAction.LayoutNext -> ActionCategory.LAYOUT_NEXT
-        is PadAction.LayoutPrevious -> ActionCategory.LAYOUT_PREVIOUS
-        is PadAction.ProfileSwitcher -> ActionCategory.PROFILE_SWITCHER
-        is PadAction.MirrorPlayStop -> ActionCategory.MIRROR_PLAY_STOP
-        is PadAction.MirrorFreeze -> ActionCategory.MIRROR_FREEZE
-        is PadAction.MirrorViewportEdit -> ActionCategory.MIRROR_VIEWPORT_EDIT
-        is PadAction.MirrorTouchProjection -> ActionCategory.MIRROR_TOUCH_PROJECTION
-        is PadAction.FullScreenMouse -> ActionCategory.FULLSCREEN_MOUSE
-        is PadAction.FullScreenKeyboard -> ActionCategory.FULLSCREEN_KEYBOARD
-        is PadAction.AppLauncher -> ActionCategory.APP_LAUNCHER
+        is PadAction.KeyboardKey -> {
+            ActionCategory.KEYBOARD_KEY
+        }
+
+        is PadAction.GamepadButton -> {
+            ActionCategory.GAMEPAD_BUTTON
+        }
+
+        is PadAction.MouseButton -> {
+            ActionCategory.MOUSE_BUTTON
+        }
+
+        is PadAction.ScrollWheel -> {
+            ActionCategory.SCROLL_WHEEL
+        }
+
+        is PadAction.TrackpointMove -> {
+            ActionCategory.TRACKPOINT
+        }
+
+        is PadAction.Macro -> {
+            ActionCategory.MACRO
+        }
+
+        is PadAction.BackgroundPeek -> {
+            ActionCategory.BACKGROUND_PEEK
+        }
+
+        is PadAction.LayoutNext -> {
+            ActionCategory.LAYOUT_NEXT
+        }
+
+        is PadAction.LayoutPrevious -> {
+            ActionCategory.LAYOUT_PREVIOUS
+        }
+
+        is PadAction.SwitchToLayout -> {
+            ActionCategory.SWITCH_TO_LAYOUT
+        }
+
+        is PadAction.ProfileSwitcher -> {
+            ActionCategory.PROFILE_SWITCHER
+        }
+
+        is PadAction.SwitchToHub -> {
+            ActionCategory.SWITCH_TO_HUB
+        }
+
+        is PadAction.MirrorPlayStop -> {
+            ActionCategory.MIRROR_PLAY_STOP
+        }
+
+        is PadAction.MirrorFreeze -> {
+            ActionCategory.MIRROR_FREEZE
+        }
+
+        is PadAction.MirrorViewportEdit -> {
+            ActionCategory.MIRROR_VIEWPORT_EDIT
+        }
+
+        is PadAction.MirrorTouchProjection -> {
+            ActionCategory.MIRROR_TOUCH_PROJECTION
+        }
+
+        is PadAction.FullScreenMouse -> {
+            ActionCategory.FULLSCREEN_MOUSE
+        }
+
+        is PadAction.FullScreenKeyboard -> {
+            ActionCategory.FULLSCREEN_KEYBOARD
+        }
+
+        is PadAction.Screenshot -> {
+            when (target) {
+                ScreenshotTarget.TOP -> ActionCategory.SCREENSHOT_TOP
+                ScreenshotTarget.BOTTOM -> ActionCategory.SCREENSHOT_BOTTOM
+                ScreenshotTarget.BOTH -> ActionCategory.SCREENSHOT_BOTH
+            }
+        }
+
+        is PadAction.StopAllMacros -> {
+            ActionCategory.STOP_ALL_MACROS
+        }
+
+        is PadAction.TouchTap -> {
+            ActionCategory.TOUCH_TAP
+        }
+
+        is PadAction.MediaControl -> {
+            when (mediaAction) {
+                MediaControlAction.PLAY_PAUSE -> ActionCategory.MEDIA_PLAY_PAUSE
+                MediaControlAction.NEXT_TRACK -> ActionCategory.MEDIA_NEXT_TRACK
+                MediaControlAction.PREVIOUS_TRACK -> ActionCategory.MEDIA_PREVIOUS_TRACK
+                MediaControlAction.STOP -> ActionCategory.MEDIA_STOP
+                MediaControlAction.MUTE -> ActionCategory.MEDIA_MUTE
+            }
+        }
+
+        is PadAction.AppLauncher -> {
+            ActionCategory.APP_LAUNCHER
+        }
     }
 
 internal fun ActionCategory.isAvailable(hasMacros: Boolean): Boolean =
@@ -235,6 +417,7 @@ internal fun ActionCategory.isAvailable(hasMacros: Boolean): Boolean =
 internal fun PadAction.displayLabel(): String {
     val context = LocalContext.current
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     return when (this) {
         is PadAction.KeyboardKey -> {
             val modLabel =
@@ -248,7 +431,7 @@ internal fun PadAction.displayLabel(): String {
                             }.joinToString("+")
                     "$modNames+$label"
                 }
-            context.getString(R.string.macropad_display_keyboard_key, modLabel)
+            stringResource(R.string.macropad_display_keyboard_key, modLabel)
         }
 
         is PadAction.GamepadButton -> {
@@ -268,76 +451,123 @@ internal fun PadAction.displayLabel(): String {
                             }.joinToString("+")
                     "$primaryLabel+$extraNames"
                 }
-            context.getString(R.string.macropad_display_gamepad_button, comboLabel)
+            stringResource(R.string.macropad_display_gamepad_button, comboLabel)
         }
 
         is PadAction.MouseButton -> {
-            context.getString(R.string.macropad_display_mouse_button, button.displayLabel)
+            stringResource(R.string.macropad_display_mouse_button, button.displayLabel)
         }
 
         is PadAction.ScrollWheel -> {
-            context.getString(R.string.macropad_display_scroll_wheel)
+            stringResource(R.string.macropad_display_scroll_wheel)
         }
 
         is PadAction.TrackpointMove -> {
-            context.getString(R.string.macropad_display_trackpoint)
+            stringResource(R.string.macropad_display_trackpoint)
         }
 
         is PadAction.Macro -> {
             val macroName =
-                MacroPadState.activeProfile.value
+                activeProfile
                     ?.macros
                     ?.firstOrNull { it.id == macroId }
                     ?.name ?: macroId
-            context.getString(R.string.macropad_display_macro, macroName)
+            stringResource(R.string.macropad_display_macro, macroName)
         }
 
         is PadAction.BackgroundPeek -> {
-            context.getString(R.string.macropad_action_ambient_peek)
+            stringResource(R.string.macropad_action_ambient_peek)
         }
 
         is PadAction.LayoutNext -> {
-            context.getString(R.string.macropad_action_layout_next)
+            stringResource(R.string.macropad_action_layout_next)
         }
 
         is PadAction.LayoutPrevious -> {
-            context.getString(R.string.macropad_action_layout_previous)
+            stringResource(R.string.macropad_action_layout_previous)
+        }
+
+        is PadAction.SwitchToLayout -> {
+            val layoutName =
+                activeProfile
+                    ?.layouts
+                    ?.firstOrNull { it.id == layoutId }
+                    ?.name
+            if (layoutName != null) {
+                stringResource(R.string.macropad_display_switch_to_layout, layoutName)
+            } else {
+                stringResource(R.string.macropad_action_switch_to_layout)
+            }
         }
 
         is PadAction.ProfileSwitcher -> {
-            context.getString(R.string.macropad_action_profile_switcher)
+            stringResource(R.string.macropad_action_profile_switcher)
+        }
+
+        is PadAction.SwitchToHub -> {
+            stringResource(R.string.macropad_action_switch_to_hub)
         }
 
         is PadAction.MirrorPlayStop -> {
-            context.getString(R.string.macropad_action_mirror_play_stop)
+            stringResource(R.string.macropad_action_mirror_play_stop)
         }
 
         is PadAction.MirrorFreeze -> {
-            context.getString(R.string.macropad_action_mirror_freeze)
+            stringResource(R.string.macropad_action_mirror_freeze)
         }
 
         is PadAction.MirrorViewportEdit -> {
-            context.getString(R.string.macropad_action_mirror_viewport_edit)
+            stringResource(R.string.macropad_action_mirror_viewport_edit)
         }
 
         is PadAction.MirrorTouchProjection -> {
-            context.getString(R.string.macropad_action_mirror_touch_projection)
+            stringResource(R.string.macropad_action_mirror_touch_projection)
         }
 
         is PadAction.FullScreenMouse -> {
-            context.getString(R.string.macropad_action_fullscreen_mouse)
+            stringResource(R.string.macropad_action_fullscreen_mouse)
         }
 
         is PadAction.FullScreenKeyboard -> {
-            context.getString(R.string.macropad_action_fullscreen_keyboard)
+            stringResource(R.string.macropad_action_fullscreen_keyboard)
+        }
+
+        is PadAction.Screenshot -> {
+            when (target) {
+                ScreenshotTarget.TOP -> stringResource(R.string.macropad_action_screenshot_top)
+                ScreenshotTarget.BOTTOM -> stringResource(R.string.macropad_action_screenshot_bottom)
+                ScreenshotTarget.BOTH -> stringResource(R.string.macropad_action_screenshot_both)
+            }
+        }
+
+        is PadAction.StopAllMacros -> {
+            stringResource(R.string.macropad_action_stop_all_macros)
+        }
+
+        is PadAction.TouchTap -> {
+            stringResource(
+                R.string.macropad_display_touch_tap,
+                (normX * PAD_PERCENT_MULTIPLIER).roundToInt(),
+                (normY * PAD_PERCENT_MULTIPLIER).roundToInt(),
+            )
+        }
+
+        is PadAction.MediaControl -> {
+            when (mediaAction) {
+                MediaControlAction.PLAY_PAUSE -> stringResource(R.string.macropad_action_media_play_pause)
+                MediaControlAction.NEXT_TRACK -> stringResource(R.string.macropad_action_media_next_track)
+                MediaControlAction.PREVIOUS_TRACK -> stringResource(R.string.macropad_action_media_previous_track)
+                MediaControlAction.STOP -> stringResource(R.string.macropad_action_media_stop)
+                MediaControlAction.MUTE -> stringResource(R.string.macropad_action_media_mute)
+            }
         }
 
         is PadAction.AppLauncher -> {
             val name = resolveAppName(context, packageName)
             if (name.isNotBlank()) {
-                context.getString(R.string.app_launcher_button_label_format, name)
+                stringResource(R.string.app_launcher_button_label_format, name)
             } else {
-                context.getString(R.string.app_launcher_picker_select_app)
+                stringResource(R.string.app_launcher_picker_select_app)
             }
         }
     }

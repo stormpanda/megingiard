@@ -2,13 +2,16 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.rounded.AdsClick
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,7 +27,9 @@ import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
+import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.GamepadStepperCard
+import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import java.util.Locale
@@ -39,6 +44,12 @@ private const val TP_SENSITIVITY_STEP = 0.1f
 private const val FS_MOUSE_SENSITIVITY_MIN = 0.1f
 private const val FS_MOUSE_SENSITIVITY_MAX = 5.0f
 private const val FS_MOUSE_SENSITIVITY_STEP = 0.1f
+
+private const val TT_PERCENT_MIN = 0f
+private const val TT_PERCENT_MAX = 100f
+private const val TT_PERCENT_STEP = 5f
+private const val TT_PERCENT_FINE_STEP = 1f
+private const val TT_PERCENT_DIVISOR = 100f
 
 @Composable
 internal fun KeyboardKeyPicker(
@@ -263,10 +274,10 @@ internal fun FullScreenMousePicker(
     AppLog.d(TAG, "FullScreenMousePicker: sens=${current.sensitivity}")
 
     GamepadActionCard(
-        title = stringResource(R.string.macropad_action_group_other),
-        description = stringResource(R.string.macropad_action_group_other_desc),
+        title = stringResource(R.string.macropad_action_group_tools),
+        description = stringResource(R.string.macropad_action_group_tools_desc),
         actionText = current.displayLabel(),
-        icon = Icons.Rounded.Layers,
+        icon = Icons.Rounded.Build,
         onClick = onOpenPicker,
         modifier = Modifier.firstDeckItem(isFirstItem),
     )
@@ -283,6 +294,121 @@ internal fun FullScreenMousePicker(
         onIncrement = {
             val stepped = ((current.sensitivity + FS_MOUSE_SENSITIVITY_STEP) * 10f).roundToInt() / 10f
             onChange(current.copy(sensitivity = stepped.coerceIn(FS_MOUSE_SENSITIVITY_MIN, FS_MOUSE_SENSITIVITY_MAX)))
+        },
+    )
+}
+
+@Composable
+internal fun SwitchToLayoutPicker(
+    current: PadAction.SwitchToLayout,
+    onOpenPicker: () -> Unit,
+    onChange: (PadAction) -> Unit,
+    isFirstItem: Boolean = false,
+) {
+    val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
+    val layouts = profile?.layouts ?: emptyList()
+    val selectedLayout =
+        layouts.firstOrNull { it.id == current.layoutId }
+            ?: layouts.firstOrNull()
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_action_group_layout),
+        description = stringResource(R.string.macropad_action_group_layout_desc),
+        actionText = stringResource(R.string.macropad_action_switch_to_layout),
+        icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+        onClick = onOpenPicker,
+        modifier = Modifier.firstDeckItem(isFirstItem),
+    )
+
+    if (layouts.isNotEmpty() && selectedLayout != null) {
+        GamepadChoiceCard(
+            title = stringResource(R.string.macropad_switch_layout_target_title),
+            description = stringResource(R.string.macropad_switch_layout_target_desc),
+            selectedText = selectedLayout.name,
+            icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+            onPrevious = {
+                val prev = layouts.cycle(selectedLayout, BumperDirection.PREV)
+                AppLog.d(TAG, "SwitchToLayoutPicker: layoutId=${prev.id} name='${prev.name}'")
+                onChange(current.copy(layoutId = prev.id))
+            },
+            onNext = {
+                val next = layouts.cycle(selectedLayout, BumperDirection.NEXT)
+                AppLog.d(TAG, "SwitchToLayoutPicker: layoutId=${next.id} name='${next.name}'")
+                onChange(current.copy(layoutId = next.id))
+            },
+        )
+    }
+
+    GamepadToggleCard(
+        title = stringResource(R.string.macropad_switch_layout_hold_title),
+        description = stringResource(R.string.macropad_switch_layout_hold_desc),
+        checked = current.holdToShift,
+        onCheckedChange = { enabled ->
+            AppLog.d(TAG, "SwitchToLayoutPicker: holdToShift=$enabled")
+            onChange(current.copy(holdToShift = enabled))
+        },
+        icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+    )
+}
+
+@Composable
+internal fun TouchTapPicker(
+    current: PadAction.TouchTap,
+    onOpenPicker: () -> Unit,
+    onRecordTap: () -> Unit,
+    onChange: (PadAction) -> Unit,
+    isFirstItem: Boolean = false,
+) {
+    val xPct = (current.normX.coerceIn(0f, 1f) * TT_PERCENT_DIVISOR).roundToInt()
+    val yPct = (current.normY.coerceIn(0f, 1f) * TT_PERCENT_DIVISOR).roundToInt()
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_action_group_tools),
+        description = stringResource(R.string.macropad_action_group_tools_desc),
+        actionText = stringResource(R.string.macropad_action_touch_tap),
+        icon = Icons.Rounded.Build,
+        onClick = onOpenPicker,
+        modifier = Modifier.firstDeckItem(isFirstItem),
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_touch_tap_record_title),
+        description = stringResource(R.string.macropad_touch_tap_record_desc),
+        actionText = "$xPct%, $yPct%",
+        icon = Icons.Rounded.AdsClick,
+        onClick = {
+            AppLog.d(TAG, "TouchTapPicker: onRecordTap clicked")
+            onRecordTap()
+        },
+    )
+
+    GamepadSliderCard(
+        title = stringResource(R.string.macropad_touch_tap_x_title),
+        description = stringResource(R.string.macropad_touch_tap_x_desc),
+        value = xPct.toFloat(),
+        valueRange = TT_PERCENT_MIN..TT_PERCENT_MAX,
+        step = TT_PERCENT_STEP,
+        fineStep = TT_PERCENT_FINE_STEP,
+        valueLabel = "$xPct%",
+        icon = Icons.Rounded.Tune,
+        onValueChange = { newVal ->
+            val newNormX = (newVal.roundToInt().coerceIn(TT_PERCENT_MIN.toInt(), TT_PERCENT_MAX.toInt())) / TT_PERCENT_DIVISOR
+            onChange(current.copy(normX = newNormX))
+        },
+    )
+
+    GamepadSliderCard(
+        title = stringResource(R.string.macropad_touch_tap_y_title),
+        description = stringResource(R.string.macropad_touch_tap_y_desc),
+        value = yPct.toFloat(),
+        valueRange = TT_PERCENT_MIN..TT_PERCENT_MAX,
+        step = TT_PERCENT_STEP,
+        fineStep = TT_PERCENT_FINE_STEP,
+        valueLabel = "$yPct%",
+        icon = Icons.Rounded.Tune,
+        onValueChange = { newVal ->
+            val newNormY = (newVal.roundToInt().coerceIn(TT_PERCENT_MIN.toInt(), TT_PERCENT_MAX.toInt())) / TT_PERCENT_DIVISOR
+            onChange(current.copy(normY = newNormY))
         },
     )
 }

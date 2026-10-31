@@ -1,10 +1,12 @@
 package com.stormpanda.megingiard.gamefocus
 
+import android.content.Intent
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LibraryTab
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -194,5 +196,18 @@ class FocusMenuTest {
         assertTrue(actions[4].isDestructive)
         actions[4].onClick()
         assertEquals(nativeApp.packageName, removedPkg)
+    }
+
+    @Test
+    fun testShouldHandlePackageBroadcast_skipsIntermediateReplacingEvents() {
+        assertTrue(shouldHandlePackageBroadcast(Intent.ACTION_PACKAGE_ADDED, isReplacing = false))
+        assertFalse(shouldHandlePackageBroadcast(Intent.ACTION_PACKAGE_ADDED, isReplacing = true))
+        assertTrue(shouldHandlePackageBroadcast(Intent.ACTION_PACKAGE_REMOVED, isReplacing = false))
+        assertFalse(shouldHandlePackageBroadcast(Intent.ACTION_PACKAGE_REMOVED, isReplacing = true))
+        assertTrue(shouldHandlePackageBroadcast(Intent.ACTION_PACKAGE_REPLACED, isReplacing = true))
+        assertTrue(shouldHandlePackageBroadcast(Intent.ACTION_PACKAGE_REPLACED, isReplacing = false))
+        assertTrue(shouldHandlePackageBroadcast(Intent.ACTION_PACKAGE_CHANGED, isReplacing = false))
+        assertFalse(shouldHandlePackageBroadcast(Intent.ACTION_MAIN, isReplacing = false))
+        assertFalse(shouldHandlePackageBroadcast(null, isReplacing = false))
     }
 }

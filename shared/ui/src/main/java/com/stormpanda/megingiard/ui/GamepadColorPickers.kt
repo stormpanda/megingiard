@@ -21,11 +21,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -80,7 +81,9 @@ fun GamepadColorSwatch(
 
     val clickModifier =
         if (onClick != null) {
-            Modifier.clickable(enabled = enabled, onClick = onClick)
+            Modifier
+                .focusProperties { canFocus = false }
+                .clickable(enabled = enabled, onClick = onClick)
         } else {
             Modifier
         }
@@ -131,7 +134,7 @@ fun GamepadColorPaletteCard(
     itemKey: Any? = title,
 ) {
     val colors = LocalAppColors.current
-    var isAdjusting by remember { mutableStateOf(false) }
+    var isAdjusting by rememberSaveable { mutableStateOf(false) }
 
     val onPreviousColor = {
         if (paletteColors.isNotEmpty()) {
@@ -167,6 +170,7 @@ fun GamepadColorPaletteCard(
                 isAdjusting = nextState
             }
         },
+        onTouchClick = null,
         enabled = enabled,
         modifier = modifier,
         itemKey = itemKey,

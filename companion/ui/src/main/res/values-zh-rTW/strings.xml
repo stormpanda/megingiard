@@ -213,6 +213,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_mirror_touch_projection">觸控投影</string>
     <string name="macropad_action_fullscreen_mouse">全螢幕滑鼠</string>
     <string name="macropad_action_fullscreen_keyboard">全螢幕鍵盤</string>
+    <string name="macropad_action_screenshot_top">螢幕截圖 (上螢幕)</string>
+    <string name="macropad_action_screenshot_bottom">螢幕截圖 (下螢幕)</string>
+    <string name="macropad_action_screenshot_both">螢幕截圖 (雙螢幕)</string>
     <string name="macropad_action_app_launcher">應用程式快速切換</string>
     <string name="app_launcher_picker_title">選取應用程式</string>
     <string name="app_launcher_picker_select_app">選擇應用程式</string>
@@ -636,8 +639,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_mirror_desc">控制螢幕鏡像串流、凍結或觸控投影</string>
     <string name="macropad_action_group_app_launcher">App Quick-Switch</string>
     <string name="macropad_action_group_app_launcher_desc">在 Megingiard 與其他應用程式之間快速切換</string>
-    <string name="macropad_action_group_other">全螢幕工具</string>
-    <string name="macropad_action_group_other_desc">開啟全螢幕滑鼠與鍵盤覆蓋層</string>
+    <string name="macropad_action_group_tools">工具</string>
+    <string name="macropad_action_group_tools_desc">開啟全螢幕滑鼠與鍵盤覆蓋層、擷取螢幕截圖、點擊螢幕座標或停止所有巨集</string>
     <string name="macropad_editor_button_type">按鈕類型</string>
 
     <!-- Log report export -->
@@ -1123,7 +1126,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_picker_visual_gamepad_title">選取手把按鈕</string>
     <string name="macropad_picker_visual_mouse_title">選取滑鼠動作</string>
     <string name="macropad_picker_mirror_title">選取鏡像動作</string>
-    <string name="macropad_picker_overlay_title">選取覆蓋層動作</string>
+    <string name="macropad_picker_tools_title">選取工具動作</string>
     <string name="macropad_picker_layout_title">選取配置動作</string>
     <string name="macropad_mouse_btn_left">左鍵點擊</string>
     <string name="macropad_mouse_btn_left_desc">滑鼠主要按鈕</string>
@@ -1144,6 +1147,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_ambient_peek_desc">按住或切換以顯示下螢幕</string>
     <string name="macropad_action_fullscreen_mouse_desc">開啟全螢幕虛擬觸控板覆蓋層</string>
     <string name="macropad_action_fullscreen_keyboard_desc">開啟全螢幕虛擬鍵盤覆蓋層</string>
+    <string name="macropad_action_screenshot_top_desc">擷取並儲存上螢幕的螢幕截圖</string>
+    <string name="macropad_action_screenshot_bottom_desc">擷取並儲存下螢幕的螢幕截圖</string>
+    <string name="macropad_action_screenshot_both_desc">同時擷取上下雙螢幕並儲存為合併圖片</string>
     <string name="macropad_action_layout_next_desc">切換至啟用設定檔中的下一個配置</string>
     <string name="macropad_action_layout_previous_desc">切換至啟用設定檔中的上一個配置</string>
     <string name="macropad_action_profile_switcher_desc">開啟設定檔選取覆蓋層</string>
@@ -1372,4 +1378,37 @@ Open Settings to create a layout.</string>
     <string name="keyboard_mode_full">完整</string>
     <string name="touchpad_mode_mouse">滑鼠</string>
     <string name="touchpad_mode_touch">觸控</string>
+    <string name="macropad_action_switch_to_layout">切換至指定配置</string>
+    <string name="macropad_action_switch_to_layout_desc">直接跳轉至目前設定檔中的指定配置</string>
+    <string name="macropad_display_switch_to_layout">配置：%1$s</string>
+    <string name="macropad_switch_layout_target_title">目標配置</string>
+    <string name="macropad_switch_layout_target_desc">選擇在此設定檔中要啟用的配置</string>
+    <string name="macropad_switch_layout_hold_title">按住切換</string>
+    <string name="macropad_switch_layout_hold_desc">按住時暫時切換配置，放開後返回原配置</string>
+    <string name="macropad_action_switch_to_hub">切換至中心</string>
+    <string name="macropad_action_switch_to_hub_desc">在下螢幕開啟 Companion 中心</string>
+    <string name="macropad_action_stop_all_macros">停止所有巨集</string>
+    <string name="macropad_action_stop_all_macros_desc">立即取消所有執行中的巨集並放開虛擬輸入</string>
+    <string name="macropad_action_touch_tap">螢幕觸控點擊</string>
+    <string name="macropad_action_touch_tap_desc">按住時點擊主螢幕上的指定座標位置</string>
+    <string name="macropad_display_touch_tap">觸控點擊 (%1$d%%, %2$d%%)</string>
+    <string name="macropad_touch_tap_record_title">錄製螢幕點擊位置</string>
+    <string name="macropad_touch_tap_record_desc">直接點擊上螢幕以擷取目標座標位置</string>
+    <string name="macropad_touch_tap_x_title">水平位置 (X)</string>
+    <string name="macropad_touch_tap_x_desc">螢幕水平座標，由左 (0%) 至右 (100%)</string>
+    <string name="macropad_touch_tap_y_title">垂直位置 (Y)</string>
+    <string name="macropad_touch_tap_y_desc">螢幕垂直座標，由上 (0%) 至下 (100%)</string>
+    <string name="macropad_action_group_media">媒體控制</string>
+    <string name="macropad_action_group_media_desc">播放控制與音訊靜音</string>
+    <string name="macropad_picker_media_title">媒體控制</string>
+    <string name="macropad_action_media_play_pause">播放 / 暫停</string>
+    <string name="macropad_action_media_play_pause_desc">切換媒體播放或暫停</string>
+    <string name="macropad_action_media_next_track">下一首</string>
+    <string name="macropad_action_media_next_track_desc">跳至下一個媒體曲目</string>
+    <string name="macropad_action_media_previous_track">上一首</string>
+    <string name="macropad_action_media_previous_track_desc">返回上一個媒體曲目</string>
+    <string name="macropad_action_media_stop">停止播放</string>
+    <string name="macropad_action_media_stop_desc">停止目前的媒體播放</string>
+    <string name="macropad_action_media_mute">靜音</string>
+    <string name="macropad_action_media_mute_desc">切換系統音訊靜音</string>
 </resources>

@@ -22,6 +22,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -119,6 +120,16 @@ class ConfigBackupRoundTripE2ETest {
                     action = PadAction.Macro(macroId = macro1.id),
                 )
 
+            val shiftTargetLayoutId = "layout-fighting-2"
+            val button3 =
+                PadButton(
+                    id = "btn-3",
+                    label = "Shift",
+                    posX = 0.8f,
+                    posY = 0.3f,
+                    action = PadAction.SwitchToLayout(layoutId = shiftTargetLayoutId, holdToShift = true),
+                )
+
             val layoutId = "layout-fighting-1"
             val bgDir = File(context.filesDir, "backgrounds")
             bgDir.mkdirs()
@@ -129,15 +140,21 @@ class ConfigBackupRoundTripE2ETest {
                 PadLayout(
                     id = layoutId,
                     name = "Fight Arcade",
-                    buttons = listOf(button1, button2),
+                    buttons = listOf(button1, button2, button3),
                     backgroundImagePath = "backgrounds/bg_$layoutId",
+                )
+
+            val layout2 =
+                PadLayout(
+                    id = shiftTargetLayoutId,
+                    name = "Fight Shift",
                 )
 
             val fightingProfile =
                 PadProfile(
                     id = "profile-fighting-id",
                     name = "Street Fighter 6",
-                    layouts = listOf(layout1),
+                    layouts = listOf(layout1, layout2),
                     activeLayoutId = layoutId,
                     macros = listOf(macro1),
                     association =
@@ -221,18 +238,17 @@ class ConfigBackupRoundTripE2ETest {
             val restoredProfiles = MacroPadState.profiles.value
             val restoredFightingProfile = restoredProfiles.firstOrNull { it.name == "Street Fighter 6" }
             assertNotNull("Expected restored Street Fighter 6 profile", restoredFightingProfile)
-            assertEquals(1, restoredFightingProfile?.layouts?.size)
-            assertEquals(
-                2,
-                restoredFightingProfile
-                    ?.layouts
-                    ?.first()
-                    ?.buttons
-                    ?.size,
-            )
-            assertEquals(1, restoredFightingProfile?.macros?.size)
-            assertEquals("Hadouken", restoredFightingProfile?.macros?.first()?.name)
-            assertEquals("com.capcom.sf6", restoredFightingProfile?.association?.packageName)
+            assertEquals(2, restoredFightingProfile?.layouts?.size)
+            val restoredArcadeLayout = restoredFightingProfile!!.layouts.first { it.name == "Fight Arcade" }
+            val restoredShiftLayout = restoredFightingProfile.layouts.first { it.name == "Fight Shift" }
+            assertNotEquals(shiftTargetLayoutId, restoredShiftLayout.id)
+            assertEquals(3, restoredArcadeLayout.buttons.size)
+            val restoredShiftAction = restoredArcadeLayout.buttons.first { it.label == "Shift" }.action as PadAction.SwitchToLayout
+            assertEquals(restoredShiftLayout.id, restoredShiftAction.layoutId)
+            assertTrue(restoredShiftAction.holdToShift)
+            assertEquals(1, restoredFightingProfile.macros.size)
+            assertEquals("Hadouken", restoredFightingProfile.macros.first().name)
+            assertEquals("com.capcom.sf6", restoredFightingProfile.association?.packageName)
         }
 
     @Test
@@ -246,11 +262,23 @@ class ConfigBackupRoundTripE2ETest {
                     name = "Super Jump",
                     steps = listOf(MacroStep.GamepadButtonTap(startTimeMs = 0L, durationMs = 100L, btnCode = 20, label = "Jump")),
                 )
+            val switchButton =
+                PadButton(
+                    id = "btn-plat-switch",
+                    label = "To Alt",
+                    posX = 0.5f,
+                    posY = 0.5f,
+                    action = PadAction.SwitchToLayout(layoutId = "layout-plat-alt", holdToShift = false),
+                )
             val profile =
                 PadProfile(
                     id = "profile-jump-id",
                     name = "Platformer Pack",
-                    layouts = listOf(PadLayout(id = "layout-plat", name = "Main")),
+                    layouts =
+                        listOf(
+                            PadLayout(id = "layout-plat", name = "Main", buttons = listOf(switchButton)),
+                            PadLayout(id = "layout-plat-alt", name = "Alt"),
+                        ),
                     activeLayoutId = "layout-plat",
                     macros = listOf(macro),
                     association = ProfileAssociation(packageName = "com.nintendo.snes"),
@@ -270,11 +298,17 @@ class ConfigBackupRoundTripE2ETest {
             ConfigManager.applyProfileImport(context, export)
             testScheduler.advanceUntilIdle()
 
-            // 5. Verify settings remained unchanged and profile is appended
+            // 5. Verify settings remained unchanged, profile is appended, and SwitchToLayout is remapped
             assertEquals(initialTheme, SettingsManager.themeMode.value)
             val updatedProfiles = MacroPadState.profiles.value
             assertEquals(initialProfileCount + 1, updatedProfiles.size)
-            assertTrue(updatedProfiles.any { it.name == "Platformer Pack" })
+            val importedPack = updatedProfiles.firstOrNull { it.name == "Platformer Pack" }
+            assertNotNull(importedPack)
+            val importedMainLayout = importedPack!!.layouts.first { it.name == "Main" }
+            val importedAltLayout = importedPack.layouts.first { it.name == "Alt" }
+            assertNotEquals("layout-plat-alt", importedAltLayout.id)
+            val importedSwitch = importedMainLayout.buttons.single().action as PadAction.SwitchToLayout
+            assertEquals(importedAltLayout.id, importedSwitch.layoutId)
         }
 
     @Test

@@ -164,7 +164,8 @@ fun PrimaryOverlayContainer(
                         } else {
                             false
                         }
-                    }.clickable(
+                    }.focusProperties { canFocus = false }
+                    .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = handleDismiss,

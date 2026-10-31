@@ -213,6 +213,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_mirror_touch_projection">Touch Projection</string>
     <string name="macropad_action_fullscreen_mouse">Fullscreen Mouse</string>
     <string name="macropad_action_fullscreen_keyboard">Fullscreen Keyboard</string>
+    <string name="macropad_action_screenshot_top">Screenshot (Top Screen)</string>
+    <string name="macropad_action_screenshot_bottom">Screenshot (Bottom Screen)</string>
+    <string name="macropad_action_screenshot_both">Screenshot (Both Screens)</string>
     <string name="macropad_action_app_launcher">App Quick-Switch</string>
     <string name="app_launcher_picker_title">Select Application</string>
     <string name="app_launcher_picker_select_app">Choose App</string>
@@ -637,8 +640,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_mirror_desc">Control screen mirroring stream, freezing, or touch projection</string>
     <string name="macropad_action_group_app_launcher">App Quick-Switch</string>
     <string name="macropad_action_group_app_launcher_desc">Quickly switch between Megingiard and another app</string>
-    <string name="macropad_action_group_other">Overlays</string>
-    <string name="macropad_action_group_other_desc">Open fullscreen mouse and keyboard overlays</string>
+    <string name="macropad_action_group_tools">Tools</string>
+    <string name="macropad_action_group_tools_desc">Open fullscreen mouse and keyboard overlays, take screenshots, tap coordinates, or stop macros</string>
     <string name="macropad_editor_button_type">Button Type</string>
 
     <!-- Log report export -->
@@ -1128,7 +1131,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_picker_visual_gamepad_title">Select Gamepad Button</string>
     <string name="macropad_picker_visual_mouse_title">Select Mouse Action</string>
     <string name="macropad_picker_mirror_title">Select Mirror Action</string>
-    <string name="macropad_picker_overlay_title">Select Overlay Action</string>
+    <string name="macropad_picker_tools_title">Select Tool Action</string>
     <string name="macropad_picker_layout_title">Select Layout Action</string>
     <string name="macropad_mouse_btn_left">Left Click</string>
     <string name="macropad_mouse_btn_left_desc">Primary mouse button</string>
@@ -1149,6 +1152,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_ambient_peek_desc">Hold or toggle to reveal display underneath</string>
     <string name="macropad_action_fullscreen_mouse_desc">Open full-screen virtual touchpad overlay</string>
     <string name="macropad_action_fullscreen_keyboard_desc">Open full-screen virtual keyboard overlay</string>
+    <string name="macropad_action_screenshot_top_desc">Capture and save a screenshot of the top display</string>
+    <string name="macropad_action_screenshot_bottom_desc">Capture and save a screenshot of the bottom display</string>
+    <string name="macropad_action_screenshot_both_desc">Capture both displays and save them as a combined image</string>
     <string name="macropad_action_layout_next_desc">Switch to next layout in active profile</string>
     <string name="macropad_action_layout_previous_desc">Switch to previous layout in active profile</string>
     <string name="macropad_action_profile_switcher_desc">Open profile selection overlay</string>
@@ -1371,5 +1377,38 @@ Open Settings to create a layout.</string>
     <string name="quick_actions_title">Quick Actions</string>
     <string name="quick_action_edit_buttons">Arrange Button Positions</string>
     <string name="quick_action_edit_buttons_desc">Move, resize, and position MacroPad buttons visually</string>
+    <string name="macropad_action_switch_to_layout">Switch to Layout</string>
+    <string name="macropad_action_switch_to_layout_desc">Jump directly to a specific layout in the active profile</string>
+    <string name="macropad_display_switch_to_layout">Layout: %1$s</string>
+    <string name="macropad_switch_layout_target_title">Target Layout</string>
+    <string name="macropad_switch_layout_target_desc">Select which layout in this profile to activate</string>
+    <string name="macropad_switch_layout_hold_title">Hold to Shift</string>
+    <string name="macropad_switch_layout_hold_desc">Temporarily switch while held and return on release</string>
+    <string name="macropad_action_switch_to_hub">Switch to Hub</string>
+    <string name="macropad_action_switch_to_hub_desc">Open the Companion Hub on the bottom screen</string>
+    <string name="macropad_action_stop_all_macros">Stop All Macros</string>
+    <string name="macropad_action_stop_all_macros_desc">Cancel all running macros and release held virtual inputs</string>
+    <string name="macropad_action_touch_tap">Touch Tap</string>
+    <string name="macropad_action_touch_tap_desc">Tap a fixed coordinate on the primary screen while held</string>
+    <string name="macropad_display_touch_tap">Touch Tap (%1$d%%, %2$d%%)</string>
+    <string name="macropad_touch_tap_record_title">Record Screen Tap</string>
+    <string name="macropad_touch_tap_record_desc">Tap the top screen directly to capture the target position</string>
+    <string name="macropad_touch_tap_x_title">Horizontal Position (X)</string>
+    <string name="macropad_touch_tap_x_desc">Horizontal screen coordinate from left (0%) to right (100%)</string>
+    <string name="macropad_touch_tap_y_title">Vertical Position (Y)</string>
+    <string name="macropad_touch_tap_y_desc">Vertical screen coordinate from top (0%) to bottom (100%)</string>
+    <string name="macropad_action_group_media">Media Controls</string>
+    <string name="macropad_action_group_media_desc">Playback controls and audio mute</string>
+    <string name="macropad_picker_media_title">Media Controls</string>
+    <string name="macropad_action_media_play_pause">Play / Pause</string>
+    <string name="macropad_action_media_play_pause_desc">Toggle media playback or pause</string>
+    <string name="macropad_action_media_next_track">Next Track</string>
+    <string name="macropad_action_media_next_track_desc">Skip to the next media track</string>
+    <string name="macropad_action_media_previous_track">Previous Track</string>
+    <string name="macropad_action_media_previous_track_desc">Return to the previous media track</string>
+    <string name="macropad_action_media_stop">Stop Playback</string>
+    <string name="macropad_action_media_stop_desc">Stop active media playback</string>
+    <string name="macropad_action_media_mute">Mute Audio</string>
+    <string name="macropad_action_media_mute_desc">Toggle system audio mute</string>
 </resources>
 

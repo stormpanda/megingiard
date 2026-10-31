@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,7 +59,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -88,6 +89,8 @@ private const val GC_PULSE_ACCENT_ALPHA = 0.35f
 private const val GC_PULSE_SURFACE_ALPHA = 0.55f
 private val GC_CORNER_8 = 8.dp
 private val GC_CORNER_8_SHAPE = RoundedCornerShape(GC_CORNER_8)
+private val GC_PILL_BORDER_HIGHLIGHTED = 2.dp
+private val GC_PILL_BORDER_DEFAULT = 1.dp
 
 /**
  * Base focusable gamepad card container with glowing accent bezel and spring focus transitions.
@@ -96,6 +99,7 @@ private val GC_CORNER_8_SHAPE = RoundedCornerShape(GC_CORNER_8)
 fun GamepadFocusCard(
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    onTouchClick: (() -> Unit)? = onClick,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
     itemKey: Any? = null,
     enabled: Boolean = true,
@@ -112,6 +116,7 @@ fun GamepadFocusCard(
     val colors = LocalAppColors.current
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
+    var hasBeenFocused by remember { mutableStateOf(false) }
 
     val recordLastFocused = LocalLastFocusedDeckTracker.current
     val cardRegistry = LocalDeckCardRegistry.current
@@ -128,9 +133,13 @@ fun GamepadFocusCard(
 
     LaunchedEffect(isFocused) {
         if (isFocused) {
+            hasBeenFocused = true
             recordLastFocused?.invoke(effectiveKey, cardFocusRequester)
+            onFocusChanged?.invoke(true)
+        } else if (hasBeenFocused) {
+            hasBeenFocused = false
+            onFocusChanged?.invoke(false)
         }
-        onFocusChanged?.invoke(isFocused)
     }
 
     val animatedBorderWidth by animateDpAsState(
@@ -170,13 +179,13 @@ fun GamepadFocusCard(
     var lastActionDownKeyCode by remember { mutableIntStateOf(0) }
 
     val keyModifier =
-        Modifier.onKeyEvent { keyEvent ->
+        Modifier.onPreviewKeyEvent { keyEvent ->
             val keyCode = keyEvent.nativeKeyEvent.keyCode
             if (keyEvent.type == KeyEventType.KeyDown) {
                 if (onCustomKeyEvent != null && onCustomKeyEvent(keyEvent)) {
                     lastCustomConsumedDownKeyCode = keyCode
                     lastActionDownKeyCode = 0
-                    return@onKeyEvent true
+                    return@onPreviewKeyEvent true
                 }
                 lastCustomConsumedDownKeyCode = 0
                 when (keyCode) {
@@ -186,12 +195,12 @@ fun GamepadFocusCard(
                     KeyEvent.KEYCODE_NUMPAD_ENTER,
                     -> {
                         lastActionDownKeyCode = keyCode
-                        return@onKeyEvent true
+                        return@onPreviewKeyEvent true
                     }
 
                     else -> {
                         lastActionDownKeyCode = 0
-                        return@onKeyEvent false
+                        return@onPreviewKeyEvent false
                     }
                 }
             } else if (keyEvent.type == KeyEventType.KeyUp) {
@@ -199,11 +208,11 @@ fun GamepadFocusCard(
                     lastCustomConsumedDownKeyCode = 0
                     lastActionDownKeyCode = 0
                     onCustomKeyEvent?.invoke(keyEvent)
-                    return@onKeyEvent true
+                    return@onPreviewKeyEvent true
                 }
                 if (onCustomKeyEvent != null && onCustomKeyEvent(keyEvent)) {
                     lastActionDownKeyCode = 0
-                    return@onKeyEvent true
+                    return@onPreviewKeyEvent true
                 }
 
                 when (keyCode) {
@@ -232,17 +241,18 @@ fun GamepadFocusCard(
         }
 
     val focusableOrClickModifier =
-        if (onClick != null) {
-            Modifier
-                .focusable(interactionSource = interactionSource)
-                .clickable(
-                    enabled = enabled,
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick,
-                )
+        if (onTouchClick != null) {
+            Modifier.clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onTouchClick,
+            )
         } else {
-            Modifier.focusable(interactionSource = interactionSource)
+            Modifier.focusable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+            )
         }
 
     val baseCardModifier =
@@ -454,7 +464,7 @@ fun GamepadPill(
             !enabled -> colors.subduedBorder.copy(alpha = GC_DISABLED_CARD_ALPHA)
             else -> colors.subduedBorder
         }
-    val pillBorderWidth = if (isHighlighted) 2.dp else 1.dp
+    val pillBorderWidth = if (isHighlighted) GC_PILL_BORDER_HIGHLIGHTED else GC_PILL_BORDER_DEFAULT
 
     val shape = GC_STATUS_PILL_SHAPE
     Row(
@@ -592,7 +602,7 @@ private fun GamepadAdjustableCard(
     itemKey: Any? = title,
     onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
-    var isAdjusting by remember { mutableStateOf(false) }
+    var isAdjusting by rememberSaveable { mutableStateOf(false) }
 
     GamepadFocusCard(
         onClick = {
@@ -600,6 +610,7 @@ private fun GamepadAdjustableCard(
             AppLog.d(TAG, "GamepadAdjustableCard: '$title' adjustment mode=$nextState")
             isAdjusting = nextState
         },
+        onTouchClick = null,
         enabled = enabled,
         modifier = modifier,
         itemKey = itemKey,

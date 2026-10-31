@@ -14,6 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
@@ -204,5 +205,107 @@ class PrimaryOverlayInputBridgeTest {
         assertEquals("C", items.cycle("A", BumperDirection.PREV))
         assertEquals("B", items.cycle("C", BumperDirection.PREV))
         assertEquals("A", items.cycle("B", BumperDirection.PREV))
+    }
+
+    @Test
+    fun testInputModalityTracking_touchAndGamepadTransitions() {
+        assertTrue("Gamepad input should default to active", PrimaryOverlayInputBridge.isGamepadInputActive.value)
+
+        PrimaryOverlayInputBridge.notifyTouchInput()
+        assertFalse(PrimaryOverlayInputBridge.isGamepadInputActive.value)
+
+        PrimaryOverlayInputBridge.notifyGamepadInput()
+        assertTrue(PrimaryOverlayInputBridge.isGamepadInputActive.value)
+
+        PrimaryOverlayInputBridge.notifyTouchInput()
+        assertFalse(PrimaryOverlayInputBridge.isGamepadInputActive.value)
+        PrimaryOverlayInputBridge.sendBumper(BumperDirection.NEXT)
+        assertTrue("Bumper input must mark gamepad active", PrimaryOverlayInputBridge.isGamepadInputActive.value)
+
+        PrimaryOverlayInputBridge.notifyTouchInput()
+        assertFalse(PrimaryOverlayInputBridge.isGamepadInputActive.value)
+        PrimaryOverlayInputBridge.sendFocusRecovery(KeyEvent.KEYCODE_DPAD_DOWN)
+        assertTrue("Focus recovery must mark gamepad active", PrimaryOverlayInputBridge.isGamepadInputActive.value)
+
+        PrimaryOverlayInputBridge.notifyTouchInput()
+        processEvent(createJoystickMotionEvent(axisX = 0.1f, axisY = -0.1f))
+        assertFalse("Deadzone-filtered stick noise must not flip modality to gamepad", PrimaryOverlayInputBridge.isGamepadInputActive.value)
+
+        processEvent(createJoystickMotionEvent(axisY = 0.85f))
+        assertTrue("Active stick deflection must mark gamepad active", PrimaryOverlayInputBridge.isGamepadInputActive.value)
+
+        PrimaryOverlayInputBridge.notifyTouchInput()
+        assertFalse(PrimaryOverlayInputBridge.isGamepadInputActive.value)
+        PrimaryOverlayInputBridge.resetJoystickState()
+        assertTrue("resetJoystickState must restore default active gamepad state", PrimaryOverlayInputBridge.isGamepadInputActive.value)
+    }
+
+    @Test
+    fun testNotifyPrimaryOverlayTouchEvent_filtersSourcesAndActions() {
+        assertTrue(PrimaryOverlayInputBridge.isGamepadInputActive.value)
+
+        val moveTouch =
+            MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_MOVE, 10f, 10f, 0).apply {
+                source = InputDevice.SOURCE_TOUCHSCREEN
+            }
+        notifyPrimaryOverlayTouchEvent(moveTouch)
+        moveTouch.recycle()
+        assertTrue("ACTION_MOVE alone should not flip modality before ACTION_DOWN", PrimaryOverlayInputBridge.isGamepadInputActive.value)
+
+        val joystickDown =
+            MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_DOWN, 10f, 10f, 0).apply {
+                source = InputDevice.SOURCE_JOYSTICK
+            }
+        notifyPrimaryOverlayTouchEvent(joystickDown)
+        joystickDown.recycle()
+        assertTrue("Joystick source must not mark touch input", PrimaryOverlayInputBridge.isGamepadInputActive.value)
+
+        val touchDown =
+            MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_DOWN, 10f, 10f, 0).apply {
+                source = InputDevice.SOURCE_TOUCHSCREEN
+            }
+        notifyPrimaryOverlayTouchEvent(touchDown)
+        touchDown.recycle()
+        assertFalse("Touchscreen ACTION_DOWN must mark touch input active", PrimaryOverlayInputBridge.isGamepadInputActive.value)
+    }
+
+    @Test
+    fun testGamepadKeyClassificationHelpers() {
+        assertTrue(isDirectionalDpadKey(KeyEvent.KEYCODE_DPAD_UP))
+        assertTrue(isDirectionalDpadKey(KeyEvent.KEYCODE_DPAD_DOWN))
+        assertTrue(isDirectionalDpadKey(KeyEvent.KEYCODE_DPAD_LEFT))
+        assertTrue(isDirectionalDpadKey(KeyEvent.KEYCODE_DPAD_RIGHT))
+        assertFalse(isDirectionalDpadKey(KeyEvent.KEYCODE_DPAD_CENTER))
+        assertFalse(isDirectionalDpadKey(KeyEvent.KEYCODE_BUTTON_A))
+
+        assertTrue(isGamepadNavigationKey(KeyEvent.KEYCODE_DPAD_UP))
+        assertTrue(isGamepadNavigationKey(KeyEvent.KEYCODE_DPAD_CENTER))
+        assertTrue(isGamepadNavigationKey(KeyEvent.KEYCODE_ENTER))
+        assertTrue(isGamepadNavigationKey(KeyEvent.KEYCODE_BUTTON_A))
+        assertTrue(isGamepadNavigationKey(KeyEvent.KEYCODE_BUTTON_L1))
+        assertFalse(isGamepadNavigationKey(KeyEvent.KEYCODE_A))
+    }
+
+    @Test
+    fun testPrimaryOverlayActivityFinishingResetsJoystickRepeatState() {
+        val downEvents = mutableListOf<Int>()
+        val handled =
+            PrimaryOverlayInputBridge.processGenericMotionEvent(createJoystickMotionEvent(axisY = 0.8f)) { action, key ->
+                if (action == KeyEvent.ACTION_DOWN) downEvents.add(key)
+            }
+        assertTrue(handled)
+        assertEquals(1, downEvents.size)
+
+        val controller = Robolectric.buildActivity(PrimaryOverlayActivity::class.java)
+        controller.create()
+        val activity = controller.get()
+        if (!activity.isFinishing) {
+            activity.finish()
+        }
+        controller.destroy()
+
+        val countAfterDestroy = downEvents.size
+        ShadowLooper.idleMainLooper(500, TimeUnit.MILLISECONDS)
+        assertEquals("Finishing PrimaryOverlayActivity must cancel joystick repeat runnable", countAfterDestroy, downEvents.size)
     }
 }

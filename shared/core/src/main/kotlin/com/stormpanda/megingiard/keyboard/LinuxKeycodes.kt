@@ -108,6 +108,11 @@ object LinuxKeycodes {
     // Extra
     const val KEY_SYSRQ = 99 // Print Screen
     const val KEY_102ND = 86 // Key between Shift and Z on ISO keyboards (< >)
+    const val KEY_MUTE = 113
+    const val KEY_NEXTSONG = 163
+    const val KEY_PLAYPAUSE = 164
+    const val KEY_PREVIOUSSONG = 165
+    const val KEY_STOPCD = 166
     const val KEY_FN = 464
     const val KEY_MAX = 464
 

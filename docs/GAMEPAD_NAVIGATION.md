@@ -16,30 +16,33 @@ Megingiard is built for the **AYN Thor** dual-screen handheld. While the seconda
 
 ## 2. Input Mapping & Event Pipeline
 
-The input pipeline is coordinated through [`PrimaryOverlayManager.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) and [`PrimaryOverlayInputBridge.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayInputBridge.kt):
+The input pipeline is coordinated through [`PrimaryOverlayManager.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt), [`PrimaryOverlayActivity.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayActivity.kt), and [`PrimaryOverlayInputBridge.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/shared/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayInputBridge.kt):
 
 ```
  ┌────────────────────────────────────────────────────────┐
- │            Physical Gamepad Input Events               │
+ │        Physical Gamepad & Touch Input Events           │
  └───────────────────────────┬────────────────────────────┘
                              │
                              ▼
  ┌────────────────────────────────────────────────────────┐
- │                 PrimaryOverlayManager                  │
- │  - setOnGenericMotionListener (Analog stick / Hat axes)│
- │  - setOnKeyListener (Buttons A, B, L1, R1)             │
+ │     PrimaryOverlayHostView / PrimaryOverlayActivity    │
+ │  - dispatchTouchEvent -> notifyTouchInput()            │
+ │  - dispatchGenericMotionEvent (Analog stick / Hat axes)│
+ │  - dispatchKeyEvent -> notifyGamepadInput(), Compose   │
+ │    tree first, fallback A/B/L1/R1 & D-pad recovery     │
  └─────────────┬────────────────────────────┬─────────────┘
                │                            │
        (Motion Translation)          (Key Forwarding)
                ▼                            ▼
  ┌───────────────────────────┐  ┌─────────────────────────┐
  │ PrimaryOverlayInputBridge │  │   Compose Focus Tree    │
- │ - Deadzone filter (0.5f)  │  │ - KeyCode.DPAD_CENTER   │
- │ - Accelerating repeat     │  │ - KeyCode.BUTTON_B      │
+ │ - isGamepadInputActive    │  │ - onPreviewKeyEvent     │
+ │ - Deadzone filter (0.5f)  │  │ - KeyCode.BUTTON_A / B  │
+ │ - Accelerating repeat     │  │ - KeyCode.DPAD_CENTER   │
  │   (250ms init / 120→60ms) │  │ - KeyCode.DPAD_*        │
  │ - Bumper Event Flow       │  └─────────────────────────┘
  └─────────────┬─────────────┘
-               │ (Uncaught input)
+               │ (Uncaught directional D-pad / Button A)
                ▼
  ┌───────────────────────────┐
  │ Focus Recovery Dispatcher │
@@ -89,15 +92,19 @@ To ensure a seamless, non-jarring console UX when drilling into nested sub-menus
 * **Sticky Positioning:** The breadcrumbs remain permanently visible at the top of the right deck pane, avoiding being scrolled off-screen when browsing deep lists.
 * **Usage:** Pass `breadcrumbs = activeBreadcrumbs` directly to `GamepadTwoPaneScaffold` (or to the child `GamepadDeck`, which registers its breadcrumbs via `LocalBreadcrumbConsumer`). Inner `GamepadDeck` calls inside a scaffold omit local header rendering to prevent duplicate headers.
 
-### 3.2 Bidirectional Horizontal Traversal & Sidebar Focus Isolation
+### 3.2 Bidirectional Horizontal Traversal, Sidebar Focus Isolation & Bumper Cycling
 
 1. **Sidebar to Deck (`D-Pad Right` / `Button A`):**
-   * Pressing `DPAD_RIGHT` on a `GamepadCategoryTile` triggers `transferFocusToDeck()`, shifting focus directly to the remembered focused card at the current depth (or `firstDeckItem`).
+   * Pressing `DPAD_RIGHT` (via `onPreviewKeyEvent`) or `BUTTON_A` / `DPAD_CENTER` on a `GamepadCategoryTile` triggers `transferFocusToDeck()`, shifting focus directly to the remembered focused card at the current depth (or `firstDeckItem`). Tapping a category tile via touch invokes `onClick` directly without forcing keyboard focus into the deck.
 2. **Deck to Sidebar (`D-Pad Left` / `Button B`):**
    * At root navigation depth (`!isCustomBackActive`), pressing `DPAD_LEFT` from a single-column card or from Column 0 of a 2-column grid exits to `activeCategoryRequester` (the selected category tile).
    * In 2-tier interactive cards (`GamepadStepperCard`, `GamepadChoiceCard`, `GamepadSliderCard`, `GamepadColorPaletteCard`), `DPAD_LEFT` navigates back to the sidebar in Tier 1 (row navigation), but adjusts values in Tier 2 (adjustment mode).
-3. **Sub-Page Focus Isolation (`canFocus = !isCustomBackActive`):**
-   * When inside sub-pages (`isCustomBackActive == true`), the sidebar rail is non-focusable (`canFocus = false`) and the Right Content Deck's leftward exit is cancelled (`FocusRequester.Cancel`). Sub-page popping is handled exclusively by `Button B` / `Back`.
+3. **Sub-Page Focus Isolation (`LocalSidebarFocusEnabled` & `LocalSuppressCategoryAutoSelect`):**
+   * Because `Modifier.verticalScroll(...)` inserts an intermediate `focusGroup()` (`FocusTargetNode`) that terminates ancestor `FocusProperties` propagation, `GamepadTwoPaneScaffold` provides `LocalSidebarFocusEnabled` (`!isCustomBackActive`) directly to every `GamepadCategoryTile`, which applies `.focusProperties { canFocus = sidebarFocusEnabled }` immediately ahead of its own focus target.
+   * `GamepadCategoryTile` auto-selection in `.onFocusChanged` is guarded by `!LocalSuppressCategoryAutoSelect.current && PrimaryOverlayInputBridge.isGamepadInputActive.value`, preventing Compose's `FocusInvalidationManager` from resetting `selectedCategory` to Tab 1 during touch or programmatic transitions.
+4. **Shoulder Bumper Category Cycling (`categoryKey` & `lastActivePaneIsDeck`):**
+   * Callers pass `categoryKey = selectedCategory` (or `selectedSection`) to `GamepadTwoPaneScaffold`, which tracks `lastActivePaneIsDeck` (`rememberSaveable`) across focus changes.
+   * When `categoryKey` changes while `PrimaryOverlayInputBridge.isGamepadInputActive.value` is `true`, `GamepadTwoPaneScaffold` suppresses sidebar auto-selection during composition settlement, then restores focus to the new deck (`focusDeck`) if `lastActivePaneIsDeck` was `true`, or to the newly selected `activeCategoryRequester` if the sidebar was active.
 
 **Rule:** The Left Sidebar Rail Column and Right Content Deck Column MUST be configured with:
 ```kotlin
@@ -133,9 +140,9 @@ Modifier.focusProperties {
 }
 ```
 
-### 3.3 Immediate Synchronous Focus at Depth Changes
+### 3.3 Input-Modality-Aware Synchronous Focus at Depth & Category Changes
 
-When mounting or entering/leaving a sub-page, `GamepadTwoPaneScaffold` observes changes to `effectiveNavKey` and invokes its consolidated `focusDeck` helper:
+When mounting, changing `categoryKey`, or entering/leaving a sub-page (`effectiveNavKey`), `GamepadTwoPaneScaffold` first checks `PrimaryOverlayInputBridge.isGamepadInputActive.value`. If the transition was triggered by touch (`isGamepadInputActive == false`), it does **not** force `InputMode.Keyboard` or request card focus, preventing touch sub-page opens from bouncing focus to the sidebar. When gamepad input is active, it invokes its consolidated `focusDeck` helper:
 
 ```kotlin
 fun focusDeck(
@@ -264,13 +271,25 @@ When composite editor overlays are suspended (e.g. `AppStateManager.suspendCurre
 
 ---
 
-## 5. Focus Recovery & Multi-Modal Input Synchronization
+## 5. Focus Recovery, Single-Node Cards & Recreation Resilience
 
-### 5.1 Pointer-to-Gamepad Synchronization
+### 5.1 Single-Focus-Target Cards & Touch vs. Gamepad Modality
 
-Tapping or clicking with a touch screen or mouse pointer automatically sets `InputMode.Touch` and shifts 2D focus to the touched item via `interactionSource`.
+1. **Input Modality Tracking (`PrimaryOverlayInputBridge.isGamepadInputActive`):**
+   * `PrimaryOverlayHostView` and `PrimaryOverlayActivity` call `PrimaryOverlayInputBridge.notifyTouchInput()` on non-joystick `ACTION_DOWN` / `ACTION_POINTER_DOWN` touch events, and `PrimaryOverlayInputBridge.notifyGamepadInput()` on gamepad/D-pad key presses, shoulder bumpers, focus recovery, and active analog stick deflections.
+2. **Single `FocusTargetNode` & Top-Down Key Preview:**
+   * `GamepadFocusCard` and `Modifier.primaryOverlayFocusable` use top-down `Modifier.onPreviewKeyEvent` placed *before* a single `.clickable(...)` (when `onTouchClick != null`) or `.focusable(...)` (when `onTouchClick == null`) — never chaining `.focusable().clickable()`, which would create nested duplicate focus targets and allow `ClickableNode` to swallow `KEYCODE_DPAD_CENTER` / `ENTER` bottom-up.
+   * Gamepad activation (`DPAD_CENTER`, `ENTER`, `NUMPAD_ENTER`, `BUTTON_A`) invokes `onClick`, whereas pointer/touch taps invoke `onTouchClick`. Two-tier adjustable cards (`GamepadStepperCard`, `GamepadChoiceCard`, `GamepadSliderCard`, `GamepadColorPaletteCard`) pass `onTouchClick = null` so touch users interact directly with capsule arrows, sliders, and swatches without getting trapped in Tier-2 `isAdjusting = true` while `isFocused` is `false`.
+   * Inner clickable controls (`CapsuleArrowButton`, `GamepadColorSwatch`, `[ Save ]` pill, modal scrims, and Material 3 `Slider`s) apply `.focusProperties { canFocus = false }` ahead of their focusable modifier so 2D D-pad traversal never gets hijacked by sub-controls.
 
-### 5.2 Universal Focus Recovery Dispatcher & Window Attachment
+### 5.2 Activity Recreation Resilience
+
+When `PrimaryOverlayActivity` is recreated mid-session (for example, when an external theme observer commits an OS `FabricatedOverlay` / `CONFIG_ASSETS_PATHS` change while cycling themes):
+* `GlobalSettingsScreen` persists `selectedCategory`, `subPageStack`, `savedFocusKeys`, and `lastAppliedPayloadKey` via `rememberSaveable`.
+* `GamepadTwoPaneScaffold` persists `lastActivePaneIsDeck` and `hasInitializedFocus` via `rememberSaveable` (paired with a non-saved `hasMountedThisInstance` flag) so focus is restored into the active pane after recreation.
+* Tier-2 cards (`GamepadAdjustableCard`, `GamepadSliderCard`, `GamepadColorPaletteCard`, `GamepadTwoStepConfirmCard`) persist `isAdjusting` / `isConfirming` via `rememberSaveable`, and `GamepadFocusCard` guards `LaunchedEffect(isFocused)` with `hasBeenFocused` so the initial unattached `isFocused == false` state on remount does not clear a restored `isAdjusting = true` state.
+
+### 5.3 Universal Focus Recovery Dispatcher & Window Attachment
 
 If pointer interaction, empty dynamic items, or dialog dismissal leaves Compose without an active focused node:
 1. Subsequent hardware inputs (D-Pad, Stick motion, Button A) fail standard view consumption.

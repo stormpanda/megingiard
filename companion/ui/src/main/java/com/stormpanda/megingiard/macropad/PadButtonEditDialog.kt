@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.MPE_CANVAS_HEIGHT_PX
 import com.stormpanda.megingiard.math.MPE_CANVAS_WIDTH_PX
@@ -398,8 +399,9 @@ internal fun EditButtonSubPageContent(
     onOpenGamepadPicker: ((currentDraft: PadButton, slotIndex: Int) -> Unit)? = null,
     onOpenMousePicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenMirrorPicker: ((currentDraft: PadButton) -> Unit)? = null,
-    onOpenOverlayPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenToolsPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenLayoutPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenMediaPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenMacroPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onDuplicate: ((PadButton) -> Unit)? = null,
     onCopyToLayout: ((PadButton) -> Unit)? = null,
@@ -468,6 +470,28 @@ internal fun EditButtonSubPageContent(
 
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val macros = profile?.macros ?: emptyList()
+    val layouts = profile?.layouts ?: emptyList()
+    val recordedTap by TouchRecordingManager.recordedTap.collectAsStateWithLifecycle()
+    val touchRecordingState by TouchRecordingManager.state.collectAsStateWithLifecycle()
+    val recordingRequested by TouchRecordingManager.recordingRequested.collectAsStateWithLifecycle()
+    val awaitingButtonTap by MacroPadNavState.awaitingButtonTapRecording.collectAsStateWithLifecycle()
+
+    LaunchedEffect(recordedTap, awaitingButtonTap, touchRecordingState, recordingRequested) {
+        if (!awaitingButtonTap) return@LaunchedEffect
+        val tap = recordedTap
+        if (tap != null) {
+            MacroPadNavState.setAwaitingButtonTapRecording(false)
+            TouchRecordingManager.consumeRecordedTap()
+            TouchRecordingManager.resetState()
+            if (action is PadAction.TouchTap) {
+                val (rx, ry) = tap
+                AppLog.i(TAG, "Recorded touch tap applied to button: normX=$rx normY=$ry")
+                action = PadAction.TouchTap(normX = rx, normY = ry)
+            }
+        } else if (!recordingRequested && touchRecordingState is TouchRecordingState.Idle) {
+            MacroPadNavState.setAwaitingButtonTapRecording(false)
+        }
+    }
 
     LaunchedEffect(macros) {
         val currentAction = action
@@ -475,6 +499,16 @@ internal fun EditButtonSubPageContent(
             val macroExists = macros.any { it.id == currentAction.macroId }
             if (!macroExists) {
                 action = initAction
+            }
+        }
+    }
+
+    LaunchedEffect(layouts) {
+        val currentAction = action
+        if (currentAction is PadAction.SwitchToLayout && layouts.isNotEmpty()) {
+            val layoutExists = layouts.any { it.id == currentAction.layoutId }
+            if (!layoutExists) {
+                action = currentAction.copy(layoutId = layouts.first().id)
             }
         }
     }
@@ -559,10 +593,26 @@ internal fun EditButtonSubPageContent(
 
     val isConfirmEnabled =
         when {
-            action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> true
-            action is PadAction.AppLauncher -> (action as PadAction.AppLauncher).packageName.isNotBlank() && label.isNotBlank()
-            action is PadAction.Macro -> label.isNotBlank() && macros.any { it.id == (action as PadAction.Macro).macroId }
-            else -> label.isNotBlank()
+            action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> {
+                true
+            }
+
+            action is PadAction.AppLauncher -> {
+                (action as PadAction.AppLauncher).packageName.isNotBlank() && label.isNotBlank()
+            }
+
+            action is PadAction.Macro -> {
+                label.isNotBlank() && macros.any { it.id == (action as PadAction.Macro).macroId }
+            }
+
+            action is PadAction.SwitchToLayout -> {
+                label.isNotBlank() &&
+                    layouts.any { it.id == (action as PadAction.SwitchToLayout).layoutId }
+            }
+
+            else -> {
+                label.isNotBlank()
+            }
         }
 
     val isNew = savedButton == null
@@ -654,11 +704,20 @@ internal fun EditButtonSubPageContent(
         onOpenMirrorPicker = {
             onOpenMirrorPicker?.invoke(currentButton)
         },
-        onOpenOverlayPicker = {
-            onOpenOverlayPicker?.invoke(currentButton)
+        onOpenToolsPicker = {
+            onOpenToolsPicker?.invoke(currentButton)
         },
         onOpenLayoutPicker = {
             onOpenLayoutPicker?.invoke(currentButton)
+        },
+        onOpenMediaPicker = {
+            onOpenMediaPicker?.invoke(currentButton)
+        },
+        onRecordTouchTap = {
+            MacroPadNavState.setButtonDraft(currentButton)
+            AppStateManager.suspendCurrentAndDismiss()
+            TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
+            MacroPadNavState.setAwaitingButtonTapRecording(true)
         },
         onChange = ::onActionChanged,
     )

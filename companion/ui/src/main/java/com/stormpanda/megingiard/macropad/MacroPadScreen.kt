@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -330,6 +331,25 @@ internal fun PadSurface(
             )
         }
 
+    val currentLayout by rememberUpdatedState(layout)
+    val currentBgTouchpadActive by rememberUpdatedState(bgTouchpadActive)
+    val currentBgTouchpadProcessor by rememberUpdatedState(bgTouchpadProcessor)
+    val currentIsPeekActive by rememberUpdatedState(isPeekActive)
+
+    DisposableEffect(engine) {
+        onDispose {
+            AppLog.d(TAG, "Disposing PadSurface hit-test engine for layout=${currentLayout.id}")
+            engine.releaseAll(currentLayout.buttons)
+        }
+    }
+
+    DisposableEffect(bgTouchpadProcessor) {
+        onDispose {
+            AppLog.d(TAG, "Disposing bgTouchpadProcessor for layout=${currentLayout.id}")
+            bgTouchpadProcessor.onCancel()
+        }
+    }
+
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier.fillMaxSize(),
@@ -342,9 +362,7 @@ internal fun PadSurface(
                     .background(if (transparentBackground) Color.Transparent else Color.Black)
                     .onSizeChanged { canvasSizeState.value = it }
                     .pointerInput(
-                        layout,
                         canvasSizeState.value,
-                        bgTouchpadActive,
                         isTouchProjectionActive,
                         overlayAtBottom,
                         edgeZonePx,
@@ -357,6 +375,9 @@ internal fun PadSurface(
                                     val canvasSize = canvasSizeState.value
                                     val w = canvasSize.width.toFloat().coerceAtLeast(1f)
                                     val h = canvasSize.height.toFloat().coerceAtLeast(1f)
+                                    val activeLayout = currentLayout
+                                    val activeBgTouchpad = currentBgTouchpadActive
+                                    val activeBgProcessor = currentBgTouchpadProcessor
 
                                     // Block input while quick menu overlay is open
                                     if (AppStateManager.isQuickMenuOpen.value && event.type != PointerEventType.Release) {
@@ -371,10 +392,10 @@ internal fun PadSurface(
                                         // even if another component has consumed the event.
                                         if (!change.pressed && change.previousPressed) {
                                             if (engine.isPointerTracked(id)) {
-                                                engine.onRelease(id, layout.buttons)
+                                                engine.onRelease(id, activeLayout.buttons)
                                                 change.consume()
                                             } else if (InteractiveCutoutController.isPointerTracked(id)) {
-                                                InteractiveCutoutController.onRelease(id, layout.mirrorCutouts)
+                                                InteractiveCutoutController.onRelease(id, activeLayout.mirrorCutouts)
                                                 change.consume()
                                             } else if (isTouchProjectionActive) {
                                                 projectionController.onRelease(
@@ -384,10 +405,10 @@ internal fun PadSurface(
                                                     boxW = w,
                                                     boxH = h,
                                                 )
-                                            } else if (bgTouchpadActive) {
-                                                bgTouchpadProcessor.onRelease(id, change.position.x, change.position.y, w, h)
+                                            } else if (activeBgTouchpad) {
+                                                activeBgProcessor.onRelease(id, change.position.x, change.position.y, w, h)
                                                 change.consume()
-                                            } else if (layout.isEmpty()) {
+                                            } else if (activeLayout.isEmpty()) {
                                                 val start = pointerStartPos
                                                 if (start != null) {
                                                     val dx = change.position.x - start.x
@@ -416,7 +437,7 @@ internal fun PadSurface(
                                         when (event.type) {
                                             PointerEventType.Press -> {
                                                 if (!change.previousPressed) {
-                                                    if (layout.isEmpty()) {
+                                                    if (activeLayout.isEmpty()) {
                                                         pointerStartPos = change.position
                                                     }
                                                     if (
@@ -426,8 +447,8 @@ internal fun PadSurface(
                                                             change.position.y,
                                                             w,
                                                             h,
-                                                            layout.buttons,
-                                                            isPeekActive,
+                                                            activeLayout.buttons,
+                                                            currentIsPeekActive,
                                                         )
                                                     ) {
                                                         change.consume()
@@ -455,12 +476,12 @@ internal fun PadSurface(
                                                             yPx = change.position.y,
                                                             boxW = w,
                                                             boxH = h,
-                                                            cutouts = layout.mirrorCutouts,
+                                                            cutouts = activeLayout.mirrorCutouts,
                                                         )
                                                     ) {
                                                         change.consume()
-                                                    } else if (bgTouchpadActive) {
-                                                        bgTouchpadProcessor.onPress(
+                                                    } else if (activeBgTouchpad) {
+                                                        activeBgProcessor.onPress(
                                                             id,
                                                             change.position.x,
                                                             change.position.y,
@@ -481,7 +502,7 @@ internal fun PadSurface(
                                                         change.position.y,
                                                         delta.x,
                                                         delta.y,
-                                                        layout.buttons,
+                                                        activeLayout.buttons,
                                                     )
                                                     change.consume()
                                                 } else if (InteractiveCutoutController.isPointerTracked(id)) {
@@ -491,7 +512,7 @@ internal fun PadSurface(
                                                         yPx = change.position.y,
                                                         boxW = w,
                                                         boxH = h,
-                                                        cutouts = layout.mirrorCutouts,
+                                                        cutouts = activeLayout.mirrorCutouts,
                                                     )
                                                     change.consume()
                                                 } else if (isTouchProjectionActive) {
@@ -503,9 +524,9 @@ internal fun PadSurface(
                                                         boxH = h,
                                                         isConsumed = change.isConsumed,
                                                     )
-                                                } else if (bgTouchpadActive) {
+                                                } else if (activeBgTouchpad) {
                                                     val delta = change.positionChange()
-                                                    bgTouchpadProcessor.onMove(
+                                                    activeBgProcessor.onMove(
                                                         id,
                                                         change.position.x,
                                                         change.position.y,
@@ -526,13 +547,13 @@ internal fun PadSurface(
                                 }
                             }
                         } finally {
-                            engine.releaseAll(layout.buttons)
+                            engine.releaseAll(currentLayout.buttons)
                             InteractiveCutoutController.cancelAllAnimations()
                             if (isTouchProjectionActive) {
                                 projectionController.reset()
                             }
-                            if (bgTouchpadActive) {
-                                bgTouchpadProcessor.onCancel()
+                            if (currentBgTouchpadActive) {
+                                currentBgTouchpadProcessor.onCancel()
                             }
                         }
                     },

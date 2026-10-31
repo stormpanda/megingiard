@@ -65,6 +65,25 @@ class PrimaryOverlayActivity : ComponentActivity() {
         }
     }
 
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        notifyPrimaryOverlayTouchEvent(ev)
+        return super.dispatchTouchEvent(ev)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && isGamepadNavigationKey(event.keyCode)) {
+            PrimaryOverlayInputBridge.notifyGamepadInput()
+        }
+        if (super.dispatchKeyEvent(event)) {
+            return true
+        }
+        if (event.action == KeyEvent.ACTION_DOWN && isDirectionalDpadKey(event.keyCode)) {
+            PrimaryOverlayInputBridge.sendFocusRecovery(event.keyCode)
+            return true
+        }
+        return false
+    }
+
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
         if (dispatchPrimaryOverlayGenericMotionEvent(event, ::dispatchKeyEvent)) {
             return true
@@ -101,6 +120,7 @@ class PrimaryOverlayActivity : ComponentActivity() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: isFinishing=$isFinishing")
         if (isFinishing) {
+            PrimaryOverlayInputBridge.resetJoystickState()
             AppStateManager.closePrimaryModal()
             AppStateManager.setActiveCropCutoutId(null)
             wasFrozenForModal = releasePrimaryOverlayMirrorFreeze(wasFrozenForModal)

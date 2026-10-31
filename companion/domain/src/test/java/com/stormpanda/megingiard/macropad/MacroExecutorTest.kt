@@ -47,12 +47,14 @@ class MacroExecutorTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         PrivdClient.isConnectedForTest = true
+        PrivdClient.clearQueueForTest()
         MacroExecutor.setRunningMacroIdsForTest(emptySet())
     }
 
     @After
     fun tearDown() {
         MacroExecutor.stopAll()
+        PrivdClient.clearQueueForTest()
         PrivdClient.isConnectedForTest = null
         Dispatchers.resetMain()
     }
@@ -200,5 +202,56 @@ class MacroExecutorTest {
 
             assertEquals("l2", MacroPadState.activeProfile.value?.activeLayoutId)
             assertTrue(MacroExecutor.isRunning(macro.id))
+        }
+
+    @Test
+    fun testStopAllReleasesOnlyMacroTouchSlotsPreservingHeldTouchTapSlot() =
+        runBlocking {
+            val touchMacro =
+                Macro(
+                    id = "touch-hold-macro",
+                    name = "Touch Hold Macro",
+                    steps =
+                        listOf(
+                            MacroStep.TouchTap(
+                                startTimeMs = 0L,
+                                durationMs = 500L,
+                                normX = 0.25f,
+                                normY = 0.25f,
+                            ),
+                        ),
+                )
+            PrivdClient.clearQueueForTest()
+
+            MacroExecutor.execute(touchMacro)
+            assertTrue(waitUntil(500) { MacroExecutor.isRunning(touchMacro.id) && PrivdClient.queueSizeForTest > 0 })
+
+            // Drain initial macro TOUCH_DOWN on slot 0, then simulate a concurrently held TouchTap button on slot 8
+            val downCommands =
+                buildList {
+                    while (true) {
+                        val cmd = PrivdClient.pollCommandForTest() ?: break
+                        add(cmd)
+                    }
+                }
+            assertTrue("Expected macro DOWN on slot 0, got $downCommands", downCommands.any { it.startsWith("D 0 ") })
+
+            injectActionDown(PadAction.TouchTap(normX = 0.75f, normY = 0.75f), touchSlot = MP_TOUCH_TAP_SLOT)
+            val buttonDown = PrivdClient.pollCommandForTest()
+            assertTrue("Expected button TouchTap DOWN on slot 8, got $buttonDown", buttonDown?.startsWith("D 8 ") == true)
+
+            // Stopping all macros must release slot 0 without nuking held TouchTap slot 8
+            MacroExecutor.stopAll()
+            assertTrue(waitUntil(500) { !MacroExecutor.isRunning(touchMacro.id) })
+
+            val cleanupCommands =
+                buildList {
+                    while (true) {
+                        val cmd = PrivdClient.pollCommandForTest() ?: break
+                        add(cmd)
+                    }
+                }
+            assertTrue("Expected macro cleanup to send U 0, got $cleanupCommands", "U 0\n" in cleanupCommands)
+            assertFalse("Macro cleanup must not release held TouchTap slot 8, got $cleanupCommands", "U 8\n" in cleanupCommands)
         }
 }
