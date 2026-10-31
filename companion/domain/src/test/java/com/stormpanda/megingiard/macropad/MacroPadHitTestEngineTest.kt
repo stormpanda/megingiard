@@ -2,6 +2,11 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.privd.PrivdClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -11,7 +16,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MacroPadHitTestEngineTest {
+    private val testDispatcher = UnconfinedTestDispatcher()
     private val engine = MacroPadHitTestEngine(buttonUnitDpToPx = { it })
     private val canvasW = 1000f
     private val canvasH = 1000f
@@ -48,6 +55,7 @@ class MacroPadHitTestEngineTest {
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         PrivdClient.isConnectedForTest = true
         PrivdClient.clearQueueForTest()
     }
@@ -56,6 +64,7 @@ class MacroPadHitTestEngineTest {
     fun tearDown() {
         PrivdClient.clearQueueForTest()
         PrivdClient.isConnectedForTest = null
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -342,6 +351,64 @@ class MacroPadHitTestEngineTest {
                 }
             }
         assertEquals(setOf("U 8\n", "U 9\n"), releasedCommands.toSet())
+        assertTrue(engine.pressedIds.value.isEmpty())
+    }
+
+    @Test
+    fun `multi-pointer press on same HoldToShift button pops all stacked entries on releaseAll`() {
+        val baseLayout = PadLayout(id = "l-base", name = "Base")
+        val shiftBtn =
+            centeredButton(
+                PadAction.SwitchToLayout(layoutId = "l-shift", holdToShift = true),
+            ).copy(id = "btn-hold-shift")
+        val shiftLayout = PadLayout(id = "l-shift", name = "Shift", buttons = listOf(shiftBtn))
+        val profile =
+            PadProfile(
+                id = "p-shift",
+                name = "ShiftProfile",
+                layouts = listOf(baseLayout, shiftLayout),
+                activeLayoutId = "l-base",
+            )
+        MacroPadState.loadFrom(listOf(profile), "p-shift")
+
+        // Two pointers press the same Hold-to-Shift button -> stack depth becomes 2
+        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, listOf(shiftBtn), false))
+        assertTrue(engine.onPress(2L, 505f, 505f, canvasW, canvasH, listOf(shiftBtn), false))
+        assertEquals("l-shift", MacroPadState.activeLayout.value?.id)
+
+        // releaseAll must pop both Hold-to-Shift entries and restore the base layout
+        engine.releaseAll(listOf(shiftBtn))
+        assertEquals("l-base", MacroPadState.activeLayout.value?.id)
+        assertTrue(engine.pressedIds.value.isEmpty())
+    }
+
+    @Test
+    fun `multi-pointer press on same KeyboardKey button keeps key held until last pointer lifts`() {
+        val keyBtn =
+            centeredButton(
+                PadAction.KeyboardKey(keycode = 30, label = "A"),
+            ).copy(id = "btn-key-a")
+        val buttons = listOf(keyBtn)
+
+        // First pointer presses -> sends KD 30
+        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, buttons, false))
+        assertEquals("KD 30\n", PrivdClient.pollCommandForTest())
+        assertNull(PrivdClient.pollCommandForTest())
+
+        // Second pointer presses same button -> stays pressed without duplicate KD 30
+        assertTrue(engine.onPress(2L, 505f, 505f, canvasW, canvasH, buttons, false))
+        assertNull(PrivdClient.pollCommandForTest())
+        assertEquals(setOf("btn-key-a"), engine.pressedIds.value)
+
+        // First pointer lifts while second still holds -> key stays held (no premature KU 30)
+        engine.onRelease(1L, buttons)
+        assertNull(PrivdClient.pollCommandForTest())
+        assertEquals(setOf("btn-key-a"), engine.pressedIds.value)
+
+        // Second pointer lifts -> sends KU 30 and clears pressedIds
+        engine.onRelease(2L, buttons)
+        assertEquals("KU 30\n", PrivdClient.pollCommandForTest())
+        assertNull(PrivdClient.pollCommandForTest())
         assertTrue(engine.pressedIds.value.isEmpty())
     }
 }

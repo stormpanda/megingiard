@@ -1190,7 +1190,29 @@ class MacroPadStateTest {
         val targetAfterButtonCopy = MacroPadState.profiles.value.first { it.id == "p2" }
         val mainLayout = targetAfterButtonCopy.layouts.first { it.id == "l2-main" }
         val copiedButtonAction = mainLayout.buttons.single().action as PadAction.SwitchToLayout
-        assertEquals("l2-main", copiedButtonAction.layoutId)
+        assertEquals(copiedLayoutId, copiedButtonAction.layoutId)
+
+        // Single-layout target profile falls back cleanly to that sole layout; stale activeLayoutId falls back to first layout
+        val l3 = testLayout(id = "l3-only", name = "TargetOnly")
+        val p3 = testProfile(id = "p3", name = "Profile3", layouts = listOf(l3), activeLayoutId = "stale-nonexistent-id")
+        MacroPadState.addProfile(p3)
+
+        MacroPadState.copyButtonToLayout(otherSwitchBtn, "p1", "p3", "l3-only")
+        val p3AfterButtonCopy = MacroPadState.profiles.value.first { it.id == "p3" }
+        val l3ButtonAction =
+            p3AfterButtonCopy.layouts
+                .first { it.id == "l3-only" }
+                .buttons
+                .single()
+                .action as PadAction.SwitchToLayout
+        assertEquals("l3-only", l3ButtonAction.layoutId)
+
+        val p3CopiedLayoutId = MacroPadState.copyLayoutToProfile(l1a, "p1", "p3")
+        assertNotNull(p3CopiedLayoutId)
+        val p3AfterLayoutCopy = MacroPadState.profiles.value.first { it.id == "p3" }
+        val p3CopiedLayout = p3AfterLayoutCopy.layouts.first { it.id == p3CopiedLayoutId }
+        val p3FallbackAction = p3CopiedLayout.buttons[1].action as PadAction.SwitchToLayout
+        assertEquals("l3-only", p3FallbackAction.layoutId)
     }
 
     @Test

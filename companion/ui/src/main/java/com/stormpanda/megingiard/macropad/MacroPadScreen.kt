@@ -338,6 +338,7 @@ internal fun PadSurface(
 
     DisposableEffect(engine) {
         onDispose {
+            AppLog.d(TAG, "Disposing PadSurface hit-test engine for layout=${currentLayout.id}")
             engine.releaseAll(currentLayout.buttons)
         }
     }

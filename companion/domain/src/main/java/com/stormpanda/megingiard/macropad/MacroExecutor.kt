@@ -272,8 +272,8 @@ object MacroExecutor {
                 GamepadInjector.hat(axis = 0, value = 0)
                 GamepadInjector.hat(axis = 1, value = 0)
             }
-            if (activeTouchSlots.isNotEmpty()) {
-                TouchInjector.releaseAllSlots()
+            activeTouchSlots.forEach { slot ->
+                TouchInjector.injectTouch(slot, TouchAction.UP, 0f, 0f)
             }
             // Race-safe state cleanup: only remove our map entry and running-ID if this job is
             // still the one registered for this macro. A rapid execute()→execute() restart

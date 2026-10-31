@@ -21,6 +21,23 @@ private const val MP_SCROLL_SENSITIVITY_PX = 12f
 private const val LOGICAL_SCREEN_WIDTH = 1920f
 private const val LOGICAL_SCREEN_HEIGHT = 1080f
 
+private data class ActiveTouchRelease(
+    val buttonId: String,
+    val slot: Int,
+    val action: PadAction.TouchTap,
+)
+
+private data class ActiveShiftRelease(
+    val buttonId: String,
+    val action: PadAction.SwitchToLayout,
+)
+
+private fun PadAction.isSingleChannelHoldAction(): Boolean =
+    this is PadAction.KeyboardKey ||
+        this is PadAction.GamepadButton ||
+        this is PadAction.MouseButton ||
+        this is PadAction.MediaControl
+
 /**
  * Hit-test engine and multi-touch dispatch for MacroPad use-mode.
  *
@@ -148,6 +165,10 @@ class MacroPadHitTestEngine(
         val hitList = if (isPeekActive) buttons.filter { it.action is PadAction.BackgroundPeek } else buttons
         val hitButton = hitList.firstOrNull { btn -> isPointInsideButton(btn, px, py, canvasW, canvasH) } ?: return false
 
+        val wasAlreadyHeldByPointer =
+            pointerMap.entries.any { (existingPointerId, buttonId) ->
+                existingPointerId != pointerId && buttonId == hitButton.id
+            }
         pointerMap[pointerId] = hitButton.id
         pointerButtonMap[pointerId] = hitButton
         when {
@@ -157,7 +178,7 @@ class MacroPadHitTestEngine(
 
             hitButton.action is PadAction.TrackpointMove -> {
                 val tpAction = hitButton.action as PadAction.TrackpointMove
-                if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
+                if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH && !wasAlreadyHeldByPointer) {
                     unclampedCursorX = virtualCursorX
                     unclampedCursorY = virtualCursorY
                     lastDxSign = 0f
@@ -189,7 +210,9 @@ class MacroPadHitTestEngine(
 
             else -> {
                 _pressedIds.value = _pressedIds.value + hitButton.id
-                injectActionDown(hitButton.action)
+                if (!hitButton.action.isSingleChannelHoldAction() || !wasAlreadyHeldByPointer) {
+                    injectActionDown(hitButton.action)
+                }
                 triggerHaptic(hitButton)
             }
         }
@@ -310,10 +333,12 @@ class MacroPadHitTestEngine(
         val touchSlot = pointerTouchSlotMap.remove(pointerId)
         val btn = buttons.firstOrNull { it.id == mapped } ?: cachedBtn ?: return
 
+        val isLastPointerOnButton = pointerMap.values.none { it == mapped }
+
         when {
             btn.action is PadAction.TrackpointMove -> {
                 val tpAction = btn.action as PadAction.TrackpointMove
-                if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
+                if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH && isLastPointerOnButton) {
                     TouchInjector.injectTouch(TouchAction.UP, unclampedCursorX, unclampedCursorY)
                 }
             }
@@ -323,7 +348,7 @@ class MacroPadHitTestEngine(
             }
 
             btn.action is PadAction.TouchTap -> {
-                if (pointerMap.values.none { it == mapped }) {
+                if (isLastPointerOnButton) {
                     _pressedIds.value = _pressedIds.value - mapped
                 }
                 if (touchSlot != null) {
@@ -331,11 +356,20 @@ class MacroPadHitTestEngine(
                 }
             }
 
-            else -> {
-                if (pointerMap.values.none { it == mapped }) {
+            btn.action is PadAction.SwitchToLayout -> {
+                if (isLastPointerOnButton) {
                     _pressedIds.value = _pressedIds.value - mapped
                 }
                 injectActionUp(btn.action)
+            }
+
+            else -> {
+                if (isLastPointerOnButton) {
+                    _pressedIds.value = _pressedIds.value - mapped
+                }
+                if (!btn.action.isSingleChannelHoldAction() || isLastPointerOnButton) {
+                    injectActionUp(btn.action)
+                }
             }
         }
     }
@@ -363,8 +397,26 @@ class MacroPadHitTestEngine(
                 val buttonId = pointerMap[pid] ?: return@mapNotNull null
                 val btn = buttons.firstOrNull { it.id == buttonId } ?: pointerButtonMap[pid]
                 val tapAction = btn?.action as? PadAction.TouchTap ?: return@mapNotNull null
-                Triple(buttonId, slot, tapAction)
+                ActiveTouchRelease(buttonId = buttonId, slot = slot, action = tapAction)
             }
+        val pointerShiftReleases =
+            pointerMap.entries.mapNotNull { (pid, buttonId) ->
+                val btn = buttons.firstOrNull { it.id == buttonId } ?: pointerButtonMap[pid]
+                val shiftAction =
+                    (btn?.action as? PadAction.SwitchToLayout)?.takeIf { it.holdToShift }
+                        ?: return@mapNotNull null
+                ActiveShiftRelease(buttonId = buttonId, action = shiftAction)
+            }
+        val pointerShiftButtonIds = pointerShiftReleases.map { it.buttonId }.toSet()
+        val fallbackShiftReleases =
+            (activeIds - pointerShiftButtonIds).mapNotNull { buttonId ->
+                val btn = buttons.firstOrNull { it.id == buttonId } ?: cachedButtonsById[buttonId]
+                val shiftAction =
+                    (btn?.action as? PadAction.SwitchToLayout)?.takeIf { it.holdToShift }
+                        ?: return@mapNotNull null
+                ActiveShiftRelease(buttonId = buttonId, action = shiftAction)
+            }
+        val activeShiftReleases = pointerShiftReleases + fallbackShiftReleases
         val allActiveIds = activeIds + pointerMappedIds
 
         _pressedIds.value = emptySet()
@@ -382,8 +434,13 @@ class MacroPadHitTestEngine(
         lastDySign = 0f
 
         activeTouchReleases.forEach { release ->
-            AppLog.d(TAG, "Releasing TouchTap button=${release.first} slot=${release.second} due to gesture cancellation")
-            injectActionUp(release.third, touchSlot = release.second)
+            AppLog.d(TAG, "Releasing TouchTap button=${release.buttonId} slot=${release.slot} due to gesture cancellation")
+            injectActionUp(release.action, touchSlot = release.slot)
+        }
+
+        activeShiftReleases.forEach { release ->
+            AppLog.d(TAG, "Releasing HoldToShift button=${release.buttonId} target=${release.action.layoutId} due to gesture cancellation")
+            injectActionUp(release.action)
         }
 
         allActiveIds.forEach { buttonId ->
@@ -398,8 +455,10 @@ class MacroPadHitTestEngine(
                         }
                     }
 
-                    btn.action is PadAction.ScrollWheel || btn.action is PadAction.TouchTap -> {
-                        // ScrollWheel is no-op; TouchTap is released per active slot above
+                    btn.action is PadAction.ScrollWheel ||
+                        btn.action is PadAction.TouchTap ||
+                        btn.action is PadAction.SwitchToLayout -> {
+                        // ScrollWheel is no-op; TouchTap and SwitchToLayout are released per active pointer above
                     }
 
                     else -> {
