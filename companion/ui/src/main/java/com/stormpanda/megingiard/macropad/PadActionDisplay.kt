@@ -417,6 +417,7 @@ internal fun ActionCategory.isAvailable(hasMacros: Boolean): Boolean =
 internal fun PadAction.displayLabel(): String {
     val context = LocalContext.current
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     return when (this) {
         is PadAction.KeyboardKey -> {
             val modLabel =
@@ -430,7 +431,7 @@ internal fun PadAction.displayLabel(): String {
                             }.joinToString("+")
                     "$modNames+$label"
                 }
-            context.getString(R.string.macropad_display_keyboard_key, modLabel)
+            stringResource(R.string.macropad_display_keyboard_key, modLabel)
         }
 
         is PadAction.GamepadButton -> {
@@ -450,101 +451,101 @@ internal fun PadAction.displayLabel(): String {
                             }.joinToString("+")
                     "$primaryLabel+$extraNames"
                 }
-            context.getString(R.string.macropad_display_gamepad_button, comboLabel)
+            stringResource(R.string.macropad_display_gamepad_button, comboLabel)
         }
 
         is PadAction.MouseButton -> {
-            context.getString(R.string.macropad_display_mouse_button, button.displayLabel)
+            stringResource(R.string.macropad_display_mouse_button, button.displayLabel)
         }
 
         is PadAction.ScrollWheel -> {
-            context.getString(R.string.macropad_display_scroll_wheel)
+            stringResource(R.string.macropad_display_scroll_wheel)
         }
 
         is PadAction.TrackpointMove -> {
-            context.getString(R.string.macropad_display_trackpoint)
+            stringResource(R.string.macropad_display_trackpoint)
         }
 
         is PadAction.Macro -> {
             val macroName =
-                MacroPadState.activeProfile.value
+                activeProfile
                     ?.macros
                     ?.firstOrNull { it.id == macroId }
                     ?.name ?: macroId
-            context.getString(R.string.macropad_display_macro, macroName)
+            stringResource(R.string.macropad_display_macro, macroName)
         }
 
         is PadAction.BackgroundPeek -> {
-            context.getString(R.string.macropad_action_ambient_peek)
+            stringResource(R.string.macropad_action_ambient_peek)
         }
 
         is PadAction.LayoutNext -> {
-            context.getString(R.string.macropad_action_layout_next)
+            stringResource(R.string.macropad_action_layout_next)
         }
 
         is PadAction.LayoutPrevious -> {
-            context.getString(R.string.macropad_action_layout_previous)
+            stringResource(R.string.macropad_action_layout_previous)
         }
 
         is PadAction.SwitchToLayout -> {
             val layoutName =
-                MacroPadState.activeProfile.value
+                activeProfile
                     ?.layouts
                     ?.firstOrNull { it.id == layoutId }
                     ?.name
             if (layoutName != null) {
-                context.getString(R.string.macropad_display_switch_to_layout, layoutName)
+                stringResource(R.string.macropad_display_switch_to_layout, layoutName)
             } else {
-                context.getString(R.string.macropad_action_switch_to_layout)
+                stringResource(R.string.macropad_action_switch_to_layout)
             }
         }
 
         is PadAction.ProfileSwitcher -> {
-            context.getString(R.string.macropad_action_profile_switcher)
+            stringResource(R.string.macropad_action_profile_switcher)
         }
 
         is PadAction.SwitchToHub -> {
-            context.getString(R.string.macropad_action_switch_to_hub)
+            stringResource(R.string.macropad_action_switch_to_hub)
         }
 
         is PadAction.MirrorPlayStop -> {
-            context.getString(R.string.macropad_action_mirror_play_stop)
+            stringResource(R.string.macropad_action_mirror_play_stop)
         }
 
         is PadAction.MirrorFreeze -> {
-            context.getString(R.string.macropad_action_mirror_freeze)
+            stringResource(R.string.macropad_action_mirror_freeze)
         }
 
         is PadAction.MirrorViewportEdit -> {
-            context.getString(R.string.macropad_action_mirror_viewport_edit)
+            stringResource(R.string.macropad_action_mirror_viewport_edit)
         }
 
         is PadAction.MirrorTouchProjection -> {
-            context.getString(R.string.macropad_action_mirror_touch_projection)
+            stringResource(R.string.macropad_action_mirror_touch_projection)
         }
 
         is PadAction.FullScreenMouse -> {
-            context.getString(R.string.macropad_action_fullscreen_mouse)
+            stringResource(R.string.macropad_action_fullscreen_mouse)
         }
 
         is PadAction.FullScreenKeyboard -> {
-            context.getString(R.string.macropad_action_fullscreen_keyboard)
+            stringResource(R.string.macropad_action_fullscreen_keyboard)
         }
 
         is PadAction.Screenshot -> {
             when (target) {
-                ScreenshotTarget.TOP -> context.getString(R.string.macropad_action_screenshot_top)
-                ScreenshotTarget.BOTTOM -> context.getString(R.string.macropad_action_screenshot_bottom)
-                ScreenshotTarget.BOTH -> context.getString(R.string.macropad_action_screenshot_both)
+                ScreenshotTarget.TOP -> stringResource(R.string.macropad_action_screenshot_top)
+                ScreenshotTarget.BOTTOM -> stringResource(R.string.macropad_action_screenshot_bottom)
+                ScreenshotTarget.BOTH -> stringResource(R.string.macropad_action_screenshot_both)
             }
         }
 
         is PadAction.StopAllMacros -> {
-            context.getString(R.string.macropad_action_stop_all_macros)
+            stringResource(R.string.macropad_action_stop_all_macros)
         }
 
         is PadAction.TouchTap -> {
-            context.getString(
+            stringResource(
                 R.string.macropad_display_touch_tap,
                 (normX * PAD_PERCENT_MULTIPLIER).roundToInt(),
                 (normY * PAD_PERCENT_MULTIPLIER).roundToInt(),
@@ -553,20 +554,20 @@ internal fun PadAction.displayLabel(): String {
 
         is PadAction.MediaControl -> {
             when (mediaAction) {
-                MediaControlAction.PLAY_PAUSE -> context.getString(R.string.macropad_action_media_play_pause)
-                MediaControlAction.NEXT_TRACK -> context.getString(R.string.macropad_action_media_next_track)
-                MediaControlAction.PREVIOUS_TRACK -> context.getString(R.string.macropad_action_media_previous_track)
-                MediaControlAction.STOP -> context.getString(R.string.macropad_action_media_stop)
-                MediaControlAction.MUTE -> context.getString(R.string.macropad_action_media_mute)
+                MediaControlAction.PLAY_PAUSE -> stringResource(R.string.macropad_action_media_play_pause)
+                MediaControlAction.NEXT_TRACK -> stringResource(R.string.macropad_action_media_next_track)
+                MediaControlAction.PREVIOUS_TRACK -> stringResource(R.string.macropad_action_media_previous_track)
+                MediaControlAction.STOP -> stringResource(R.string.macropad_action_media_stop)
+                MediaControlAction.MUTE -> stringResource(R.string.macropad_action_media_mute)
             }
         }
 
         is PadAction.AppLauncher -> {
             val name = resolveAppName(context, packageName)
             if (name.isNotBlank()) {
-                context.getString(R.string.app_launcher_button_label_format, name)
+                stringResource(R.string.app_launcher_button_label_format, name)
             } else {
-                context.getString(R.string.app_launcher_picker_select_app)
+                stringResource(R.string.app_launcher_picker_select_app)
             }
         }
     }

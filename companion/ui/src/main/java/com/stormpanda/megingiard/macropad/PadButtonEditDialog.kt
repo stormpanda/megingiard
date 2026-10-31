@@ -472,15 +472,24 @@ internal fun EditButtonSubPageContent(
     val macros = profile?.macros ?: emptyList()
     val layouts = profile?.layouts ?: emptyList()
     val recordedTap by TouchRecordingManager.recordedTap.collectAsStateWithLifecycle()
+    val touchRecordingState by TouchRecordingManager.state.collectAsStateWithLifecycle()
+    val recordingRequested by TouchRecordingManager.recordingRequested.collectAsStateWithLifecycle()
+    val awaitingButtonTap by MacroPadNavState.awaitingButtonTapRecording.collectAsStateWithLifecycle()
 
-    LaunchedEffect(recordedTap) {
-        val tap = recordedTap ?: return@LaunchedEffect
-        if (action is PadAction.TouchTap) {
-            val (rx, ry) = tap
+    LaunchedEffect(recordedTap, awaitingButtonTap, touchRecordingState, recordingRequested) {
+        if (!awaitingButtonTap) return@LaunchedEffect
+        val tap = recordedTap
+        if (tap != null) {
+            MacroPadNavState.setAwaitingButtonTapRecording(false)
             TouchRecordingManager.consumeRecordedTap()
             TouchRecordingManager.resetState()
-            AppLog.i(TAG, "Recorded touch tap applied to button: normX=$rx normY=$ry")
-            action = PadAction.TouchTap(normX = rx, normY = ry)
+            if (action is PadAction.TouchTap) {
+                val (rx, ry) = tap
+                AppLog.i(TAG, "Recorded touch tap applied to button: normX=$rx normY=$ry")
+                action = PadAction.TouchTap(normX = rx, normY = ry)
+            }
+        } else if (!recordingRequested && touchRecordingState is TouchRecordingState.Idle) {
+            MacroPadNavState.setAwaitingButtonTapRecording(false)
         }
     }
 
@@ -708,6 +717,7 @@ internal fun EditButtonSubPageContent(
             MacroPadNavState.setButtonDraft(currentButton)
             AppStateManager.suspendCurrentAndDismiss()
             TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
+            MacroPadNavState.setAwaitingButtonTapRecording(true)
         },
         onChange = ::onActionChanged,
     )

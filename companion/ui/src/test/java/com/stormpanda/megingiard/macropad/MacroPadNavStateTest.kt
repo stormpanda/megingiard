@@ -331,4 +331,42 @@ class MacroPadNavStateTest {
         assertEquals("My Custom App", MacroPadNavState.buttonDraft.value?.label)
         assertEquals(PadAction.AppLauncher("com.custom.app"), MacroPadNavState.buttonDraft.value?.action)
     }
+
+    @Test
+    fun `awaitingButtonTapRecording tracks intent and resets on null draft section switch and reset`() {
+        val draft =
+            PadButton(
+                id = "btn-tap-1",
+                label = "Tap",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.TouchTap(normX = 0.2f, normY = 0.8f),
+            )
+        assertFalse(MacroPadNavState.awaitingButtonTapRecording.value)
+
+        MacroPadNavState.selectSection(EditorSection.BUTTONS)
+        MacroPadNavState.setButtonDraft(draft)
+        MacroPadNavState.setAwaitingButtonTapRecording(true)
+        assertTrue(MacroPadNavState.awaitingButtonTapRecording.value)
+
+        // Updating draft with non-null preserves awaiting flag across suspension
+        MacroPadNavState.setButtonDraft(draft.copy(label = "Tap Updated"))
+        assertTrue(MacroPadNavState.awaitingButtonTapRecording.value)
+
+        // Clearing buttonDraft clears awaiting flag
+        MacroPadNavState.setButtonDraft(null)
+        assertFalse(MacroPadNavState.awaitingButtonTapRecording.value)
+
+        // Switching section clears awaiting flag
+        MacroPadNavState.setButtonDraft(draft)
+        MacroPadNavState.setAwaitingButtonTapRecording(true)
+        MacroPadNavState.selectSection(EditorSection.MACROS)
+        assertFalse(MacroPadNavState.awaitingButtonTapRecording.value)
+
+        // Full reset clears awaiting flag
+        MacroPadNavState.setButtonDraft(draft)
+        MacroPadNavState.setAwaitingButtonTapRecording(true)
+        MacroPadNavState.reset()
+        assertFalse(MacroPadNavState.awaitingButtonTapRecording.value)
+    }
 }

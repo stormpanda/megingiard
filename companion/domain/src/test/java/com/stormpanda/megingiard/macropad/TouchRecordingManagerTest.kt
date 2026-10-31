@@ -198,6 +198,19 @@ class TouchRecordingManagerTest {
     }
 
     @Test
+    fun `resetState clears recordedTap so stale macro tap coordinates do not leak`() {
+        TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
+        TouchRecordingManager.onTapRecorded(0.75f, 0.25f)
+        assertEquals(Pair(0.75f, 0.25f), TouchRecordingManager.recordedTap.value)
+
+        // Simulates MacroTimelineEditor consuming TouchRecordingState.Done via resetState()
+        TouchRecordingManager.resetState()
+
+        assertEquals(TouchRecordingState.Idle, TouchRecordingManager.state.value)
+        assertEquals(null, TouchRecordingManager.recordedTap.value)
+    }
+
+    @Test
     fun `onTouchEvent in TAP mode triggers onTapRecorded on touch event`() {
         TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
         assertEquals(true, TouchRecordingManager.recordingRequested.value)

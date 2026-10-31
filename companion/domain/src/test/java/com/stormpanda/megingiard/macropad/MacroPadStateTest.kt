@@ -1225,4 +1225,71 @@ class MacroPadStateTest {
         MacroPadState.endHoldToShiftLayout("l2")
         assertEquals("l1", MacroPadState.activeLayout.value?.id)
     }
+
+    @Test
+    fun `stacked HoldToShift supports LIFO and out-of-order release across multiple layouts`() {
+        val l1 = testLayout(id = "l1", name = "Base")
+        val l2 = testLayout(id = "l2", name = "Shift1")
+        val l3 = testLayout(id = "l3", name = "Shift2")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1, l2, l3), activeLayoutId = "l1"))
+
+        // LIFO release: l1 -> hold l2 -> hold l3 -> release l3 -> release l2
+        MacroPadState.beginHoldToShiftLayout("l2")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+        MacroPadState.beginHoldToShiftLayout("l3")
+        assertEquals("l3", MacroPadState.activeLayout.value?.id)
+        assertEquals("l1", MacroPadState.activeProfile.value?.activeLayoutId)
+
+        MacroPadState.endHoldToShiftLayout("l3")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.endHoldToShiftLayout("l2")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+
+        // Out-of-order release: l1 -> hold l2 -> hold l3 -> release l2 first -> l3 stays active -> release l3 -> l1
+        MacroPadState.beginHoldToShiftLayout("l2")
+        MacroPadState.beginHoldToShiftLayout("l3")
+        assertEquals("l3", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.endHoldToShiftLayout("l2")
+        assertEquals("l3", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.endHoldToShiftLayout("l3")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+    }
+
+    @Test
+    fun `stacked HoldToShift keeps target layout active when two buttons hold the same target until both release`() {
+        val l1 = testLayout(id = "l1", name = "Base")
+        val l2 = testLayout(id = "l2", name = "Shift")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1, l2), activeLayoutId = "l1"))
+
+        MacroPadState.beginHoldToShiftLayout("l2")
+        MacroPadState.beginHoldToShiftLayout("l2")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.endHoldToShiftLayout("l2")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.endHoldToShiftLayout("l2")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+    }
+
+    @Test
+    fun `deleteLayout prunes deleted intermediate shift layout while preserving remaining held shift`() {
+        val l1 = testLayout(id = "l1", name = "Base")
+        val l2 = testLayout(id = "l2", name = "Shift1")
+        val l3 = testLayout(id = "l3", name = "Shift2")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1, l2, l3), activeLayoutId = "l1"))
+
+        MacroPadState.beginHoldToShiftLayout("l2")
+        MacroPadState.beginHoldToShiftLayout("l3")
+        assertEquals("l3", MacroPadState.activeLayout.value?.id)
+
+        assertTrue(MacroPadState.deleteLayout("l2"))
+        assertEquals("l3", MacroPadState.activeLayout.value?.id)
+
+        MacroPadState.endHoldToShiftLayout("l3")
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+    }
 }

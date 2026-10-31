@@ -14,6 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
@@ -283,5 +284,28 @@ class PrimaryOverlayInputBridgeTest {
         assertTrue(isGamepadNavigationKey(KeyEvent.KEYCODE_BUTTON_A))
         assertTrue(isGamepadNavigationKey(KeyEvent.KEYCODE_BUTTON_L1))
         assertFalse(isGamepadNavigationKey(KeyEvent.KEYCODE_A))
+    }
+
+    @Test
+    fun testPrimaryOverlayActivityFinishingResetsJoystickRepeatState() {
+        val downEvents = mutableListOf<Int>()
+        val handled =
+            PrimaryOverlayInputBridge.processGenericMotionEvent(createJoystickMotionEvent(axisY = 0.8f)) { action, key ->
+                if (action == KeyEvent.ACTION_DOWN) downEvents.add(key)
+            }
+        assertTrue(handled)
+        assertEquals(1, downEvents.size)
+
+        val controller = Robolectric.buildActivity(PrimaryOverlayActivity::class.java)
+        controller.create()
+        val activity = controller.get()
+        if (!activity.isFinishing) {
+            activity.finish()
+        }
+        controller.destroy()
+
+        val countAfterDestroy = downEvents.size
+        ShadowLooper.idleMainLooper(500, TimeUnit.MILLISECONDS)
+        assertEquals("Finishing PrimaryOverlayActivity must cancel joystick repeat runnable", countAfterDestroy, downEvents.size)
     }
 }

@@ -120,6 +120,7 @@ class PrimaryOverlayActivity : ComponentActivity() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: isFinishing=$isFinishing")
         if (isFinishing) {
+            PrimaryOverlayInputBridge.resetJoystickState()
             AppStateManager.closePrimaryModal()
             AppStateManager.setActiveCropCutoutId(null)
             wasFrozenForModal = releasePrimaryOverlayMirrorFreeze(wasFrozenForModal)

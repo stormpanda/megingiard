@@ -31,12 +31,23 @@ internal object MacroPadNavState {
     private val _buttonDraft = MutableStateFlow<PadButton?>(null)
     val buttonDraft: StateFlow<PadButton?> = _buttonDraft.asStateFlow()
 
+    private val _awaitingButtonTapRecording = MutableStateFlow(false)
+    val awaitingButtonTapRecording: StateFlow<Boolean> = _awaitingButtonTapRecording.asStateFlow()
+
     private val _macroDraft = MutableStateFlow<Macro?>(null)
     val macroDraft: StateFlow<Macro?> = _macroDraft.asStateFlow()
 
     fun setButtonDraft(draft: PadButton?) {
         AppLog.d(TAG, "setButtonDraft: id=${draft?.id}")
         _buttonDraft.value = draft
+        if (draft == null) {
+            _awaitingButtonTapRecording.value = false
+        }
+    }
+
+    fun setAwaitingButtonTapRecording(awaiting: Boolean) {
+        AppLog.d(TAG, "setAwaitingButtonTapRecording: awaiting=$awaiting")
+        _awaitingButtonTapRecording.value = awaiting
     }
 
     fun setMacroDraft(draft: Macro?) {
@@ -51,6 +62,7 @@ internal object MacroPadNavState {
             _subPageStack.value = emptyList()
             _savedFocusKeysByDepth.value = emptyMap()
             _buttonDraft.value = null
+            _awaitingButtonTapRecording.value = false
             _macroDraft.value = null
         }
     }
@@ -103,6 +115,7 @@ internal object MacroPadNavState {
         _macroTimelineFocusStepIndex.value = null
         _savedFocusKeysByDepth.value = emptyMap()
         _buttonDraft.value = null
+        _awaitingButtonTapRecording.value = false
         _macroDraft.value = null
     }
 

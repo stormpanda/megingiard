@@ -96,21 +96,32 @@ fun Color.darken(factor: Float = CARD_BG_DARKEN_FACTOR): Color {
 }
 
 object AppPaletteExtractor {
+    private val initLock = Any()
     private val paletteCache = LruCache<String, ExtractedAppPalette>(PALETTE_CACHE_SIZE)
+
+    @Volatile
     private var isInitialized = false
+
+    @Volatile
     private var appContext: Context? = null
 
     fun init(context: Context) {
-        if (isInitialized && appContext == context.applicationContext) return
-        appContext = context.applicationContext
-        loadPersistedPalettes(context.applicationContext)
-        isInitialized = true
+        if (isInitialized) return
+        val resolvedAppContext = context.applicationContext
+        synchronized(initLock) {
+            if (isInitialized) return
+            appContext = resolvedAppContext
+            loadPersistedPalettes(resolvedAppContext)
+            isInitialized = true
+        }
     }
 
     internal fun resetForTesting() {
-        paletteCache.evictAll()
-        isInitialized = false
-        appContext = null
+        synchronized(initLock) {
+            paletteCache.evictAll()
+            isInitialized = false
+            appContext = null
+        }
     }
 
     private fun loadPersistedPalettes(context: Context) {
