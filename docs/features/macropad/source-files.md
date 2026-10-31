@@ -12,7 +12,7 @@
 
 | File | Responsibility |
 | --- | --- |
-| `MacroPadScreen.kt` | Use-mode Composable: pad render (`PadSurface`), multi-touch input, background mirror & layout image layers, and single `DisposableEffect(hasFollowMode)` `TouchScreenObserver` registration; reactively switches between use-mode `PadSurface` and bottom-screen live editor `PadCanvas` when `AppStateManager.isEditorActive` is true; collects `MacroExecutor.runningMacroIds` |
+| `MacroPadScreen.kt` | Use-mode Composable: pad render (`PadSurface`), multi-touch input, background mirror & layout image layers, and single `DisposableEffect(hasFollowMode)` `TouchScreenObserver` registration; reactively switches between use-mode `PadSurface` and bottom-screen live editor `PadCanvas` when `AppStateManager.isEditorActive` is true; collects `MacroExecutor.runningMacroIds` and `MacroPadState.missingProfileToastEvent` |
 | `MacroPadEditor.kt` | Full-screen layout editor built on `GamepadTwoPaneScaffold`: orchestrates the 9 sidebar categories (`Quick Actions`, `Profiles`, `Layouts`, `Automation`, `Mirror`, `Background`, `Mask`, `Buttons`, `Macros`), deck content columns, in-deck sub-page stack navigation, and exit auto-switch reactivation prompt (`GamepadConfirmModal`) |
 | `MacroPadNavState.kt` | Singleton holding `selectedSection`, `subPageStack`, and single-source-of-truth `buttonDraft` and `macroDraft` across composable lifecycles and modal suspensions |
 | `MacroPadSubPages.kt` | Architecture models and shared components for in-deck sub-menus: `MacroPadSubPage` sealed hierarchy, `EditorColorTarget`, `GamepadSubPageHeader` breadcrumbs, `ColorWheelSubPageContent`, and shared `rememberButton2DAdjusterState` (`Button2DAdjusterState`) for 2D gamepad button movement and resizing |
@@ -30,7 +30,7 @@
 | `PadButtonEditDialog.kt` | In-deck button create/edit sub-page (`EditButtonSubPageContent`), `ButtonColorSubPageContent`, and `ColorPreviewInfoBox` |
 | `PadActionPicker.kt` | Action category selector card and dispatcher to action-specific sub-pickers in the button editor |
 | `PadActionDisplay.kt` | Action type enums (`ActionGroup`, `ActionCategory`), string mappings, and localized gamepad button formatting/label templates |
-| `PadActionSubPickers.kt` | Sub-widgets for configuring action details: `KeyboardKeyPicker`, `GamepadButtonPicker`, `MouseActionPicker`, `TrackpointPicker`, `MacroPicker`, `SwitchToLayoutPicker`, and `TouchTapPicker` |
+| `PadActionSubPickers.kt` | Sub-widgets for configuring action details: `KeyboardKeyPicker`, `GamepadButtonPicker`, `MouseActionPicker`, `TrackpointPicker`, `MacroPicker`, `SwitchToLayoutPicker`, `SwitchToProfilePicker`, and `TouchTapPicker` |
 | `ActionGridSubPages.kt` | Shared `ActionGridItem` model and 2-column grid sub-pages (`ChooseButtonTypeSubPageContent`, `MirrorActionPickerSubPageContent`, `ToolsActionPickerSubPageContent`, `LayoutActionPickerSubPageContent`, `MediaActionPickerSubPageContent`, `MacroActionPickerSubPageContent`) |
 | `VisualKeyboardPicker.kt` | Interactive virtual keyboard sub-page (`VisualKeyboardPicker`) with 2D D-pad spatial navigation |
 | `VisualGamepadPicker.kt` | Interactive virtual AYN Thor controller sub-page (`VisualGamepadPicker`) with 2D D-pad spatial navigation |

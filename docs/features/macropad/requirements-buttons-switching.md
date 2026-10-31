@@ -49,6 +49,7 @@
   | `LayoutNext`            | Next Layout         | `arrow_forward` |
   | `LayoutPrevious`        | Prev Layout         | `arrow_back`    |
   | `SwitchToLayout`        | Switch Layout       | `view_quilt`    |
+  | `SwitchToProfile`       | Switch to Profile   | `folder`        |
   | `ProfileSwitcher`       | Switch Profile      | `swap_horiz`    |
   | `SwitchToHub`           | Hub                 | `dashboard`     |
   | `MirrorPlayStop`        | Mirror              | `cast`          |
@@ -144,6 +145,6 @@
 
 - **Name Collision Formatting**: All copy and duplication operations MUST avoid adding a `(Copy)` suffix via `nextUniqueName(baseName)` in `MacroPadLayout.kt`. Instead, standard conflict resolution numbering (e.g. `Combo (2)` or `Lay1 (2)`) is appended on name collision. If no collision occurs, the original name is kept.
 - **In-Deck Management Cards & Copy Sub-Pages**:
-  - **Profiles**: Edit, Duplicate, Reorder, Unlink, and Delete options are presented as dedicated `GamepadActionCard` and `GamepadTwoStepConfirmCard` rows in the **Profiles Deck** (`ProfilesDeck`). Duplicating a profile deep-copies all its layouts and macros, and maps macro IDs within layout buttons.
+  - **Profiles**: Edit, Duplicate, Reorder, Unlink, and Delete options are presented as dedicated `GamepadActionCard` and `GamepadTwoStepConfirmCard` rows in the **Profiles Deck** (`ProfilesDeck`). Duplicating a profile deep-copies all its layouts and macros, mapping macro IDs, layout IDs (`SwitchToLayout`), and self-referential profile IDs (`SwitchToProfile`) within layout buttons while preserving external profile references.
   - **Layouts**: Edit, Duplicate, Copy to Profile (`CopyLayoutSubPageContent`), Reorder (`ReorderLayouts`), and Delete options are presented in the **Layouts Deck** (`LayoutsDeck`). Duplicating a layout clones all its buttons and cutouts with new UUIDs and duplicates background/mask media files under the new layout ID.
   - **Buttons**: Edit, Duplicate, Copy to Layout (`CopyButtonSubPageContent`), and Delete options are accessible inside `EditButtonSubPageContent` (`PadButtonEditDialog.kt`), while reordering is accessible via the **Reorder Buttons** sub-page (`ReorderButtons`) in the **Buttons Deck**.

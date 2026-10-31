@@ -1384,6 +1384,12 @@ Open Settings to create a layout.</string>
     <string name="macropad_switch_layout_target_desc">Select which layout in this profile to activate</string>
     <string name="macropad_switch_layout_hold_title">Hold to Shift</string>
     <string name="macropad_switch_layout_hold_desc">Temporarily switch while held and return on release</string>
+    <string name="macropad_action_switch_to_profile">Switch to Profile</string>
+    <string name="macropad_action_switch_to_profile_desc">Jump directly to a specific profile</string>
+    <string name="macropad_display_switch_to_profile">Profile: %1$s</string>
+    <string name="macropad_switch_profile_target_title">Target Profile</string>
+    <string name="macropad_switch_profile_target_desc">Select which profile to activate</string>
+    <string name="macropad_switch_profile_not_found_toast">Target profile no longer exists</string>
     <string name="macropad_action_switch_to_hub">Switch to Hub</string>
     <string name="macropad_action_switch_to_hub_desc">Open the Companion Hub on the bottom screen</string>
     <string name="macropad_action_stop_all_macros">Stop All Macros</string>

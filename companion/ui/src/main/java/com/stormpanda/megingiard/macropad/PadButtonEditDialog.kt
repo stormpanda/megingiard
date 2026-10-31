@@ -468,6 +468,7 @@ internal fun EditButtonSubPageContent(
     val globalAccentInt by SettingsManager.accentColor.collectAsStateWithLifecycle()
     val globalAccentColor = Color(globalAccentInt)
 
+    val allProfiles by MacroPadState.profiles.collectAsStateWithLifecycle()
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val macros = profile?.macros ?: emptyList()
     val layouts = profile?.layouts ?: emptyList()
@@ -509,6 +510,19 @@ internal fun EditButtonSubPageContent(
             val layoutExists = layouts.any { it.id == currentAction.layoutId }
             if (!layoutExists) {
                 action = currentAction.copy(layoutId = layouts.first().id)
+            }
+        }
+    }
+
+    LaunchedEffect(allProfiles) {
+        val currentAction = action
+        if (currentAction is PadAction.SwitchToProfile && allProfiles.isNotEmpty()) {
+            val profileExists = allProfiles.any { it.id == currentAction.profileId }
+            if (!profileExists) {
+                val fallbackId =
+                    allProfiles.firstOrNull { it.id != profile?.id }?.id
+                        ?: allProfiles.first().id
+                action = currentAction.copy(profileId = fallbackId)
             }
         }
     }
@@ -608,6 +622,11 @@ internal fun EditButtonSubPageContent(
             action is PadAction.SwitchToLayout -> {
                 label.isNotBlank() &&
                     layouts.any { it.id == (action as PadAction.SwitchToLayout).layoutId }
+            }
+
+            action is PadAction.SwitchToProfile -> {
+                label.isNotBlank() &&
+                    allProfiles.any { it.id == (action as PadAction.SwitchToProfile).profileId }
             }
 
             else -> {

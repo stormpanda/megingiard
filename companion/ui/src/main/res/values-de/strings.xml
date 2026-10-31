@@ -1384,6 +1384,12 @@ Open Settings to create a layout.</string>
     <string name="macropad_switch_layout_target_desc">Wähle das Layout aus, das aktiviert werden soll</string>
     <string name="macropad_switch_layout_hold_title">Halten zum Umschalten</string>
     <string name="macropad_switch_layout_hold_desc">Solange gedrückt temporär wechseln und beim Loslassen zurückkehren</string>
+    <string name="macropad_action_switch_to_profile">Zu Profil wechseln</string>
+    <string name="macropad_action_switch_to_profile_desc">Direkt zu einem bestimmten Profil springen</string>
+    <string name="macropad_display_switch_to_profile">Profil: %1$s</string>
+    <string name="macropad_switch_profile_target_title">Ziel-Profil</string>
+    <string name="macropad_switch_profile_target_desc">Wähle das Profil aus, das aktiviert werden soll</string>
+    <string name="macropad_switch_profile_not_found_toast">Ziel-Profil existiert nicht mehr</string>
     <string name="macropad_action_switch_to_hub">Zum Hub wechseln</string>
     <string name="macropad_action_switch_to_hub_desc">Companion Hub auf dem unteren Bildschirm öffnen</string>
     <string name="macropad_action_stop_all_macros">Alle Makros stoppen</string>

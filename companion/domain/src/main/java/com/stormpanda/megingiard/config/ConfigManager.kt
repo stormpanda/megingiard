@@ -697,8 +697,10 @@ object ConfigManager {
             masksDir.mkdirs()
         }
 
+        val profileIdMap = profiles.associate { profile -> profile.id to UUID.randomUUID().toString() }
+
         for (profile in profiles) {
-            val newProfileId = UUID.randomUUID().toString()
+            val newProfileId = profileIdMap.getValue(profile.id)
 
             // Build macro ID remap: old → new for all macros in this profile
             val macroIdMap = mutableMapOf<String, String>()
@@ -714,7 +716,7 @@ object ConfigManager {
             val layoutIdMap = layoutIdPairs.associate { (oldLayout, newId) -> oldLayout.id to newId }
             val fallbackLayoutId = layoutIdPairs.firstOrNull()?.second
 
-            // Remap macro and layout references in button actions and handle background/mask image copying/extraction
+            // Remap macro, layout, and profile references in button actions and handle background/mask image copying/extraction
             val remappedLayouts =
                 layoutIdPairs.map { (layout, newLayoutId) ->
                     val oldLayoutId = layout.id
@@ -728,6 +730,7 @@ object ConfigManager {
                                         macroIdMap = macroIdMap,
                                         layoutIdMap = layoutIdMap,
                                         fallbackLayoutId = fallbackLayoutId,
+                                        profileIdMap = profileIdMap,
                                     ),
                             )
                         }
@@ -830,6 +833,7 @@ object ConfigManager {
         macroIdMap: Map<String, String>,
         layoutIdMap: Map<String, String>,
         fallbackLayoutId: String?,
+        profileIdMap: Map<String, String>,
     ): PadAction =
         when (action) {
             is PadAction.Macro -> {
@@ -840,6 +844,11 @@ object ConfigManager {
             is PadAction.SwitchToLayout -> {
                 val newLayoutId = layoutIdMap[action.layoutId] ?: fallbackLayoutId ?: action.layoutId
                 action.copy(layoutId = newLayoutId)
+            }
+
+            is PadAction.SwitchToProfile -> {
+                val newProfileId = profileIdMap[action.profileId] ?: action.profileId
+                action.copy(profileId = newProfileId)
             }
 
             else -> {

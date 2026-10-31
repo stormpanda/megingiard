@@ -1385,6 +1385,12 @@ Open Settings to create a layout.</string>
     <string name="macropad_switch_layout_target_desc">選擇在此設定檔中要啟用的配置</string>
     <string name="macropad_switch_layout_hold_title">按住切換</string>
     <string name="macropad_switch_layout_hold_desc">按住時暫時切換配置，放開後返回原配置</string>
+    <string name="macropad_action_switch_to_profile">切換至指定設定檔</string>
+    <string name="macropad_action_switch_to_profile_desc">直接跳轉至指定的設定檔</string>
+    <string name="macropad_display_switch_to_profile">設定檔：%1$s</string>
+    <string name="macropad_switch_profile_target_title">目標設定檔</string>
+    <string name="macropad_switch_profile_target_desc">選擇要啟用的設定檔</string>
+    <string name="macropad_switch_profile_not_found_toast">目標設定檔已不存在</string>
     <string name="macropad_action_switch_to_hub">切換至中心</string>
     <string name="macropad_action_switch_to_hub_desc">在下螢幕開啟 Companion 中心</string>
     <string name="macropad_action_stop_all_macros">停止所有巨集</string>

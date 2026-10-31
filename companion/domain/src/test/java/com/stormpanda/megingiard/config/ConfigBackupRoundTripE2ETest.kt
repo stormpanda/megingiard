@@ -130,6 +130,15 @@ class ConfigBackupRoundTripE2ETest {
                     action = PadAction.SwitchToLayout(layoutId = shiftTargetLayoutId, holdToShift = true),
                 )
 
+            val button4 =
+                PadButton(
+                    id = "btn-4",
+                    label = "To Media",
+                    posX = 0.8f,
+                    posY = 0.6f,
+                    action = PadAction.SwitchToProfile(profileId = "profile-general-id"),
+                )
+
             val layoutId = "layout-fighting-1"
             val bgDir = File(context.filesDir, "backgrounds")
             bgDir.mkdirs()
@@ -140,7 +149,7 @@ class ConfigBackupRoundTripE2ETest {
                 PadLayout(
                     id = layoutId,
                     name = "Fight Arcade",
-                    buttons = listOf(button1, button2, button3),
+                    buttons = listOf(button1, button2, button3, button4),
                     backgroundImagePath = "backgrounds/bg_$layoutId",
                 )
 
@@ -237,15 +246,20 @@ class ConfigBackupRoundTripE2ETest {
 
             val restoredProfiles = MacroPadState.profiles.value
             val restoredFightingProfile = restoredProfiles.firstOrNull { it.name == "Street Fighter 6" }
+            val restoredGeneralProfile = restoredProfiles.firstOrNull { it.name == "General Media" }
             assertNotNull("Expected restored Street Fighter 6 profile", restoredFightingProfile)
+            assertNotNull("Expected restored General Media profile", restoredGeneralProfile)
+            assertNotEquals("profile-general-id", restoredGeneralProfile!!.id)
             assertEquals(2, restoredFightingProfile?.layouts?.size)
             val restoredArcadeLayout = restoredFightingProfile!!.layouts.first { it.name == "Fight Arcade" }
             val restoredShiftLayout = restoredFightingProfile.layouts.first { it.name == "Fight Shift" }
             assertNotEquals(shiftTargetLayoutId, restoredShiftLayout.id)
-            assertEquals(3, restoredArcadeLayout.buttons.size)
+            assertEquals(4, restoredArcadeLayout.buttons.size)
             val restoredShiftAction = restoredArcadeLayout.buttons.first { it.label == "Shift" }.action as PadAction.SwitchToLayout
             assertEquals(restoredShiftLayout.id, restoredShiftAction.layoutId)
             assertTrue(restoredShiftAction.holdToShift)
+            val restoredMediaSwitch = restoredArcadeLayout.buttons.first { it.label == "To Media" }.action as PadAction.SwitchToProfile
+            assertEquals(restoredGeneralProfile.id, restoredMediaSwitch.profileId)
             assertEquals(1, restoredFightingProfile.macros.size)
             assertEquals("Hadouken", restoredFightingProfile.macros.first().name)
             assertEquals("com.capcom.sf6", restoredFightingProfile.association?.packageName)

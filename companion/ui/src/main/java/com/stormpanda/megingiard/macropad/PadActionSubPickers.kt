@@ -6,6 +6,7 @@ import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.AdsClick
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.ControlCamera
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.SmartButton
@@ -349,6 +350,47 @@ internal fun SwitchToLayoutPicker(
         },
         icon = Icons.AutoMirrored.Rounded.ViewQuilt,
     )
+}
+
+@Composable
+internal fun SwitchToProfilePicker(
+    current: PadAction.SwitchToProfile,
+    onOpenPicker: () -> Unit,
+    onChange: (PadAction) -> Unit,
+    isFirstItem: Boolean = false,
+) {
+    val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
+    val selectedProfile =
+        profiles.firstOrNull { it.id == current.profileId }
+            ?: profiles.firstOrNull()
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_action_group_layout),
+        description = stringResource(R.string.macropad_action_group_layout_desc),
+        actionText = stringResource(R.string.macropad_action_switch_to_profile),
+        icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+        onClick = onOpenPicker,
+        modifier = Modifier.firstDeckItem(isFirstItem),
+    )
+
+    if (profiles.isNotEmpty() && selectedProfile != null) {
+        GamepadChoiceCard(
+            title = stringResource(R.string.macropad_switch_profile_target_title),
+            description = stringResource(R.string.macropad_switch_profile_target_desc),
+            selectedText = selectedProfile.name,
+            icon = Icons.Rounded.Folder,
+            onPrevious = {
+                val prev = profiles.cycle(selectedProfile, BumperDirection.PREV)
+                AppLog.d(TAG, "SwitchToProfilePicker: profileId=${prev.id} name='${prev.name}'")
+                onChange(current.copy(profileId = prev.id))
+            },
+            onNext = {
+                val next = profiles.cycle(selectedProfile, BumperDirection.NEXT)
+                AppLog.d(TAG, "SwitchToProfilePicker: profileId=${next.id} name='${next.name}'")
+                onChange(current.copy(profileId = next.id))
+            },
+        )
+    }
 }
 
 @Composable

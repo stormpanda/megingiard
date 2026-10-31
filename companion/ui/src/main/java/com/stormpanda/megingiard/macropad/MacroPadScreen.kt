@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -109,6 +110,7 @@ private const val TAG = "MacroPadScreen"
 
 @Composable
 fun MacroPadScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val layout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val isEditorActive by AppStateManager.isEditorActive.collectAsStateWithLifecycle()
@@ -118,6 +120,13 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val isCroppingMask by MacroPadState.isCroppingMask.collectAsStateWithLifecycle()
     val gridMode by MacroPadState.gridMode.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
+
+    LaunchedEffect(Unit) {
+        MacroPadState.missingProfileToastEvent.collect {
+            AppLog.w(TAG, "missingProfileToastEvent received -> showing missing profile toast")
+            DialogToastManager.show(context.getString(R.string.macropad_switch_profile_not_found_toast))
+        }
+    }
 
     // Reset peek state when leaving MACROPAD mode
     DisposableEffect(Unit) {

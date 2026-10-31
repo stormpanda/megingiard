@@ -189,6 +189,15 @@ internal fun ActionPicker(
             )
         }
 
+        is PadAction.SwitchToProfile -> {
+            SwitchToProfilePicker(
+                current = current,
+                onOpenPicker = onOpenLayoutPicker,
+                onChange = loggedOnChange,
+                isFirstItem = isFirstItem,
+            )
+        }
+
         is PadAction.Macro -> {
             MacroPicker(
                 current = current,

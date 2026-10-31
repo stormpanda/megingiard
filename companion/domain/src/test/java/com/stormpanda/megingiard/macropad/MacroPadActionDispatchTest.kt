@@ -198,6 +198,49 @@ class MacroPadActionDispatchTest {
     }
 
     @Test
+    fun injectActionDown_switchToProfile_switchesProfileAndPinsMacroPadMode() =
+        runTest {
+            val p1 =
+                PadProfile(
+                    id = "prof-1",
+                    name = "Game A",
+                    layouts = listOf(PadLayout(id = "l1", name = "Main A")),
+                    activeLayoutId = "l1",
+                )
+            val p2 =
+                PadProfile(
+                    id = "prof-2",
+                    name = "Game B",
+                    layouts =
+                        listOf(
+                            PadLayout(id = "l2-a", name = "Main B"),
+                            PadLayout(id = "l2-b", name = "Combat B"),
+                        ),
+                    activeLayoutId = "l2-b",
+                )
+            MacroPadState.loadFrom(listOf(p1, p2), "prof-1")
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+
+            injectActionDown(PadAction.SwitchToProfile(profileId = "prof-2"))
+            assertEquals("prof-2", MacroPadState.activeProfile.value?.id)
+            assertEquals("l2-b", MacroPadState.activeLayout.value?.id)
+            assertEquals(CompanionViewMode.MACROPAD, AppStateManager.companionViewMode.value)
+
+            injectActionUp(PadAction.SwitchToProfile(profileId = "prof-2"))
+            assertEquals("prof-2", MacroPadState.activeProfile.value?.id)
+
+            // Missing target profile leaves active profile and AUTO view mode unchanged and emits toast event
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+            MacroPadState.missingProfileToastEvent.test {
+                injectActionDown(PadAction.SwitchToProfile(profileId = "deleted-profile-id"))
+                assertEquals(Unit, awaitItem())
+                assertEquals("prof-2", MacroPadState.activeProfile.value?.id)
+                assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
     fun injectActionDown_stopAllMacros() =
         runBlocking {
             PrivdClient.isConnectedForTest = true

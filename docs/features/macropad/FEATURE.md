@@ -68,6 +68,7 @@ Each button supports one of the following actions:
 | `BackgroundPeek` | App-level peek toggle | _(none)_ |
 | `Screenshot` | Top / Bottom / Both screen capture (`ScreenCaptureManager.requestScreenshot`) | `megingiard_privd` (Top / Both) & `PixelCopy` (Bottom / Both) |
 | `SwitchToLayout` | Direct layout jump or temporary Hold-to-Shift (`MacroPadState.switchToLayout` / `beginHoldToShiftLayout`) | _(none)_ |
+| `SwitchToProfile` | Direct profile jump and pin MacroPad mode (`MacroPadState.switchToProfile` + `CompanionViewMode.MACROPAD`) | _(none)_ |
 | `SwitchToHub` | Open Companion Hub (`AppStateManager.setCompanionViewMode(DASHBOARD)`) | _(none)_ |
 | `StopAllMacros` | Cancel all running macros and release held keys/buttons (`MacroExecutor.stopAll()`) | `megingiard_privd` (Privd) |
 | `TouchTap` | Direct primary-screen touch at normalized `(normX, normY)` while held (`TouchInjector.injectTouch` across multi-touch slot pool `5..9`, default slot `8`) | `megingiard_privd` (Privd) |
@@ -82,7 +83,7 @@ Each button supports one of the following actions:
     - **Visual Mouse Picker**: Displays all 7 mouse actions (Left Click, Right Click, Middle Click, Back / Mouse 4, Forward / Mouse 5, Scroll Wheel, and Trackpoint) arranged in a reusable 2-column card grid (`GamepadTwoColumnGrid`).
     - **Mirror Action Picker**: Displays all 5 screen mirror actions (Mirror Start/Stop, Mirror Freeze, Mirror Viewport, Touch Projection, and Background Peek) in a 2-column card grid.
     - **Tools Action Picker**: Displays all 7 tool actions (Fullscreen Mouse, Fullscreen Keyboard, Screenshot Top Screen, Screenshot Bottom Screen, Screenshot Both Screens, Stop All Macros, and Touch Tap) in a 2-column card grid.
-    - **Layout Action Picker**: Displays all 5 layout actions (Next Layout, Previous Layout, Switch to Layout, Profile Switcher, Switch to Hub) in a 2-column card grid.
+    - **Layout Action Picker**: Displays all 6 layout actions (Next Layout, Previous Layout, Switch to Layout, Switch to Profile, Profile Switcher, Switch to Hub) in a 2-column card grid.
     - **Media Action Picker**: Displays all 5 media actions (Play / Pause, Next Track, Previous Track, Stop Playback, Mute Audio) in a 2-column card grid.
     - **App Quick-Switch**: Extracted into a dedicated top-level `ActionGroup.APP_LAUNCHER` button type. In the button editor, the app selection card (`AppLauncherPicker`) is displayed directly without redundant action sub-menu selectors to quickly switch between Megingiard and another app.
   - Modifiers (Mod 1, Mod 2 for keyboard), combo buttons (Extra 1, Extra 2, Extra 3 for gamepad), and specific app target (for App Quick-Switch) remain configurable on the `EditButton` page below the primary action card. For `GamepadButton`, selecting any extra input card (Extra 1, Extra 2, Extra 3) opens the same `VisualGamepadPicker` sub-page as the primary button action, enabling visual selection, automatic deduplication, toggle-to-deselect, and an in-deck Clear action.

@@ -3,8 +3,12 @@ package com.stormpanda.megingiard.macropad
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
 import java.util.UUID
@@ -26,6 +30,7 @@ private fun PadButton.cloneWithMacroMapping(
     macroMapping: Map<String, String>,
     layoutMapping: Map<String, String> = emptyMap(),
     fallbackLayoutId: String? = null,
+    profileMapping: Map<String, String> = emptyMap(),
 ): PadButton {
     val updatedAction =
         when (val action = this.action) {
@@ -37,6 +42,11 @@ private fun PadButton.cloneWithMacroMapping(
             is PadAction.SwitchToLayout -> {
                 val newLayoutId = layoutMapping[action.layoutId] ?: fallbackLayoutId ?: action.layoutId
                 action.copy(layoutId = newLayoutId)
+            }
+
+            is PadAction.SwitchToProfile -> {
+                val newProfileId = profileMapping[action.profileId] ?: action.profileId
+                action.copy(profileId = newProfileId)
             }
 
             else -> {
@@ -53,7 +63,8 @@ private fun List<PadButton>.cloneWithMacroMapping(
     macroMapping: Map<String, String>,
     layoutMapping: Map<String, String> = emptyMap(),
     fallbackLayoutId: String? = null,
-): List<PadButton> = map { it.cloneWithMacroMapping(macroMapping, layoutMapping, fallbackLayoutId) }
+    profileMapping: Map<String, String> = emptyMap(),
+): List<PadButton> = map { it.cloneWithMacroMapping(macroMapping, layoutMapping, fallbackLayoutId, profileMapping) }
 
 /**
  * Runtime state holder for the MacroPad-centric UI.
@@ -88,6 +99,13 @@ object MacroPadState {
 
     private val _activeLayout = MutableStateFlow<PadLayout?>(null)
     val activeLayout: StateFlow<PadLayout?> = _activeLayout.asStateFlow()
+
+    private val _missingProfileToastEvent =
+        MutableSharedFlow<Unit>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+    val missingProfileToastEvent: SharedFlow<Unit> = _missingProfileToastEvent.asSharedFlow()
 
     private var shiftReturnLayoutId: String? = null
     private val activeShiftLayoutStack = mutableListOf<String>()
@@ -495,6 +513,35 @@ object MacroPadState {
     }
 
     /**
+     * Switches directly to [profileId] if it exists in [profiles].
+     * Returns `true` when [profileId] resolved to an existing profile, or `false` (emitting
+     * [missingProfileToastEvent]) when [profileId] is blank or no longer exists.
+     */
+    fun switchToProfile(profileId: String): Boolean {
+        if (profileId.isBlank()) {
+            AppLog.w(TAG, "switchToProfile rejected: blank profileId")
+            _missingProfileToastEvent.tryEmit(Unit)
+            return false
+        }
+        val targetName: String? =
+            synchronized(stateLock) {
+                val target = _profiles.value.firstOrNull { it.id == profileId } ?: return@synchronized null
+                _previewLayout.value = null
+                assignActiveProfileId(profileId)
+                recomputeActiveState()
+                target.name
+            }
+        if (targetName == null) {
+            AppLog.w(TAG, "switchToProfile failed: target profileId=$profileId not found")
+            _missingProfileToastEvent.tryEmit(Unit)
+            return false
+        }
+        AppLog.i(TAG, "switchToProfile: '$targetName' ($profileId)")
+        MacroPadSettings.saveMacroPadData()
+        return true
+    }
+
+    /**
      * Single write path for [_activeProfileId]. When the active profile actually changes, all
      * running macros are stopped: macro IDs are profile-scoped, so macros of the previous profile
      * would otherwise keep running (looping macros indefinitely) with no button left to stop them.
@@ -543,6 +590,7 @@ object MacroPadState {
             val uniqueName = existingNames.nextUniqueName(sourceProfile.name, MP_DEFAULT_PROFILE_NAME)
 
             val newProfileId = UUID.randomUUID().toString()
+            val profileMapping = mapOf(sourceProfile.id to newProfileId)
             val macroMapping = mutableMapOf<String, String>() // source macro ID -> target macro ID
             val mappedLayouts = sourceProfile.layouts.associate { lay -> lay.id to UUID.randomUUID().toString() }
             layoutMapping = mappedLayouts
@@ -565,7 +613,12 @@ object MacroPadState {
                         }
                     layout.copy(
                         id = targetLayoutId,
-                        buttons = layout.buttons.cloneWithMacroMapping(macroMapping, mappedLayouts),
+                        buttons =
+                            layout.buttons.cloneWithMacroMapping(
+                                macroMapping = macroMapping,
+                                layoutMapping = mappedLayouts,
+                                profileMapping = profileMapping,
+                            ),
                         mirrorCutouts = copiedCutouts,
                         backgroundImagePath = layout.backgroundImagePath?.let { "backgrounds/bg_$targetLayoutId" },
                         backgroundImageVersion = 0,

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.AdsClick
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
@@ -145,6 +146,12 @@ private val LAYOUT_ACTION_ITEMS =
             R.string.macropad_action_switch_to_layout,
             R.string.macropad_action_switch_to_layout_desc,
             Icons.AutoMirrored.Rounded.ViewQuilt,
+        ),
+        ActionGridItem(
+            PadAction.SwitchToProfile(),
+            R.string.macropad_action_switch_to_profile,
+            R.string.macropad_action_switch_to_profile_desc,
+            Icons.Rounded.Folder,
         ),
         ActionGridItem(
             PadAction.ProfileSwitcher,

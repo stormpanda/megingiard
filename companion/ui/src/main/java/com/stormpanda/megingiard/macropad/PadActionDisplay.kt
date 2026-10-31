@@ -13,6 +13,7 @@ import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.MusicNote
@@ -181,6 +182,20 @@ internal enum class ActionCategory(
             PadAction.SwitchToLayout(layoutId = defaultTargetId, holdToShift = false)
         },
     ),
+    SWITCH_TO_PROFILE(
+        Icons.Rounded.Folder,
+        R.string.macropad_action_switch_to_profile,
+        ActionGroup.LAYOUT,
+        {
+            val allProfiles = MacroPadState.profiles.value
+            val activeId = MacroPadState.activeProfile.value?.id
+            val defaultTargetId =
+                allProfiles.firstOrNull { it.id != activeId }?.id
+                    ?: allProfiles.firstOrNull()?.id
+                    ?: ""
+            PadAction.SwitchToProfile(profileId = defaultTargetId)
+        },
+    ),
     PROFILE_SWITCHER(
         Icons.Rounded.SwapHoriz,
         R.string.macropad_action_profile_switcher,
@@ -344,6 +359,10 @@ internal fun PadAction.toCategory(): ActionCategory =
             ActionCategory.SWITCH_TO_LAYOUT
         }
 
+        is PadAction.SwitchToProfile -> {
+            ActionCategory.SWITCH_TO_PROFILE
+        }
+
         is PadAction.ProfileSwitcher -> {
             ActionCategory.PROFILE_SWITCHER
         }
@@ -417,6 +436,7 @@ internal fun ActionCategory.isAvailable(hasMacros: Boolean): Boolean =
 internal fun PadAction.displayLabel(): String {
     val context = LocalContext.current
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    val allProfiles by MacroPadState.profiles.collectAsStateWithLifecycle()
     val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     return when (this) {
         is PadAction.KeyboardKey -> {
@@ -497,6 +517,18 @@ internal fun PadAction.displayLabel(): String {
                 stringResource(R.string.macropad_display_switch_to_layout, layoutName)
             } else {
                 stringResource(R.string.macropad_action_switch_to_layout)
+            }
+        }
+
+        is PadAction.SwitchToProfile -> {
+            val profileName =
+                allProfiles
+                    .firstOrNull { it.id == profileId }
+                    ?.name
+            if (profileName != null) {
+                stringResource(R.string.macropad_display_switch_to_profile, profileName)
+            } else {
+                stringResource(R.string.macropad_action_switch_to_profile)
             }
         }
 

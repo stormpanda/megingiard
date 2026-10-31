@@ -467,4 +467,27 @@ class PadButtonSerializationTest {
         assertEquals("stop", PadAction.MediaControl(MediaControlAction.STOP).defaultIconName())
         assertEquals("volume_off", PadAction.MediaControl(MediaControlAction.MUTE).defaultIconName())
     }
+
+    @Test
+    fun `SwitchToProfile action serializes and deserializes with defaultIconName`() {
+        val button =
+            PadButton(
+                id = "btn-switch-profile",
+                label = "Switch Profile",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.SwitchToProfile(profileId = "profile-target-1"),
+            )
+        val encoded = json.encodeToString(button)
+        assertTrue(encoded.contains("\"type\":\"switch_to_profile\""))
+        assertTrue(encoded.contains("\"profileId\":\"profile-target-1\""))
+        val decoded = json.decodeFromString<PadButton>(encoded)
+        assertEquals(button, decoded)
+
+        val defaultPayload = """{"id":"btn-default-prof","label":"Prof","posX":0.5,"posY":0.5,"widthDp":60.0,"heightDp":60.0,"action":{"type":"switch_to_profile"}}"""
+        val decodedDefault = json.decodeFromString<PadButton>(defaultPayload)
+        assertEquals(PadAction.SwitchToProfile(profileId = ""), decodedDefault.action)
+
+        assertEquals("folder", PadAction.SwitchToProfile("profile-1").defaultIconName())
+    }
 }

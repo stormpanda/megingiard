@@ -331,6 +331,13 @@ sealed class PadAction {
         val holdToShift: Boolean = false,
     ) : PadAction()
 
+    /** Switches directly to the profile with [profileId], activating its remembered active layout. */
+    @Serializable
+    @SerialName("switch_to_profile")
+    data class SwitchToProfile(
+        val profileId: String = "",
+    ) : PadAction()
+
     /** Opens the profile-switcher dialog to select a different profile. */
     @Serializable
     @SerialName("profile_switcher")
@@ -415,6 +422,10 @@ fun PadAction.defaultIconName(): String? =
 
         is PadAction.SwitchToLayout -> {
             "view_quilt"
+        }
+
+        is PadAction.SwitchToProfile -> {
+            "folder"
         }
 
         is PadAction.ProfileSwitcher -> {

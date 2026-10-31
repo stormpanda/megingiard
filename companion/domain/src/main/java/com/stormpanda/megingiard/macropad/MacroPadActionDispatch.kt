@@ -96,6 +96,13 @@ fun injectActionDown(
             }
         }
 
+        is PadAction.SwitchToProfile -> {
+            AppLog.d(TAG, "actionDown: SwitchToProfile profileId=${action.profileId}")
+            if (MacroPadState.switchToProfile(action.profileId)) {
+                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+            }
+        }
+
         is PadAction.ProfileSwitcher -> {
             AppLog.d(TAG, "actionDown: ProfileSwitcher")
             AppStateManager.openQuickMenu()
