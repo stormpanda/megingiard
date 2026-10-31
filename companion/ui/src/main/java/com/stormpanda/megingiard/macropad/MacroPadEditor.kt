@@ -53,6 +53,7 @@ import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -122,6 +123,7 @@ import kotlin.math.max
 private const val TAG = "MacroPadEditor"
 private val MPE_DECK_SPACING = 10.dp
 private val MPE_EMPTY_PADDING_V = 12.dp
+private val MPE_WARNING_BADGE_ICON_SIZE = 14.dp
 private const val MPE_BUTTON_HEADER_COUNT = 5
 
 private fun EditorSection.titleResId(): Int =
@@ -2629,6 +2631,7 @@ private fun ButtonsDeck(
 ) {
     val colors = LocalAppColors.current
     val buttons = layout?.buttons ?: emptyList()
+    val allProfiles by MacroPadState.profiles.collectAsStateWithLifecycle()
     val gridMode by MacroPadState.gridMode.collectAsStateWithLifecycle()
     var isReordering by remember { mutableStateOf(false) }
 
@@ -2760,12 +2763,36 @@ private fun ButtonsDeck(
             }
         } else if (!isReordering) {
             items(buttons, key = { it.id }) { btn ->
+                val isOrphanedTarget =
+                    btn.action.hasMissingTarget(
+                        allProfiles = allProfiles,
+                        activeProfile = profile,
+                    )
                 GamepadActionCard(
                     title = btn.label.ifBlank { btn.action.displayLabel() },
                     description = describePadButton(btn),
                     icon = btn.action.toCategory().icon,
                     onClick = { onEditButton(btn) },
                     itemKey = btn.id,
+                    trailingContent =
+                        if (isOrphanedTarget) {
+                            {
+                                GamepadPill(
+                                    text = stringResource(R.string.macropad_button_missing_target_badge),
+                                    isDestructive = true,
+                                    leadingContent = {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Warning,
+                                            contentDescription = null,
+                                            tint = colors.error,
+                                            modifier = Modifier.size(MPE_WARNING_BADGE_ICON_SIZE),
+                                        )
+                                    },
+                                )
+                            }
+                        } else {
+                            null
+                        },
                     onFocusChanged = { isFocused ->
                         if (isFocused) {
                             MacroPadState.setSelectedButtonId(btn.id)

@@ -491,8 +491,12 @@ internal fun PadAction.displayLabel(): String {
                 activeProfile
                     ?.macros
                     ?.firstOrNull { it.id == macroId }
-                    ?.name ?: macroId
-            stringResource(R.string.macropad_display_macro, macroName)
+                    ?.name
+            if (macroName != null) {
+                stringResource(R.string.macropad_display_macro, macroName)
+            } else {
+                stringResource(R.string.macropad_action_macro)
+            }
         }
 
         is PadAction.BackgroundPeek -> {

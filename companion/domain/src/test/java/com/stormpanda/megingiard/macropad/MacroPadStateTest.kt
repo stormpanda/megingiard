@@ -1388,4 +1388,29 @@ class MacroPadStateTest {
                 .single()
         assertEquals("p1", (copiedBtn.action as PadAction.SwitchToProfile).profileId)
     }
+
+    @Test
+    fun `switchToLayout and beginHoldToShiftLayout return false when target layout is blank or missing`() {
+        val l1 = testLayout(id = "l1", name = "Base")
+        val l2 = testLayout(id = "l2", name = "Target")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1, l2), activeLayoutId = "l1"))
+
+        assertFalse(MacroPadState.switchToLayout(""))
+        assertFalse(MacroPadState.switchToLayout("   "))
+        assertFalse(MacroPadState.switchToLayout("missing-layout"))
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+
+        assertTrue(MacroPadState.switchToLayout("l2"))
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+        assertTrue(MacroPadState.switchToLayout("l2"))
+
+        assertFalse(MacroPadState.beginHoldToShiftLayout(""))
+        assertFalse(MacroPadState.beginHoldToShiftLayout("missing-layout"))
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+
+        assertTrue(MacroPadState.beginHoldToShiftLayout("l1"))
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+        MacroPadState.endHoldToShiftLayout("l1")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+    }
 }

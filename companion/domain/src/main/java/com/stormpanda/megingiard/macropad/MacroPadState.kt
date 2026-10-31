@@ -31,33 +31,17 @@ private fun PadButton.cloneWithMacroMapping(
     layoutMapping: Map<String, String> = emptyMap(),
     fallbackLayoutId: String? = null,
     profileMapping: Map<String, String> = emptyMap(),
-): PadButton {
-    val updatedAction =
-        when (val action = this.action) {
-            is PadAction.Macro -> {
-                val newMacroId = macroMapping[action.macroId] ?: action.macroId
-                PadAction.Macro(newMacroId)
-            }
-
-            is PadAction.SwitchToLayout -> {
-                val newLayoutId = layoutMapping[action.layoutId] ?: fallbackLayoutId ?: action.layoutId
-                action.copy(layoutId = newLayoutId)
-            }
-
-            is PadAction.SwitchToProfile -> {
-                val newProfileId = profileMapping[action.profileId] ?: action.profileId
-                action.copy(profileId = newProfileId)
-            }
-
-            else -> {
-                action
-            }
-        }
-    return this.copy(
+): PadButton =
+    this.copy(
         id = UUID.randomUUID().toString(),
-        action = updatedAction,
+        action =
+            this.action.remapTargetIds(
+                macroIdMap = macroMapping,
+                layoutIdMap = layoutMapping,
+                fallbackLayoutId = fallbackLayoutId,
+                profileIdMap = profileMapping,
+            ),
     )
-}
 
 private fun List<PadButton>.cloneWithMacroMapping(
     macroMapping: Map<String, String>,
@@ -106,6 +90,13 @@ object MacroPadState {
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
     val missingProfileToastEvent: SharedFlow<Unit> = _missingProfileToastEvent.asSharedFlow()
+
+    private val _missingLayoutToastEvent =
+        MutableSharedFlow<Unit>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+    val missingLayoutToastEvent: SharedFlow<Unit> = _missingLayoutToastEvent.asSharedFlow()
 
     private var shiftReturnLayoutId: String? = null
     private val activeShiftLayoutStack = mutableListOf<String>()
@@ -672,33 +663,72 @@ object MacroPadState {
         }
     }
 
-    /** Switches directly to [layoutId] if it exists in the active profile. */
-    fun switchToLayout(layoutId: String) {
-        if (layoutId.isBlank()) return
-        updateState {
-            val profile = _activeProfile.value ?: return
-            val target = profile.layouts.firstOrNull { it.id == layoutId } ?: return
-            if (profile.activeLayoutId == layoutId && shiftActiveLayoutId == null) return
-            AppLog.d(TAG, "switchToLayout: ${target.name} ($layoutId)")
-            applyActiveLayoutIdLocked(profile, layoutId)
+    /**
+     * Switches directly to [layoutId] if it exists in the active profile.
+     * Returns `true` when [layoutId] resolved to an existing layout in the active profile, or
+     * `false` (emitting [missingLayoutToastEvent] when an active profile is loaded) if [layoutId]
+     * is blank or no longer exists.
+     */
+    fun switchToLayout(layoutId: String): Boolean {
+        if (layoutId.isBlank()) {
+            AppLog.w(TAG, "switchToLayout rejected: blank layoutId")
+            _missingLayoutToastEvent.tryEmit(Unit)
+            return false
         }
+        var activeProfileId: String? = null
+        var switchedLayoutName: String? = null
+        var alreadyActive = false
+        synchronized(stateLock) {
+            val profile = _activeProfile.value ?: return false
+            activeProfileId = profile.id
+            val target = profile.layouts.firstOrNull { it.id == layoutId } ?: return@synchronized
+            if (profile.activeLayoutId == layoutId && shiftActiveLayoutId == null) {
+                alreadyActive = true
+                return@synchronized
+            }
+            applyActiveLayoutIdLocked(profile, layoutId)
+            recomputeActiveState()
+            switchedLayoutName = target.name
+        }
+        if (alreadyActive) {
+            return true
+        }
+        val resolvedName = switchedLayoutName
+        if (resolvedName == null) {
+            AppLog.w(TAG, "switchToLayout failed: target layoutId=$layoutId not found in profile=$activeProfileId")
+            _missingLayoutToastEvent.tryEmit(Unit)
+            return false
+        }
+        AppLog.d(TAG, "switchToLayout: $resolvedName ($layoutId)")
+        MacroPadSettings.saveMacroPadData()
+        return true
     }
 
     /**
      * Temporarily pushes [targetLayoutId] onto the transient in-memory Hold-to-Shift stack while
      * a Hold-to-Shift button is held, without mutating persisted [PadProfile.activeLayoutId] or
      * triggering DataStore writes. Supports concurrent / chained multi-touch shifts.
+     * Returns `true` when [targetLayoutId] exists in the active profile, or `false` (emitting
+     * [missingLayoutToastEvent] when an active profile is loaded) if blank or missing.
      */
-    fun beginHoldToShiftLayout(targetLayoutId: String) {
-        if (targetLayoutId.isBlank()) return
-        updateState(persist = false) {
-            val profile = _activeProfile.value ?: return
-            if (profile.layouts.none { it.id == targetLayoutId }) return
+    fun beginHoldToShiftLayout(targetLayoutId: String): Boolean {
+        if (targetLayoutId.isBlank()) {
+            AppLog.w(TAG, "beginHoldToShiftLayout rejected: blank targetLayoutId")
+            _missingLayoutToastEvent.tryEmit(Unit)
+            return false
+        }
+        var activeProfileId: String? = null
+        var layoutFound = false
+        synchronized(stateLock) {
+            val profile = _activeProfile.value ?: return false
+            activeProfileId = profile.id
+            if (profile.layouts.none { it.id == targetLayoutId }) return@synchronized
+            layoutFound = true
             val baseId =
                 profile.activeLayoutId?.takeIf { candidate -> profile.layouts.any { it.id == candidate } }
                     ?: profile.layouts.firstOrNull()?.id
-                    ?: return
-            if (activeShiftLayoutStack.isEmpty() && baseId == targetLayoutId) return
+                    ?: return@synchronized
+            if (activeShiftLayoutStack.isEmpty() && baseId == targetLayoutId) return@synchronized
             val currentId =
                 activeShiftLayoutStack.lastOrNull { candidate -> profile.layouts.any { it.id == candidate } }
                     ?: baseId
@@ -711,7 +741,14 @@ object MacroPadState {
                 "beginHoldToShiftLayout: $currentId -> $targetLayoutId (depth=${activeShiftLayoutStack.size}, return=$shiftReturnLayoutId)",
             )
             _previewLayout.value = null
+            recomputeActiveState()
         }
+        if (!layoutFound) {
+            AppLog.w(TAG, "beginHoldToShiftLayout failed: target layoutId=$targetLayoutId not found in profile=$activeProfileId")
+            _missingLayoutToastEvent.tryEmit(Unit)
+            return false
+        }
+        return true
     }
 
     /**

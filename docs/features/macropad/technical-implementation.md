@@ -243,7 +243,7 @@ All input events from MacroPad actions (keyboard, mouse, gamepad, and touch) are
 `MacroPadState` is an `object` singleton following the project-wide pattern:
 
 - Private `MutableStateFlow` backing fields: `_profiles`, `_activeProfileId`, `_activeProfile`, `_activeLayout`, plus a transient in-memory `activeShiftLayoutStack` / `shiftReturnLayoutId` supporting concurrent stacked `Hold-to-Shift` (`PadAction.SwitchToLayout(holdToShift = true)`) layout overrides without mutating persisted `PadProfile.activeLayoutId`
-- Public read-only `StateFlow` / `SharedFlow`: `profiles`, `activeProfile`, `activeLayout`, and `missingProfileToastEvent` (emitted by `switchToProfile(profileId): Boolean` when a `PadAction.SwitchToProfile` target no longer exists)
+- Public read-only `StateFlow` / `SharedFlow`: `profiles`, `activeProfile`, `activeLayout`, `missingProfileToastEvent` (emitted by `switchToProfile(profileId): Boolean` when a `PadAction.SwitchToProfile` target no longer exists), and `missingLayoutToastEvent` (emitted by `switchToLayout(layoutId): Boolean` / `beginHoldToShiftLayout(targetLayoutId): Boolean` when a `PadAction.SwitchToLayout` target no longer exists)
 - All state mutations run inside a centralized `updateState(persist = true) { ... }` helper guarded by `stateLock` that atomically recomputes `_activeProfile` and `_activeLayout` (resolving the top valid `activeShiftLayoutStack` entry over `PadProfile.activeLayoutId`) before optionally scheduling a debounced asynchronous save (`MACROPAD_SAVE_DEBOUNCE_MS = 250L`) via `MacroPadSettings.saveMacroPadData()` (with `flushMacroPadDataNow()` for immediate flushes in config export and unit tests).
 
 ### Injector Lifecycle

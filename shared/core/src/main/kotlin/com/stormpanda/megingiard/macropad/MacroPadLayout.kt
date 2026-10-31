@@ -499,6 +499,66 @@ fun PadAction.defaultIconName(): String? =
         }
     }
 
+/**
+ * Returns a copy of this [PadAction] with UUID references remapped across [macroIdMap],
+ * [layoutIdMap] (falling back to [fallbackLayoutId] when unmapped), and [profileIdMap].
+ * Non-referential actions and unmapped IDs without a fallback are returned unchanged.
+ */
+fun PadAction.remapTargetIds(
+    macroIdMap: Map<String, String> = emptyMap(),
+    layoutIdMap: Map<String, String> = emptyMap(),
+    fallbackLayoutId: String? = null,
+    profileIdMap: Map<String, String> = emptyMap(),
+): PadAction =
+    when (this) {
+        is PadAction.Macro -> {
+            val newMacroId = macroIdMap[macroId] ?: macroId
+            copy(macroId = newMacroId)
+        }
+
+        is PadAction.SwitchToLayout -> {
+            val newLayoutId = layoutIdMap[layoutId] ?: fallbackLayoutId ?: layoutId
+            copy(layoutId = newLayoutId)
+        }
+
+        is PadAction.SwitchToProfile -> {
+            val newProfileId = profileIdMap[profileId] ?: profileId
+            copy(profileId = newProfileId)
+        }
+
+        else -> {
+            this
+        }
+    }
+
+/**
+ * Returns `true` when this action references a target entity (profile, layout, or macro) by UUID
+ * that is blank or absent from [allProfiles] / [activeProfile].
+ * Returns `false` for non-referential actions or when [activeProfile] is `null` for
+ * profile-scoped targets.
+ */
+fun PadAction.hasMissingTarget(
+    allProfiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+): Boolean =
+    when (this) {
+        is PadAction.SwitchToProfile -> {
+            profileId.isBlank() || allProfiles.none { it.id == profileId }
+        }
+
+        is PadAction.SwitchToLayout -> {
+            activeProfile != null && (layoutId.isBlank() || activeProfile.layouts.none { it.id == layoutId })
+        }
+
+        is PadAction.Macro -> {
+            activeProfile != null && (macroId.isBlank() || activeProfile.macros.none { it.id == macroId })
+        }
+
+        else -> {
+            false
+        }
+    }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PadButton — a single interactable element on the pad
 // ─────────────────────────────────────────────────────────────────────────────

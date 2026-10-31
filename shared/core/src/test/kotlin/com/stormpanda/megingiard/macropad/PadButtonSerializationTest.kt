@@ -490,4 +490,95 @@ class PadButtonSerializationTest {
 
         assertEquals("folder", PadAction.SwitchToProfile("profile-1").defaultIconName())
     }
+
+    @Test
+    fun `remapTargetIds remaps Macro SwitchToLayout and SwitchToProfile and preserves unmapped actions`() {
+        val macroMap = mapOf("m-old" to "m-new")
+        val layoutMap = mapOf("l-old" to "l-new")
+        val profileMap = mapOf("p-old" to "p-new")
+
+        assertEquals(
+            PadAction.Macro("m-new"),
+            PadAction.Macro("m-old").remapTargetIds(macroIdMap = macroMap),
+        )
+        assertEquals(
+            PadAction.Macro("m-unmapped"),
+            PadAction.Macro("m-unmapped").remapTargetIds(macroIdMap = macroMap),
+        )
+        assertEquals(
+            PadAction.SwitchToLayout(layoutId = "l-new", holdToShift = true),
+            PadAction.SwitchToLayout(layoutId = "l-old", holdToShift = true).remapTargetIds(
+                layoutIdMap = layoutMap,
+                fallbackLayoutId = "l-fallback",
+            ),
+        )
+        assertEquals(
+            PadAction.SwitchToLayout(layoutId = "l-fallback", holdToShift = false),
+            PadAction.SwitchToLayout(layoutId = "l-missing", holdToShift = false).remapTargetIds(
+                layoutIdMap = layoutMap,
+                fallbackLayoutId = "l-fallback",
+            ),
+        )
+        assertEquals(
+            PadAction.SwitchToLayout(layoutId = "l-missing", holdToShift = false),
+            PadAction.SwitchToLayout(layoutId = "l-missing", holdToShift = false).remapTargetIds(
+                layoutIdMap = layoutMap,
+                fallbackLayoutId = null,
+            ),
+        )
+        assertEquals(
+            PadAction.SwitchToProfile(profileId = "p-new"),
+            PadAction.SwitchToProfile(profileId = "p-old").remapTargetIds(profileIdMap = profileMap),
+        )
+        assertEquals(
+            PadAction.SwitchToProfile(profileId = "p-external"),
+            PadAction.SwitchToProfile(profileId = "p-external").remapTargetIds(profileIdMap = profileMap),
+        )
+        assertEquals(
+            PadAction.SwitchToHub,
+            PadAction.SwitchToHub.remapTargetIds(
+                macroIdMap = macroMap,
+                layoutIdMap = layoutMap,
+                fallbackLayoutId = "l-fallback",
+                profileIdMap = profileMap,
+            ),
+        )
+    }
+
+    @Test
+    fun `hasMissingTarget detects orphaned SwitchToProfile SwitchToLayout and Macro references`() {
+        val activeProfile =
+            PadProfile(
+                id = "p-active",
+                name = "Active",
+                layouts = listOf(PadLayout(id = "l-1", name = "Main")),
+                macros = listOf(Macro(id = "m-1", name = "Combo")),
+                activeLayoutId = "l-1",
+            )
+        val otherProfile =
+            PadProfile(
+                id = "p-other",
+                name = "Other",
+                layouts = listOf(PadLayout(id = "l-2", name = "Secondary")),
+                activeLayoutId = "l-2",
+            )
+        val allProfiles = listOf(activeProfile, otherProfile)
+
+        assertFalse(PadAction.SwitchToProfile("p-other").hasMissingTarget(allProfiles, activeProfile))
+        assertTrue(PadAction.SwitchToProfile("p-deleted").hasMissingTarget(allProfiles, activeProfile))
+        assertTrue(PadAction.SwitchToProfile("").hasMissingTarget(allProfiles, activeProfile))
+
+        assertFalse(PadAction.SwitchToLayout("l-1").hasMissingTarget(allProfiles, activeProfile))
+        assertTrue(PadAction.SwitchToLayout("l-deleted").hasMissingTarget(allProfiles, activeProfile))
+        assertTrue(PadAction.SwitchToLayout("").hasMissingTarget(allProfiles, activeProfile))
+        assertFalse(PadAction.SwitchToLayout("l-deleted").hasMissingTarget(allProfiles, activeProfile = null))
+
+        assertFalse(PadAction.Macro("m-1").hasMissingTarget(allProfiles, activeProfile))
+        assertTrue(PadAction.Macro("m-deleted").hasMissingTarget(allProfiles, activeProfile))
+        assertTrue(PadAction.Macro("").hasMissingTarget(allProfiles, activeProfile))
+        assertFalse(PadAction.Macro("m-deleted").hasMissingTarget(allProfiles, activeProfile = null))
+
+        assertFalse(PadAction.LayoutNext.hasMissingTarget(allProfiles, activeProfile))
+        assertFalse(PadAction.SwitchToHub.hasMissingTarget(allProfiles, activeProfile))
+    }
 }

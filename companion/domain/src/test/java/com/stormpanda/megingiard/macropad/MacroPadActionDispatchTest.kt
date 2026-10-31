@@ -191,6 +191,36 @@ class MacroPadActionDispatchTest {
     }
 
     @Test
+    fun injectActionDown_switchToLayout_missingTargetEmitsToastOncePerPress() =
+        runTest {
+            val layoutA = PadLayout(id = "layout-a", name = "Main")
+            val profile =
+                PadProfile(
+                    id = "prof-1",
+                    name = "Test",
+                    layouts = listOf(layoutA),
+                    activeLayoutId = "layout-a",
+                )
+            MacroPadState.loadFrom(listOf(profile), "prof-1")
+
+            MacroPadState.missingLayoutToastEvent.test {
+                val missingTap = PadAction.SwitchToLayout(layoutId = "deleted-layout", holdToShift = false)
+                injectActionDown(missingTap)
+                assertEquals(Unit, awaitItem())
+                assertEquals("layout-a", MacroPadState.activeLayout.value?.id)
+                injectActionUp(missingTap)
+                expectNoEvents()
+
+                val missingShift = PadAction.SwitchToLayout(layoutId = "deleted-layout", holdToShift = true)
+                injectActionDown(missingShift)
+                assertEquals(Unit, awaitItem())
+                assertEquals("layout-a", MacroPadState.activeLayout.value?.id)
+                injectActionUp(missingShift)
+                expectNoEvents()
+            }
+        }
+
+    @Test
     fun injectActionDown_switchToHub() {
         AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
         injectActionDown(PadAction.SwitchToHub)

@@ -71,6 +71,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
+import kotlinx.coroutines.launch
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -122,9 +123,17 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val colors = LocalAppColors.current
 
     LaunchedEffect(Unit) {
-        MacroPadState.missingProfileToastEvent.collect {
-            AppLog.w(TAG, "missingProfileToastEvent received -> showing missing profile toast")
-            DialogToastManager.show(context.getString(R.string.macropad_switch_profile_not_found_toast))
+        launch {
+            MacroPadState.missingProfileToastEvent.collect {
+                AppLog.w(TAG, "missingProfileToastEvent received -> showing missing profile toast")
+                DialogToastManager.show(context.getString(R.string.macropad_switch_profile_not_found_toast))
+            }
+        }
+        launch {
+            MacroPadState.missingLayoutToastEvent.collect {
+                AppLog.w(TAG, "missingLayoutToastEvent received -> showing missing layout toast")
+                DialogToastManager.show(context.getString(R.string.macropad_switch_layout_not_found_toast))
+            }
         }
     }
 

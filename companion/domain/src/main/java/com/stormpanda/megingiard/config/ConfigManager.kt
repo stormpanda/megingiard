@@ -8,8 +8,8 @@ import android.provider.OpenableColumns
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.BackgroundScaleMode
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.macropad.PadAction
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.remapTargetIds
 import com.stormpanda.megingiard.security.HmacUtil
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
@@ -725,8 +725,7 @@ object ConfigManager {
                             button.copy(
                                 id = UUID.randomUUID().toString(),
                                 action =
-                                    remapImportedAction(
-                                        action = button.action,
+                                    button.action.remapTargetIds(
                                         macroIdMap = macroIdMap,
                                         layoutIdMap = layoutIdMap,
                                         fallbackLayoutId = fallbackLayoutId,
@@ -827,34 +826,6 @@ object ConfigManager {
             AppLog.d(TAG, "imported profile '${profile.name}' → $newProfileId (${remappedMacros.size} macros)")
         }
     }
-
-    private fun remapImportedAction(
-        action: PadAction,
-        macroIdMap: Map<String, String>,
-        layoutIdMap: Map<String, String>,
-        fallbackLayoutId: String?,
-        profileIdMap: Map<String, String>,
-    ): PadAction =
-        when (action) {
-            is PadAction.Macro -> {
-                val newMacroId = macroIdMap[action.macroId] ?: action.macroId
-                PadAction.Macro(macroId = newMacroId)
-            }
-
-            is PadAction.SwitchToLayout -> {
-                val newLayoutId = layoutIdMap[action.layoutId] ?: fallbackLayoutId ?: action.layoutId
-                action.copy(layoutId = newLayoutId)
-            }
-
-            is PadAction.SwitchToProfile -> {
-                val newProfileId = profileIdMap[action.profileId] ?: action.profileId
-                action.copy(profileId = newProfileId)
-            }
-
-            else -> {
-                action
-            }
-        }
 
     // ── Checksum ─────────────────────────────────────────────────────────────
 

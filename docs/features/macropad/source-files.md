@@ -12,7 +12,7 @@
 
 | File | Responsibility |
 | --- | --- |
-| `MacroPadScreen.kt` | Use-mode Composable: pad render (`PadSurface`), multi-touch input, background mirror & layout image layers, and single `DisposableEffect(hasFollowMode)` `TouchScreenObserver` registration; reactively switches between use-mode `PadSurface` and bottom-screen live editor `PadCanvas` when `AppStateManager.isEditorActive` is true; collects `MacroExecutor.runningMacroIds` and `MacroPadState.missingProfileToastEvent` |
+| `MacroPadScreen.kt` | Use-mode Composable: pad render (`PadSurface`), multi-touch input, background mirror & layout image layers, and single `DisposableEffect(hasFollowMode)` `TouchScreenObserver` registration; reactively switches between use-mode `PadSurface` and bottom-screen live editor `PadCanvas` when `AppStateManager.isEditorActive` is true; collects `MacroExecutor.runningMacroIds`, `MacroPadState.missingProfileToastEvent`, and `MacroPadState.missingLayoutToastEvent` |
 | `MacroPadEditor.kt` | Full-screen layout editor built on `GamepadTwoPaneScaffold`: orchestrates the 9 sidebar categories (`Quick Actions`, `Profiles`, `Layouts`, `Automation`, `Mirror`, `Background`, `Mask`, `Buttons`, `Macros`), deck content columns, in-deck sub-page stack navigation, and exit auto-switch reactivation prompt (`GamepadConfirmModal`) |
 | `MacroPadNavState.kt` | Singleton holding `selectedSection`, `subPageStack`, and single-source-of-truth `buttonDraft` and `macroDraft` across composable lifecycles and modal suspensions |
 | `MacroPadSubPages.kt` | Architecture models and shared components for in-deck sub-menus: `MacroPadSubPage` sealed hierarchy, `EditorColorTarget`, `GamepadSubPageHeader` breadcrumbs, `ColorWheelSubPageContent`, and shared `rememberButton2DAdjusterState` (`Button2DAdjusterState`) for 2D gamepad button movement and resizing |
@@ -74,7 +74,7 @@
 | `TouchScreenObserver.kt` (`:companion:domain`) | Multi-client passive evdev reader (`SUB TOUCH`) with per-client callback registration (`start(clientToken, onTouchNormalized, onTouchEvent)`) |
 | `InjectorLifecycleManager.kt` (`:companion:ui`) | Centrally starts and stops `KeyInjector`, `MouseInjector`, and `TouchInjector` based on foreground activity and setup wizard state |
 | `MegingiardAccessibilityService.kt` (`:companion:ui`) | Event-driven accessibility service forwarding foreground window focus changes to `AutoSwitchCoordinator` and hosting `FloatingBubbleOverlay` |
-| `MacroPadLayout.kt` (`:shared:core`) | Serializable data models (`PadProfile`, `PadLayout`, `PadButton`, `PadAction`, `ColorOption`), custom serializers, `normalizedOnLoad()`, and `nextUniqueName()` |
+| `MacroPadLayout.kt` (`:shared:core`) | Serializable data models (`PadProfile`, `PadLayout`, `PadButton`, `PadAction`, `ColorOption`), custom serializers, `PadAction.remapTargetIds()`, `PadAction.hasMissingTarget()`, `normalizedOnLoad()`, and `nextUniqueName()` |
 | `MacroData.kt` (`:shared:core`) | Serializable `Macro` and `MacroStep` models, `Macro.randomized()`, and `completeTouchPathSamples()` |
 | `MacroEventCompiler.kt` (`:shared:core`) | Pure compiler converting `List<MacroStep>` into chronologically sorted, reset-prioritized `MacroEvent` sequences |
 | `MacroStepShift.kt` (`:shared:core`) | Pure `ShiftMode` (`NONE`, `START_DELTA`, `END_DELTA`) and `applyShiftSubsequent()` step timestamp shifting logic |
