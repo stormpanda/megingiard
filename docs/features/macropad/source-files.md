@@ -74,7 +74,7 @@
 | `TouchScreenObserver.kt` (`:companion:domain`) | Multi-client passive evdev reader (`SUB TOUCH`) with per-client callback registration (`start(clientToken, onTouchNormalized, onTouchEvent)`) |
 | `InjectorLifecycleManager.kt` (`:companion:ui`) | Centrally starts and stops `KeyInjector`, `MouseInjector`, and `TouchInjector` based on foreground activity and setup wizard state |
 | `MegingiardAccessibilityService.kt` (`:companion:ui`) | Event-driven accessibility service forwarding foreground window focus changes to `AutoSwitchCoordinator` and hosting `FloatingBubbleOverlay` |
-| `MacroPadLayout.kt` (`:shared:core`) | Serializable data models (`PadProfile`, `PadLayout`, `PadButton`, `PadAction`, `ColorOption`), custom serializers, `PadAction.remapTargetIds()`, `PadAction.hasMissingTarget()`, `normalizedOnLoad()`, and `nextUniqueName()` |
+| `MacroPadLayout.kt` (`:shared:core`) | Serializable data models (`PadProfile`, `PadLayout`, `PadButton`, `PadAction`, `ColorOption`), custom serializers, `PadAction.remapTargetIds()`, `PadAction.hasMissingTarget()`, `defaultSwitchTargetId()`, `normalizedOnLoad()`, and `nextUniqueName()` |
 | `MacroData.kt` (`:shared:core`) | Serializable `Macro` and `MacroStep` models, `Macro.randomized()`, and `completeTouchPathSamples()` |
 | `MacroEventCompiler.kt` (`:shared:core`) | Pure compiler converting `List<MacroStep>` into chronologically sorted, reset-prioritized `MacroEvent` sequences |
 | `MacroStepShift.kt` (`:shared:core`) | Pure `ShiftMode` (`NONE`, `START_DELTA`, `END_DELTA`) and `applyShiftSubsequent()` step timestamp shifting logic |

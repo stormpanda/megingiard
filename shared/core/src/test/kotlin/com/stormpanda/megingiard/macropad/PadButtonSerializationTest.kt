@@ -581,4 +581,24 @@ class PadButtonSerializationTest {
         assertFalse(PadAction.LayoutNext.hasMissingTarget(allProfiles, activeProfile))
         assertFalse(PadAction.SwitchToHub.hasMissingTarget(allProfiles, activeProfile))
     }
+
+    @Test
+    fun `defaultSwitchTargetId prefers first non-active entity and falls back cleanly`() {
+        val p1 = PadProfile(id = "p-1", name = "One")
+        val p2 = PadProfile(id = "p-2", name = "Two")
+        val p3 = PadProfile(id = "p-3", name = "Three")
+
+        assertEquals("p-2", listOf(p1, p2, p3).defaultSwitchTargetId(activeProfileId = "p-1"))
+        assertEquals("p-1", listOf(p1, p2, p3).defaultSwitchTargetId(activeProfileId = "p-2"))
+        assertEquals("p-1", listOf(p1, p2, p3).defaultSwitchTargetId(activeProfileId = null))
+        assertEquals("p-1", listOf(p1).defaultSwitchTargetId(activeProfileId = "p-1"))
+        assertEquals("", emptyList<PadProfile>().defaultSwitchTargetId(activeProfileId = "p-1"))
+
+        val l1 = PadLayout(id = "l-1", name = "Base")
+        val l2 = PadLayout(id = "l-2", name = "Alt")
+        assertEquals("l-2", listOf(l1, l2).defaultSwitchTargetId(activeLayoutId = "l-1"))
+        assertEquals("l-1", listOf(l1, l2).defaultSwitchTargetId(activeLayoutId = "l-2"))
+        assertEquals("l-1", listOf(l1).defaultSwitchTargetId(activeLayoutId = "l-1"))
+        assertEquals("", emptyList<PadLayout>().defaultSwitchTargetId(activeLayoutId = "l-1"))
+    }
 }

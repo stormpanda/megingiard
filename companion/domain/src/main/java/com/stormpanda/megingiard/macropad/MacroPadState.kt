@@ -514,21 +514,27 @@ object MacroPadState {
             _missingProfileToastEvent.tryEmit(Unit)
             return false
         }
-        val targetName: String? =
-            synchronized(stateLock) {
-                val target = _profiles.value.firstOrNull { it.id == profileId } ?: return@synchronized null
-                _previewLayout.value = null
-                assignActiveProfileId(profileId)
-                recomputeActiveState()
-                target.name
-            }
-        if (targetName == null) {
+        var targetName: String? = null
+        var profileChanged = false
+        updateState(persist = false) {
+            val target = _profiles.value.firstOrNull { it.id == profileId } ?: return@updateState
+            profileChanged = _activeProfileId.value != profileId
+            _previewLayout.value = null
+            assignActiveProfileId(profileId)
+            targetName = target.name
+        }
+        val resolvedName = targetName
+        if (resolvedName == null) {
             AppLog.w(TAG, "switchToProfile failed: target profileId=$profileId not found")
             _missingProfileToastEvent.tryEmit(Unit)
             return false
         }
-        AppLog.i(TAG, "switchToProfile: '$targetName' ($profileId)")
-        MacroPadSettings.saveMacroPadData()
+        if (profileChanged) {
+            AppLog.i(TAG, "switchToProfile: '$resolvedName' ($profileId)")
+            MacroPadSettings.saveMacroPadData()
+        } else {
+            AppLog.d(TAG, "switchToProfile: '$resolvedName' ($profileId) already active")
+        }
         return true
     }
 
@@ -678,17 +684,22 @@ object MacroPadState {
         var activeProfileId: String? = null
         var switchedLayoutName: String? = null
         var alreadyActive = false
-        synchronized(stateLock) {
-            val profile = _activeProfile.value ?: return false
+        var persistedLayoutChanged = false
+        updateState(persist = false) {
+            val profile = _activeProfile.value ?: return@updateState
             activeProfileId = profile.id
-            val target = profile.layouts.firstOrNull { it.id == layoutId } ?: return@synchronized
+            val target = profile.layouts.firstOrNull { it.id == layoutId } ?: return@updateState
             if (profile.activeLayoutId == layoutId && shiftActiveLayoutId == null) {
                 alreadyActive = true
-                return@synchronized
+                return@updateState
             }
+            persistedLayoutChanged = profile.activeLayoutId != layoutId
             applyActiveLayoutIdLocked(profile, layoutId)
-            recomputeActiveState()
             switchedLayoutName = target.name
+        }
+        if (activeProfileId == null) {
+            AppLog.w(TAG, "switchToLayout rejected: no active profile loaded for layoutId=$layoutId")
+            return false
         }
         if (alreadyActive) {
             return true
@@ -700,7 +711,9 @@ object MacroPadState {
             return false
         }
         AppLog.d(TAG, "switchToLayout: $resolvedName ($layoutId)")
-        MacroPadSettings.saveMacroPadData()
+        if (persistedLayoutChanged) {
+            MacroPadSettings.saveMacroPadData()
+        }
         return true
     }
 
@@ -719,16 +732,16 @@ object MacroPadState {
         }
         var activeProfileId: String? = null
         var layoutFound = false
-        synchronized(stateLock) {
-            val profile = _activeProfile.value ?: return false
+        updateState(persist = false) {
+            val profile = _activeProfile.value ?: return@updateState
             activeProfileId = profile.id
-            if (profile.layouts.none { it.id == targetLayoutId }) return@synchronized
+            if (profile.layouts.none { it.id == targetLayoutId }) return@updateState
             layoutFound = true
             val baseId =
                 profile.activeLayoutId?.takeIf { candidate -> profile.layouts.any { it.id == candidate } }
                     ?: profile.layouts.firstOrNull()?.id
-                    ?: return@synchronized
-            if (activeShiftLayoutStack.isEmpty() && baseId == targetLayoutId) return@synchronized
+                    ?: return@updateState
+            if (activeShiftLayoutStack.isEmpty() && baseId == targetLayoutId) return@updateState
             val currentId =
                 activeShiftLayoutStack.lastOrNull { candidate -> profile.layouts.any { it.id == candidate } }
                     ?: baseId
@@ -741,7 +754,10 @@ object MacroPadState {
                 "beginHoldToShiftLayout: $currentId -> $targetLayoutId (depth=${activeShiftLayoutStack.size}, return=$shiftReturnLayoutId)",
             )
             _previewLayout.value = null
-            recomputeActiveState()
+        }
+        if (activeProfileId == null) {
+            AppLog.w(TAG, "beginHoldToShiftLayout rejected: no active profile loaded for targetLayoutId=$targetLayoutId")
+            return false
         }
         if (!layoutFound) {
             AppLog.w(TAG, "beginHoldToShiftLayout failed: target layoutId=$targetLayoutId not found in profile=$activeProfileId")

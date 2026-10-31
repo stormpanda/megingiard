@@ -18,6 +18,8 @@ internal val GC_SPACING_8 = 8.dp
 internal val GC_SPACING_10 = 10.dp
 
 internal const val GC_ACCENT_TINT_ALPHA = 0.2f
+internal const val GC_DESTRUCTIVE_BG_ALPHA = 0.15f
+internal const val GC_DESTRUCTIVE_BORDER_ALPHA = 0.6f
 internal const val GC_ANIM_DURATION_MS = 150
 
 private val GC_STATUS_PILL_CORNER = 16.dp

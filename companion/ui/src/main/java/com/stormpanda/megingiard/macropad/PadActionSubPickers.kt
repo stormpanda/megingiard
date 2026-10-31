@@ -28,6 +28,7 @@ import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
+import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
@@ -180,9 +181,8 @@ internal fun MacroPicker(
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val macros = profile?.macros ?: emptyList()
 
-    val selectedMacro =
-        macros.firstOrNull { it.id == current.macroId }
-            ?: macros.firstOrNull()
+    val selectedMacro = macros.firstOrNull { it.id == current.macroId }
+    val isMissingTarget = selectedMacro == null && macros.isNotEmpty()
 
     GamepadInfoBox(
         text = stringResource(R.string.macropad_picker_macro_create_info_title),
@@ -194,7 +194,23 @@ internal fun MacroPicker(
     GamepadActionCard(
         title = stringResource(R.string.macropad_action_macro),
         description = stringResource(R.string.macropad_picker_macro_desc),
-        actionText = selectedMacro?.name ?: stringResource(R.string.macropad_picker_folder_empty),
+        actionText =
+            when {
+                selectedMacro != null -> selectedMacro.name
+                macros.isEmpty() -> stringResource(R.string.macropad_picker_folder_empty)
+                else -> null
+            },
+        trailingContent =
+            if (isMissingTarget) {
+                {
+                    GamepadPill(
+                        text = stringResource(R.string.macropad_button_missing_target_badge),
+                        isDestructive = true,
+                    )
+                }
+            } else {
+                null
+            },
         icon = Icons.Rounded.SmartButton,
         onClick = onOpenMacroPicker,
         modifier = Modifier.firstDeckItem(isFirstItem),
@@ -308,9 +324,7 @@ internal fun SwitchToLayoutPicker(
 ) {
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val layouts = profile?.layouts ?: emptyList()
-    val selectedLayout =
-        layouts.firstOrNull { it.id == current.layoutId }
-            ?: layouts.firstOrNull()
+    val selectedLayout = layouts.firstOrNull { it.id == current.layoutId }
 
     GamepadActionCard(
         title = stringResource(R.string.macropad_action_group_layout),
@@ -321,19 +335,26 @@ internal fun SwitchToLayoutPicker(
         modifier = Modifier.firstDeckItem(isFirstItem),
     )
 
-    if (layouts.isNotEmpty() && selectedLayout != null) {
+    if (layouts.isNotEmpty()) {
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_switch_layout_target_title),
             description = stringResource(R.string.macropad_switch_layout_target_desc),
-            selectedText = selectedLayout.name,
+            selectedText =
+                selectedLayout?.name
+                    ?: stringResource(R.string.macropad_button_missing_target_badge),
             icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+            isError = selectedLayout == null,
             onPrevious = {
-                val prev = layouts.cycle(selectedLayout, BumperDirection.PREV)
+                val prev =
+                    selectedLayout?.let { layouts.cycle(it, BumperDirection.PREV) }
+                        ?: layouts.first()
                 AppLog.d(TAG, "SwitchToLayoutPicker: layoutId=${prev.id} name='${prev.name}'")
                 onChange(current.copy(layoutId = prev.id))
             },
             onNext = {
-                val next = layouts.cycle(selectedLayout, BumperDirection.NEXT)
+                val next =
+                    selectedLayout?.let { layouts.cycle(it, BumperDirection.NEXT) }
+                        ?: layouts.first()
                 AppLog.d(TAG, "SwitchToLayoutPicker: layoutId=${next.id} name='${next.name}'")
                 onChange(current.copy(layoutId = next.id))
             },
@@ -360,9 +381,7 @@ internal fun SwitchToProfilePicker(
     isFirstItem: Boolean = false,
 ) {
     val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
-    val selectedProfile =
-        profiles.firstOrNull { it.id == current.profileId }
-            ?: profiles.firstOrNull()
+    val selectedProfile = profiles.firstOrNull { it.id == current.profileId }
 
     GamepadActionCard(
         title = stringResource(R.string.macropad_action_group_layout),
@@ -373,19 +392,26 @@ internal fun SwitchToProfilePicker(
         modifier = Modifier.firstDeckItem(isFirstItem),
     )
 
-    if (profiles.isNotEmpty() && selectedProfile != null) {
+    if (profiles.isNotEmpty()) {
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_switch_profile_target_title),
             description = stringResource(R.string.macropad_switch_profile_target_desc),
-            selectedText = selectedProfile.name,
+            selectedText =
+                selectedProfile?.name
+                    ?: stringResource(R.string.macropad_button_missing_target_badge),
             icon = Icons.Rounded.Folder,
+            isError = selectedProfile == null,
             onPrevious = {
-                val prev = profiles.cycle(selectedProfile, BumperDirection.PREV)
+                val prev =
+                    selectedProfile?.let { profiles.cycle(it, BumperDirection.PREV) }
+                        ?: profiles.first()
                 AppLog.d(TAG, "SwitchToProfilePicker: profileId=${prev.id} name='${prev.name}'")
                 onChange(current.copy(profileId = prev.id))
             },
             onNext = {
-                val next = profiles.cycle(selectedProfile, BumperDirection.NEXT)
+                val next =
+                    selectedProfile?.let { profiles.cycle(it, BumperDirection.NEXT) }
+                        ?: profiles.first()
                 AppLog.d(TAG, "SwitchToProfilePicker: profileId=${next.id} name='${next.name}'")
                 onChange(current.copy(profileId = next.id))
             },

@@ -173,13 +173,15 @@ internal enum class ActionCategory(
         R.string.macropad_action_switch_to_layout,
         ActionGroup.LAYOUT,
         {
-            val profile = MacroPadState.activeProfile.value
+            val layouts =
+                MacroPadState.activeProfile.value
+                    ?.layouts
+                    .orEmpty()
             val activeId = MacroPadState.activeLayout.value?.id
-            val defaultTargetId =
-                profile?.layouts?.firstOrNull { it.id != activeId }?.id
-                    ?: profile?.layouts?.firstOrNull()?.id
-                    ?: ""
-            PadAction.SwitchToLayout(layoutId = defaultTargetId, holdToShift = false)
+            PadAction.SwitchToLayout(
+                layoutId = layouts.defaultSwitchTargetId(activeId),
+                holdToShift = false,
+            )
         },
     ),
     SWITCH_TO_PROFILE(
@@ -189,11 +191,9 @@ internal enum class ActionCategory(
         {
             val allProfiles = MacroPadState.profiles.value
             val activeId = MacroPadState.activeProfile.value?.id
-            val defaultTargetId =
-                allProfiles.firstOrNull { it.id != activeId }?.id
-                    ?: allProfiles.firstOrNull()?.id
-                    ?: ""
-            PadAction.SwitchToProfile(profileId = defaultTargetId)
+            PadAction.SwitchToProfile(
+                profileId = allProfiles.defaultSwitchTargetId(activeId),
+            )
         },
     ),
     PROFILE_SWITCHER(

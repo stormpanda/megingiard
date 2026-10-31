@@ -115,13 +115,30 @@ fun GamepadAdjustableCapsule(
     isAdjusting: Boolean,
     isFocused: Boolean,
     enabled: Boolean = true,
+    isError: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    val capsuleBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
+    val capsuleBorderColor =
+        when {
+            isAdjusting -> colors.accent
+            isError -> colors.error.copy(alpha = GC_DESTRUCTIVE_BORDER_ALPHA)
+            else -> colors.subduedBorder
+        }
     val capsuleBorderWidth = if (isAdjusting) GC_CAPSULE_BORDER_ADJUSTING else GC_CAPSULE_BORDER_DEFAULT
-    val capsuleBg = if (isAdjusting) colors.accent.copy(alpha = GC_ACCENT_TINT_ALPHA) else colors.surfaceVariant
+    val capsuleBg =
+        when {
+            isAdjusting -> colors.accent.copy(alpha = GC_ACCENT_TINT_ALPHA)
+            isError -> colors.error.copy(alpha = GC_DESTRUCTIVE_BG_ALPHA)
+            else -> colors.surfaceVariant
+        }
     val arrowTint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary
+    val valueTextColor =
+        when {
+            isError -> colors.error
+            isAdjusting -> colors.accent
+            else -> colors.onSurface
+        }
 
     Row(
         modifier =
@@ -144,7 +161,7 @@ fun GamepadAdjustableCapsule(
 
         Text(
             text = valueText,
-            color = if (isAdjusting) colors.accent else colors.onSurface,
+            color = valueTextColor,
             fontSize = GC_TEXT_SIZE_CAPSULE,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,

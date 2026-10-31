@@ -1,12 +1,15 @@
 package com.stormpanda.megingiard.macropad
 
+import app.cash.turbine.test
 import com.stormpanda.megingiard.mirror.AnchorPoint
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.mirror.VisualAnchorSignature
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -1413,4 +1416,59 @@ class MacroPadStateTest {
         MacroPadState.endHoldToShiftLayout("l1")
         assertEquals("l2", MacroPadState.activeLayout.value?.id)
     }
+
+    @Test
+    fun `switchToProfile and switchToLayout skip redundant persistence when persisted target is unchanged`() =
+        runTest {
+            val p1l1 = testLayout(id = "p1-l1", name = "P1Base")
+            val p1l2 = testLayout(id = "p1-l2", name = "P1Shift")
+            val p1 = testProfile(id = "p1", name = "Profile 1", layouts = listOf(p1l1, p1l2), activeLayoutId = "p1-l1")
+            val p2 =
+                testProfile(
+                    id = "p2",
+                    name = "Profile 2",
+                    layouts = listOf(testLayout(id = "p2-l1", name = "P2Base")),
+                    activeLayoutId = "p2-l1",
+                )
+            loadProfiles(p1, p2, activeId = "p1")
+
+            MacroPadSettings.macroPadSaveRequests.test {
+                // Switching to a different profile triggers persistence
+                assertTrue(MacroPadState.switchToProfile("p2"))
+                assertEquals(Unit, awaitItem())
+
+                // Switching to the already-active profile skips persistence
+                assertTrue(MacroPadState.switchToProfile("p2"))
+                expectNoEvents()
+
+                // Switch back to p1 (persists), push a transient shift, then re-switch to p1 (clears shift, skips persistence)
+                assertTrue(MacroPadState.switchToProfile("p1"))
+                assertEquals(Unit, awaitItem())
+                assertTrue(MacroPadState.beginHoldToShiftLayout("p1-l2"))
+                expectNoEvents()
+                assertTrue(MacroPadState.switchToProfile("p1"))
+                assertEquals("p1-l1", MacroPadState.activeLayout.value?.id)
+                expectNoEvents()
+
+                // Tapping SwitchToLayout for the already-persisted base layout while shifted clears shift without persisting
+                assertTrue(MacroPadState.beginHoldToShiftLayout("p1-l2"))
+                assertEquals("p1-l2", MacroPadState.activeLayout.value?.id)
+                assertTrue(MacroPadState.switchToLayout("p1-l1"))
+                assertEquals("p1-l1", MacroPadState.activeLayout.value?.id)
+                expectNoEvents()
+            }
+        }
+
+    @Test
+    fun `switchToLayout and beginHoldToShiftLayout reject cleanly without toast when no active profile is loaded`() =
+        runTest {
+            MacroPadState.reorderProfiles(emptyList())
+            assertNull(MacroPadState.activeProfile.value)
+
+            MacroPadState.missingLayoutToastEvent.test {
+                assertFalse(MacroPadState.switchToLayout("l1"))
+                assertFalse(MacroPadState.beginHoldToShiftLayout("l1"))
+                expectNoEvents()
+            }
+        }
 }

@@ -504,29 +504,6 @@ internal fun EditButtonSubPageContent(
         }
     }
 
-    LaunchedEffect(layouts) {
-        val currentAction = action
-        if (currentAction is PadAction.SwitchToLayout && layouts.isNotEmpty()) {
-            val layoutExists = layouts.any { it.id == currentAction.layoutId }
-            if (!layoutExists) {
-                action = currentAction.copy(layoutId = layouts.first().id)
-            }
-        }
-    }
-
-    LaunchedEffect(allProfiles) {
-        val currentAction = action
-        if (currentAction is PadAction.SwitchToProfile && allProfiles.isNotEmpty()) {
-            val profileExists = allProfiles.any { it.id == currentAction.profileId }
-            if (!profileExists) {
-                val fallbackId =
-                    allProfiles.firstOrNull { it.id != profile?.id }?.id
-                        ?: allProfiles.first().id
-                action = currentAction.copy(profileId = fallbackId)
-            }
-        }
-    }
-
     var posX by remember(button) { mutableFloatStateOf(button?.posX ?: 0.5f) }
     var posY by remember(button) { mutableFloatStateOf(button?.posY ?: 0.5f) }
     var isAdjusting by remember { mutableStateOf(false) }

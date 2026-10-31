@@ -559,6 +559,28 @@ fun PadAction.hasMissingTarget(
         }
     }
 
+/**
+ * Selects the default switch-target profile UUID when creating a new [PadAction.SwitchToProfile]
+ * button: prefers the first profile distinct from [activeProfileId], falling back to the first
+ * profile when only one exists, or `""` when empty.
+ */
+@JvmName("defaultProfileSwitchTargetId")
+fun List<PadProfile>.defaultSwitchTargetId(activeProfileId: String?): String =
+    firstOrNull { it.id != activeProfileId }?.id
+        ?: firstOrNull()?.id
+        ?: ""
+
+/**
+ * Selects the default switch-target layout UUID when creating a new [PadAction.SwitchToLayout]
+ * button: prefers the first layout distinct from [activeLayoutId], falling back to the first
+ * layout when only one exists, or `""` when empty.
+ */
+@JvmName("defaultLayoutSwitchTargetId")
+fun List<PadLayout>.defaultSwitchTargetId(activeLayoutId: String?): String =
+    firstOrNull { it.id != activeLayoutId }?.id
+        ?: firstOrNull()?.id
+        ?: ""
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PadButton — a single interactable element on the pad
 // ─────────────────────────────────────────────────────────────────────────────
