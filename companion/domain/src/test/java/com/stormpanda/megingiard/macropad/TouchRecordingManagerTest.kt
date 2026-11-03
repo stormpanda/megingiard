@@ -30,6 +30,7 @@ class TouchRecordingManagerTest {
         TouchRecordingManager.cancelRecording()
         TouchRecordingManager.resetState()
         TouchRecordingManager.consumeRecordedTap()
+        TouchRecordingManager.consumeRecordedSingleGesture()
         TouchScreenObserver.stopAll()
     }
 
@@ -308,5 +309,59 @@ class TouchRecordingManagerTest {
         assertEquals(0.2f, path.samples[0].normX)
         assertEquals(0.4f, path.samples[1].normX)
         assertEquals(TouchAction.UP, path.samples.last().action)
+    }
+
+    @Test
+    fun `SINGLE_GESTURE mode stays open across multi-finger movement and auto-finishes when last finger lifts`() {
+        TouchRecordingManager.requestRecording(TouchRecordingMode.SINGLE_GESTURE)
+        assertEquals(true, TouchRecordingManager.recordingRequested.value)
+
+        // Finger 0 touches down and moves, Finger 1 joins for a pinch
+        sendTouch(0, TouchAction.DOWN, 0.2f, 0.3f)
+        sendTouch(0, TouchAction.MOVE, 0.25f, 0.35f)
+        sendTouch(1, TouchAction.DOWN, 0.8f, 0.7f)
+        sendTouch(1, TouchAction.MOVE, 0.75f, 0.65f)
+
+        val midState = TouchRecordingManager.state.value as TouchRecordingState.Recording
+        assertEquals(TouchRecordingMode.SINGLE_GESTURE, midState.mode)
+        assertEquals(2, midState.activePointersCount)
+        assertEquals(true, TouchRecordingManager.recordingRequested.value)
+        assertEquals(null, TouchRecordingManager.recordedSingleGesture.value)
+
+        // Finger 0 lifts first — recording MUST remain open until Finger 1 also lifts
+        sendTouch(0, TouchAction.UP, 0.25f, 0.35f)
+        val afterFirstLift = TouchRecordingManager.state.value as TouchRecordingState.Recording
+        assertEquals(1, afterFirstLift.activePointersCount)
+        assertEquals(true, TouchRecordingManager.recordingRequested.value)
+        assertEquals(null, TouchRecordingManager.recordedSingleGesture.value)
+
+        // Finger 1 lifts — all pointers are now up, so SINGLE_GESTURE auto-completes immediately
+        sendTouch(1, TouchAction.UP, 0.75f, 0.65f)
+        assertEquals(false, TouchRecordingManager.recordingRequested.value)
+        val recorded = TouchRecordingManager.recordedSingleGesture.value
+        assertTrue(recorded != null && recorded.size == 6)
+        assertEquals(0L, recorded!!.first().offsetMs)
+        assertEquals(3, recorded.count { it.pointerId == 0 })
+        assertEquals(3, recorded.count { it.pointerId == 1 })
+        assertTrue(TouchRecordingManager.state.value is TouchRecordingState.Done)
+
+        TouchRecordingManager.consumeRecordedSingleGesture()
+        assertEquals(null, TouchRecordingManager.recordedSingleGesture.value)
+    }
+
+    @Test
+    fun `cancelRecording and resetState clear recordedSingleGesture`() {
+        TouchRecordingManager.requestRecording(TouchRecordingMode.SINGLE_GESTURE)
+        TouchRecordingManager.onSingleGestureRecorded(
+            listOf(
+                sample(0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.3f, normY = 0.4f),
+                sample(40L, pointerId = 0, action = TouchAction.UP, normX = 0.6f, normY = 0.4f),
+            ),
+        )
+        assertTrue(TouchRecordingManager.recordedSingleGesture.value != null)
+
+        TouchRecordingManager.resetState()
+        assertEquals(null, TouchRecordingManager.recordedSingleGesture.value)
+        assertEquals(TouchRecordingState.Idle, TouchRecordingManager.state.value)
     }
 }

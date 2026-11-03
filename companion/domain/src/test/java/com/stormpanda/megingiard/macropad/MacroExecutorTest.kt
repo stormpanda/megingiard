@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.ui.PrimaryModalConfig
 import com.stormpanda.megingiard.ui.PrimaryModalType
@@ -253,5 +254,47 @@ class MacroExecutorTest {
                 }
             assertTrue("Expected macro cleanup to send U 0, got $cleanupCommands", "U 0\n" in cleanupCommands)
             assertFalse("Macro cleanup must not release held TouchTap slot 8, got $cleanupCommands", "U 8\n" in cleanupCommands)
+        }
+
+    @Test
+    fun testRestartMidGestureReleasesPreviousTouchSlotBeforeNewDown() =
+        runBlocking {
+            val gestureAction =
+                PadAction.SingleTouchGesture(
+                    samples =
+                        listOf(
+                            TouchSample(0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.2f, normY = 0.3f),
+                            TouchSample(300L, pointerId = 0, action = TouchAction.UP, normX = 0.8f, normY = 0.3f),
+                        ),
+                )
+            val execId = singleTouchGestureExecutionId("btn-restart-gesture")
+            PrivdClient.clearQueueForTest()
+
+            // First press starts the gesture and holds slot 0 down
+            injectActionDown(gestureAction, buttonId = "btn-restart-gesture")
+            assertTrue(waitUntil(500) { MacroExecutor.isRunning(execId) && PrivdClient.queueSizeForTest > 0 })
+            val firstDown = PrivdClient.pollCommandForTest()
+            assertTrue("Expected initial D 0, got $firstDown", firstDown?.startsWith("D 0 ") == true)
+
+            // Re-pressing mid-gesture cancels the first run, lifts slot 0 first, then injects fresh D 0
+            injectActionDown(gestureAction, buttonId = "btn-restart-gesture")
+            assertTrue(waitUntil(500) { PrivdClient.queueSizeForTest >= 2 })
+
+            val restartCommands =
+                buildList {
+                    while (true) {
+                        val cmd = PrivdClient.pollCommandForTest() ?: break
+                        add(cmd)
+                    }
+                }
+            val upIdx = restartCommands.indexOf("U 0\n")
+            val newDownIdx = restartCommands.indexOfLast { it.startsWith("D 0 ") }
+            assertTrue(
+                "Previous slot 0 UP must occur before restarted D 0, got $restartCommands",
+                upIdx >= 0 && newDownIdx > upIdx,
+            )
+
+            MacroExecutor.stopAll()
+            assertTrue(waitUntil(500) { !MacroExecutor.isRunning(execId) })
         }
 }

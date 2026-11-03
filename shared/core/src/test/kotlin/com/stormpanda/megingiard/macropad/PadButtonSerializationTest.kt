@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -428,7 +429,7 @@ class PadButtonSerializationTest {
     }
 
     @Test
-    fun `TouchTap action serializes and deserializes with defaultIconName`() {
+    fun `TouchTap action serializes and deserializes with defaultIconName and legacy backward compatibility`() {
         val tapButton =
             PadButton(
                 id = "btn-touch-tap",
@@ -441,7 +442,50 @@ class PadButtonSerializationTest {
         assertTrue(encoded.contains("\"type\":\"touch_tap\""))
         val decoded = json.decodeFromString<PadButton>(encoded)
         assertEquals(tapButton, decoded)
+        assertTrue((decoded.action as PadAction.TouchTap).isRecorded)
         assertEquals("ads_click", PadAction.TouchTap(0.25f, 0.75f).defaultIconName())
+
+        // Legacy saved payload without isRecorded must decode with isRecorded = true
+        val legacyPayload =
+            """{"id":"btn-legacy-tap","label":"Legacy Tap","posX":0.5,"posY":0.5,"widthDp":60.0,"heightDp":60.0,"action":{"type":"touch_tap","normX":0.4,"normY":0.6}}"""
+        val decodedLegacy = json.decodeFromString<PadButton>(legacyPayload)
+        assertEquals(PadAction.TouchTap(normX = 0.4f, normY = 0.6f, isRecorded = true), decodedLegacy.action)
+
+        // Unrecorded draft round-trips isRecorded = false
+        val unrecordedButton = tapButton.copy(action = PadAction.TouchTap(isRecorded = false))
+        val decodedUnrecorded = json.decodeFromString<PadButton>(json.encodeToString(unrecordedButton))
+        assertEquals(unrecordedButton, decodedUnrecorded)
+    }
+
+    @Test
+    fun `SingleTouchGesture action serializes multi-finger samples and provides gesture defaultIconName`() {
+        val samples =
+            listOf(
+                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.2f, normY = 0.3f),
+                TouchSample(offsetMs = 15L, pointerId = 1, action = TouchAction.DOWN, normX = 0.8f, normY = 0.3f),
+                TouchSample(offsetMs = 50L, pointerId = 0, action = TouchAction.MOVE, normX = 0.3f, normY = 0.4f),
+                TouchSample(offsetMs = 50L, pointerId = 1, action = TouchAction.MOVE, normX = 0.7f, normY = 0.4f),
+                TouchSample(offsetMs = 90L, pointerId = 0, action = TouchAction.UP, normX = 0.3f, normY = 0.4f),
+                TouchSample(offsetMs = 100L, pointerId = 1, action = TouchAction.UP, normX = 0.7f, normY = 0.4f),
+            )
+        val gestureButton =
+            PadButton(
+                id = "btn-single-gesture",
+                label = "Pinch",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.SingleTouchGesture(samples = samples),
+            )
+        val encoded = json.encodeToString(gestureButton)
+        assertTrue(encoded.contains("\"type\":\"single_touch_gesture\""))
+        val decoded = json.decodeFromString<PadButton>(encoded)
+        assertEquals(gestureButton, decoded)
+        assertEquals("gesture", PadAction.SingleTouchGesture(samples = samples).defaultIconName())
+
+        val emptyDefaultPayload =
+            """{"id":"btn-empty-gesture","label":"Gesture","posX":0.5,"posY":0.5,"widthDp":60.0,"heightDp":60.0,"action":{"type":"single_touch_gesture"}}"""
+        val decodedDefault = json.decodeFromString<PadButton>(emptyDefaultPayload)
+        assertEquals(PadAction.SingleTouchGesture(samples = emptyList()), decodedDefault.action)
     }
 
     @Test

@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.MusicNote
@@ -41,10 +42,12 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import java.util.Locale
 import kotlin.math.roundToInt
 
 private const val TAG = "PadActionDisplay"
 private const val PAD_PERCENT_MULTIPLIER = 100f
+private const val PAD_MS_PER_SECOND = 1000f
 
 internal enum class ActionGroup(
     val icon: ImageVector,
@@ -65,6 +68,11 @@ internal enum class ActionGroup(
         Icons.Rounded.Mouse,
         R.string.macropad_action_group_mouse,
         R.string.macropad_action_group_mouse_desc,
+    ),
+    TOUCH(
+        Icons.Rounded.TouchApp,
+        R.string.macropad_action_group_touch,
+        R.string.macropad_action_group_touch_desc,
     ),
     APP_LAUNCHER(
         Icons.Rounded.Apps,
@@ -271,8 +279,14 @@ internal enum class ActionCategory(
     TOUCH_TAP(
         Icons.Rounded.AdsClick,
         R.string.macropad_action_touch_tap,
-        ActionGroup.TOOLS,
-        { PadAction.TouchTap() },
+        ActionGroup.TOUCH,
+        { PadAction.TouchTap(isRecorded = false) },
+    ),
+    SINGLE_TOUCH_GESTURE(
+        Icons.Rounded.Gesture,
+        R.string.macropad_action_single_touch_gesture,
+        ActionGroup.TOUCH,
+        { PadAction.SingleTouchGesture() },
     ),
     MEDIA_PLAY_PAUSE(
         Icons.Rounded.PlayArrow,
@@ -409,6 +423,10 @@ internal fun PadAction.toCategory(): ActionCategory =
 
         is PadAction.TouchTap -> {
             ActionCategory.TOUCH_TAP
+        }
+
+        is PadAction.SingleTouchGesture -> {
+            ActionCategory.SINGLE_TOUCH_GESTURE
         }
 
         is PadAction.MediaControl -> {
@@ -581,11 +599,29 @@ internal fun PadAction.displayLabel(): String {
         }
 
         is PadAction.TouchTap -> {
-            stringResource(
-                R.string.macropad_display_touch_tap,
-                (normX * PAD_PERCENT_MULTIPLIER).roundToInt(),
-                (normY * PAD_PERCENT_MULTIPLIER).roundToInt(),
-            )
+            if (!isRecorded) {
+                stringResource(R.string.macropad_action_touch_tap)
+            } else {
+                stringResource(
+                    R.string.macropad_display_touch_tap,
+                    (normX * PAD_PERCENT_MULTIPLIER).roundToInt(),
+                    (normY * PAD_PERCENT_MULTIPLIER).roundToInt(),
+                )
+            }
+        }
+
+        is PadAction.SingleTouchGesture -> {
+            if (samples.isEmpty()) {
+                stringResource(R.string.macropad_action_single_touch_gesture)
+            } else {
+                val fingerCount = countSingleTouchGestureFingers(samples)
+                val durationLabel = formatSingleTouchGestureDuration(samples)
+                if (fingerCount == 1) {
+                    stringResource(R.string.macropad_display_single_touch_gesture_single_finger, durationLabel)
+                } else {
+                    stringResource(R.string.macropad_display_single_touch_gesture_multi_finger, fingerCount, durationLabel)
+                }
+            }
         }
 
         is PadAction.MediaControl -> {
@@ -607,6 +643,18 @@ internal fun PadAction.displayLabel(): String {
             }
         }
     }
+}
+
+internal fun countSingleTouchGestureFingers(samples: List<TouchSample>): Int =
+    samples
+        .map { it.pointerId }
+        .distinct()
+        .size
+        .coerceAtLeast(1)
+
+internal fun formatSingleTouchGestureDuration(samples: List<TouchSample>): String {
+    val maxOffsetMs = samples.maxOfOrNull { it.offsetMs } ?: 0L
+    return String.format(Locale.US, "%.1fs", maxOffsetMs / PAD_MS_PER_SECOND)
 }
 
 internal fun resolveAppName(

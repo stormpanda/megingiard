@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionCommand
 import com.stormpanda.megingiard.CompanionViewMode
+import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.privd.PrivdClient
@@ -18,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -326,11 +328,65 @@ class MacroPadActionDispatchTest {
 
             injectActionUp(action)
             assertEquals("U $MP_TOUCH_TAP_SLOT\n", PrivdClient.pollCommandForTest())
+
+            // Unrecorded TouchTap must no-op on both down and up
+            val unrecorded = PadAction.TouchTap(normX = 0.5f, normY = 0.5f, isRecorded = false)
+            injectActionDown(unrecorded)
+            injectActionUp(unrecorded)
+            assertNull(PrivdClient.pollCommandForTest())
         } finally {
             PrivdClient.clearQueueForTest()
             PrivdClient.isConnectedForTest = null
         }
     }
+
+    @Test
+    fun injectActionDown_singleTouchGestureExecutesViaMacroExecutorAndStopsViaStopAllMacros() =
+        runBlocking {
+            PrivdClient.isConnectedForTest = true
+            PrivdClient.clearQueueForTest()
+            try {
+                // Empty SingleTouchGesture is a safe no-op
+                injectActionDown(PadAction.SingleTouchGesture(), buttonId = "btn-empty")
+                assertNull(PrivdClient.pollCommandForTest())
+
+                val gestureAction =
+                    PadAction.SingleTouchGesture(
+                        samples =
+                            listOf(
+                                TouchSample(0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.25f, normY = 0.5f),
+                                TouchSample(10L, pointerId = 1, action = TouchAction.DOWN, normX = 0.75f, normY = 0.5f),
+                                TouchSample(400L, pointerId = 0, action = TouchAction.UP, normX = 0.25f, normY = 0.5f),
+                                TouchSample(400L, pointerId = 1, action = TouchAction.UP, normX = 0.75f, normY = 0.5f),
+                            ),
+                    )
+                val execId = singleTouchGestureExecutionId("btn-pinch")
+                injectActionDown(gestureAction, buttonId = "btn-pinch")
+
+                val started =
+                    withTimeoutOrNull(1000L) {
+                        while (!MacroExecutor.isRunning(execId)) {
+                            delay(10L)
+                        }
+                        true
+                    } ?: false
+                assertTrue(started)
+
+                injectActionDown(PadAction.StopAllMacros)
+                val stopped =
+                    withTimeoutOrNull(1000L) {
+                        while (MacroExecutor.isRunning(execId)) {
+                            delay(10L)
+                        }
+                        true
+                    } ?: false
+                assertTrue(stopped)
+            } finally {
+                MacroExecutor.stopAll()
+                PrivdClient.clearQueueForTest()
+                PrivdClient.isConnectedForTest = null
+            }
+        }
 
     @Test
     fun injectActionDownAndUp_mediaControl() {

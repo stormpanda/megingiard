@@ -390,6 +390,14 @@ sealed class PadAction {
     data class TouchTap(
         val normX: Float = 0.5f,
         val normY: Float = 0.5f,
+        val isRecorded: Boolean = true,
+    ) : PadAction()
+
+    /** Replays a recorded single multi-finger touch gesture on the primary display via the macro execution pipeline. */
+    @Serializable
+    @SerialName("single_touch_gesture")
+    data class SingleTouchGesture(
+        val samples: List<TouchSample> = emptyList(),
     ) : PadAction()
 
     /** Dispatches a media playback or audio mute key event via uinput. */
@@ -482,6 +490,10 @@ fun PadAction.defaultIconName(): String? =
 
         is PadAction.TouchTap -> {
             "ads_click"
+        }
+
+        is PadAction.SingleTouchGesture -> {
+            "gesture"
         }
 
         is PadAction.MediaControl -> {

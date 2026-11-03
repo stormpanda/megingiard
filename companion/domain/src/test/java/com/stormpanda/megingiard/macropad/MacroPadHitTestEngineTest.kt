@@ -411,4 +411,21 @@ class MacroPadHitTestEngineTest {
         assertNull(PrivdClient.pollCommandForTest())
         assertTrue(engine.pressedIds.value.isEmpty())
     }
+
+    @Test
+    fun `unrecorded TouchTap highlights pressed button without allocating slot or injecting touch`() {
+        val unrecordedTap =
+            centeredButton(
+                PadAction.TouchTap(normX = 0.5f, normY = 0.5f, isRecorded = false),
+            ).copy(id = "btn-unrecorded-tap")
+        val buttons = listOf(unrecordedTap)
+
+        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, buttons, false))
+        assertEquals(setOf("btn-unrecorded-tap"), engine.pressedIds.value)
+        assertNull(PrivdClient.pollCommandForTest())
+
+        engine.onRelease(1L, buttons)
+        assertNull(PrivdClient.pollCommandForTest())
+        assertTrue(engine.pressedIds.value.isEmpty())
+    }
 }

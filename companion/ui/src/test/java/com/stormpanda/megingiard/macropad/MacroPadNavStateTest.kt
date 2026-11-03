@@ -369,4 +369,53 @@ class MacroPadNavStateTest {
         MacroPadNavState.reset()
         assertFalse(MacroPadNavState.awaitingButtonTapRecording.value)
     }
+
+    @Test
+    fun `awaitingButtonGestureRecording tracks intent and resets on pop setStack null draft section switch and reset`() {
+        val draft =
+            PadButton(
+                id = "btn-gesture-1",
+                label = "Swipe",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.SingleTouchGesture(),
+            )
+        assertFalse(MacroPadNavState.awaitingButtonGestureRecording.value)
+
+        MacroPadNavState.selectSection(EditorSection.BUTTONS)
+        MacroPadNavState.push(MacroPadSubPage.EditButton(buttonId = null))
+        MacroPadNavState.setButtonDraft(draft)
+        MacroPadNavState.setAwaitingButtonGestureRecording(true)
+        assertTrue(MacroPadNavState.awaitingButtonGestureRecording.value)
+
+        // Updating draft with non-null preserves awaiting flag across suspension
+        MacroPadNavState.setButtonDraft(draft.copy(label = "Swipe Updated"))
+        assertTrue(MacroPadNavState.awaitingButtonGestureRecording.value)
+
+        // pop clears awaiting flag
+        MacroPadNavState.pop()
+        assertFalse(MacroPadNavState.awaitingButtonGestureRecording.value)
+
+        // setStack clears awaiting flag
+        MacroPadNavState.setAwaitingButtonGestureRecording(true)
+        MacroPadNavState.setStack(listOf(MacroPadSubPage.EditButton(buttonId = null)))
+        assertFalse(MacroPadNavState.awaitingButtonGestureRecording.value)
+
+        // Clearing buttonDraft clears awaiting flag
+        MacroPadNavState.setAwaitingButtonGestureRecording(true)
+        MacroPadNavState.setButtonDraft(null)
+        assertFalse(MacroPadNavState.awaitingButtonGestureRecording.value)
+
+        // Switching section clears awaiting flag
+        MacroPadNavState.setButtonDraft(draft)
+        MacroPadNavState.setAwaitingButtonGestureRecording(true)
+        MacroPadNavState.selectSection(EditorSection.MACROS)
+        assertFalse(MacroPadNavState.awaitingButtonGestureRecording.value)
+
+        // Full reset clears awaiting flag
+        MacroPadNavState.setButtonDraft(draft)
+        MacroPadNavState.setAwaitingButtonGestureRecording(true)
+        MacroPadNavState.reset()
+        assertFalse(MacroPadNavState.awaitingButtonGestureRecording.value)
+    }
 }

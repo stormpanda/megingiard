@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -89,6 +90,7 @@ import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import com.stormpanda.megingiard.ui.toHexLabel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
 import java.util.UUID
 import kotlin.math.roundToInt
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
@@ -97,6 +99,15 @@ private const val TAG = "PadButtonEditDialog"
 
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_ICON_SIZE_DP = 20.dp
+
+private data class ButtonTouchRecordingObservation(
+    val recordedTap: Pair<Float, Float>?,
+    val recordedGesture: List<TouchSample>?,
+    val awaitingTap: Boolean,
+    val awaitingGesture: Boolean,
+    val recordingRequested: Boolean,
+    val isIdle: Boolean,
+)
 
 internal class Button2DAdjusterState(
     private val coroutineScope: CoroutineScope,
@@ -398,6 +409,7 @@ internal fun EditButtonSubPageContent(
     onOpenKeyboardPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenGamepadPicker: ((currentDraft: PadButton, slotIndex: Int) -> Unit)? = null,
     onOpenMousePicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenTouchPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenMirrorPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenToolsPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenLayoutPicker: ((currentDraft: PadButton) -> Unit)? = null,
@@ -473,24 +485,53 @@ internal fun EditButtonSubPageContent(
     val macros = profile?.macros ?: emptyList()
     val layouts = profile?.layouts ?: emptyList()
     val recordedTap by TouchRecordingManager.recordedTap.collectAsStateWithLifecycle()
+    val recordedGesture by TouchRecordingManager.recordedSingleGesture.collectAsStateWithLifecycle()
     val touchRecordingState by TouchRecordingManager.state.collectAsStateWithLifecycle()
     val recordingRequested by TouchRecordingManager.recordingRequested.collectAsStateWithLifecycle()
     val awaitingButtonTap by MacroPadNavState.awaitingButtonTapRecording.collectAsStateWithLifecycle()
+    val awaitingButtonGesture by MacroPadNavState.awaitingButtonGestureRecording.collectAsStateWithLifecycle()
 
-    LaunchedEffect(recordedTap, awaitingButtonTap, touchRecordingState, recordingRequested) {
-        if (!awaitingButtonTap) return@LaunchedEffect
-        val tap = recordedTap
-        if (tap != null) {
-            MacroPadNavState.setAwaitingButtonTapRecording(false)
-            TouchRecordingManager.consumeRecordedTap()
-            TouchRecordingManager.resetState()
-            if (action is PadAction.TouchTap) {
-                val (rx, ry) = tap
-                AppLog.i(TAG, "Recorded touch tap applied to button: normX=$rx normY=$ry")
-                action = PadAction.TouchTap(normX = rx, normY = ry)
+    LaunchedEffect(Unit) {
+        snapshotFlow {
+            ButtonTouchRecordingObservation(
+                recordedTap = recordedTap,
+                recordedGesture = recordedGesture,
+                awaitingTap = awaitingButtonTap,
+                awaitingGesture = awaitingButtonGesture,
+                recordingRequested = recordingRequested,
+                isIdle = touchRecordingState is TouchRecordingState.Idle,
+            )
+        }.collectLatest { obs ->
+            if (obs.awaitingTap) {
+                val tap = obs.recordedTap
+                if (tap != null) {
+                    MacroPadNavState.setAwaitingButtonTapRecording(false)
+                    TouchRecordingManager.consumeRecordedTap()
+                    TouchRecordingManager.resetState()
+                    if (action is PadAction.TouchTap) {
+                        val (rx, ry) = tap
+                        AppLog.i(TAG, "Recorded touch tap applied to button: normX=$rx normY=$ry")
+                        action = PadAction.TouchTap(normX = rx, normY = ry, isRecorded = true)
+                    }
+                } else if (!obs.recordingRequested && obs.isIdle) {
+                    MacroPadNavState.setAwaitingButtonTapRecording(false)
+                }
             }
-        } else if (!recordingRequested && touchRecordingState is TouchRecordingState.Idle) {
-            MacroPadNavState.setAwaitingButtonTapRecording(false)
+
+            if (obs.awaitingGesture) {
+                val gesture = obs.recordedGesture
+                if (gesture != null) {
+                    MacroPadNavState.setAwaitingButtonGestureRecording(false)
+                    TouchRecordingManager.consumeRecordedSingleGesture()
+                    TouchRecordingManager.resetState()
+                    if (action is PadAction.SingleTouchGesture) {
+                        AppLog.i(TAG, "Recorded single touch gesture applied to button: samples=${gesture.size}")
+                        action = PadAction.SingleTouchGesture(samples = gesture)
+                    }
+                } else if (!obs.recordingRequested && obs.isIdle) {
+                    MacroPadNavState.setAwaitingButtonGestureRecording(false)
+                }
+            }
         }
     }
 
@@ -606,6 +647,14 @@ internal fun EditButtonSubPageContent(
                     allProfiles.any { it.id == (action as PadAction.SwitchToProfile).profileId }
             }
 
+            action is PadAction.TouchTap -> {
+                (action as PadAction.TouchTap).isRecorded && label.isNotBlank()
+            }
+
+            action is PadAction.SingleTouchGesture -> {
+                (action as PadAction.SingleTouchGesture).samples.isNotEmpty() && label.isNotBlank()
+            }
+
             else -> {
                 label.isNotBlank()
             }
@@ -697,6 +746,9 @@ internal fun EditButtonSubPageContent(
         onOpenMousePicker = {
             onOpenMousePicker?.invoke(currentButton)
         },
+        onOpenTouchPicker = {
+            onOpenTouchPicker?.invoke(currentButton)
+        },
         onOpenMirrorPicker = {
             onOpenMirrorPicker?.invoke(currentButton)
         },
@@ -713,7 +765,15 @@ internal fun EditButtonSubPageContent(
             MacroPadNavState.setButtonDraft(currentButton)
             AppStateManager.suspendCurrentAndDismiss()
             TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
+            MacroPadNavState.setAwaitingButtonGestureRecording(false)
             MacroPadNavState.setAwaitingButtonTapRecording(true)
+        },
+        onRecordTouchGesture = {
+            MacroPadNavState.setButtonDraft(currentButton)
+            AppStateManager.suspendCurrentAndDismiss()
+            TouchRecordingManager.requestRecording(TouchRecordingMode.SINGLE_GESTURE)
+            MacroPadNavState.setAwaitingButtonTapRecording(false)
+            MacroPadNavState.setAwaitingButtonGestureRecording(true)
         },
         onChange = ::onActionChanged,
     )

@@ -232,6 +232,12 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
 
+    data class ChooseTouchAction(
+        val buttonId: String?,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
     data class ChooseMirrorAction(
         val buttonId: String?,
     ) : MacroPadSubPage {

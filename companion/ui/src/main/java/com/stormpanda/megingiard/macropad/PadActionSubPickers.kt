@@ -7,12 +7,13 @@ import androidx.compose.material.icons.rounded.AdsClick
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SportsEsports
-import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,7 +30,6 @@ import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadPill
-import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.cycle
@@ -47,10 +47,6 @@ private const val FS_MOUSE_SENSITIVITY_MIN = 0.1f
 private const val FS_MOUSE_SENSITIVITY_MAX = 5.0f
 private const val FS_MOUSE_SENSITIVITY_STEP = 0.1f
 
-private const val TT_PERCENT_MIN = 0f
-private const val TT_PERCENT_MAX = 100f
-private const val TT_PERCENT_STEP = 5f
-private const val TT_PERCENT_FINE_STEP = 1f
 private const val TT_PERCENT_DIVISOR = 100f
 
 @Composable
@@ -424,59 +420,81 @@ internal fun TouchTapPicker(
     current: PadAction.TouchTap,
     onOpenPicker: () -> Unit,
     onRecordTap: () -> Unit,
-    onChange: (PadAction) -> Unit,
     isFirstItem: Boolean = false,
 ) {
     val xPct = (current.normX.coerceIn(0f, 1f) * TT_PERCENT_DIVISOR).roundToInt()
     val yPct = (current.normY.coerceIn(0f, 1f) * TT_PERCENT_DIVISOR).roundToInt()
+    val recordStatusText =
+        if (current.isRecorded) {
+            "$xPct%, $yPct%"
+        } else {
+            stringResource(R.string.macropad_touch_not_recorded)
+        }
 
     GamepadActionCard(
-        title = stringResource(R.string.macropad_action_group_tools),
-        description = stringResource(R.string.macropad_action_group_tools_desc),
+        title = stringResource(R.string.macropad_action_group_touch),
+        description = stringResource(R.string.macropad_action_group_touch_desc),
         actionText = stringResource(R.string.macropad_action_touch_tap),
-        icon = Icons.Rounded.Build,
-        onClick = onOpenPicker,
+        icon = Icons.Rounded.TouchApp,
+        onClick = {
+            AppLog.d(TAG, "TouchTapPicker: opening touch action picker")
+            onOpenPicker()
+        },
         modifier = Modifier.firstDeckItem(isFirstItem),
     )
 
     GamepadActionCard(
         title = stringResource(R.string.macropad_touch_tap_record_title),
         description = stringResource(R.string.macropad_touch_tap_record_desc),
-        actionText = "$xPct%, $yPct%",
+        actionText = recordStatusText,
         icon = Icons.Rounded.AdsClick,
         onClick = {
             AppLog.d(TAG, "TouchTapPicker: onRecordTap clicked")
             onRecordTap()
         },
     )
+}
 
-    GamepadSliderCard(
-        title = stringResource(R.string.macropad_touch_tap_x_title),
-        description = stringResource(R.string.macropad_touch_tap_x_desc),
-        value = xPct.toFloat(),
-        valueRange = TT_PERCENT_MIN..TT_PERCENT_MAX,
-        step = TT_PERCENT_STEP,
-        fineStep = TT_PERCENT_FINE_STEP,
-        valueLabel = "$xPct%",
-        icon = Icons.Rounded.Tune,
-        onValueChange = { newVal ->
-            val newNormX = (newVal.roundToInt().coerceIn(TT_PERCENT_MIN.toInt(), TT_PERCENT_MAX.toInt())) / TT_PERCENT_DIVISOR
-            onChange(current.copy(normX = newNormX))
+@Composable
+internal fun SingleTouchGesturePicker(
+    current: PadAction.SingleTouchGesture,
+    onOpenPicker: () -> Unit,
+    onRecordGesture: () -> Unit,
+    isFirstItem: Boolean = false,
+) {
+    val recordStatusText =
+        if (current.samples.isEmpty()) {
+            stringResource(R.string.macropad_touch_not_recorded)
+        } else {
+            val fingerCount = countSingleTouchGestureFingers(current.samples)
+            val durationLabel = formatSingleTouchGestureDuration(current.samples)
+            if (fingerCount == 1) {
+                stringResource(R.string.macropad_single_touch_gesture_summary_single_finger, durationLabel)
+            } else {
+                stringResource(R.string.macropad_single_touch_gesture_summary_multi_finger, fingerCount, durationLabel)
+            }
+        }
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_action_group_touch),
+        description = stringResource(R.string.macropad_action_group_touch_desc),
+        actionText = stringResource(R.string.macropad_action_single_touch_gesture),
+        icon = Icons.Rounded.TouchApp,
+        onClick = {
+            AppLog.d(TAG, "SingleTouchGesturePicker: opening touch action picker")
+            onOpenPicker()
         },
+        modifier = Modifier.firstDeckItem(isFirstItem),
     )
 
-    GamepadSliderCard(
-        title = stringResource(R.string.macropad_touch_tap_y_title),
-        description = stringResource(R.string.macropad_touch_tap_y_desc),
-        value = yPct.toFloat(),
-        valueRange = TT_PERCENT_MIN..TT_PERCENT_MAX,
-        step = TT_PERCENT_STEP,
-        fineStep = TT_PERCENT_FINE_STEP,
-        valueLabel = "$yPct%",
-        icon = Icons.Rounded.Tune,
-        onValueChange = { newVal ->
-            val newNormY = (newVal.roundToInt().coerceIn(TT_PERCENT_MIN.toInt(), TT_PERCENT_MAX.toInt())) / TT_PERCENT_DIVISOR
-            onChange(current.copy(normY = newNormY))
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_single_touch_gesture_record_title),
+        description = stringResource(R.string.macropad_single_touch_gesture_record_desc),
+        actionText = recordStatusText,
+        icon = Icons.Rounded.Gesture,
+        onClick = {
+            AppLog.d(TAG, "SingleTouchGesturePicker: onRecordGesture clicked")
+            onRecordGesture()
         },
     )
 }

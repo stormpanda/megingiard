@@ -200,10 +200,15 @@ class MacroPadHitTestEngine(
             }
 
             hitButton.action is PadAction.TouchTap -> {
-                val slot = allocateTouchTapSlot(pointerId)
+                val tapAction = hitButton.action as PadAction.TouchTap
                 _pressedIds.value = _pressedIds.value + hitButton.id
-                if (slot != null) {
-                    injectActionDown(hitButton.action, touchSlot = slot)
+                if (tapAction.isRecorded) {
+                    val slot = allocateTouchTapSlot(pointerId)
+                    if (slot != null) {
+                        injectActionDown(tapAction, touchSlot = slot, buttonId = hitButton.id)
+                    }
+                } else {
+                    AppLog.d(TAG, "Skipping unrecorded TouchTap on button=${hitButton.id}")
                 }
                 triggerHaptic(hitButton)
             }
@@ -211,7 +216,7 @@ class MacroPadHitTestEngine(
             else -> {
                 _pressedIds.value = _pressedIds.value + hitButton.id
                 if (!hitButton.action.isSingleChannelHoldAction() || !wasAlreadyHeldByPointer) {
-                    injectActionDown(hitButton.action)
+                    injectActionDown(hitButton.action, buttonId = hitButton.id)
                 }
                 triggerHaptic(hitButton)
             }

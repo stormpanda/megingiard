@@ -513,12 +513,15 @@ Open Settings to create a layout.</string>
     <!-- Touch recording flow -->
     <string name="touch_recording_title">正在錄製螢幕觸控</string>
     <string name="touch_recording_mode_tap">單次輕觸</string>
+    <string name="touch_recording_mode_single_gesture">單次觸控手勢</string>
     <string name="touch_recording_mode_gesture">觸控手勢</string>
     <string name="touch_recording_hint_tap">請在上螢幕上輕觸目標位置。輕觸位置將自動記錄。</string>
+    <string name="touch_recording_hint_single_gesture">請在上螢幕上繪製單指或多指手勢。當所有手指離開螢幕後將自動完成錄製。</string>
     <string name="touch_recording_hint_gesture">請在上螢幕上繪製觸控手勢。完成後點選停止並儲存。</string>
     <string name="touch_recording_radar_waiting">等待上螢幕上的觸控輸入</string>
     <string name="touch_recording_radar_coords">X: %1$.1f%%  Y: %2$.1f%%</string>
     <string name="touch_recording_actions_tap" formatted="false">%1$d 次輕觸</string>
+    <string name="touch_recording_actions_single_gesture" formatted="false">%1$d 指 (%2$d 點)</string>
     <string name="touch_recording_actions_gestures" formatted="false">%1$d 個手勢 (%2$d 點)</string>
     <string name="macropad_macro_test_run">測試執行</string>
     <string name="macropad_macro_loop_toggle">循環巨集</string>
@@ -640,7 +643,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_app_launcher">App Quick-Switch</string>
     <string name="macropad_action_group_app_launcher_desc">在 Megingiard 與其他應用程式之間快速切換</string>
     <string name="macropad_action_group_tools">工具</string>
-    <string name="macropad_action_group_tools_desc">開啟全螢幕滑鼠與鍵盤覆蓋層、擷取螢幕截圖、點擊螢幕座標或停止所有巨集</string>
+    <string name="macropad_action_group_tools_desc">開啟全螢幕滑鼠與鍵盤覆蓋層、擷取螢幕截圖或停止所有巨集</string>
     <string name="macropad_editor_button_type">按鈕類型</string>
 
     <!-- Log report export -->
@@ -1397,15 +1400,23 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_switch_to_hub_desc">在下螢幕開啟 Companion 中心</string>
     <string name="macropad_action_stop_all_macros">停止所有巨集</string>
     <string name="macropad_action_stop_all_macros_desc">立即取消所有執行中的巨集並放開虛擬輸入</string>
+    <string name="macropad_action_group_touch">觸控</string>
+    <string name="macropad_action_group_touch_desc">點擊螢幕座標位置或重播錄製的多指觸控手勢</string>
+    <string name="macropad_picker_touch_title">觸控動作</string>
+    <string name="macropad_touch_not_recorded">尚未錄製</string>
     <string name="macropad_action_touch_tap">螢幕觸控點擊</string>
     <string name="macropad_action_touch_tap_desc">按住時點擊主螢幕上的指定座標位置</string>
     <string name="macropad_display_touch_tap">觸控點擊 (%1$d%%, %2$d%%)</string>
     <string name="macropad_touch_tap_record_title">錄製螢幕點擊位置</string>
     <string name="macropad_touch_tap_record_desc">直接點擊上螢幕以擷取目標座標位置</string>
-    <string name="macropad_touch_tap_x_title">水平位置 (X)</string>
-    <string name="macropad_touch_tap_x_desc">螢幕水平座標，由左 (0%) 至右 (100%)</string>
-    <string name="macropad_touch_tap_y_title">垂直位置 (Y)</string>
-    <string name="macropad_touch_tap_y_desc">螢幕垂直座標，由上 (0%) 至下 (100%)</string>
+    <string name="macropad_action_single_touch_gesture">單次觸控手勢</string>
+    <string name="macropad_action_single_touch_gesture_desc">在主螢幕上重播錄製的單指或多指觸控手勢</string>
+    <string name="macropad_display_single_touch_gesture_single_finger">觸控手勢 (1 指, %1$s)</string>
+    <string name="macropad_display_single_touch_gesture_multi_finger">觸控手勢 (%1$d 指, %2$s)</string>
+    <string name="macropad_single_touch_gesture_record_title">錄製螢幕觸控手勢</string>
+    <string name="macropad_single_touch_gesture_record_desc">直接在上螢幕執行單指或多指手勢；所有手指離開螢幕後自動完成錄製</string>
+    <string name="macropad_single_touch_gesture_summary_single_finger">1 指 · %1$s</string>
+    <string name="macropad_single_touch_gesture_summary_multi_finger">%1$d 指 · %2$s</string>
     <string name="macropad_action_group_media">媒體控制</string>
     <string name="macropad_action_group_media_desc">播放控制與音訊靜音</string>
     <string name="macropad_picker_media_title">媒體控制</string>

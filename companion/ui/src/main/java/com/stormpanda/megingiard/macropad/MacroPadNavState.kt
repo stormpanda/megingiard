@@ -34,6 +34,9 @@ internal object MacroPadNavState {
     private val _awaitingButtonTapRecording = MutableStateFlow(false)
     val awaitingButtonTapRecording: StateFlow<Boolean> = _awaitingButtonTapRecording.asStateFlow()
 
+    private val _awaitingButtonGestureRecording = MutableStateFlow(false)
+    val awaitingButtonGestureRecording: StateFlow<Boolean> = _awaitingButtonGestureRecording.asStateFlow()
+
     private val _macroDraft = MutableStateFlow<Macro?>(null)
     val macroDraft: StateFlow<Macro?> = _macroDraft.asStateFlow()
 
@@ -42,12 +45,18 @@ internal object MacroPadNavState {
         _buttonDraft.value = draft
         if (draft == null) {
             _awaitingButtonTapRecording.value = false
+            _awaitingButtonGestureRecording.value = false
         }
     }
 
     fun setAwaitingButtonTapRecording(awaiting: Boolean) {
         AppLog.d(TAG, "setAwaitingButtonTapRecording: awaiting=$awaiting")
         _awaitingButtonTapRecording.value = awaiting
+    }
+
+    fun setAwaitingButtonGestureRecording(awaiting: Boolean) {
+        AppLog.d(TAG, "setAwaitingButtonGestureRecording: awaiting=$awaiting")
+        _awaitingButtonGestureRecording.value = awaiting
     }
 
     fun setMacroDraft(draft: Macro?) {
@@ -63,6 +72,7 @@ internal object MacroPadNavState {
             _savedFocusKeysByDepth.value = emptyMap()
             _buttonDraft.value = null
             _awaitingButtonTapRecording.value = false
+            _awaitingButtonGestureRecording.value = false
             _macroDraft.value = null
         }
     }
@@ -77,12 +87,16 @@ internal object MacroPadNavState {
         if (currentStack.isEmpty()) return false
         val popped = currentStack.last()
         AppLog.d(TAG, "pop: popped=${popped::class.simpleName}")
+        _awaitingButtonTapRecording.value = false
+        _awaitingButtonGestureRecording.value = false
         _subPageStack.value = currentStack.dropLast(1)
         return true
     }
 
     fun setStack(stack: List<MacroPadSubPage>) {
         AppLog.d(TAG, "setStack: size=${stack.size}")
+        _awaitingButtonTapRecording.value = false
+        _awaitingButtonGestureRecording.value = false
         _subPageStack.value = stack
     }
 
@@ -116,6 +130,7 @@ internal object MacroPadNavState {
         _savedFocusKeysByDepth.value = emptyMap()
         _buttonDraft.value = null
         _awaitingButtonTapRecording.value = false
+        _awaitingButtonGestureRecording.value = false
         _macroDraft.value = null
     }
 

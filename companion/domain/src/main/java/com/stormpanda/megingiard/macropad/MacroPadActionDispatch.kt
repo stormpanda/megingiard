@@ -12,6 +12,8 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 // MacroPadState and MacroExecutor are in the same package — no import needed.
 
 private const val TAG = "MacroPadActionDispatch"
+private const val MP_SINGLE_GESTURE_EXEC_PREFIX = "single_touch_gesture_"
+private const val MP_SINGLE_GESTURE_MACRO_NAME = "Single Touch Gesture"
 internal const val MP_TOUCH_TAP_SLOT = 8
 private const val MP_TOUCH_TAP_SLOT_ALT_1 = 9
 private const val MP_TOUCH_TAP_SLOT_ALT_2 = 7
@@ -26,6 +28,8 @@ internal val MP_TOUCH_TAP_SLOT_POOL =
         MP_TOUCH_TAP_SLOT_ALT_4,
     )
 
+fun singleTouchGestureExecutionId(buttonId: String): String = "$MP_SINGLE_GESTURE_EXEC_PREFIX$buttonId"
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Injection helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -33,6 +37,7 @@ internal val MP_TOUCH_TAP_SLOT_POOL =
 fun injectActionDown(
     action: PadAction,
     touchSlot: Int = MP_TOUCH_TAP_SLOT,
+    buttonId: String = "",
 ) {
     when (action) {
         is PadAction.KeyboardKey -> {
@@ -165,10 +170,38 @@ fun injectActionDown(
         }
 
         is PadAction.TouchTap -> {
+            if (!action.isRecorded) {
+                AppLog.d(TAG, "actionDown: TouchTap skipped (not recorded)")
+                return
+            }
             val clampedX = action.normX.coerceIn(0f, 1f)
             val clampedY = action.normY.coerceIn(0f, 1f)
             AppLog.d(TAG, "actionDown: TouchTap slot=$touchSlot normX=$clampedX normY=$clampedY")
             TouchInjector.injectTouch(touchSlot, TouchAction.DOWN, clampedX, clampedY)
+        }
+
+        is PadAction.SingleTouchGesture -> {
+            if (action.samples.isEmpty()) {
+                AppLog.d(TAG, "actionDown: SingleTouchGesture skipped (empty samples)")
+                return
+            }
+            val execId = singleTouchGestureExecutionId(buttonId)
+            val durationMs = action.samples.maxOfOrNull { it.offsetMs } ?: 0L
+            val gestureMacro =
+                Macro(
+                    id = execId,
+                    name = MP_SINGLE_GESTURE_MACRO_NAME,
+                    steps =
+                        listOf(
+                            MacroStep.TouchPath(
+                                startTimeMs = 0L,
+                                durationMs = durationMs,
+                                samples = action.samples,
+                            ),
+                        ),
+                )
+            AppLog.d(TAG, "actionDown: SingleTouchGesture execId=$execId samples=${action.samples.size} durationMs=$durationMs")
+            MacroExecutor.execute(gestureMacro)
         }
 
         is PadAction.MediaControl -> {
@@ -208,6 +241,10 @@ fun injectActionUp(
         }
 
         is PadAction.TouchTap -> {
+            if (!action.isRecorded) {
+                AppLog.d(TAG, "actionUp: TouchTap skipped (not recorded)")
+                return
+            }
             val clampedX = action.normX.coerceIn(0f, 1f)
             val clampedY = action.normY.coerceIn(0f, 1f)
             AppLog.d(TAG, "actionUp: TouchTap slot=$touchSlot normX=$clampedX normY=$clampedY")

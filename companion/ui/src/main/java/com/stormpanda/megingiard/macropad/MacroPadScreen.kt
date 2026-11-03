@@ -600,8 +600,11 @@ internal fun PadSurface(
             visibleButtons.forEach { btn ->
                 val isPressed = btn.id in pressedIds
                 val isRunning =
-                    btn.action is PadAction.Macro &&
-                        (btn.action as PadAction.Macro).macroId in runningMacroIds
+                    when (val act = btn.action) {
+                        is PadAction.Macro -> act.macroId in runningMacroIds
+                        is PadAction.SingleTouchGesture -> singleTouchGestureExecutionId(btn.id) in runningMacroIds
+                        else -> false
+                    }
                 PadButton(
                     btn = btn,
                     layout = layout,

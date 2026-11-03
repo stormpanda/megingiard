@@ -14,7 +14,7 @@ private const val TRM_MAX_TRAIL_POINTS = 40
 private const val TRM_DEFAULT_TAP_DURATION_MS = 100L
 private const val CLIENT_TOKEN = "TouchRecordingManager"
 
-enum class TouchRecordingMode { TAP, GESTURE }
+enum class TouchRecordingMode { TAP, SINGLE_GESTURE, GESTURE }
 
 /**
  * Live state for a single active touch pointer on the screen.
@@ -92,6 +92,14 @@ object TouchRecordingManager {
      */
     val recordedTap: StateFlow<Pair<Float, Float>?> = _recordedTap.asStateFlow()
 
+    private val _recordedSingleGesture = MutableStateFlow<List<TouchSample>?>(null)
+
+    /**
+     * Completed [TouchSample] list recorded in [TouchRecordingMode.SINGLE_GESTURE],
+     * or `null` if no single gesture has been recorded yet / after consumption.
+     */
+    val recordedSingleGesture: StateFlow<List<TouchSample>?> = _recordedSingleGesture.asStateFlow()
+
     private class PointerTracker(
         val slot: Int,
         var normX: Float,
@@ -129,6 +137,7 @@ object TouchRecordingManager {
             activePointers.clear()
             currentGestureSamples.clear()
             _recordedTap.value = null
+            _recordedSingleGesture.value = null
             recordedGestureSteps.clear()
             _state.value =
                 TouchRecordingState.Recording(
@@ -164,7 +173,9 @@ object TouchRecordingManager {
                 }
             }
 
-            TouchRecordingMode.GESTURE -> {
+            TouchRecordingMode.SINGLE_GESTURE,
+            TouchRecordingMode.GESTURE,
+            -> {
                 when (action) {
                     TouchAction.DOWN -> {
                         if (!isGestureSegmentRecording) {
@@ -226,11 +237,16 @@ object TouchRecordingManager {
 
                             if (activePointers.isEmpty() && isGestureSegmentRecording && currentGestureSamples.isNotEmpty()) {
                                 isGestureSegmentRecording = false
+                                val completedSegment = currentGestureSamples.toList()
+                                currentGestureSamples.clear()
+                                if (current.mode == TouchRecordingMode.SINGLE_GESTURE) {
+                                    onSingleGestureRecorded(completedSegment)
+                                    return
+                                }
                                 recordGestureCompleted(
-                                    samples = currentGestureSamples.toList(),
+                                    samples = completedSegment,
                                     startOffsetMs = gestureSegmentStartOffsetMs,
                                 )
-                                currentGestureSamples.clear()
                             }
                         }
                     }
@@ -292,6 +308,38 @@ object TouchRecordingManager {
         _recordingRequested.value = false
         AppStateManager.resumeSuspended()
     }
+
+    /**
+     * Called when all active pointers lift in [TouchRecordingMode.SINGLE_GESTURE] mode.
+     * Completes the recorded touch samples, stops [TouchScreenObserver], and resumes the suspended editor.
+     */
+    fun onSingleGestureRecorded(samples: List<TouchSample>) =
+        synchronized(recordingLock) {
+            if (samples.isEmpty()) {
+                AppLog.w(TAG, "onSingleGestureRecorded called with empty samples — ignored")
+                return
+            }
+            TouchScreenObserver.stop(CLIENT_TOKEN)
+            val completedSamples = completeTouchPathSamples(samples)
+            val durationMs = completedSamples.maxOfOrNull { it.offsetMs } ?: 0L
+            val step =
+                MacroStep.TouchPath(
+                    startTimeMs = 0L,
+                    durationMs = durationMs,
+                    samples = completedSamples,
+                )
+            AppLog.i(
+                TAG,
+                "onSingleGestureRecorded rawSamples=${samples.size} completedSamples=${completedSamples.size} durationMs=$durationMs",
+            )
+            _recordedSingleGesture.value = completedSamples
+            _state.value = TouchRecordingState.Done(listOf(step))
+            activePointers.clear()
+            currentGestureSamples.clear()
+            isGestureSegmentRecording = false
+            _recordingRequested.value = false
+            AppStateManager.resumeSuspended()
+        }
 
     /**
      * Called when a gesture segment is completed.
@@ -379,6 +427,7 @@ object TouchRecordingManager {
             TouchScreenObserver.stop(CLIENT_TOKEN)
             _recordingRequested.value = false
             _recordedTap.value = null
+            _recordedSingleGesture.value = null
             isGestureSegmentRecording = false
             recordedGestureSteps.clear()
             activePointers.clear()
@@ -396,11 +445,22 @@ object TouchRecordingManager {
             _recordedTap.value = null
         }
 
+    /**
+     * Called by the button editor after it has applied [recordedSingleGesture].
+     * Resets [recordedSingleGesture] to `null` so the `LaunchedEffect` does not re-trigger.
+     */
+    fun consumeRecordedSingleGesture() =
+        synchronized(recordingLock) {
+            AppLog.d(TAG, "consumeRecordedSingleGesture")
+            _recordedSingleGesture.value = null
+        }
+
     fun resetState() =
         synchronized(recordingLock) {
             AppLog.d(TAG, "resetState")
             TouchScreenObserver.stop(CLIENT_TOKEN)
             _recordedTap.value = null
+            _recordedSingleGesture.value = null
             isGestureSegmentRecording = false
             recordedGestureSteps.clear()
             activePointers.clear()

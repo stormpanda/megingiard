@@ -63,6 +63,7 @@
   | `Screenshot(BOTH)`      | Screenshot (Both)   | `splitscreen`   |
   | `StopAllMacros`         | Stop All Macros     | `stop_circle`   |
   | `TouchTap`              | Touch Tap           | `ads_click`     |
+  | `SingleTouchGesture`    | Single Touch Gesture | `gesture`      |
   | `MediaControl(PLAY_PAUSE)` | Play / Pause     | `play_pause`    |
   | `MediaControl(NEXT_TRACK)` | Next Track       | `skip_next`     |
   | `MediaControl(PREVIOUS_TRACK)` | Previous Track | `skip_previous` |
@@ -76,10 +77,10 @@
 ### FR-P12: Grouped Action Selection in Button Editor
 
 - `PadActionPicker` MUST provide a grouped action selection flow in `EditButtonSubPageContent`.
-- The button type group (`Keyboard`, `Gamepad`, `Mouse`, `App Quick-Switch`, `Macro`, `Layout`, `Mirror`, `Tools`, `Media Controls`) determines which action sub-page picker opens.
+- The button type group (`Keyboard`, `Gamepad`, `Mouse`, `Touch`, `App Quick-Switch`, `Macro`, `Layout`, `Mirror`, `Tools`, `Media Controls`) determines which action sub-page picker opens.
 - The second dropdown selects the concrete action inside the currently selected group. **If the selected group only has a single enabled concrete action, this second dropdown is hidden, and that action is automatically selected in the background.**
 - Group and action labels MUST come from `strings.xml` resources.
-- Existing action-specific inline editors (keyboard modifier slots, gamepad extra-button slots, macro picker) MUST remain unchanged and appear after action selection.
+- Existing action-specific inline editors (keyboard modifier slots, gamepad extra-button slots, macro picker, and Display 0 touch recording triggers for `TouchTap` and `SingleTouchGesture`) MUST appear after action selection. `TouchTap` configures coordinates strictly via Display 0 tap recording (no manual X/Y sliders), and both unrecorded `TouchTap` (`isRecorded == false`) and empty `SingleTouchGesture` (`samples.isEmpty()`) keep **Create / Save** disabled until recorded.
 - `KeyboardKey` and `GamepadButton` are excluded — they manage their own labels via the key/button name.
 - **Behaviour in `ButtonEditDialog`:**
   - On dialog open (new button with `initialAction`): `initLabel` and `initIconName` are derived from the defaults before any state is initialised.
