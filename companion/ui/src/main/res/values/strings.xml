@@ -1161,6 +1161,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_layout_next_desc">Switch to next layout in active profile</string>
     <string name="macropad_action_layout_previous_desc">Switch to previous layout in active profile</string>
     <string name="macropad_action_profile_switcher_desc">Open profile selection overlay</string>
+    <string name="macropad_gamepad_btn_mode">Home</string>
     <string name="macropad_gamepad_btn_dpad_up">D-Pad Up</string>
     <string name="macropad_gamepad_btn_dpad_down">D-Pad Down</string>
     <string name="macropad_gamepad_btn_dpad_left">D-Pad Left</string>

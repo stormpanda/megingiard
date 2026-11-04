@@ -48,6 +48,7 @@ import kotlin.math.roundToInt
 private const val TAG = "PadActionDisplay"
 private const val PAD_PERCENT_MULTIPLIER = 100f
 private const val PAD_MS_PER_SECOND = 1000f
+private const val PAD_DEFAULT_CENTER_POS = 0.5f
 
 internal enum class ActionGroup(
     val icon: ImageVector,
@@ -125,7 +126,13 @@ internal enum class ActionCategory(
         Icons.Rounded.SportsEsports,
         R.string.macropad_action_gamepad_button,
         ActionGroup.GAMEPAD,
-        { PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A") },
+        {
+            val swap = MacroPadSettings.gamepadSwapFaceButtons.value
+            PadAction.GamepadButton(
+                btnCode = GamepadKeycodes.BTN_SOUTH,
+                label = gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_SOUTH, swap),
+            )
+        },
     ),
     MOUSE_BUTTON(
         Icons.Rounded.Mouse,
@@ -821,3 +828,217 @@ internal fun gamepadCodeDisplayLabel(
 @Composable
 internal fun GamepadKeycodes.GamepadButtonPreset.localizedDisplayLabel(swapFaceButtons: Boolean): String =
     gamepadCodeDisplayLabel(code, swapFaceButtons)
+
+internal fun MouseButton.shortLabelResId(): Int =
+    when (this) {
+        MouseButton.LEFT -> R.string.kb_mouse_btn_left
+        MouseButton.RIGHT -> R.string.kb_mouse_btn_right
+        MouseButton.MIDDLE -> R.string.kb_mouse_btn_middle
+        MouseButton.MOUSE4 -> R.string.kb_mouse_btn_4
+        MouseButton.MOUSE5 -> R.string.kb_mouse_btn_5
+    }
+
+/**
+ * Pure JVM helper resolving non-resource default button labels for parameterized actions
+ * ([PadAction.KeyboardKey], [PadAction.GamepadButton], [PadAction.Macro],
+ * [PadAction.SwitchToLayout], [PadAction.SwitchToProfile]). Returns `null` when the caller
+ * should fall back to a localized string resource.
+ */
+internal fun PadAction.resolveDataDrivenDefaultLabel(
+    allProfiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+    swapFaceButtons: Boolean,
+    homeButtonLabel: String,
+): String? =
+    when (this) {
+        is PadAction.KeyboardKey -> {
+            if (modifiers.isEmpty()) {
+                label
+            } else {
+                val modNames =
+                    modifiers
+                        .mapNotNull { code ->
+                            MODIFIER_PRESETS.firstOrNull { it.first == code }?.second
+                        }.joinToString("+")
+                if (modNames.isEmpty()) label else "$modNames+$label"
+            }
+        }
+
+        is PadAction.GamepadButton -> {
+            fun codeShortLabel(code: Int): String =
+                if (code == GamepadKeycodes.BTN_MODE) {
+                    homeButtonLabel
+                } else {
+                    gamepadCodeDisplayShortLabel(code, swapFaceButtons)
+                }
+
+            val primary = codeShortLabel(btnCode)
+            if (extraBtnCodes.isEmpty()) {
+                primary
+            } else {
+                val extras = extraBtnCodes.joinToString("+") { codeShortLabel(it) }
+                "$primary+$extras"
+            }
+        }
+
+        is PadAction.Macro -> {
+            activeProfile
+                ?.macros
+                ?.firstOrNull { it.id == macroId }
+                ?.name
+                ?.takeIf { it.isNotBlank() }
+        }
+
+        is PadAction.SwitchToLayout -> {
+            activeProfile
+                ?.layouts
+                ?.firstOrNull { it.id == layoutId }
+                ?.name
+                ?.takeIf { it.isNotBlank() }
+        }
+
+        is PadAction.SwitchToProfile -> {
+            allProfiles
+                .firstOrNull { it.id == profileId }
+                ?.name
+                ?.takeIf { it.isNotBlank() }
+        }
+
+        else -> {
+            null
+        }
+    }
+
+/**
+ * Resolves the localized default [PadButton.label] for this [PadAction] when creating a button
+ * or changing its action while the previous default label is still untouched.
+ */
+internal fun PadAction.defaultButtonLabel(
+    context: Context,
+    allProfiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+    swapFaceButtons: Boolean,
+): String {
+    val homeLabel = context.getString(R.string.macropad_gamepad_btn_mode)
+    resolveDataDrivenDefaultLabel(
+        allProfiles = allProfiles,
+        activeProfile = activeProfile,
+        swapFaceButtons = swapFaceButtons,
+        homeButtonLabel = homeLabel,
+    )?.let { return it }
+
+    return when (this) {
+        is PadAction.MouseButton -> {
+            context.getString(button.shortLabelResId())
+        }
+
+        is PadAction.ScrollWheel -> {
+            context.getString(R.string.macropad_display_scroll_wheel)
+        }
+
+        is PadAction.TrackpointMove -> {
+            context.getString(R.string.macropad_display_trackpoint)
+        }
+
+        is PadAction.AppLauncher -> {
+            resolveAppName(context, packageName).ifBlank {
+                context.getString(R.string.macropad_action_app_launcher)
+            }
+        }
+
+        else -> {
+            context.getString(toCategory().labelResId)
+        }
+    }
+}
+
+/**
+ * Pure transition rule applying [newAction] to this [PadButton] while preserving user-customized
+ * labels and icons:
+ * - [PadButton.label] updates to [newDefaultLabel] iff blank, equal to [newButtonPlaceholder], or
+ *   still equal to [oldDefaultLabel].
+ * - [PadButton.iconName] is cleared to `null` for fixed-face actions (`!newAction.supportsCustomIcon()`),
+ *   or updated to `newAction.defaultIconName()` iff `iconName == action.defaultIconName()`.
+ */
+internal fun PadButton.withActionDefaultsResolved(
+    newAction: PadAction,
+    newButtonPlaceholder: String,
+    oldDefaultLabel: String,
+    newDefaultLabel: String,
+): PadButton {
+    val shouldUpdateLabel =
+        label.isBlank() ||
+            label == newButtonPlaceholder ||
+            label == oldDefaultLabel
+    val resolvedLabel =
+        if (shouldUpdateLabel && newDefaultLabel.isNotBlank()) {
+            newDefaultLabel
+        } else {
+            label
+        }
+    val resolvedIconName =
+        if (!newAction.supportsCustomIcon()) {
+            null
+        } else if (iconName == action.defaultIconName()) {
+            newAction.defaultIconName()
+        } else {
+            iconName
+        }
+    return copy(
+        label = resolvedLabel,
+        iconName = resolvedIconName,
+    ).withActionSizing(newAction)
+}
+
+internal fun PadButton.withActionDefaults(
+    newAction: PadAction,
+    context: Context,
+    allProfiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+    swapFaceButtons: Boolean,
+): PadButton {
+    val placeholder = context.getString(R.string.macropad_editor_new_button_default_label)
+    val oldDefault = action.defaultButtonLabel(context, allProfiles, activeProfile, swapFaceButtons)
+    val newDefault = newAction.defaultButtonLabel(context, allProfiles, activeProfile, swapFaceButtons)
+    val updated =
+        withActionDefaultsResolved(
+            newAction = newAction,
+            newButtonPlaceholder = placeholder,
+            oldDefaultLabel = oldDefault,
+            newDefaultLabel = newDefault,
+        )
+    AppLog.d(
+        TAG,
+        "withActionDefaults: ${action::class.simpleName} -> ${newAction::class.simpleName} " +
+            "label='${updated.label}' icon=${updated.iconName}",
+    )
+    return updated
+}
+
+internal fun createDefaultDraftButton(
+    id: String,
+    defaultAction: PadAction,
+    context: Context,
+    allProfiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+    swapFaceButtons: Boolean,
+    posX: Float = PAD_DEFAULT_CENTER_POS,
+    posY: Float = PAD_DEFAULT_CENTER_POS,
+): PadButton {
+    val defaultLabel = defaultAction.defaultButtonLabel(context, allProfiles, activeProfile, swapFaceButtons)
+    val defaultIcon = if (defaultAction.supportsCustomIcon()) defaultAction.defaultIconName() else null
+    val created =
+        PadButton(
+            id = id,
+            label = defaultLabel,
+            iconName = defaultIcon,
+            posX = posX,
+            posY = posY,
+            action = defaultAction,
+        ).withActionSizing(defaultAction)
+    AppLog.d(
+        TAG,
+        "createDefaultDraftButton: action=${defaultAction::class.simpleName} label='${created.label}' icon=${created.iconName}",
+    )
+    return created
+}

@@ -97,6 +97,7 @@ import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "PadButtonEditDialog"
 
+private const val PBD_DEFAULT_CENTER_POS = 0.5f
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_ICON_SIZE_DP = 20.dp
 
@@ -430,15 +431,33 @@ internal fun EditButtonSubPageContent(
         MacroPadState.setSelectedButtonId(stableButtonId)
     }
 
-    val defaultButtonLabel = stringResource(R.string.macropad_editor_new_button_default_label)
+    val allProfiles by MacroPadState.profiles.collectAsStateWithLifecycle()
+    val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+
     val initAction =
         button?.action
             ?: initialAction
-            ?: PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
-    val initLabel =
-        button?.label?.ifBlank { defaultButtonLabel }
-            ?: defaultButtonLabel
-    val initIconName = button?.iconName ?: selectedIcon
+            ?: PadAction.GamepadButton(
+                btnCode = GamepadKeycodes.BTN_SOUTH,
+                label = gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_SOUTH, swapFaceButtons),
+            )
+    val resolvedInitDefaultLabel =
+        initAction.defaultButtonLabel(
+            context = context,
+            allProfiles = allProfiles,
+            activeProfile = profile,
+            swapFaceButtons = swapFaceButtons,
+        )
+    val initLabel = button?.label ?: resolvedInitDefaultLabel
+    val initIconName =
+        if (button != null) {
+            button.iconName ?: selectedIcon
+        } else if (!initAction.supportsCustomIcon()) {
+            null
+        } else {
+            selectedIcon ?: initAction.defaultIconName()
+        }
     var label by remember(button) { mutableStateOf(initLabel) }
     var iconName by remember(button, selectedIcon) { mutableStateOf(selectedIcon ?: initIconName) }
     val initialSized =
@@ -446,9 +465,10 @@ internal fun EditButtonSubPageContent(
             val base =
                 button ?: PadButton(
                     id = stableButtonId,
-                    posX = 0.5f,
-                    posY = 0.5f,
+                    posX = PBD_DEFAULT_CENTER_POS,
+                    posY = PBD_DEFAULT_CENTER_POS,
                     label = initLabel,
+                    iconName = initIconName,
                     action = initAction,
                 )
             base.withActionSizing(initAction)
@@ -480,8 +500,6 @@ internal fun EditButtonSubPageContent(
     val globalAccentInt by SettingsManager.accentColor.collectAsStateWithLifecycle()
     val globalAccentColor = Color(globalAccentInt)
 
-    val allProfiles by MacroPadState.profiles.collectAsStateWithLifecycle()
-    val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val macros = profile?.macros ?: emptyList()
     val layouts = profile?.layouts ?: emptyList()
     val recordedTap by TouchRecordingManager.recordedTap.collectAsStateWithLifecycle()
@@ -545,8 +563,8 @@ internal fun EditButtonSubPageContent(
         }
     }
 
-    var posX by remember(button) { mutableFloatStateOf(button?.posX ?: 0.5f) }
-    var posY by remember(button) { mutableFloatStateOf(button?.posY ?: 0.5f) }
+    var posX by remember(button) { mutableFloatStateOf(button?.posX ?: PBD_DEFAULT_CENTER_POS) }
+    var posY by remember(button) { mutableFloatStateOf(button?.posY ?: PBD_DEFAULT_CENTER_POS) }
     var isAdjusting by remember { mutableStateOf(false) }
 
     val currentButton =
@@ -616,8 +634,17 @@ internal fun EditButtonSubPageContent(
 
     fun onActionChanged(newAction: PadAction) {
         AppLog.d(TAG, "onActionChanged: $newAction")
-        action = newAction
-        val updated = currentButton.withActionSizing(newAction)
+        val updated =
+            currentButton.withActionDefaults(
+                newAction = newAction,
+                context = context,
+                allProfiles = allProfiles,
+                activeProfile = profile,
+                swapFaceButtons = swapFaceButtons,
+            )
+        action = updated.action
+        label = updated.label
+        iconName = updated.iconName
         widthDp = updated.widthDp
         heightDp = updated.heightDp
         buttonShape = updated.buttonShape
@@ -682,7 +709,7 @@ internal fun EditButtonSubPageContent(
     val currentBg = resolveBgColorOption(effectiveBgOpt, globalAccentColor)
 
     val showLabel = action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove
-    val showIconPicker = action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher
+    val showIconPicker = action.supportsCustomIcon()
 
     val promptState =
         rememberSaveExitPromptState(

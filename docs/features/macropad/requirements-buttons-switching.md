@@ -31,48 +31,40 @@
   - In the **editor canvas** (`PadCanvas`, `DraggableButton`): the icon is shown at `60 dp × 0.72 × min(cols, rows)` (≈ 43 dp for 1×1).
   - In the **button list** (`MacroPadEditor`, `ButtonsDeck`): the icon is shown at 18 dp in the indicator box instead of the two-character label abbreviation.
 - When `iconName` is `null`, the existing label rendering is used unchanged; the label field is still stored and used in the editor button list.
-- When the action type is `ScrollWheel`, `TrackpointMove`, or `BackgroundPeek`, `iconName` is forced to `null` (these action types have fixed rendering and do not support icons).
+- When `PadAction.supportsCustomIcon()` is `false` (`ScrollWheel`, `TrackpointMove`, `BackgroundPeek`, and `AppLauncher`), `iconName` is forced to `null` via `PadButton.withActionSizing()` and the Icon Picker card is hidden in `EditButtonSubPageContent` (these action types render fixed glyphs or real APK icons).
 - Icon selection opens `ChooseIconSubPageContent` (`IconPickerDialog.kt`), an in-deck sub-page with a search field, a current-selection two-step clear card (when an icon is selected), and a 5-column `LazyVerticalGrid` of all available icons (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`).
 - The `iconName` field defaults to `null`, so existing saved profiles load without any migration.
 - No runtime reflection or Proguard keep-rules are required.
 
-### FR-P11: Default Icons and Labels for Special Action Buttons
+### FR-P11: Smart Default Icons and Localized Default Labels
 
-- When a new button is created (or the action type is changed while the label field is still blank), the editor MUST pre-fill `label` and `iconName` with sensible defaults for action types that do not manage their own label.
-- Defaults are defined via two package-level extension functions in `core/…/macropad/MacroPadLayout.kt`:
-  - `fun PadAction.defaultLabel(): String` — returns a short English label suggestion.
-  - `fun PadAction.defaultIconName(): String?` — returns a Material Symbols Rounded ligature name, or `null` if no default applies.
+- When a new button is created via `ChooseButtonType` (or its action / sub-options change via any sub-page picker or inline editor), the editor pre-fills and updates `label` and `iconName` while preserving user customizations:
+  - **Default Icons (`shared/core/…/MacroPadLayout.kt`)**: `fun PadAction.defaultIconName(): String?` returns a Material Symbols Rounded ligature name for actions where each variant maps 1-to-1 to an unambiguous glyph, or `null` when text / dedicated rendering is clearer.
+  - **Default Labels (`companion/ui/…/PadActionDisplay.kt`)**: `fun PadAction.defaultButtonLabel(...)` resolves a localized button label from `strings.xml` and live profile/app state (honoring A/B & X/Y face-button swap).
+  - **Preservation Rules (`PadButton.withActionDefaults`)**:
+    - `label` auto-updates to `newAction`'s default label **only if** the current label is blank, equals the placeholder (`R.string.macropad_editor_new_button_default_label`), or still equals `oldAction`'s default label. User-typed custom labels are never overwritten.
+    - `iconName` auto-updates to `newAction.defaultIconName()` **only if** `currentIconName == oldAction.defaultIconName()` (and is forced to `null` whenever `!newAction.supportsCustomIcon()`). Manually picked or cleared icons are preserved across action edits, while adding/removing keyboard modifiers or extra gamepad buttons automatically toggles between the chord text (`null`) and single-input glyph.
 - Default mapping:
 
-  | `PadAction`             | Default label       | Default icon    |
-  | ----------------------- | ------------------- | --------------- |
-  | `LayoutNext`            | Next Layout         | `arrow_forward` |
-  | `LayoutPrevious`        | Prev Layout         | `arrow_back`    |
-  | `SwitchToLayout`        | Switch Layout       | `view_quilt`    |
-  | `SwitchToProfile`       | Switch to Profile   | `folder`        |
-  | `ProfileSwitcher`       | Switch Profile      | `swap_horiz`    |
-  | `SwitchToHub`           | Hub                 | `dashboard`     |
-  | `MirrorPlayStop`        | Mirror              | `cast`          |
-  | `MirrorFreeze`          | Freeze              | `pause_circle`  |
-  | `MirrorViewportEdit`    | Viewport            | `crop_free`     |
-  | `MirrorTouchProjection` | Touch Projection    | `touch_app`     |
-  | `FullScreenMouse`       | Mouse               | `mouse`         |
-  | `FullScreenKeyboard`    | Keyboard            | `keyboard`      |
-  | `Screenshot(TOP)`       | Screenshot (Top)    | `splitscreen_bottom` |
-  | `Screenshot(BOTTOM)`    | Screenshot (Bottom) | `splitscreen_top` |
-  | `Screenshot(BOTH)`      | Screenshot (Both)   | `splitscreen`   |
-  | `StopAllMacros`         | Stop All Macros     | `stop_circle`   |
-  | `TouchTap`              | Touch Tap           | `ads_click`     |
-  | `SingleTouchGesture`    | Single Touch Gesture | `gesture`      |
-  | `MediaControl(PLAY_PAUSE)` | Play / Pause     | `play_pause`    |
-  | `MediaControl(NEXT_TRACK)` | Next Track       | `skip_next`     |
-  | `MediaControl(PREVIOUS_TRACK)` | Previous Track | `skip_previous` |
-  | `MediaControl(STOP)`    | Stop Playback       | `stop`          |
-  | `MediaControl(MUTE)`    | Mute Audio          | `volume_off`    |
-  | `Macro`                 | _(from macro name)_ | `smart_button`  |
-  | All others              | _(empty)_           | _(null)_        |
-
-- `ScrollWheel`, `TrackpointMove`, and `BackgroundPeek` are excluded — they have fixed rendering and do not use labels or icons.
+  | `PadAction` / Variant | Default label (localized / live) | Default icon (`defaultIconName()`) |
+  | --------------------- | -------------------------------- | ---------------------------------- |
+  | `KeyboardKey` (no modifiers: `Enter` / `Backspace` / `Tab` / `Space` / `Caps` / `Up` / `Down` / `Left` / `Right` / `PgUp` / `PgDn`) | Key label | `keyboard_return` / `backspace` / `keyboard_tab` / `space_bar` / `keyboard_capslock` / `keyboard_arrow_up` / `keyboard_arrow_down` / `keyboard_arrow_left` / `keyboard_arrow_right` / `keyboard_double_arrow_up` / `keyboard_double_arrow_down` |
+  | `KeyboardKey` (alphanumeric, F-keys, punctuation, or `modifiers.isNotEmpty()`) | Key or `Mod+Key` chord | _(null)_ |
+  | `GamepadButton` (`extraBtnCodes.isEmpty()`: `BTN_MODE`) | `Home` (`R.string.macropad_gamepad_btn_mode`) | `home` |
+  | `GamepadButton` (`extraBtnCodes.isEmpty()`: 8-way D-Pad) | Short preset label (`D-Up`, …) | `arrow_upward` / `arrow_downward` / `arrow_back` / `arrow_forward` / `north_west` / `north_east` / `south_west` / `south_east` |
+  | `GamepadButton` (face, shoulder, trigger, stick, `Start`/`Select`, or combos) | Short label or `Btn+Extra` (swap-aware) | _(null)_ |
+  | `MouseButton(LEFT / RIGHT)` | `LMB` / `RMB` | `left_click` / `right_click` |
+  | `MouseButton(MIDDLE / MOUSE4 / MOUSE5)` | `MMB` / `M4` / `M5` | _(null)_ |
+  | `LayoutNext` / `LayoutPrevious` | Next Layout / Previous Layout | `arrow_forward` / `arrow_back` |
+  | `ProfileSwitcher` / `SwitchToHub` | Profile Switcher / Hub | `swap_horiz` / `dashboard` |
+  | `SwitchToLayout` / `SwitchToProfile` / `Macro` | Resolved layout / profile / macro name (or category fallback) | _(null)_ |
+  | `MirrorPlayStop` / `MirrorFreeze` / `MirrorViewportEdit` / `MirrorTouchProjection` | Localized category label | `cast` / `pause_circle` / `crop_free` / `touch_app` |
+  | `FullScreenMouse` / `FullScreenKeyboard` / `StopAllMacros` | Localized category label | `mouse` / `keyboard` / `stop_circle` |
+  | `Screenshot(TOP / BOTTOM / BOTH)` | Localized category label | `splitscreen_bottom` / `splitscreen_top` / `splitscreen` |
+  | `TouchTap` / `SingleTouchGesture` | Localized category label | _(null)_ |
+  | `MediaControl(PLAY_PAUSE / NEXT_TRACK / PREVIOUS_TRACK / STOP / MUTE)` | Localized category label | `play_pause` / `skip_next` / `skip_previous` / `stop` / `volume_off` |
+  | `AppLauncher` | Resolved app label (or category fallback) | _(null — uses real APK icon)_ |
+  | `ScrollWheel` / `TrackpointMove` / `BackgroundPeek` | Localized display label (for editor list) | _(null — fixed custom face)_ |
 
 ### FR-P12: Grouped Action Selection in Button Editor
 
@@ -81,11 +73,6 @@
 - The second dropdown selects the concrete action inside the currently selected group. **If the selected group only has a single enabled concrete action, this second dropdown is hidden, and that action is automatically selected in the background.**
 - Group and action labels MUST come from `strings.xml` resources.
 - Existing action-specific inline editors (keyboard modifier slots, gamepad extra-button slots, macro picker, and Display 0 touch recording triggers for `TouchTap` and `SingleTouchGesture`) MUST appear after action selection. `TouchTap` configures coordinates strictly via Display 0 tap recording (no manual X/Y sliders), and both unrecorded `TouchTap` (`isRecorded == false`) and empty `SingleTouchGesture` (`samples.isEmpty()`) keep **Create / Save** disabled until recorded.
-- `KeyboardKey` and `GamepadButton` are excluded — they manage their own labels via the key/button name.
-- **Behaviour in `ButtonEditDialog`:**
-  - On dialog open (new button with `initialAction`): `initLabel` and `initIconName` are derived from the defaults before any state is initialised.
-  - On action type change (`onActionChanged`): defaults are applied whenever `button == null` (new button) or the label field is blank.
-  - The user can override both label and icon at any time after the default is applied.
 - **No migration required:** existing saved buttons are unaffected; `iconName` defaults to `null` on deserialisation.
 
 ### FR-P13: Global Gamepad Button Label Swap (A/B and X/Y)

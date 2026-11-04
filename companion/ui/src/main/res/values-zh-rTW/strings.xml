@@ -1156,6 +1156,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_layout_next_desc">切換至啟用設定檔中的下一個配置</string>
     <string name="macropad_action_layout_previous_desc">切換至啟用設定檔中的上一個配置</string>
     <string name="macropad_action_profile_switcher_desc">開啟設定檔選取覆蓋層</string>
+    <string name="macropad_gamepad_btn_mode">主畫面</string>
     <string name="macropad_gamepad_btn_dpad_up">方向鍵 上</string>
     <string name="macropad_gamepad_btn_dpad_down">方向鍵 下</string>
     <string name="macropad_gamepad_btn_dpad_left">方向鍵 左</string>

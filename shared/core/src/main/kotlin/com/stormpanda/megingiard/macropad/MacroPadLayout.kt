@@ -413,27 +413,89 @@ sealed class PadAction {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Returns `true` when this action supports assigning a Material Symbols icon via
+ * [PadButton.iconName]. Fixed-face actions ([PadAction.ScrollWheel],
+ * [PadAction.TrackpointMove], [PadAction.BackgroundPeek], [PadAction.AppLauncher])
+ * render dedicated glyphs or package icons and always enforce `iconName = null`.
+ */
+fun PadAction.supportsCustomIcon(): Boolean =
+    when (this) {
+        is PadAction.ScrollWheel,
+        is PadAction.TrackpointMove,
+        is PadAction.BackgroundPeek,
+        is PadAction.AppLauncher,
+        -> false
+
+        else -> true
+    }
+
+/**
  * Returns the Material Symbols Rounded icon name (snake_case ligature string)
- * to use as a default icon for this action type when a new button is created.
- * Returns `null` for action types that have no meaningful icon default (e.g.
- * [PadAction.KeyboardKey], [PadAction.GamepadButton], [PadAction.MouseButton]).
+ * to use as a default icon for this action when a new button is created or its
+ * action is changed while still using its previous default icon.
+ * Returns `null` when the button should display its text label or a dedicated custom face.
  */
 fun PadAction.defaultIconName(): String? =
     when (this) {
+        is PadAction.KeyboardKey -> {
+            if (modifiers.isNotEmpty()) {
+                null
+            } else {
+                when (keycode) {
+                    LinuxKeycodes.KEY_ENTER -> "keyboard_return"
+                    LinuxKeycodes.KEY_BACKSPACE -> "backspace"
+                    LinuxKeycodes.KEY_TAB -> "keyboard_tab"
+                    LinuxKeycodes.KEY_SPACE -> "space_bar"
+                    LinuxKeycodes.KEY_CAPSLOCK -> "keyboard_capslock"
+                    LinuxKeycodes.KEY_UP -> "keyboard_arrow_up"
+                    LinuxKeycodes.KEY_DOWN -> "keyboard_arrow_down"
+                    LinuxKeycodes.KEY_LEFT -> "keyboard_arrow_left"
+                    LinuxKeycodes.KEY_RIGHT -> "keyboard_arrow_right"
+                    LinuxKeycodes.KEY_PAGEUP -> "keyboard_double_arrow_up"
+                    LinuxKeycodes.KEY_PAGEDOWN -> "keyboard_double_arrow_down"
+                    else -> null
+                }
+            }
+        }
+
+        is PadAction.GamepadButton -> {
+            if (extraBtnCodes.isNotEmpty()) {
+                null
+            } else {
+                when (btnCode) {
+                    GamepadKeycodes.BTN_MODE -> "home"
+                    GamepadKeycodes.BTN_DPAD_UP -> "arrow_upward"
+                    GamepadKeycodes.BTN_DPAD_DOWN -> "arrow_downward"
+                    GamepadKeycodes.BTN_DPAD_LEFT -> "arrow_back"
+                    GamepadKeycodes.BTN_DPAD_RIGHT -> "arrow_forward"
+                    GamepadKeycodes.CODE_DPAD_UP_LEFT -> "north_west"
+                    GamepadKeycodes.CODE_DPAD_UP_RIGHT -> "north_east"
+                    GamepadKeycodes.CODE_DPAD_DOWN_LEFT -> "south_west"
+                    GamepadKeycodes.CODE_DPAD_DOWN_RIGHT -> "south_east"
+                    else -> null
+                }
+            }
+        }
+
+        is PadAction.MouseButton -> {
+            when (button) {
+                MouseBtnEnum.LEFT -> "left_click"
+
+                MouseBtnEnum.RIGHT -> "right_click"
+
+                MouseBtnEnum.MIDDLE,
+                MouseBtnEnum.MOUSE4,
+                MouseBtnEnum.MOUSE5,
+                -> null
+            }
+        }
+
         is PadAction.LayoutNext -> {
             "arrow_forward"
         }
 
         is PadAction.LayoutPrevious -> {
             "arrow_back"
-        }
-
-        is PadAction.SwitchToLayout -> {
-            "view_quilt"
-        }
-
-        is PadAction.SwitchToProfile -> {
-            "folder"
         }
 
         is PadAction.ProfileSwitcher -> {
@@ -468,14 +530,6 @@ fun PadAction.defaultIconName(): String? =
             "keyboard"
         }
 
-        is PadAction.AppLauncher -> {
-            "apps"
-        }
-
-        is PadAction.Macro -> {
-            "smart_button"
-        }
-
         is PadAction.Screenshot -> {
             when (target) {
                 ScreenshotTarget.TOP -> "splitscreen_bottom"
@@ -486,14 +540,6 @@ fun PadAction.defaultIconName(): String? =
 
         is PadAction.StopAllMacros -> {
             "stop_circle"
-        }
-
-        is PadAction.TouchTap -> {
-            "ads_click"
-        }
-
-        is PadAction.SingleTouchGesture -> {
-            "gesture"
         }
 
         is PadAction.MediaControl -> {
@@ -635,15 +681,17 @@ data class PadButton(
 )
 
 /**
- * Returns a copy of this [PadButton] with dimensions and shape adjusted appropriately for [newAction].
+ * Returns a copy of this [PadButton] with dimensions, shape, and icon constraints adjusted for [newAction].
  * - [PadAction.TrackpointMove]: Enforces 1:1 aspect ratio, minimum size of [MP_TRACKPOINT_DEFAULT_SIZE_DP], and [ButtonShape.CIRCLE].
  * - [PadAction.ScrollWheel]: Enforces a minimum vertical height of [MP_SCROLL_WHEEL_MIN_HEIGHT_DP].
+ * - Fixed-face actions (`!newAction.supportsCustomIcon()`): Forces [PadButton.iconName] to `null`.
  */
 fun PadButton.withActionSizing(newAction: PadAction): PadButton {
     val isTrackpoint = newAction is PadAction.TrackpointMove
     val tpSize = if (isTrackpoint) maxOf(widthDp, heightDp, MP_TRACKPOINT_DEFAULT_SIZE_DP) else widthDp
     return copy(
         action = newAction,
+        iconName = if (!newAction.supportsCustomIcon()) null else iconName,
         widthDp = if (isTrackpoint) tpSize else widthDp,
         heightDp =
             if (newAction is PadAction.ScrollWheel && heightDp < MP_SCROLL_WHEEL_MIN_HEIGHT_DP) {

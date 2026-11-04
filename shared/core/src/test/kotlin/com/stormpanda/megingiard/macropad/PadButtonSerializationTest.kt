@@ -1,11 +1,13 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.input.TouchAction
+import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -407,7 +409,7 @@ class PadButtonSerializationTest {
         val decodedHub = json.decodeFromString<PadButton>(encodedHub)
         assertEquals(hubButton, decodedHub)
 
-        assertEquals("view_quilt", PadAction.SwitchToLayout("layout-1", holdToShift = false).defaultIconName())
+        assertNull(PadAction.SwitchToLayout("layout-1", holdToShift = false).defaultIconName())
         assertEquals("dashboard", PadAction.SwitchToHub.defaultIconName())
     }
 
@@ -429,7 +431,7 @@ class PadButtonSerializationTest {
     }
 
     @Test
-    fun `TouchTap action serializes and deserializes with defaultIconName and legacy backward compatibility`() {
+    fun `TouchTap action serializes and deserializes with label-first null defaultIconName and legacy backward compatibility`() {
         val tapButton =
             PadButton(
                 id = "btn-touch-tap",
@@ -443,7 +445,7 @@ class PadButtonSerializationTest {
         val decoded = json.decodeFromString<PadButton>(encoded)
         assertEquals(tapButton, decoded)
         assertTrue((decoded.action as PadAction.TouchTap).isRecorded)
-        assertEquals("ads_click", PadAction.TouchTap(0.25f, 0.75f).defaultIconName())
+        assertNull(PadAction.TouchTap(0.25f, 0.75f).defaultIconName())
 
         // Legacy saved payload without isRecorded must decode with isRecorded = true
         val legacyPayload =
@@ -458,7 +460,7 @@ class PadButtonSerializationTest {
     }
 
     @Test
-    fun `SingleTouchGesture action serializes multi-finger samples and provides gesture defaultIconName`() {
+    fun `SingleTouchGesture action serializes multi-finger samples with label-first null defaultIconName`() {
         val samples =
             listOf(
                 TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.2f, normY = 0.3f),
@@ -480,7 +482,7 @@ class PadButtonSerializationTest {
         assertTrue(encoded.contains("\"type\":\"single_touch_gesture\""))
         val decoded = json.decodeFromString<PadButton>(encoded)
         assertEquals(gestureButton, decoded)
-        assertEquals("gesture", PadAction.SingleTouchGesture(samples = samples).defaultIconName())
+        assertNull(PadAction.SingleTouchGesture(samples = samples).defaultIconName())
 
         val emptyDefaultPayload =
             """{"id":"btn-empty-gesture","label":"Gesture","posX":0.5,"posY":0.5,"widthDp":60.0,"heightDp":60.0,"action":{"type":"single_touch_gesture"}}"""
@@ -513,7 +515,7 @@ class PadButtonSerializationTest {
     }
 
     @Test
-    fun `SwitchToProfile action serializes and deserializes with defaultIconName`() {
+    fun `SwitchToProfile action serializes and deserializes with label-first null defaultIconName`() {
         val button =
             PadButton(
                 id = "btn-switch-profile",
@@ -532,7 +534,88 @@ class PadButtonSerializationTest {
         val decodedDefault = json.decodeFromString<PadButton>(defaultPayload)
         assertEquals(PadAction.SwitchToProfile(profileId = ""), decodedDefault.action)
 
-        assertEquals("folder", PadAction.SwitchToProfile("profile-1").defaultIconName())
+        assertNull(PadAction.SwitchToProfile("profile-1").defaultIconName())
+    }
+
+    @Test
+    fun `non-fixed MouseButton GamepadButton and KeyboardKey actions map unambiguous default icons and null chords`() {
+        // MouseButton: Left & Right click get dedicated glyphs; Middle/M4/M5 remain text-first
+        assertEquals("left_click", PadAction.MouseButton(MouseButton.LEFT).defaultIconName())
+        assertEquals("right_click", PadAction.MouseButton(MouseButton.RIGHT).defaultIconName())
+        assertNull(PadAction.MouseButton(MouseButton.MIDDLE).defaultIconName())
+        assertNull(PadAction.MouseButton(MouseButton.MOUSE4).defaultIconName())
+        assertNull(PadAction.MouseButton(MouseButton.MOUSE5).defaultIconName())
+
+        // GamepadButton: Home & 8-way D-Pad get glyphs only when extraBtnCodes is empty
+        assertEquals("home", PadAction.GamepadButton(GamepadKeycodes.BTN_MODE, "Home").defaultIconName())
+        assertEquals("arrow_upward", PadAction.GamepadButton(GamepadKeycodes.BTN_DPAD_UP, "D-Up").defaultIconName())
+        assertEquals("arrow_downward", PadAction.GamepadButton(GamepadKeycodes.BTN_DPAD_DOWN, "D-Down").defaultIconName())
+        assertEquals("arrow_back", PadAction.GamepadButton(GamepadKeycodes.BTN_DPAD_LEFT, "D-Left").defaultIconName())
+        assertEquals("arrow_forward", PadAction.GamepadButton(GamepadKeycodes.BTN_DPAD_RIGHT, "D-Right").defaultIconName())
+        assertEquals("north_west", PadAction.GamepadButton(GamepadKeycodes.CODE_DPAD_UP_LEFT, "D-UL").defaultIconName())
+        assertEquals("north_east", PadAction.GamepadButton(GamepadKeycodes.CODE_DPAD_UP_RIGHT, "D-UR").defaultIconName())
+        assertEquals("south_west", PadAction.GamepadButton(GamepadKeycodes.CODE_DPAD_DOWN_LEFT, "D-DL").defaultIconName())
+        assertEquals("south_east", PadAction.GamepadButton(GamepadKeycodes.CODE_DPAD_DOWN_RIGHT, "D-DR").defaultIconName())
+        assertNull(
+            PadAction
+                .GamepadButton(
+                    btnCode = GamepadKeycodes.BTN_DPAD_UP,
+                    label = "D-Up",
+                    extraBtnCodes = listOf(GamepadKeycodes.BTN_SOUTH),
+                ).defaultIconName(),
+        )
+        assertNull(PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A").defaultIconName())
+        assertNull(PadAction.GamepadButton(GamepadKeycodes.CODE_LS_UP, "LS Up").defaultIconName())
+
+        // KeyboardKey: Single special/nav keys get glyphs; chords and character keys stay null
+        assertEquals("keyboard_return", PadAction.KeyboardKey(LinuxKeycodes.KEY_ENTER, "Enter").defaultIconName())
+        assertEquals("backspace", PadAction.KeyboardKey(LinuxKeycodes.KEY_BACKSPACE, "⌫").defaultIconName())
+        assertEquals("keyboard_tab", PadAction.KeyboardKey(LinuxKeycodes.KEY_TAB, "Tab").defaultIconName())
+        assertEquals("space_bar", PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space").defaultIconName())
+        assertEquals("keyboard_capslock", PadAction.KeyboardKey(LinuxKeycodes.KEY_CAPSLOCK, "Caps").defaultIconName())
+        assertEquals("keyboard_arrow_up", PadAction.KeyboardKey(LinuxKeycodes.KEY_UP, "↑").defaultIconName())
+        assertEquals("keyboard_arrow_down", PadAction.KeyboardKey(LinuxKeycodes.KEY_DOWN, "↓").defaultIconName())
+        assertEquals("keyboard_arrow_left", PadAction.KeyboardKey(LinuxKeycodes.KEY_LEFT, "←").defaultIconName())
+        assertEquals("keyboard_arrow_right", PadAction.KeyboardKey(LinuxKeycodes.KEY_RIGHT, "→").defaultIconName())
+        assertEquals("keyboard_double_arrow_up", PadAction.KeyboardKey(LinuxKeycodes.KEY_PAGEUP, "PgUp").defaultIconName())
+        assertEquals("keyboard_double_arrow_down", PadAction.KeyboardKey(LinuxKeycodes.KEY_PAGEDOWN, "PgDn").defaultIconName())
+        assertNull(
+            PadAction
+                .KeyboardKey(
+                    keycode = LinuxKeycodes.KEY_SPACE,
+                    label = "Space",
+                    modifiers = listOf(LinuxKeycodes.KEY_LEFTCTRL),
+                ).defaultIconName(),
+        )
+        assertNull(PadAction.KeyboardKey(LinuxKeycodes.KEY_W, "W").defaultIconName())
+        assertNull(PadAction.KeyboardKey(LinuxKeycodes.KEY_F5, "F5").defaultIconName())
+        assertNull(PadAction.Macro("m-1").defaultIconName())
+    }
+
+    @Test
+    fun `supportsCustomIcon and withActionSizing clear iconName on fixed-face actions`() {
+        val base =
+            PadButton(
+                id = "btn-icon",
+                label = "Test",
+                iconName = "star",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.LayoutNext,
+            )
+
+        assertFalse(PadAction.ScrollWheel.supportsCustomIcon())
+        assertFalse(PadAction.TrackpointMove().supportsCustomIcon())
+        assertFalse(PadAction.BackgroundPeek.supportsCustomIcon())
+        assertFalse(PadAction.AppLauncher("com.example").supportsCustomIcon())
+        assertTrue(PadAction.LayoutNext.supportsCustomIcon())
+        assertTrue(PadAction.SwitchToProfile("p1").supportsCustomIcon())
+
+        assertNull(base.withActionSizing(PadAction.ScrollWheel).iconName)
+        assertNull(base.withActionSizing(PadAction.TrackpointMove()).iconName)
+        assertNull(base.withActionSizing(PadAction.BackgroundPeek).iconName)
+        assertNull(base.withActionSizing(PadAction.AppLauncher("com.example")).iconName)
+        assertEquals("star", base.withActionSizing(PadAction.SwitchToHub).iconName)
     }
 
     @Test

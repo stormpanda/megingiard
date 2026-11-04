@@ -1161,6 +1161,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_layout_next_desc">Zum nächsten Layout im Profil wechseln</string>
     <string name="macropad_action_layout_previous_desc">Zum vorherigen Layout im Profil wechseln</string>
     <string name="macropad_action_profile_switcher_desc">Profil-Auswahlmenü öffnen</string>
+    <string name="macropad_gamepad_btn_mode">Home</string>
     <string name="macropad_gamepad_btn_dpad_up">Steuerkreuz Oben</string>
     <string name="macropad_gamepad_btn_dpad_down">Steuerkreuz Unten</string>
     <string name="macropad_gamepad_btn_dpad_left">Steuerkreuz Links</string>
