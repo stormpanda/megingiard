@@ -9,21 +9,27 @@ import org.junit.Test
 class PServiceBridgeTest {
     @Before
     fun setUp() {
-        PServiceBridge.isAvailableForTest = null
+        PServiceBridge.resetForTesting()
     }
 
     @After
     fun tearDown() {
-        PServiceBridge.isAvailableForTest = null
+        PServiceBridge.resetForTesting()
     }
 
     @Test
     fun testIsAvailableOverridesForTesting() {
+        assertFalse(PServiceBridge.isCachedAvailable())
+
         PServiceBridge.isAvailableForTest = true
         assertTrue(PServiceBridge.isAvailable())
+        assertTrue(PServiceBridge.isCachedAvailable())
+        assertTrue(PrivdManager.isRootBridgeCachedAvailable)
 
         PServiceBridge.isAvailableForTest = false
         assertFalse(PServiceBridge.isAvailable())
+        assertFalse(PServiceBridge.isCachedAvailable())
+        assertFalse(PrivdManager.isRootBridgeCachedAvailable)
     }
 
     @Test

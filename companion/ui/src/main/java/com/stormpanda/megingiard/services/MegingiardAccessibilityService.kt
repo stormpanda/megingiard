@@ -26,6 +26,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.AutoKeyboardFocusCoordinator
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
+import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.AutoSetupLanguageConfig
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdClient
@@ -34,6 +35,7 @@ import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdPairScreenTextScanner
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.KeyboardSettings
+import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -80,12 +82,24 @@ class MegingiardAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         instance = this
         AppLog.i(TAG, "onServiceConnected: Megingiard Accessibility Service is active")
+        SettingsManager.init(applicationContext)
+        val shouldAutoConnectPrivd =
+            !OnboardingWizardManager.shouldAutoStartWizard() &&
+                !OnboardingWizardManager.isWizardActive.value &&
+                !AppStateManager.isPrivdPromptActive.value
         AppStateManager.setAccessibilityActive(true)
 
-        serviceScope.launch(Dispatchers.IO) {
-            if (PrivdManager.state.value != PrivdState.RUNNING) {
-                PrivdManager.connect(applicationContext)
+        if (shouldAutoConnectPrivd) {
+            serviceScope.launch(Dispatchers.IO) {
+                if (PrivdManager.state.value != PrivdState.RUNNING) {
+                    PrivdManager.connect(applicationContext)
+                }
             }
+        } else {
+            AppLog.d(
+                TAG,
+                "onServiceConnected: skipping PrivdManager auto-connect while onboarding or reconnect wizard is active",
+            )
         }
 
         serviceScope.launch {

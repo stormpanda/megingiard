@@ -911,6 +911,7 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_auto_setup">Start Auto Setup</string>
     <string name="privd_reconnect_title">Reconnect Megingiard System Service</string>
     <string name="privd_reconnect_desc">Megingiard System Service was disconnected, for example because of a device reboot or because Wireless Debugging was deactivated.</string>
+    <string name="privd_reconnect_root_bridge_desc">Megingiard System Service was disconnected. Activate the System Service via the AYN Thor hardware bridge to continue.</string>
     <string name="privd_reconnect_auto_button">Auto Reconnect</string>
     <string name="privd_reconnect_all_set">You\'re All Set!</string>
     <string name="privd_reconnect_btn_close">Close</string>
@@ -927,6 +928,7 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_root_bridge_title">Megingiard System Service (Hardware Bridge Detected)</string>
     <string name="onboarding_privd_root_bridge_desc">The AYN Thor hardware root bridge is ready. Activate the System Service for single-controller gamepad merge and direct display mirroring.</string>
     <string name="onboarding_privd_activate_btn">Activate System Service</string>
+    <string name="onboarding_privd_retry_btn">Retry Activation</string>
     <string name="onboarding_privd_activating">Connecting to system service…</string>
     <string name="onboarding_privd_daemon_row_label">Megingiard System Service</string>
     <string name="onboarding_accessibility_activate_btn">Activate Accessibility</string>

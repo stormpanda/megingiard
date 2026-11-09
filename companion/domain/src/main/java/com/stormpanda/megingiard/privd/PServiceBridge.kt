@@ -46,6 +46,19 @@ object PServiceBridge {
 
     @Volatile internal var isAvailableForTest: Boolean? = null
 
+    fun setAvailableForTesting(available: Boolean?) {
+        isAvailableForTest = available
+    }
+
+    /**
+     * Non-blocking check returning the last cached root-bridge availability state (or test override)
+     * without acquiring [execLock] or performing Binder IPC.
+     */
+    fun isCachedAvailable(): Boolean {
+        isAvailableForTest?.let { return it }
+        return isProbeChecked && isBridgeAvailable
+    }
+
     /**
      * Checks if the PServerBinder root service is reachable, responsive, and executing as root.
      * Caches successful probes; failed probes are throttled by [RETRY_THROTTLE_MS] to prevent
@@ -56,6 +69,11 @@ object PServiceBridge {
 
         if (isProbeChecked && isBridgeAvailable) {
             return true
+        }
+
+        val nowOutside = SystemClock.uptimeMillis()
+        if (nowOutside - lastProbeFailureTime < RETRY_THROTTLE_MS) {
+            return false
         }
 
         synchronized(execLock) {
@@ -202,7 +220,7 @@ object PServiceBridge {
         }
     }
 
-    internal fun resetForTesting() {
+    fun resetForTesting() {
         cachedBinder = null
         isProbeChecked = false
         isBridgeAvailable = false

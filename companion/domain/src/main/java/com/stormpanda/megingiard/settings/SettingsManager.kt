@@ -215,7 +215,6 @@ object SettingsManager {
         prefs[KEY_OVERLAY_AT_BOTTOM]?.let { _overlayAtBottom.value = it }
         prefs[KEY_OVERLAY_FADE_OUT]?.let { _overlayFadeOut.value = it }
 
-        prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION]?.let { _welcomeTourCompletedVersion.value = it }
         MirrorSettings.loadFrom(prefs)
         KeyboardSettings.loadFrom(prefs)
         TouchpadSettings.loadFrom(prefs)
@@ -235,6 +234,7 @@ object SettingsManager {
         prefs[KEY_ACCENT_COLOR]?.let { _accentColor.value = it }
         prefs[KEY_CUSTOM_ACCENT_COLOR]?.let { _customAccentColor.value = it }
         prefs[KEY_STEAMGRIDDB_API_TOKEN]?.let { _steamGridDbApiToken.value = it }
+        prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION]?.let { _welcomeTourCompletedVersion.value = it }
         MacroPadSettings.loadFrom(prefs)
         UpdateManager.loadFrom(prefs)
     }

@@ -347,8 +347,8 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        AppStateManager.setAccessibilityActive(MegingiardAccessibilityService.isEnabled(this))
         AppStateManager.resetPrivdPromptState()
+        AppStateManager.setAccessibilityActive(MegingiardAccessibilityService.isEnabled(this))
 
         // Handle .mgrd config files opened from a file manager or share sheet.
         handleIncomingIntent(intent)
@@ -383,10 +383,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        // Auto-connect Privileged Mode if the user previously bootstrapped the daemon.
+        // Auto-connect Privileged Mode if the user previously completed onboarding.
         // The daemon survives app restarts (it's a separate shell-UID process); we just
-        // re-open the abstract socket. Failure is silent: the user can re-bootstrap from
-        // Settings if needed.
+        // re-open the socket (or re-bootstrap via PServer/ADB). Suppressed while initial
+        // onboarding or Accessibility setup is pending so activation requires user consent.
         lifecycleScope.launch {
             var triggered = false
             PrivdManager.state.collect { state ->
@@ -396,9 +396,19 @@ class MainActivity : ComponentActivity() {
                     }
 
                     (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered -> {
-                        triggered = true
-                        AppLog.i(TAG, "Auto-connecting Privileged Mode")
-                        withContext(Dispatchers.IO) { PrivdManager.connect(applicationContext) }
+                        if (!OnboardingWizardManager.shouldAutoStartWizard() &&
+                            !OnboardingWizardManager.isWizardActive.value &&
+                            AppStateManager.isAccessibilityActive.value
+                        ) {
+                            triggered = true
+                            AppLog.i(TAG, "Auto-connecting Privileged Mode")
+                            withContext(Dispatchers.IO) { PrivdManager.connect(applicationContext) }
+                        } else {
+                            AppLog.d(
+                                TAG,
+                                "Skipping Privileged Mode auto-connect (onboardingPending=${OnboardingWizardManager.shouldAutoStartWizard()}, wizardActive=${OnboardingWizardManager.isWizardActive.value}, accessibilityActive=${AppStateManager.isAccessibilityActive.value})",
+                            )
+                        }
                     }
                 }
             }

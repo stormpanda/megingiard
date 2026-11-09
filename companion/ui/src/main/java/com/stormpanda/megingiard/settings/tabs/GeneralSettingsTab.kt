@@ -66,7 +66,8 @@ fun GeneralSettingsTab(
     )
 
     val isPrivdRunning = privdState == PrivdState.RUNNING
-    val isPrivdConnecting = privdState == PrivdState.CONNECTING
+    val isPrivdConnecting =
+        privdState == PrivdState.CONNECTING || privdState == PrivdState.BOOTSTRAPPING
     GamepadActionCard(
         title = stringResource(R.string.privd_title),
         description = stringResource(R.string.help_settings_privd_desc),
@@ -94,12 +95,12 @@ fun GeneralSettingsTab(
             )
         },
         onClick = {
-            if (isRootBridgeAvailable && !isPrivdRunning) {
-                if (!isPrivdConnecting) {
+            if (!isPrivdRunning && !isPrivdConnecting) {
+                if (isRootBridgeAvailable) {
                     onConnectPrivd()
+                } else {
+                    onOpenPrivdSetup()
                 }
-            } else {
-                onOpenPrivdSetup()
             }
         },
     )
@@ -112,12 +113,14 @@ fun GeneralSettingsTab(
         onClick = onConnectPrivd,
     )
 
-    GamepadActionCard(
-        title = stringResource(R.string.privd_rerun_wizard),
-        description = stringResource(R.string.privd_rerun_wizard_desc),
-        icon = Icons.Rounded.AutoFixHigh,
-        onClick = onOpenPrivdSetup,
-    )
+    if (!isRootBridgeAvailable) {
+        GamepadActionCard(
+            title = stringResource(R.string.privd_rerun_wizard),
+            description = stringResource(R.string.privd_rerun_wizard_desc),
+            icon = Icons.Rounded.AutoFixHigh,
+            onClick = onOpenPrivdSetup,
+        )
+    }
 
     GamepadChoiceCard(
         title = stringResource(R.string.settings_language),

@@ -282,7 +282,21 @@ internal class SystemSetupStatus(
 }
 
 @Composable
-internal fun rememberSystemSetupStatus(currentStepId: OnboardingStepId): SystemSetupStatus {
+internal fun rememberIsRootBridgeAvailable(): Boolean {
+    var isAvailable by remember { mutableStateOf(PrivdManager.isRootBridgeCachedAvailable) }
+    LaunchedEffect(Unit) {
+        if (!isAvailable) {
+            isAvailable = withContext(Dispatchers.IO) { PrivdManager.isRootBridgeAvailable }
+        }
+    }
+    return isAvailable
+}
+
+@Composable
+internal fun rememberSystemSetupStatus(
+    currentStepId: OnboardingStepId,
+    isRootBridgeAvailable: Boolean = false,
+): SystemSetupStatus {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val isAccessibilityActive by AppStateManager.isAccessibilityActive.collectAsStateWithLifecycle()
@@ -302,10 +316,10 @@ internal fun rememberSystemSetupStatus(currentStepId: OnboardingStepId): SystemS
     status.isAccessibilityActive = isAccessibilityActive
     status.isAutoSetupActive = isAutoSetupActive
 
-    DisposableEffect(context, lifecycleOwner) {
+    DisposableEffect(context, lifecycleOwner, isRootBridgeAvailable) {
         val observer =
             LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
+                if (event == Lifecycle.Event.ON_RESUME && !isRootBridgeAvailable) {
                     status.refresh(context)
                 }
             }
@@ -315,8 +329,8 @@ internal fun rememberSystemSetupStatus(currentStepId: OnboardingStepId): SystemS
         }
     }
 
-    LaunchedEffect(currentStepId) {
-        if (currentStepId == OnboardingStepId.PRIVILEGED) {
+    LaunchedEffect(currentStepId, isRootBridgeAvailable) {
+        if (currentStepId == OnboardingStepId.PRIVILEGED && !isRootBridgeAvailable) {
             AppLog.d(TAG, "Starting 1s continuous polling loop for prerequisite status ($currentStepId)")
             while (isActive) {
                 status.refresh(context)
@@ -347,11 +361,11 @@ fun OnboardingWizardDialog(
     val isFirstStep = activeStepIndex == 0
 
     val isQuickMenuStep = currentStepState.id == OnboardingStepId.QUICK_MENU
-    val setupStatus = rememberSystemSetupStatus(currentStepState.id)
+    val isRootBridgeAvailable = rememberIsRootBridgeAvailable()
+    val setupStatus = rememberSystemSetupStatus(currentStepState.id, isRootBridgeAvailable)
     val rootBridgeActions = rememberRootBridgeActions()
     val privdState by PrivdManager.state.collectAsStateWithLifecycle()
 
-    val isRootBridgeAvailable = remember { PrivdManager.isRootBridgeAvailable }
     val isLanguageSupported =
         remember(context) {
             AutoSetupLanguageConfig.fromLocaleOrNull(resolveSystemLocale(context)) != null
@@ -493,14 +507,15 @@ internal fun SystemSetupStepContent(
                 titleText =
                     stringResource(
                         when {
-                            isRootBridgeAvailable -> R.string.onboarding_privd_root_bridge_title
                             isReconnectPrompt -> R.string.privd_reconnect_title
+                            isRootBridgeAvailable -> R.string.onboarding_privd_root_bridge_title
                             else -> R.string.onboarding_privd_title
                         },
                     ),
                 descText =
                     stringResource(
                         when {
+                            isReconnectPrompt && isRootBridgeAvailable -> R.string.privd_reconnect_root_bridge_desc
                             isRootBridgeAvailable -> R.string.onboarding_privd_root_bridge_desc
                             isReconnectPrompt -> R.string.privd_reconnect_desc
                             else -> R.string.onboarding_privd_desc
@@ -823,7 +838,10 @@ fun PrivilegedStepContent(
             Spacer(modifier = Modifier.height(16.dp))
 
             val isRunning = privdState == PrivdState.RUNNING
-            val isConnecting = isActivatingRootBridge || privdState == PrivdState.CONNECTING
+            val isConnecting =
+                isActivatingRootBridge ||
+                    privdState == PrivdState.CONNECTING ||
+                    privdState == PrivdState.BOOTSTRAPPING
             val isFailed = privdState == PrivdState.FAILED && !isConnecting
 
             val daemonStatus =
@@ -878,7 +896,7 @@ fun PrivilegedStepContent(
                 ) {
                     val errorRes = lastError.descriptionResId()
                     OnboardingWarningBanner(
-                        text = if (errorRes != null) stringResource(errorRes) else "Daemon connection failed.",
+                        text = stringResource(errorRes ?: R.string.privd_error_daemon_unreachable),
                     )
                     AppMagicalButton(
                         onClick = onActivateViaRootBridge,
@@ -892,7 +910,7 @@ fun PrivilegedStepContent(
                         )
                         Spacer(modifier = Modifier.width(OW_BUTTON_SPACED_BY))
                         Text(
-                            text = stringResource(R.string.privd_action_retry),
+                            text = stringResource(R.string.onboarding_privd_retry_btn),
                             color = colors.actionColorSystem,
                             style = MaterialTheme.typography.labelLarge,
                         )
@@ -946,7 +964,7 @@ fun PrivilegedStepContent(
         mutableStateOf(false)
     }
 
-    val isAllSet = isWifiActive && isDevModeActive && isWirelessActive && isUsbActive && isDevicePaired && privdState == PrivdState.RUNNING
+    val isAllSet = privdState == PrivdState.RUNNING
 
     LaunchedEffect(isAllSet) {
         if (!isAllSet) {
@@ -1108,7 +1126,7 @@ fun PrivilegedStepContent(
                 ) {
                     val errorRes = lastError.descriptionResId()
                     OnboardingWarningBanner(
-                        text = if (errorRes != null) stringResource(errorRes) else "Daemon connection failed.",
+                        text = stringResource(errorRes ?: R.string.privd_error_daemon_unreachable),
                     )
                     AppMagicalButton(
                         onClick = {

@@ -115,6 +115,8 @@ object PrivdManager {
 
     val isRootBridgeAvailable: Boolean get() = PServiceBridge.isAvailable()
 
+    val isRootBridgeCachedAvailable: Boolean get() = PServiceBridge.isCachedAvailable()
+
     fun connect(context: Context): Boolean {
         AppLog.i(TAG, "connect() called (current state=${state.value})")
         _testStateOverride.value = null
@@ -127,7 +129,8 @@ object PrivdManager {
         }
 
         // Direct connect failed. Attempt Tier-1 fast-track via PServer root bridge
-        if (PServiceBridge.isAvailable()) {
+        val rootBridgeAvailable = PServiceBridge.isAvailable()
+        if (rootBridgeAvailable) {
             AppLog.i(TAG, "Direct connect failed. PServer root bridge is available — attempting fast-track bootstrap.")
             _isBootstrapping.value = true
             val pOk = PServerBootstrapper.bootstrap(context)
@@ -147,8 +150,13 @@ object PrivdManager {
             return PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")
         }
 
-        _lastError.value = PrivdError.DAEMON_UNREACHABLE
-        AppLog.w(TAG, "Privileged Mode FAILED — daemon not reachable and no bootstrap method succeeded")
+        _lastError.value =
+            if (rootBridgeAvailable) {
+                PrivdError.BOOTSTRAP_SPAWN_FAILED
+            } else {
+                PrivdError.DAEMON_UNREACHABLE
+            }
+        AppLog.w(TAG, "Privileged Mode FAILED — daemon not reachable and no bootstrap method succeeded (lastError=${_lastError.value})")
         return false
     }
 

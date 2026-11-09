@@ -7,6 +7,7 @@ import com.stormpanda.megingiard.macropad.MacroStep
 import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
 import com.stormpanda.megingiard.privd.BootstrapStage
 import com.stormpanda.megingiard.privd.EvdevEvent
+import com.stormpanda.megingiard.privd.PServiceBridge
 import com.stormpanda.megingiard.privd.PendingRpc
 import com.stormpanda.megingiard.privd.PrivdAdbConnectionManager
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
@@ -333,5 +334,26 @@ class PrivdSubsystemTest {
             )
         assertTrue(errorMultiRpc.onLine("PROC_ERR permission denied"))
         assertNull(errorMultiRpc.deferred.getCompleted())
+    }
+
+    @Test
+    fun `PrivdManager connect sets BOOTSTRAP_SPAWN_FAILED when root bridge bootstrap fails and DAEMON_UNREACHABLE otherwise`() {
+        val context = RuntimeEnvironment.getApplication()
+        PrivdAdbConnectionManager.clearCredentials(context)
+        PrivdClient.setStateForTesting(null)
+        PrivdManager.setStateForTesting(null)
+
+        try {
+            PServiceBridge.isAvailableForTest = true
+            assertFalse(PrivdManager.connect(context))
+            assertEquals(PrivdError.BOOTSTRAP_SPAWN_FAILED, PrivdManager.lastError.value)
+
+            PServiceBridge.isAvailableForTest = false
+            assertFalse(PrivdManager.connect(context))
+            assertEquals(PrivdError.DAEMON_UNREACHABLE, PrivdManager.lastError.value)
+        } finally {
+            PServiceBridge.resetForTesting()
+            PrivdManager.setStateForTesting(PrivdState.OFF)
+        }
     }
 }

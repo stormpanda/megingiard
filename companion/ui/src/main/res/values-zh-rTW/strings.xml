@@ -910,6 +910,7 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_auto_setup">開始自動設定</string>
     <string name="privd_reconnect_title">重新連線 Megingiard 系統服務</string>
     <string name="privd_reconnect_desc">Megingiard 系統服務已中斷（可能是裝置重新開機或無線除錯被關閉）。</string>
+    <string name="privd_reconnect_root_bridge_desc">Megingiard 系統服務已中斷連線。請透過 AYN Thor 原廠硬體橋接啟用系統服務以繼續。</string>
     <string name="privd_reconnect_auto_button">自動重新連線</string>
     <string name="privd_reconnect_all_set">已全部設定完成！</string>
     <string name="privd_reconnect_btn_close">關閉</string>
@@ -926,6 +927,7 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_root_bridge_title">Megingiard 系統服務 (偵測到硬體橋接)</string>
     <string name="onboarding_privd_root_bridge_desc">AYN Thor 原廠硬體橋接已就緒。啟用系統服務以享受單手把整合與直接螢幕投影功能。</string>
     <string name="onboarding_privd_activate_btn">啟用系統服務</string>
+    <string name="onboarding_privd_retry_btn">重試啟用</string>
     <string name="onboarding_privd_activating">正在連線至系統服務…</string>
     <string name="onboarding_privd_daemon_row_label">Megingiard 系統服務</string>
     <string name="onboarding_accessibility_activate_btn">啟用無障礙服務</string>

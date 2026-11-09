@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.viewmodel
 
+import com.stormpanda.megingiard.privd.PServiceBridge
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -9,6 +10,9 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,6 +29,7 @@ class GlobalSettingsViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        PServiceBridge.resetForTesting()
         SettingsManager.resetForTesting(
             RuntimeEnvironment.getApplication(),
             CoroutineScope(testDispatcher),
@@ -34,6 +39,7 @@ class GlobalSettingsViewModelTest {
 
     @After
     fun tearDown() {
+        PServiceBridge.resetForTesting()
         Dispatchers.resetMain()
     }
 
@@ -50,5 +56,25 @@ class GlobalSettingsViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals("test_token", SettingsManager.steamGridDbApiToken.value)
         assertEquals(SteamGridDbTestStatus.IDLE, vm.steamGridDbTestStatus.value)
+    }
+
+    @Test
+    fun testIsRootBridgeAvailableUsesCachedStateAndRefreshes() {
+        val vmUnprobed = GlobalSettingsViewModel(testDispatcher)
+        assertNull(vmUnprobed.isRootBridgeAvailable.value)
+
+        PServiceBridge.setAvailableForTesting(false)
+        vmUnprobed.checkPrivilegedModeStatus()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(false, vmUnprobed.isRootBridgeAvailable.value)
+
+        PServiceBridge.setAvailableForTesting(true)
+        val vmCached = GlobalSettingsViewModel(testDispatcher)
+        assertTrue(vmCached.isRootBridgeAvailable.value == true)
+
+        PServiceBridge.setAvailableForTesting(false)
+        vmCached.checkPrivilegedModeStatus()
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(vmCached.isRootBridgeAvailable.value == true)
     }
 }

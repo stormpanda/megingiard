@@ -911,6 +911,7 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_auto_setup">Auto-Einrichtung starten</string>
     <string name="privd_reconnect_title">Megingiard Systemdienst neu verbinden</string>
     <string name="privd_reconnect_desc">Der Megingiard Systemdienst wurde getrennt, zum Beispiel durch einen Geräteneustart oder weil Wireless Debugging deaktiviert wurde.</string>
+    <string name="privd_reconnect_root_bridge_desc">Der Megingiard Systemdienst wurde getrennt. Aktiviere den Systemdienst über die AYN Thor Hardware-Bridge, um fortzufahren.</string>
     <string name="privd_reconnect_auto_button">Automatisch verbinden</string>
     <string name="privd_reconnect_all_set">Alles erledigt!</string>
     <string name="privd_reconnect_btn_close">Schließen</string>
@@ -927,6 +928,7 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_root_bridge_title">Megingiard Systemdienst (Hardware-Bridge erkannt)</string>
     <string name="onboarding_privd_root_bridge_desc">Die AYN Thor Hardware-Bridge ist bereit. Aktiviere den Systemdienst für Single-Controller Gamepad-Merge und direktes Display-Mirroring.</string>
     <string name="onboarding_privd_activate_btn">Systemdienst aktivieren</string>
+    <string name="onboarding_privd_retry_btn">Aktivierung wiederholen</string>
     <string name="onboarding_privd_activating">Verbinde mit Systemdienst…</string>
     <string name="onboarding_privd_daemon_row_label">Megingiard Systemdienst</string>
     <string name="onboarding_accessibility_activate_btn">Bedienungshilfe aktivieren</string>

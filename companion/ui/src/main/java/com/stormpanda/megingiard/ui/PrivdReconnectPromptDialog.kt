@@ -33,14 +33,17 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.onboarding.OnboardingStepState
+import com.stormpanda.megingiard.privd.AutoSetupLanguageConfig
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardCardScaffold
 import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardFooter
 import com.stormpanda.megingiard.ui.onboarding.SystemSetupStepContent
+import com.stormpanda.megingiard.ui.onboarding.rememberIsRootBridgeAvailable
 import com.stormpanda.megingiard.ui.onboarding.rememberRootBridgeActions
 import com.stormpanda.megingiard.ui.onboarding.rememberSystemSetupStatus
+import com.stormpanda.megingiard.ui.onboarding.resolveSystemLocale
 
 private const val TAG = "PrivdPromptDialog"
 
@@ -92,11 +95,14 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
 
     var isNextAnimation by remember { mutableStateOf(true) }
 
-    val setupStatus = rememberSystemSetupStatus(currentStepState.id)
+    val isRootBridgeAvailable = rememberIsRootBridgeAvailable()
+    val setupStatus = rememberSystemSetupStatus(currentStepState.id, isRootBridgeAvailable)
     val rootBridgeActions = rememberRootBridgeActions()
     val privdState by PrivdManager.state.collectAsStateWithLifecycle()
-
-    val isRootBridgeAvailable = remember { PrivdManager.isRootBridgeAvailable }
+    val isLanguageSupported =
+        remember(context) {
+            AutoSetupLanguageConfig.fromLocaleOrNull(resolveSystemLocale(context)) != null
+        }
 
     LaunchedEffect(setupStatus.isAccessibilityActive) {
         if (!setupStatus.isAccessibilityActive) {
@@ -164,16 +170,7 @@ fun PrivdReconnectPromptDialog(onDone: () -> Unit) {
                     }
 
                     OnboardingStepId.PRIVILEGED -> {
-                        if (isRootBridgeAvailable) {
-                            privdState == PrivdState.RUNNING
-                        } else {
-                            setupStatus.isWifiActive &&
-                                setupStatus.isDevModeActive &&
-                                setupStatus.isUsbActive &&
-                                setupStatus.isWirelessActive &&
-                                setupStatus.isDevicePaired &&
-                                privdState == PrivdState.RUNNING
-                        }
+                        privdState == PrivdState.RUNNING || (!isRootBridgeAvailable && !isLanguageSupported)
                     }
 
                     else -> {

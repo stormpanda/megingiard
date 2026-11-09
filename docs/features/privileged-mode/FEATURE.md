@@ -44,10 +44,10 @@ Megingiard uses a two-tier bootstrap architecture:
   - `"Active (v<N>)"` (e.g., `Active (v17)`) with illuminated accent badge styling when the system service is in the `RUNNING` state.
   - `"Connecting…"` when the system service is in the `CONNECTING` or `BOOTSTRAPPING` state.
   - `"Disconnected"` with standard muted surface badge styling when the system service is offline or disconnected.
-- When the hardware root bridge is detected (`PrivdManager.isRootBridgeAvailable`) and Megingiard System Service is offline, tapping the Global Settings card directly triggers system service connection without opening the manual port wizard.
+- When the hardware root bridge is detected (`PrivdManager.isRootBridgeAvailable`) and Megingiard System Service is offline, tapping the Global Settings card directly triggers system service connection without opening the manual port wizard. Tapping the card while the service is already `RUNNING`, `CONNECTING`, or `BOOTSTRAPPING` is a no-op.
 - Global Settings exposes dedicated action cards:
   - **Restart System Service**: Re-runs the connection verification sequence and restarts background service IPC (`GlobalSettingsViewModel.privdConnect(context)`).
-  - **Re-run Setup Wizard**: Opens the Wireless Debugging pairing and bootstrap wizard (`PrivdSetupWizardDialog`).
+  - **Re-run Setup Wizard**: Opens the Wireless Debugging pairing and bootstrap wizard (`PrivdSetupWizardDialog`). Hidden when the hardware root bridge (`PrivdManager.isRootBridgeAvailable`) is available.
 - The Reconnection Prompt (`PrivdReconnectPromptDialog`) and Onboarding Wizard (`OnboardingWizardDialog`) share `SystemSetupStepContent` and `OnboardingWizardFooter` to show prerequisite status checkmarks and actionable controls when activating Accessibility or Megingiard System Service.
 
 ### FR-PV3: Elimination of Unprivileged Fallbacks
@@ -121,8 +121,8 @@ Megingiard uses a two-tier bootstrap architecture:
 Megingiard supports three bootstrap pathways depending on device capabilities:
 
 1. **Tier-1 Hardware Root Bridge (`PServiceBridge` + `PServerBootstrapper`):**
-   - Queries `/system/bin/pservice` Binder (`PServerBinder`, transaction code `1`).
-   - Copies `megingiard_privd_arm64` and `megingiard_mirror.dex` into `context.cacheDir`, verifies SHA-256 hashes via `BinaryIntegrity.verify()`, generates a per-install 32-byte HMAC key via `PrivdPairKey.generateAndStore()`, and executes a single root command block that copies the binaries to `/data/local/tmp/`, sets `chown 2000:2000` (`shell:shell`), provisions the HMAC key (`--provision <key_hex>`), and launches the daemon under UID 2000 (`su 2000 -c ...`).
+   - Queries `/system/bin/pservice` Binder (`PServerBinder`, transaction code `0`).
+   - Copies `megingiard_privd_arm64` and `megingiard_mirror.dex` into `context.cacheDir`, verifies SHA-256 hashes via `BinaryIntegrity.verify()`, generates a per-install 32-byte HMAC key via `PrivdPairKey.generateAndStore()`, and executes a single root command script that copies the binaries to `/data/local/tmp/`, sets `chown 2000:2000` (`shell:shell`), provisions the HMAC key (`--provision <key_hex>`), and spawns the detached daemon in the background.
    - Verifies connectivity via `PrivdManager.verifyConnect()`.
 
 2. **Tier-2 Automated Accessibility Setup (`MegingiardAccessibilityService.startMultiStageAutoSetup`):**
@@ -160,7 +160,7 @@ function correctly in minified release builds.
 
 Auto-connect is mandatory and always active on app startup. There is no `privdAutoConnect` setting.
 - `PrivdManager.state` (`StateFlow<PrivdState>`) is derived reactively via `combine` over `PrivdClient.state`, bootstrap in-flight status, and `PrivdManager.lastError`.
-- `MainActivity.onCreate()` and `MegingiardAccessibilityService.onServiceConnected()` invoke `PrivdManager.connect(applicationContext)` on `Dispatchers.IO`:
+- `MainActivity.onCreate()` and `MegingiardAccessibilityService.onServiceConnected()` invoke `PrivdManager.connect(applicationContext)` on `Dispatchers.IO` after initial onboarding has been completed (and while neither the onboarding wizard nor the reconnect prompt is awaiting user interaction):
   1. First attempts a direct local TCP socket connection (`127.0.0.1:51234` for release or `127.0.0.1:51244` for debug) via `PrivdClient.connect()`.
   2. If direct connect fails and `PServiceBridge.isAvailable()` is true, runs `PServerBootstrapper.bootstrap(context)` (Tier-1 root bridge).
   3. Otherwise, if saved ADB credentials (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in `noBackupFilesDir`, runs `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` (Tier-2 ADB fallback).

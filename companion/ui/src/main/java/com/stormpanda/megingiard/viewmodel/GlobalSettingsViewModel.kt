@@ -10,6 +10,7 @@ import com.stormpanda.megingiard.media.SteamGridDbException
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.settings.SettingsManager
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,104 +46,111 @@ private fun Throwable.toSteamGridDbTestStatus(): SteamGridDbTestStatus =
  * ViewModel for [com.stormpanda.megingiard.settings.GlobalSettingsScreen] — coordinates
  * asynchronous operations (SteamGridDB token validation and Privileged Mode bootstrap/connection).
  */
-class GlobalSettingsViewModel : ViewModel() {
-    private val _isRootBridgeAvailable = MutableStateFlow<Boolean?>(null)
-    val isRootBridgeAvailable: StateFlow<Boolean?> = _isRootBridgeAvailable.asStateFlow()
+class GlobalSettingsViewModel
+    @JvmOverloads
+    constructor(
+        private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    ) : ViewModel() {
+        private val _isRootBridgeAvailable =
+            MutableStateFlow<Boolean?>(
+                if (PrivdManager.isRootBridgeCachedAvailable) true else null,
+            )
+        val isRootBridgeAvailable: StateFlow<Boolean?> = _isRootBridgeAvailable.asStateFlow()
 
-    private val _steamGridDbTestStatus = MutableStateFlow(SteamGridDbTestStatus.IDLE)
-    val steamGridDbTestStatus: StateFlow<SteamGridDbTestStatus> = _steamGridDbTestStatus.asStateFlow()
+        private val _steamGridDbTestStatus = MutableStateFlow(SteamGridDbTestStatus.IDLE)
+        val steamGridDbTestStatus: StateFlow<SteamGridDbTestStatus> = _steamGridDbTestStatus.asStateFlow()
 
-    fun setSteamGridDbApiToken(value: String) {
-        SettingsManager.setSteamGridDbApiToken(value)
-        _steamGridDbTestStatus.value = SteamGridDbTestStatus.IDLE
-    }
-
-    fun testSteamGridDbConnection(token: String) {
-        if (token.isBlank()) {
-            _steamGridDbTestStatus.value = SteamGridDbTestStatus.INVALID_TOKEN
-            return
+        fun setSteamGridDbApiToken(value: String) {
+            SettingsManager.setSteamGridDbApiToken(value)
+            _steamGridDbTestStatus.value = SteamGridDbTestStatus.IDLE
         }
-        viewModelScope.launch {
-            _steamGridDbTestStatus.value = SteamGridDbTestStatus.TESTING
-            _steamGridDbTestStatus.value =
-                SteamGridDbClient.validateToken(token.trim()).fold(
-                    onSuccess = { SteamGridDbTestStatus.CONNECTED },
-                    onFailure = { it.toSteamGridDbTestStatus() },
-                )
-        }
-    }
 
-    /**
-     * Initiates a connection to the daemon socket asynchronously on [Dispatchers.IO].
-     * The result is reflected in [PrivdManager.state] — optional [onComplete] callback on Main.
-     */
-    fun privdConnect(
-        context: Context,
-        onComplete: ((Boolean) -> Unit)? = null,
-    ) {
-        AppLog.i(TAG, "privdConnect()")
-        val appContext = context.applicationContext
-        viewModelScope.launch(Dispatchers.IO) {
-            val success = PrivdManager.connect(appContext)
-            if (onComplete != null) {
-                withContext(Dispatchers.Main) {
-                    onComplete(success)
+        fun testSteamGridDbConnection(token: String) {
+            if (token.isBlank()) {
+                _steamGridDbTestStatus.value = SteamGridDbTestStatus.INVALID_TOKEN
+                return
+            }
+            viewModelScope.launch {
+                _steamGridDbTestStatus.value = SteamGridDbTestStatus.TESTING
+                _steamGridDbTestStatus.value =
+                    SteamGridDbClient.validateToken(token.trim()).fold(
+                        onSuccess = { SteamGridDbTestStatus.CONNECTED },
+                        onFailure = { it.toSteamGridDbTestStatus() },
+                    )
+            }
+        }
+
+        /**
+         * Initiates a connection to the daemon socket asynchronously on [Dispatchers.IO].
+         * The result is reflected in [PrivdManager.state] — optional [onComplete] callback on Main.
+         */
+        fun privdConnect(
+            context: Context,
+            onComplete: ((Boolean) -> Unit)? = null,
+        ) {
+            AppLog.i(TAG, "privdConnect()")
+            val appContext = context.applicationContext
+            viewModelScope.launch(ioDispatcher) {
+                val success = PrivdManager.connect(appContext)
+                if (onComplete != null) {
+                    withContext(Dispatchers.Main) {
+                        onComplete(success)
+                    }
                 }
             }
         }
-    }
 
-    /**
-     * Pair with the device's ADB Wireless-Debugging service.
-     * Result is delivered via [onResult] on the main thread.
-     */
-    fun privdPair(
-        context: Context,
-        host: String,
-        port: Int,
-        code: String,
-        onResult: (Boolean) -> Unit,
-    ) {
-        AppLog.i(TAG, "privdPair($host:$port)")
-        val appContext = context.applicationContext
-        viewModelScope.launch {
-            val ok =
-                withContext(Dispatchers.IO) {
-                    PrivdBootstrapper.pair(appContext, host, port, code)
-                }
-            onResult(ok)
+        /**
+         * Pair with the device's ADB Wireless-Debugging service.
+         * Result is delivered via [onResult] on the main thread.
+         */
+        fun privdPair(
+            context: Context,
+            host: String,
+            port: Int,
+            code: String,
+            onResult: (Boolean) -> Unit,
+        ) {
+            AppLog.i(TAG, "privdPair($host:$port)")
+            val appContext = context.applicationContext
+            viewModelScope.launch {
+                val ok =
+                    withContext(ioDispatcher) {
+                        PrivdBootstrapper.pair(appContext, host, port, code)
+                    }
+                onResult(ok)
+            }
+        }
+
+        /**
+         * After pairing succeeded: connect directly to [host], push the
+         * daemon binary, spawn the daemon, then verify with [PrivdManager.connect].
+         * The ADB connect port is detected automatically from the system property.
+         * On success, persists the auto-connect flag so future app starts skip the wizard.
+         */
+        fun privdBootstrap(
+            context: Context,
+            host: String,
+            onResult: (Boolean) -> Unit,
+        ) {
+            AppLog.i(TAG, "privdBootstrap()")
+            val appContext = context.applicationContext
+            viewModelScope.launch {
+                val ok =
+                    withContext(ioDispatcher) {
+                        PrivdBootstrapper.bootstrapAndConnect(appContext, host)
+                    }
+                onResult(ok)
+            }
+        }
+
+        fun checkPrivilegedModeStatus() {
+            viewModelScope.launch(ioDispatcher) {
+                _isRootBridgeAvailable.value = PrivdManager.isRootBridgeAvailable
+                AppLog.d(
+                    TAG,
+                    "checkPrivilegedModeStatus: isRootBridgeAvailable=${_isRootBridgeAvailable.value}",
+                )
+            }
         }
     }
-
-    /**
-     * After pairing succeeded: connect directly to [host], push the
-     * daemon binary, spawn the daemon, then verify with [PrivdManager.connect].
-     * The ADB connect port is detected automatically from the system property.
-     * On success, persists the auto-connect flag so future app starts skip the wizard.
-     */
-    fun privdBootstrap(
-        context: Context,
-        host: String,
-        onResult: (Boolean) -> Unit,
-    ) {
-        AppLog.i(TAG, "privdBootstrap()")
-        val appContext = context.applicationContext
-        viewModelScope.launch {
-            val ok =
-                withContext(Dispatchers.IO) {
-                    PrivdBootstrapper.bootstrapAndConnect(appContext, host)
-                }
-            onResult(ok)
-        }
-    }
-
-    fun checkPrivilegedModeStatus() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isRootBridgeAvailable.value = PrivdManager.isRootBridgeAvailable
-            AppLog.d(
-                TAG,
-                "checkPrivilegedModeStatus: isRootBridgeAvailable=${_isRootBridgeAvailable.value}",
-            )
-        }
-    }
-}
