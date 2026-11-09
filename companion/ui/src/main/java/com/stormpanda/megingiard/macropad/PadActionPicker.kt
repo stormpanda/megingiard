@@ -26,11 +26,13 @@ internal fun ActionPicker(
     onOpenKeyboardPicker: () -> Unit = {},
     onOpenGamepadPicker: (slotIndex: Int) -> Unit = {},
     onOpenMousePicker: () -> Unit = {},
+    onOpenTouchPicker: () -> Unit = {},
     onOpenMirrorPicker: () -> Unit = {},
     onOpenToolsPicker: () -> Unit = {},
     onOpenLayoutPicker: () -> Unit = {},
     onOpenMediaPicker: () -> Unit = {},
     onRecordTouchTap: () -> Unit = {},
+    onRecordTouchGesture: () -> Unit = {},
     isFirstItem: Boolean = false,
     onChange: (PadAction) -> Unit,
 ) {
@@ -116,9 +118,17 @@ internal fun ActionPicker(
         is PadAction.TouchTap -> {
             TouchTapPicker(
                 current = current,
-                onOpenPicker = onOpenToolsPicker,
+                onOpenPicker = onOpenTouchPicker,
                 onRecordTap = onRecordTouchTap,
-                onChange = loggedOnChange,
+                isFirstItem = isFirstItem,
+            )
+        }
+
+        is PadAction.SingleTouchGesture -> {
+            SingleTouchGesturePicker(
+                current = current,
+                onOpenPicker = onOpenTouchPicker,
+                onRecordGesture = onRecordTouchGesture,
                 isFirstItem = isFirstItem,
             )
         }
@@ -182,6 +192,15 @@ internal fun ActionPicker(
 
         is PadAction.SwitchToLayout -> {
             SwitchToLayoutPicker(
+                current = current,
+                onOpenPicker = onOpenLayoutPicker,
+                onChange = loggedOnChange,
+                isFirstItem = isFirstItem,
+            )
+        }
+
+        is PadAction.SwitchToProfile -> {
+            SwitchToProfilePicker(
                 current = current,
                 onOpenPicker = onOpenLayoutPicker,
                 onChange = loggedOnChange,

@@ -1,10 +1,13 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.input.TouchAction
+import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -406,7 +409,7 @@ class PadButtonSerializationTest {
         val decodedHub = json.decodeFromString<PadButton>(encodedHub)
         assertEquals(hubButton, decodedHub)
 
-        assertEquals("view_quilt", PadAction.SwitchToLayout("layout-1", holdToShift = false).defaultIconName())
+        assertNull(PadAction.SwitchToLayout("layout-1", holdToShift = false).defaultIconName())
         assertEquals("dashboard", PadAction.SwitchToHub.defaultIconName())
     }
 
@@ -428,7 +431,7 @@ class PadButtonSerializationTest {
     }
 
     @Test
-    fun `TouchTap action serializes and deserializes with defaultIconName`() {
+    fun `TouchTap action serializes and deserializes with label-first null defaultIconName and legacy backward compatibility`() {
         val tapButton =
             PadButton(
                 id = "btn-touch-tap",
@@ -441,7 +444,50 @@ class PadButtonSerializationTest {
         assertTrue(encoded.contains("\"type\":\"touch_tap\""))
         val decoded = json.decodeFromString<PadButton>(encoded)
         assertEquals(tapButton, decoded)
-        assertEquals("ads_click", PadAction.TouchTap(0.25f, 0.75f).defaultIconName())
+        assertTrue((decoded.action as PadAction.TouchTap).isRecorded)
+        assertNull(PadAction.TouchTap(0.25f, 0.75f).defaultIconName())
+
+        // Legacy saved payload without isRecorded must decode with isRecorded = true
+        val legacyPayload =
+            """{"id":"btn-legacy-tap","label":"Legacy Tap","posX":0.5,"posY":0.5,"widthDp":60.0,"heightDp":60.0,"action":{"type":"touch_tap","normX":0.4,"normY":0.6}}"""
+        val decodedLegacy = json.decodeFromString<PadButton>(legacyPayload)
+        assertEquals(PadAction.TouchTap(normX = 0.4f, normY = 0.6f, isRecorded = true), decodedLegacy.action)
+
+        // Unrecorded draft round-trips isRecorded = false
+        val unrecordedButton = tapButton.copy(action = PadAction.TouchTap(isRecorded = false))
+        val decodedUnrecorded = json.decodeFromString<PadButton>(json.encodeToString(unrecordedButton))
+        assertEquals(unrecordedButton, decodedUnrecorded)
+    }
+
+    @Test
+    fun `SingleTouchGesture action serializes multi-finger samples with label-first null defaultIconName`() {
+        val samples =
+            listOf(
+                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.2f, normY = 0.3f),
+                TouchSample(offsetMs = 15L, pointerId = 1, action = TouchAction.DOWN, normX = 0.8f, normY = 0.3f),
+                TouchSample(offsetMs = 50L, pointerId = 0, action = TouchAction.MOVE, normX = 0.3f, normY = 0.4f),
+                TouchSample(offsetMs = 50L, pointerId = 1, action = TouchAction.MOVE, normX = 0.7f, normY = 0.4f),
+                TouchSample(offsetMs = 90L, pointerId = 0, action = TouchAction.UP, normX = 0.3f, normY = 0.4f),
+                TouchSample(offsetMs = 100L, pointerId = 1, action = TouchAction.UP, normX = 0.7f, normY = 0.4f),
+            )
+        val gestureButton =
+            PadButton(
+                id = "btn-single-gesture",
+                label = "Pinch",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.SingleTouchGesture(samples = samples),
+            )
+        val encoded = json.encodeToString(gestureButton)
+        assertTrue(encoded.contains("\"type\":\"single_touch_gesture\""))
+        val decoded = json.decodeFromString<PadButton>(encoded)
+        assertEquals(gestureButton, decoded)
+        assertNull(PadAction.SingleTouchGesture(samples = samples).defaultIconName())
+
+        val emptyDefaultPayload =
+            """{"id":"btn-empty-gesture","label":"Gesture","posX":0.5,"posY":0.5,"widthDp":60.0,"heightDp":60.0,"action":{"type":"single_touch_gesture"}}"""
+        val decodedDefault = json.decodeFromString<PadButton>(emptyDefaultPayload)
+        assertEquals(PadAction.SingleTouchGesture(samples = emptyList()), decodedDefault.action)
     }
 
     @Test
@@ -466,5 +512,220 @@ class PadButtonSerializationTest {
         assertEquals("skip_previous", PadAction.MediaControl(MediaControlAction.PREVIOUS_TRACK).defaultIconName())
         assertEquals("stop", PadAction.MediaControl(MediaControlAction.STOP).defaultIconName())
         assertEquals("volume_off", PadAction.MediaControl(MediaControlAction.MUTE).defaultIconName())
+    }
+
+    @Test
+    fun `SwitchToProfile action serializes and deserializes with label-first null defaultIconName`() {
+        val button =
+            PadButton(
+                id = "btn-switch-profile",
+                label = "Switch Profile",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.SwitchToProfile(profileId = "profile-target-1"),
+            )
+        val encoded = json.encodeToString(button)
+        assertTrue(encoded.contains("\"type\":\"switch_to_profile\""))
+        assertTrue(encoded.contains("\"profileId\":\"profile-target-1\""))
+        val decoded = json.decodeFromString<PadButton>(encoded)
+        assertEquals(button, decoded)
+
+        val defaultPayload = """{"id":"btn-default-prof","label":"Prof","posX":0.5,"posY":0.5,"widthDp":60.0,"heightDp":60.0,"action":{"type":"switch_to_profile"}}"""
+        val decodedDefault = json.decodeFromString<PadButton>(defaultPayload)
+        assertEquals(PadAction.SwitchToProfile(profileId = ""), decodedDefault.action)
+
+        assertNull(PadAction.SwitchToProfile("profile-1").defaultIconName())
+    }
+
+    @Test
+    fun `non-fixed MouseButton GamepadButton and KeyboardKey actions map unambiguous default icons and null chords`() {
+        // MouseButton: Left & Right click get dedicated glyphs; Middle/M4/M5 remain text-first
+        assertEquals("left_click", PadAction.MouseButton(MouseButton.LEFT).defaultIconName())
+        assertEquals("right_click", PadAction.MouseButton(MouseButton.RIGHT).defaultIconName())
+        assertNull(PadAction.MouseButton(MouseButton.MIDDLE).defaultIconName())
+        assertNull(PadAction.MouseButton(MouseButton.MOUSE4).defaultIconName())
+        assertNull(PadAction.MouseButton(MouseButton.MOUSE5).defaultIconName())
+
+        // GamepadButton: Home & 8-way D-Pad get glyphs only when extraBtnCodes is empty
+        assertEquals("home", PadAction.GamepadButton(GamepadKeycodes.BTN_MODE, "Home").defaultIconName())
+        assertEquals("arrow_upward", PadAction.GamepadButton(GamepadKeycodes.BTN_DPAD_UP, "D-Up").defaultIconName())
+        assertEquals("arrow_downward", PadAction.GamepadButton(GamepadKeycodes.BTN_DPAD_DOWN, "D-Down").defaultIconName())
+        assertEquals("arrow_back", PadAction.GamepadButton(GamepadKeycodes.BTN_DPAD_LEFT, "D-Left").defaultIconName())
+        assertEquals("arrow_forward", PadAction.GamepadButton(GamepadKeycodes.BTN_DPAD_RIGHT, "D-Right").defaultIconName())
+        assertEquals("north_west", PadAction.GamepadButton(GamepadKeycodes.CODE_DPAD_UP_LEFT, "D-UL").defaultIconName())
+        assertEquals("north_east", PadAction.GamepadButton(GamepadKeycodes.CODE_DPAD_UP_RIGHT, "D-UR").defaultIconName())
+        assertEquals("south_west", PadAction.GamepadButton(GamepadKeycodes.CODE_DPAD_DOWN_LEFT, "D-DL").defaultIconName())
+        assertEquals("south_east", PadAction.GamepadButton(GamepadKeycodes.CODE_DPAD_DOWN_RIGHT, "D-DR").defaultIconName())
+        assertNull(
+            PadAction
+                .GamepadButton(
+                    btnCode = GamepadKeycodes.BTN_DPAD_UP,
+                    label = "D-Up",
+                    extraBtnCodes = listOf(GamepadKeycodes.BTN_SOUTH),
+                ).defaultIconName(),
+        )
+        assertNull(PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A").defaultIconName())
+        assertNull(PadAction.GamepadButton(GamepadKeycodes.CODE_LS_UP, "LS Up").defaultIconName())
+
+        // KeyboardKey: Single special/nav keys get glyphs; chords and character keys stay null
+        assertEquals("keyboard_return", PadAction.KeyboardKey(LinuxKeycodes.KEY_ENTER, "Enter").defaultIconName())
+        assertEquals("backspace", PadAction.KeyboardKey(LinuxKeycodes.KEY_BACKSPACE, "⌫").defaultIconName())
+        assertEquals("keyboard_tab", PadAction.KeyboardKey(LinuxKeycodes.KEY_TAB, "Tab").defaultIconName())
+        assertEquals("space_bar", PadAction.KeyboardKey(LinuxKeycodes.KEY_SPACE, "Space").defaultIconName())
+        assertEquals("keyboard_capslock", PadAction.KeyboardKey(LinuxKeycodes.KEY_CAPSLOCK, "Caps").defaultIconName())
+        assertEquals("keyboard_arrow_up", PadAction.KeyboardKey(LinuxKeycodes.KEY_UP, "↑").defaultIconName())
+        assertEquals("keyboard_arrow_down", PadAction.KeyboardKey(LinuxKeycodes.KEY_DOWN, "↓").defaultIconName())
+        assertEquals("keyboard_arrow_left", PadAction.KeyboardKey(LinuxKeycodes.KEY_LEFT, "←").defaultIconName())
+        assertEquals("keyboard_arrow_right", PadAction.KeyboardKey(LinuxKeycodes.KEY_RIGHT, "→").defaultIconName())
+        assertEquals("keyboard_double_arrow_up", PadAction.KeyboardKey(LinuxKeycodes.KEY_PAGEUP, "PgUp").defaultIconName())
+        assertEquals("keyboard_double_arrow_down", PadAction.KeyboardKey(LinuxKeycodes.KEY_PAGEDOWN, "PgDn").defaultIconName())
+        assertNull(
+            PadAction
+                .KeyboardKey(
+                    keycode = LinuxKeycodes.KEY_SPACE,
+                    label = "Space",
+                    modifiers = listOf(LinuxKeycodes.KEY_LEFTCTRL),
+                ).defaultIconName(),
+        )
+        assertNull(PadAction.KeyboardKey(LinuxKeycodes.KEY_W, "W").defaultIconName())
+        assertNull(PadAction.KeyboardKey(LinuxKeycodes.KEY_F5, "F5").defaultIconName())
+        assertNull(PadAction.Macro("m-1").defaultIconName())
+    }
+
+    @Test
+    fun `supportsCustomIcon and withActionSizing clear iconName on fixed-face actions`() {
+        val base =
+            PadButton(
+                id = "btn-icon",
+                label = "Test",
+                iconName = "star",
+                posX = 0.5f,
+                posY = 0.5f,
+                action = PadAction.LayoutNext,
+            )
+
+        assertFalse(PadAction.ScrollWheel.supportsCustomIcon())
+        assertFalse(PadAction.TrackpointMove().supportsCustomIcon())
+        assertFalse(PadAction.BackgroundPeek.supportsCustomIcon())
+        assertFalse(PadAction.AppLauncher("com.example").supportsCustomIcon())
+        assertTrue(PadAction.LayoutNext.supportsCustomIcon())
+        assertTrue(PadAction.SwitchToProfile("p1").supportsCustomIcon())
+
+        assertNull(base.withActionSizing(PadAction.ScrollWheel).iconName)
+        assertNull(base.withActionSizing(PadAction.TrackpointMove()).iconName)
+        assertNull(base.withActionSizing(PadAction.BackgroundPeek).iconName)
+        assertNull(base.withActionSizing(PadAction.AppLauncher("com.example")).iconName)
+        assertEquals("star", base.withActionSizing(PadAction.SwitchToHub).iconName)
+    }
+
+    @Test
+    fun `remapTargetIds remaps Macro SwitchToLayout and SwitchToProfile and preserves unmapped actions`() {
+        val macroMap = mapOf("m-old" to "m-new")
+        val layoutMap = mapOf("l-old" to "l-new")
+        val profileMap = mapOf("p-old" to "p-new")
+
+        assertEquals(
+            PadAction.Macro("m-new"),
+            PadAction.Macro("m-old").remapTargetIds(macroIdMap = macroMap),
+        )
+        assertEquals(
+            PadAction.Macro("m-unmapped"),
+            PadAction.Macro("m-unmapped").remapTargetIds(macroIdMap = macroMap),
+        )
+        assertEquals(
+            PadAction.SwitchToLayout(layoutId = "l-new", holdToShift = true),
+            PadAction.SwitchToLayout(layoutId = "l-old", holdToShift = true).remapTargetIds(
+                layoutIdMap = layoutMap,
+                fallbackLayoutId = "l-fallback",
+            ),
+        )
+        assertEquals(
+            PadAction.SwitchToLayout(layoutId = "l-fallback", holdToShift = false),
+            PadAction.SwitchToLayout(layoutId = "l-missing", holdToShift = false).remapTargetIds(
+                layoutIdMap = layoutMap,
+                fallbackLayoutId = "l-fallback",
+            ),
+        )
+        assertEquals(
+            PadAction.SwitchToLayout(layoutId = "l-missing", holdToShift = false),
+            PadAction.SwitchToLayout(layoutId = "l-missing", holdToShift = false).remapTargetIds(
+                layoutIdMap = layoutMap,
+                fallbackLayoutId = null,
+            ),
+        )
+        assertEquals(
+            PadAction.SwitchToProfile(profileId = "p-new"),
+            PadAction.SwitchToProfile(profileId = "p-old").remapTargetIds(profileIdMap = profileMap),
+        )
+        assertEquals(
+            PadAction.SwitchToProfile(profileId = "p-external"),
+            PadAction.SwitchToProfile(profileId = "p-external").remapTargetIds(profileIdMap = profileMap),
+        )
+        assertEquals(
+            PadAction.SwitchToHub,
+            PadAction.SwitchToHub.remapTargetIds(
+                macroIdMap = macroMap,
+                layoutIdMap = layoutMap,
+                fallbackLayoutId = "l-fallback",
+                profileIdMap = profileMap,
+            ),
+        )
+    }
+
+    @Test
+    fun `hasMissingTarget detects orphaned SwitchToProfile SwitchToLayout and Macro references`() {
+        val activeProfile =
+            PadProfile(
+                id = "p-active",
+                name = "Active",
+                layouts = listOf(PadLayout(id = "l-1", name = "Main")),
+                macros = listOf(Macro(id = "m-1", name = "Combo")),
+                activeLayoutId = "l-1",
+            )
+        val otherProfile =
+            PadProfile(
+                id = "p-other",
+                name = "Other",
+                layouts = listOf(PadLayout(id = "l-2", name = "Secondary")),
+                activeLayoutId = "l-2",
+            )
+        val allProfiles = listOf(activeProfile, otherProfile)
+
+        assertFalse(PadAction.SwitchToProfile("p-other").hasMissingTarget(allProfiles, activeProfile))
+        assertTrue(PadAction.SwitchToProfile("p-deleted").hasMissingTarget(allProfiles, activeProfile))
+        assertTrue(PadAction.SwitchToProfile("").hasMissingTarget(allProfiles, activeProfile))
+
+        assertFalse(PadAction.SwitchToLayout("l-1").hasMissingTarget(allProfiles, activeProfile))
+        assertTrue(PadAction.SwitchToLayout("l-deleted").hasMissingTarget(allProfiles, activeProfile))
+        assertTrue(PadAction.SwitchToLayout("").hasMissingTarget(allProfiles, activeProfile))
+        assertFalse(PadAction.SwitchToLayout("l-deleted").hasMissingTarget(allProfiles, activeProfile = null))
+
+        assertFalse(PadAction.Macro("m-1").hasMissingTarget(allProfiles, activeProfile))
+        assertTrue(PadAction.Macro("m-deleted").hasMissingTarget(allProfiles, activeProfile))
+        assertTrue(PadAction.Macro("").hasMissingTarget(allProfiles, activeProfile))
+        assertFalse(PadAction.Macro("m-deleted").hasMissingTarget(allProfiles, activeProfile = null))
+
+        assertFalse(PadAction.LayoutNext.hasMissingTarget(allProfiles, activeProfile))
+        assertFalse(PadAction.SwitchToHub.hasMissingTarget(allProfiles, activeProfile))
+    }
+
+    @Test
+    fun `defaultSwitchTargetId prefers first non-active entity and falls back cleanly`() {
+        val p1 = PadProfile(id = "p-1", name = "One")
+        val p2 = PadProfile(id = "p-2", name = "Two")
+        val p3 = PadProfile(id = "p-3", name = "Three")
+
+        assertEquals("p-2", listOf(p1, p2, p3).defaultSwitchTargetId(activeProfileId = "p-1"))
+        assertEquals("p-1", listOf(p1, p2, p3).defaultSwitchTargetId(activeProfileId = "p-2"))
+        assertEquals("p-1", listOf(p1, p2, p3).defaultSwitchTargetId(activeProfileId = null))
+        assertEquals("p-1", listOf(p1).defaultSwitchTargetId(activeProfileId = "p-1"))
+        assertEquals("", emptyList<PadProfile>().defaultSwitchTargetId(activeProfileId = "p-1"))
+
+        val l1 = PadLayout(id = "l-1", name = "Base")
+        val l2 = PadLayout(id = "l-2", name = "Alt")
+        assertEquals("l-2", listOf(l1, l2).defaultSwitchTargetId(activeLayoutId = "l-1"))
+        assertEquals("l-1", listOf(l1, l2).defaultSwitchTargetId(activeLayoutId = "l-2"))
+        assertEquals("l-1", listOf(l1).defaultSwitchTargetId(activeLayoutId = "l-1"))
+        assertEquals("", emptyList<PadLayout>().defaultSwitchTargetId(activeLayoutId = "l-1"))
     }
 }

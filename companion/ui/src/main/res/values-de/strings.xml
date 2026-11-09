@@ -514,12 +514,15 @@ Open Settings to create a layout.</string>
     <!-- Touch recording flow -->
     <string name="touch_recording_title">Touch-Eingabe aufzeichnen</string>
     <string name="touch_recording_mode_tap">Einzeltippen</string>
+    <string name="touch_recording_mode_single_gesture">Einzelne Touch-Geste</string>
     <string name="touch_recording_mode_gesture">Touch-Geste</string>
     <string name="touch_recording_hint_tap">Tippe auf die gewünschte Stelle auf dem Hauptbildschirm. Die Position wird automatisch erfasst.</string>
+    <string name="touch_recording_hint_single_gesture">Führe eine Ein- oder Mehrfinger-Geste auf dem Hauptbildschirm aus. Die Aufnahme endet automatisch, sobald alle Finger angehoben werden.</string>
     <string name="touch_recording_hint_gesture">Führe Touch-Gesten auf dem Hauptbildschirm aus. Tippe auf ‚Stopp &amp; Speichern‘, wenn du fertig bist.</string>
     <string name="touch_recording_radar_waiting">Warte auf Touch-Eingabe auf dem Hauptbildschirm</string>
     <string name="touch_recording_radar_coords">X: %1$.1f%%  Y: %2$.1f%%</string>
     <string name="touch_recording_actions_tap" formatted="false">%1$d Tippen</string>
+    <string name="touch_recording_actions_single_gesture" formatted="false">%1$d Finger (%2$d Pkt.)</string>
     <string name="touch_recording_actions_gestures" formatted="false">%1$d Gesten (%2$d Pkt.)</string>
     <string name="macropad_macro_test_run">Testlauf</string>
     <string name="macropad_macro_loop_toggle">Makro wiederholen</string>
@@ -641,7 +644,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_app_launcher">App Quick-Switch</string>
     <string name="macropad_action_group_app_launcher_desc">Schnell zwischen Megingiard und einer anderen App wechseln</string>
     <string name="macropad_action_group_tools">Werkzeuge</string>
-    <string name="macropad_action_group_tools_desc">Vollbild-Maus- und Tastatur-Overlays öffnen, Screenshots erstellen, Koordinaten antippen oder Makros stoppen</string>
+    <string name="macropad_action_group_tools_desc">Vollbild-Maus- und Tastatur-Overlays öffnen, Screenshots erstellen oder Makros stoppen</string>
     <string name="macropad_editor_button_type">Tastentyp</string>
 
     <!-- Log report export -->
@@ -1158,6 +1161,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_layout_next_desc">Zum nächsten Layout im Profil wechseln</string>
     <string name="macropad_action_layout_previous_desc">Zum vorherigen Layout im Profil wechseln</string>
     <string name="macropad_action_profile_switcher_desc">Profil-Auswahlmenü öffnen</string>
+    <string name="macropad_gamepad_btn_mode">Home</string>
     <string name="macropad_gamepad_btn_dpad_up">Steuerkreuz Oben</string>
     <string name="macropad_gamepad_btn_dpad_down">Steuerkreuz Unten</string>
     <string name="macropad_gamepad_btn_dpad_left">Steuerkreuz Links</string>
@@ -1384,19 +1388,35 @@ Open Settings to create a layout.</string>
     <string name="macropad_switch_layout_target_desc">Wähle das Layout aus, das aktiviert werden soll</string>
     <string name="macropad_switch_layout_hold_title">Halten zum Umschalten</string>
     <string name="macropad_switch_layout_hold_desc">Solange gedrückt temporär wechseln und beim Loslassen zurückkehren</string>
+    <string name="macropad_switch_layout_not_found_toast">Ziel-Layout existiert nicht mehr</string>
+    <string name="macropad_action_switch_to_profile">Zu Profil wechseln</string>
+    <string name="macropad_action_switch_to_profile_desc">Direkt zu einem bestimmten Profil springen</string>
+    <string name="macropad_display_switch_to_profile">Profil: %1$s</string>
+    <string name="macropad_switch_profile_target_title">Ziel-Profil</string>
+    <string name="macropad_switch_profile_target_desc">Wähle das Profil aus, das aktiviert werden soll</string>
+    <string name="macropad_switch_profile_not_found_toast">Ziel-Profil existiert nicht mehr</string>
+    <string name="macropad_button_missing_target_badge">Ziel fehlt</string>
     <string name="macropad_action_switch_to_hub">Zum Hub wechseln</string>
     <string name="macropad_action_switch_to_hub_desc">Companion Hub auf dem unteren Bildschirm öffnen</string>
     <string name="macropad_action_stop_all_macros">Alle Makros stoppen</string>
     <string name="macropad_action_stop_all_macros_desc">Alle laufenden Makros abbrechen und gehaltene Eingaben lösen</string>
+    <string name="macropad_action_group_touch">Touch</string>
+    <string name="macropad_action_group_touch_desc">Bildschirmkoordinate antippen oder aufgezeichnete Mehrfinger-Geste abspielen</string>
+    <string name="macropad_picker_touch_title">Touch-Aktion</string>
+    <string name="macropad_touch_not_recorded">Nicht aufgezeichnet</string>
     <string name="macropad_action_touch_tap">Touch-Tippen</string>
     <string name="macropad_action_touch_tap_desc">Feste Position auf dem oberen Bildschirm antippen (solange gedrückt)</string>
     <string name="macropad_display_touch_tap">Touch-Tippen (%1$d%%, %2$d%%)</string>
     <string name="macropad_touch_tap_record_title">Touch-Position aufzeichnen</string>
     <string name="macropad_touch_tap_record_desc">Tippe direkt auf den oberen Bildschirm, um die Zielposition zu erfassen</string>
-    <string name="macropad_touch_tap_x_title">Horizontale Position (X)</string>
-    <string name="macropad_touch_tap_x_desc">Horizontale Bildschirmkoordinate von links (0%) bis rechts (100%)</string>
-    <string name="macropad_touch_tap_y_title">Vertikale Position (Y)</string>
-    <string name="macropad_touch_tap_y_desc">Vertikale Bildschirmkoordinate von oben (0%) bis unten (100%)</string>
+    <string name="macropad_action_single_touch_gesture">Einzelne Touch-Geste</string>
+    <string name="macropad_action_single_touch_gesture_desc">Aufgezeichnete Ein- oder Mehrfinger-Geste auf dem Hauptbildschirm abspielen</string>
+    <string name="macropad_display_single_touch_gesture_single_finger">Touch-Geste (1 Finger, %1$s)</string>
+    <string name="macropad_display_single_touch_gesture_multi_finger">Touch-Geste (%1$d Finger, %2$s)</string>
+    <string name="macropad_single_touch_gesture_record_title">Touch-Geste aufzeichnen</string>
+    <string name="macropad_single_touch_gesture_record_desc">Führe eine Ein- oder Mehrfinger-Geste auf dem oberen Bildschirm aus; die Aufnahme endet beim Anheben aller Finger</string>
+    <string name="macropad_single_touch_gesture_summary_single_finger">1 Finger · %1$s</string>
+    <string name="macropad_single_touch_gesture_summary_multi_finger">%1$d Finger · %2$s</string>
     <string name="macropad_action_group_media">Mediensteuerung</string>
     <string name="macropad_action_group_media_desc">Wiedergabesteuerung und Stummschaltung</string>
     <string name="macropad_picker_media_title">Mediensteuerung</string>

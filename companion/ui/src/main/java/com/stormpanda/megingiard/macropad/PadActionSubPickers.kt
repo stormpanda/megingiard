@@ -6,12 +6,14 @@ import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.AdsClick
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.ControlCamera
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SportsEsports
-import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,7 +29,7 @@ import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadInfoBox
-import com.stormpanda.megingiard.ui.GamepadSliderCard
+import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.cycle
@@ -45,10 +47,6 @@ private const val FS_MOUSE_SENSITIVITY_MIN = 0.1f
 private const val FS_MOUSE_SENSITIVITY_MAX = 5.0f
 private const val FS_MOUSE_SENSITIVITY_STEP = 0.1f
 
-private const val TT_PERCENT_MIN = 0f
-private const val TT_PERCENT_MAX = 100f
-private const val TT_PERCENT_STEP = 5f
-private const val TT_PERCENT_FINE_STEP = 1f
 private const val TT_PERCENT_DIVISOR = 100f
 
 @Composable
@@ -179,9 +177,8 @@ internal fun MacroPicker(
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val macros = profile?.macros ?: emptyList()
 
-    val selectedMacro =
-        macros.firstOrNull { it.id == current.macroId }
-            ?: macros.firstOrNull()
+    val selectedMacro = macros.firstOrNull { it.id == current.macroId }
+    val isMissingTarget = selectedMacro == null && macros.isNotEmpty()
 
     GamepadInfoBox(
         text = stringResource(R.string.macropad_picker_macro_create_info_title),
@@ -193,7 +190,23 @@ internal fun MacroPicker(
     GamepadActionCard(
         title = stringResource(R.string.macropad_action_macro),
         description = stringResource(R.string.macropad_picker_macro_desc),
-        actionText = selectedMacro?.name ?: stringResource(R.string.macropad_picker_folder_empty),
+        actionText =
+            when {
+                selectedMacro != null -> selectedMacro.name
+                macros.isEmpty() -> stringResource(R.string.macropad_picker_folder_empty)
+                else -> null
+            },
+        trailingContent =
+            if (isMissingTarget) {
+                {
+                    GamepadPill(
+                        text = stringResource(R.string.macropad_button_missing_target_badge),
+                        isDestructive = true,
+                    )
+                }
+            } else {
+                null
+            },
         icon = Icons.Rounded.SmartButton,
         onClick = onOpenMacroPicker,
         modifier = Modifier.firstDeckItem(isFirstItem),
@@ -307,9 +320,7 @@ internal fun SwitchToLayoutPicker(
 ) {
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val layouts = profile?.layouts ?: emptyList()
-    val selectedLayout =
-        layouts.firstOrNull { it.id == current.layoutId }
-            ?: layouts.firstOrNull()
+    val selectedLayout = layouts.firstOrNull { it.id == current.layoutId }
 
     GamepadActionCard(
         title = stringResource(R.string.macropad_action_group_layout),
@@ -320,19 +331,26 @@ internal fun SwitchToLayoutPicker(
         modifier = Modifier.firstDeckItem(isFirstItem),
     )
 
-    if (layouts.isNotEmpty() && selectedLayout != null) {
+    if (layouts.isNotEmpty()) {
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_switch_layout_target_title),
             description = stringResource(R.string.macropad_switch_layout_target_desc),
-            selectedText = selectedLayout.name,
+            selectedText =
+                selectedLayout?.name
+                    ?: stringResource(R.string.macropad_button_missing_target_badge),
             icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+            isError = selectedLayout == null,
             onPrevious = {
-                val prev = layouts.cycle(selectedLayout, BumperDirection.PREV)
+                val prev =
+                    selectedLayout?.let { layouts.cycle(it, BumperDirection.PREV) }
+                        ?: layouts.first()
                 AppLog.d(TAG, "SwitchToLayoutPicker: layoutId=${prev.id} name='${prev.name}'")
                 onChange(current.copy(layoutId = prev.id))
             },
             onNext = {
-                val next = layouts.cycle(selectedLayout, BumperDirection.NEXT)
+                val next =
+                    selectedLayout?.let { layouts.cycle(it, BumperDirection.NEXT) }
+                        ?: layouts.first()
                 AppLog.d(TAG, "SwitchToLayoutPicker: layoutId=${next.id} name='${next.name}'")
                 onChange(current.copy(layoutId = next.id))
             },
@@ -352,63 +370,131 @@ internal fun SwitchToLayoutPicker(
 }
 
 @Composable
+internal fun SwitchToProfilePicker(
+    current: PadAction.SwitchToProfile,
+    onOpenPicker: () -> Unit,
+    onChange: (PadAction) -> Unit,
+    isFirstItem: Boolean = false,
+) {
+    val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
+    val selectedProfile = profiles.firstOrNull { it.id == current.profileId }
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_action_group_layout),
+        description = stringResource(R.string.macropad_action_group_layout_desc),
+        actionText = stringResource(R.string.macropad_action_switch_to_profile),
+        icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+        onClick = onOpenPicker,
+        modifier = Modifier.firstDeckItem(isFirstItem),
+    )
+
+    if (profiles.isNotEmpty()) {
+        GamepadChoiceCard(
+            title = stringResource(R.string.macropad_switch_profile_target_title),
+            description = stringResource(R.string.macropad_switch_profile_target_desc),
+            selectedText =
+                selectedProfile?.name
+                    ?: stringResource(R.string.macropad_button_missing_target_badge),
+            icon = Icons.Rounded.Folder,
+            isError = selectedProfile == null,
+            onPrevious = {
+                val prev =
+                    selectedProfile?.let { profiles.cycle(it, BumperDirection.PREV) }
+                        ?: profiles.first()
+                AppLog.d(TAG, "SwitchToProfilePicker: profileId=${prev.id} name='${prev.name}'")
+                onChange(current.copy(profileId = prev.id))
+            },
+            onNext = {
+                val next =
+                    selectedProfile?.let { profiles.cycle(it, BumperDirection.NEXT) }
+                        ?: profiles.first()
+                AppLog.d(TAG, "SwitchToProfilePicker: profileId=${next.id} name='${next.name}'")
+                onChange(current.copy(profileId = next.id))
+            },
+        )
+    }
+}
+
+@Composable
 internal fun TouchTapPicker(
     current: PadAction.TouchTap,
     onOpenPicker: () -> Unit,
     onRecordTap: () -> Unit,
-    onChange: (PadAction) -> Unit,
     isFirstItem: Boolean = false,
 ) {
     val xPct = (current.normX.coerceIn(0f, 1f) * TT_PERCENT_DIVISOR).roundToInt()
     val yPct = (current.normY.coerceIn(0f, 1f) * TT_PERCENT_DIVISOR).roundToInt()
+    val recordStatusText =
+        if (current.isRecorded) {
+            "$xPct%, $yPct%"
+        } else {
+            stringResource(R.string.macropad_touch_not_recorded)
+        }
 
     GamepadActionCard(
-        title = stringResource(R.string.macropad_action_group_tools),
-        description = stringResource(R.string.macropad_action_group_tools_desc),
+        title = stringResource(R.string.macropad_action_group_touch),
+        description = stringResource(R.string.macropad_action_group_touch_desc),
         actionText = stringResource(R.string.macropad_action_touch_tap),
-        icon = Icons.Rounded.Build,
-        onClick = onOpenPicker,
+        icon = Icons.Rounded.TouchApp,
+        onClick = {
+            AppLog.d(TAG, "TouchTapPicker: opening touch action picker")
+            onOpenPicker()
+        },
         modifier = Modifier.firstDeckItem(isFirstItem),
     )
 
     GamepadActionCard(
         title = stringResource(R.string.macropad_touch_tap_record_title),
         description = stringResource(R.string.macropad_touch_tap_record_desc),
-        actionText = "$xPct%, $yPct%",
+        actionText = recordStatusText,
         icon = Icons.Rounded.AdsClick,
         onClick = {
             AppLog.d(TAG, "TouchTapPicker: onRecordTap clicked")
             onRecordTap()
         },
     )
+}
 
-    GamepadSliderCard(
-        title = stringResource(R.string.macropad_touch_tap_x_title),
-        description = stringResource(R.string.macropad_touch_tap_x_desc),
-        value = xPct.toFloat(),
-        valueRange = TT_PERCENT_MIN..TT_PERCENT_MAX,
-        step = TT_PERCENT_STEP,
-        fineStep = TT_PERCENT_FINE_STEP,
-        valueLabel = "$xPct%",
-        icon = Icons.Rounded.Tune,
-        onValueChange = { newVal ->
-            val newNormX = (newVal.roundToInt().coerceIn(TT_PERCENT_MIN.toInt(), TT_PERCENT_MAX.toInt())) / TT_PERCENT_DIVISOR
-            onChange(current.copy(normX = newNormX))
+@Composable
+internal fun SingleTouchGesturePicker(
+    current: PadAction.SingleTouchGesture,
+    onOpenPicker: () -> Unit,
+    onRecordGesture: () -> Unit,
+    isFirstItem: Boolean = false,
+) {
+    val recordStatusText =
+        if (current.samples.isEmpty()) {
+            stringResource(R.string.macropad_touch_not_recorded)
+        } else {
+            val fingerCount = countSingleTouchGestureFingers(current.samples)
+            val durationLabel = formatSingleTouchGestureDuration(current.samples)
+            if (fingerCount == 1) {
+                stringResource(R.string.macropad_single_touch_gesture_summary_single_finger, durationLabel)
+            } else {
+                stringResource(R.string.macropad_single_touch_gesture_summary_multi_finger, fingerCount, durationLabel)
+            }
+        }
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_action_group_touch),
+        description = stringResource(R.string.macropad_action_group_touch_desc),
+        actionText = stringResource(R.string.macropad_action_single_touch_gesture),
+        icon = Icons.Rounded.TouchApp,
+        onClick = {
+            AppLog.d(TAG, "SingleTouchGesturePicker: opening touch action picker")
+            onOpenPicker()
         },
+        modifier = Modifier.firstDeckItem(isFirstItem),
     )
 
-    GamepadSliderCard(
-        title = stringResource(R.string.macropad_touch_tap_y_title),
-        description = stringResource(R.string.macropad_touch_tap_y_desc),
-        value = yPct.toFloat(),
-        valueRange = TT_PERCENT_MIN..TT_PERCENT_MAX,
-        step = TT_PERCENT_STEP,
-        fineStep = TT_PERCENT_FINE_STEP,
-        valueLabel = "$yPct%",
-        icon = Icons.Rounded.Tune,
-        onValueChange = { newVal ->
-            val newNormY = (newVal.roundToInt().coerceIn(TT_PERCENT_MIN.toInt(), TT_PERCENT_MAX.toInt())) / TT_PERCENT_DIVISOR
-            onChange(current.copy(normY = newNormY))
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_single_touch_gesture_record_title),
+        description = stringResource(R.string.macropad_single_touch_gesture_record_desc),
+        actionText = recordStatusText,
+        icon = Icons.Rounded.Gesture,
+        onClick = {
+            AppLog.d(TAG, "SingleTouchGesturePicker: onRecordGesture clicked")
+            onRecordGesture()
         },
     )
 }

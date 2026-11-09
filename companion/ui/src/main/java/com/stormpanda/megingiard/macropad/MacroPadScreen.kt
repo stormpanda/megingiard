@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,6 +71,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
+import kotlinx.coroutines.launch
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -109,6 +111,7 @@ private const val TAG = "MacroPadScreen"
 
 @Composable
 fun MacroPadScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
     val profile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     val layout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val isEditorActive by AppStateManager.isEditorActive.collectAsStateWithLifecycle()
@@ -118,6 +121,21 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val isCroppingMask by MacroPadState.isCroppingMask.collectAsStateWithLifecycle()
     val gridMode by MacroPadState.gridMode.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
+
+    LaunchedEffect(Unit) {
+        launch {
+            MacroPadState.missingProfileToastEvent.collect {
+                AppLog.w(TAG, "missingProfileToastEvent received -> showing missing profile toast")
+                DialogToastManager.show(context.getString(R.string.macropad_switch_profile_not_found_toast))
+            }
+        }
+        launch {
+            MacroPadState.missingLayoutToastEvent.collect {
+                AppLog.w(TAG, "missingLayoutToastEvent received -> showing missing layout toast")
+                DialogToastManager.show(context.getString(R.string.macropad_switch_layout_not_found_toast))
+            }
+        }
+    }
 
     // Reset peek state when leaving MACROPAD mode
     DisposableEffect(Unit) {
@@ -582,8 +600,11 @@ internal fun PadSurface(
             visibleButtons.forEach { btn ->
                 val isPressed = btn.id in pressedIds
                 val isRunning =
-                    btn.action is PadAction.Macro &&
-                        (btn.action as PadAction.Macro).macroId in runningMacroIds
+                    when (val act = btn.action) {
+                        is PadAction.Macro -> act.macroId in runningMacroIds
+                        is PadAction.SingleTouchGesture -> singleTouchGestureExecutionId(btn.id) in runningMacroIds
+                        else -> false
+                    }
                 PadButton(
                     btn = btn,
                     layout = layout,

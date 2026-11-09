@@ -12,7 +12,7 @@
 
 | File | Responsibility |
 | --- | --- |
-| `MacroPadScreen.kt` | Use-mode Composable: pad render (`PadSurface`), multi-touch input, background mirror & layout image layers, and single `DisposableEffect(hasFollowMode)` `TouchScreenObserver` registration; reactively switches between use-mode `PadSurface` and bottom-screen live editor `PadCanvas` when `AppStateManager.isEditorActive` is true; collects `MacroExecutor.runningMacroIds` |
+| `MacroPadScreen.kt` | Use-mode Composable: pad render (`PadSurface`), multi-touch input, background mirror & layout image layers, and single `DisposableEffect(hasFollowMode)` `TouchScreenObserver` registration; reactively switches between use-mode `PadSurface` and bottom-screen live editor `PadCanvas` when `AppStateManager.isEditorActive` is true; collects `MacroExecutor.runningMacroIds`, `MacroPadState.missingProfileToastEvent`, and `MacroPadState.missingLayoutToastEvent` |
 | `MacroPadEditor.kt` | Full-screen layout editor built on `GamepadTwoPaneScaffold`: orchestrates the 9 sidebar categories (`Quick Actions`, `Profiles`, `Layouts`, `Automation`, `Mirror`, `Background`, `Mask`, `Buttons`, `Macros`), deck content columns, in-deck sub-page stack navigation, and exit auto-switch reactivation prompt (`GamepadConfirmModal`) |
 | `MacroPadNavState.kt` | Singleton holding `selectedSection`, `subPageStack`, and single-source-of-truth `buttonDraft` and `macroDraft` across composable lifecycles and modal suspensions |
 | `MacroPadSubPages.kt` | Architecture models and shared components for in-deck sub-menus: `MacroPadSubPage` sealed hierarchy, `EditorColorTarget`, `GamepadSubPageHeader` breadcrumbs, `ColorWheelSubPageContent`, and shared `rememberButton2DAdjusterState` (`Button2DAdjusterState`) for 2D gamepad button movement and resizing |
@@ -30,8 +30,8 @@
 | `PadButtonEditDialog.kt` | In-deck button create/edit sub-page (`EditButtonSubPageContent`), `ButtonColorSubPageContent`, and `ColorPreviewInfoBox` |
 | `PadActionPicker.kt` | Action category selector card and dispatcher to action-specific sub-pickers in the button editor |
 | `PadActionDisplay.kt` | Action type enums (`ActionGroup`, `ActionCategory`), string mappings, and localized gamepad button formatting/label templates |
-| `PadActionSubPickers.kt` | Sub-widgets for configuring action details: `KeyboardKeyPicker`, `GamepadButtonPicker`, `MouseActionPicker`, `TrackpointPicker`, `MacroPicker`, `SwitchToLayoutPicker`, and `TouchTapPicker` |
-| `ActionGridSubPages.kt` | Shared `ActionGridItem` model and 2-column grid sub-pages (`ChooseButtonTypeSubPageContent`, `MirrorActionPickerSubPageContent`, `ToolsActionPickerSubPageContent`, `LayoutActionPickerSubPageContent`, `MediaActionPickerSubPageContent`, `MacroActionPickerSubPageContent`) |
+| `PadActionSubPickers.kt` | Sub-widgets for configuring action details: `KeyboardKeyPicker`, `GamepadButtonPicker`, `MouseActionPicker`, `TrackpointPicker`, `MacroPicker`, `SwitchToLayoutPicker`, `SwitchToProfilePicker`, `TouchTapPicker`, and `SingleTouchGesturePicker` |
+| `ActionGridSubPages.kt` | Shared `ActionGridItem` model and 2-column grid sub-pages (`ChooseButtonTypeSubPageContent`, `TouchActionPickerSubPageContent`, `MirrorActionPickerSubPageContent`, `ToolsActionPickerSubPageContent`, `LayoutActionPickerSubPageContent`, `MediaActionPickerSubPageContent`, `MacroActionPickerSubPageContent`) |
 | `VisualKeyboardPicker.kt` | Interactive virtual keyboard sub-page (`VisualKeyboardPicker`) with 2D D-pad spatial navigation |
 | `VisualGamepadPicker.kt` | Interactive virtual AYN Thor controller sub-page (`VisualGamepadPicker`) with 2D D-pad spatial navigation |
 | `VisualMousePicker.kt` | 2-column mouse action picker sub-page (`VisualMousePicker`) |
@@ -46,7 +46,7 @@
 | `MacroStepListItem.kt` | Helper formatting, direction arrow (`dirArrow`), and icon resolution functions for macro steps |
 | `MacroTextSequenceDialog.kt` | In-deck sub-page (`TextSequenceGeneratorSubPageContent`) that converts a typed text string into timed `KeyboardKeyTap` macro steps |
 | `PhysicalGamepadRecordingSheet.kt` | Companion recording HUD rendered on Display 4 during physical gamepad recording with live stick radars, D-Pad compass, active button pills, and Stop/Cancel actions |
-| `TouchRecordingSheet.kt` | Companion recording HUD rendered on Display 4 during touch macro recording with live 16:9 multi-touch radar, gesture trails, and Stop/Cancel actions |
+| `TouchRecordingSheet.kt` | Companion recording HUD rendered on Display 4 during touch macro and button touch/gesture recording (`TAP`, `SINGLE_GESTURE`, `GESTURE`) with live 16:9 multi-touch radar, gesture trails, and mode-appropriate Cancel / Stop & Save actions |
 | `CopyDialogs.kt` | In-deck sub-pages (`CopyLayoutSubPageContent`, `CopyButtonSubPageContent`) for copying layouts and buttons across profiles/layouts |
 | `ReorderOverlays.kt` | In-deck reorder sub-pages (`ReorderProfilesSubPageContent`, `ReorderLayoutsSubPageContent`, `ReorderButtonsSubPageContent`, `ReorderMacrosSubPageContent`, `ReorderMacroStepsSubPageContent`) |
 | `EditorBaseComponents.kt` | Reusable preview boxes (`ButtonPreviewBox`), section headers, and editor UI primitives |
@@ -64,17 +64,17 @@
 | `MacroPadState.kt` (`:companion:domain`) | Singleton state: profiles, active profile, active layout, centralized `updateState` mutations with debounced persistence (`MacroPadSettings`), and transient editor preview state |
 | `MacroPadHitTestEngine.kt` (`:companion:domain`) | Multi-touch pointer state machine, single-pass `onPress` shape-aware hit testing (via `ButtonShapeGeometry`), trackpoint relative/virtual-touch cursor tracking, and scroll wheel accumulation |
 | `ButtonShapeGeometry.kt` (`:shared:core`) | Pure normalized polygon vertex definitions (`NormalizedPoint`, `verticesFor`), inscribed-circle optical centering and scaling (`contentCenterOffsetFor`, `contentScaleFor`), and shape-aware point containment (`isNormalizedPointInside`) shared by hit testing and Compose button rendering |
-| `MacroPadActionDispatch.kt` (`:companion:domain`) | Dispatches discrete button down/up actions to `KeyInjector`, `GamepadInjector`, `MouseInjector`, `MacroExecutor`, layout/profile switching, and mirror controls |
-| `MacroExecutor.kt` (`:companion:domain`) | Tap-to-toggle macro playback and `runTest()`: compiles steps via `MacroEventCompiler`, replays over `PrivdClient`, tracks `runningMacroIds`, and releases all pressed inputs in `finally` |
+| `MacroPadActionDispatch.kt` (`:companion:domain`) | Dispatches discrete button down/up actions to `KeyInjector`, `GamepadInjector`, `MouseInjector`, `TouchInjector`, `MacroExecutor` (including single-shot `SingleTouchGesture` playback via `singleTouchGestureExecutionId`), layout/profile switching, and mirror controls |
+| `MacroExecutor.kt` (`:companion:domain`) | Tap-to-toggle macro and single-shot gesture playback and `runTest()`: compiles steps via `MacroEventCompiler`, awaits cancelled job touch-slot release before restarting, replays over `PrivdClient`, tracks `runningMacroIds`, and releases all pressed inputs in `finally` |
 | `GamepadInjector.kt` (`:companion:domain`) | Facade routing gamepad button, hat, and joystick commands (`GD`, `GU`, `HD`, `JS`) directly to `PrivdClient` for hardware evdev merge |
 | `PhysicalGamepadRecordingManager.kt` (`:companion:domain`) | Domain singleton managing evdev controller capture via `megingiard_privd` (`SUB GAMEPAD`) with synchronized `recordingLock` state transitions |
-| `TouchRecordingManager.kt` (`:companion:domain`) | Domain singleton managing tap and multi-touch gesture recording via `TouchScreenObserver` with computed live pointer properties on `TouchRecordingState.Recording` |
+| `TouchRecordingManager.kt` (`:companion:domain`) | Domain singleton managing single-tap (`TAP`), auto-completing single multi-finger gesture (`SINGLE_GESTURE`), and multi-step gesture (`GESTURE`) recording via `TouchScreenObserver` with computed live pointer properties on `TouchRecordingState.Recording` |
 | `BackgroundPickerManager.kt` (`:companion:domain`) | Coordinates system document picker URI results for background and mask images |
 | `AutoSwitchCoordinator.kt` (`:companion:domain`) | Coordinates active profile transitions when foreground packages or active emulator ROM sessions change |
 | `TouchScreenObserver.kt` (`:companion:domain`) | Multi-client passive evdev reader (`SUB TOUCH`) with per-client callback registration (`start(clientToken, onTouchNormalized, onTouchEvent)`) |
 | `InjectorLifecycleManager.kt` (`:companion:ui`) | Centrally starts and stops `KeyInjector`, `MouseInjector`, and `TouchInjector` based on foreground activity and setup wizard state |
 | `MegingiardAccessibilityService.kt` (`:companion:ui`) | Event-driven accessibility service forwarding foreground window focus changes to `AutoSwitchCoordinator` and hosting `FloatingBubbleOverlay` |
-| `MacroPadLayout.kt` (`:shared:core`) | Serializable data models (`PadProfile`, `PadLayout`, `PadButton`, `PadAction`, `ColorOption`), custom serializers, `normalizedOnLoad()`, and `nextUniqueName()` |
+| `MacroPadLayout.kt` (`:shared:core`) | Serializable data models (`PadProfile`, `PadLayout`, `PadButton`, `PadAction`, `ColorOption`), custom serializers, `PadAction.remapTargetIds()`, `PadAction.hasMissingTarget()`, `defaultSwitchTargetId()`, `normalizedOnLoad()`, and `nextUniqueName()` |
 | `MacroData.kt` (`:shared:core`) | Serializable `Macro` and `MacroStep` models, `Macro.randomized()`, and `completeTouchPathSamples()` |
 | `MacroEventCompiler.kt` (`:shared:core`) | Pure compiler converting `List<MacroStep>` into chronologically sorted, reset-prioritized `MacroEvent` sequences |
 | `MacroStepShift.kt` (`:shared:core`) | Pure `ShiftMode` (`NONE`, `START_DELTA`, `END_DELTA`) and `applyShiftSubsequent()` step timestamp shifting logic |

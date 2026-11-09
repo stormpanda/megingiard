@@ -3,6 +3,8 @@ package com.stormpanda.megingiard.macropad
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -29,8 +31,9 @@ class AppLauncherActionTest {
     }
 
     @Test
-    fun `default icon name for app launcher is correct`() {
+    fun `app launcher uses dedicated APK icon face and disables custom icon`() {
         val action = PadAction.AppLauncher("com.test.app")
-        assertEquals("apps", action.defaultIconName())
+        assertNull(action.defaultIconName())
+        assertFalse(action.supportsCustomIcon())
     }
 }

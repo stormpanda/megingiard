@@ -242,19 +242,29 @@ internal fun TouchRecordingSheet(
 
                 // ── Status Badges Row (Above Radar, Uniform Height & Margins) ─
                 val modeLabel =
-                    if (mode == TouchRecordingMode.TAP) {
-                        stringResource(R.string.touch_recording_mode_tap)
-                    } else {
-                        stringResource(R.string.touch_recording_mode_gesture)
+                    when (mode) {
+                        TouchRecordingMode.TAP -> stringResource(R.string.touch_recording_mode_tap)
+                        TouchRecordingMode.SINGLE_GESTURE -> stringResource(R.string.touch_recording_mode_single_gesture)
+                        TouchRecordingMode.GESTURE -> stringResource(R.string.touch_recording_mode_gesture)
                     }
 
                 val badgeText =
-                    if (mode == TouchRecordingMode.TAP) {
-                        stringResource(R.string.touch_recording_actions_tap, if (recording?.liveNormX != null) 1 else 0)
-                    } else {
-                        val count = recording?.recordedGestureCount ?: 0
-                        val sampleCount = recording?.totalRecordedSampleCount ?: 0
-                        stringResource(R.string.touch_recording_actions_gestures, count, sampleCount)
+                    when (mode) {
+                        TouchRecordingMode.TAP -> {
+                            stringResource(R.string.touch_recording_actions_tap, if (recording?.liveNormX != null) 1 else 0)
+                        }
+
+                        TouchRecordingMode.SINGLE_GESTURE -> {
+                            val activeCount = recording?.activePointersCount ?: 0
+                            val trailPoints = recording?.activeTrailPoints?.size ?: 0
+                            stringResource(R.string.touch_recording_actions_single_gesture, activeCount, trailPoints)
+                        }
+
+                        TouchRecordingMode.GESTURE -> {
+                            val count = recording?.recordedGestureCount ?: 0
+                            val sampleCount = recording?.totalRecordedSampleCount ?: 0
+                            stringResource(R.string.touch_recording_actions_gestures, count, sampleCount)
+                        }
                     }
 
                 Row(
@@ -336,10 +346,10 @@ internal fun TouchRecordingSheet(
 
                 // ── Instruction Hint ────────────────────────────────────────
                 val hintLabel =
-                    if (mode == TouchRecordingMode.TAP) {
-                        stringResource(R.string.touch_recording_hint_tap)
-                    } else {
-                        stringResource(R.string.touch_recording_hint_gesture)
+                    when (mode) {
+                        TouchRecordingMode.TAP -> stringResource(R.string.touch_recording_hint_tap)
+                        TouchRecordingMode.SINGLE_GESTURE -> stringResource(R.string.touch_recording_hint_single_gesture)
+                        TouchRecordingMode.GESTURE -> stringResource(R.string.touch_recording_hint_gesture)
                     }
 
                 Text(

@@ -63,9 +63,10 @@ object MacroExecutor {
             // Cancel any existing execution for this macro before launching a new one.
             // Do NOT remove from the map here — the finally block handles removal via a job-identity
             // check, preventing the old job's finally from corrupting the new job's state.
-            runningJobs[macro.id]?.cancel()
+            val previousJob = runningJobs[macro.id]
+            previousJob?.cancel()
             AppLog.d(TAG, "execute macro='${macro.name}' id=${macro.id} steps=${macro.steps.size} loop=${macro.loopEnabled}")
-            val job = scope.launch { executeSuspend(macro) }
+            val job = scope.launch { executeSuspend(macro, previousJob) }
             runningJobs[macro.id] = job
         }
     }
@@ -83,14 +84,16 @@ object MacroExecutor {
         }
         val singleShot = macro.copy(loopEnabled = false)
         val currentJob = coroutineContext[Job]
+        val previousJob: Job?
         synchronized(runningJobs) {
-            runningJobs[macro.id]?.cancel()
+            previousJob = runningJobs[macro.id]
+            previousJob?.cancel()
             if (currentJob != null) {
                 runningJobs[macro.id] = currentJob
             }
         }
         AppLog.d(TAG, "executeAndWait macro='${singleShot.name}' id=${singleShot.id} steps=${singleShot.steps.size}")
-        executeSuspend(singleShot)
+        executeSuspend(singleShot, previousJob)
     }
 
     /**
@@ -168,7 +171,10 @@ object MacroExecutor {
     // Internal execution logic
     // -------------------------------------------------------------------------
 
-    private suspend fun executeSuspend(macro: Macro) {
+    private suspend fun executeSuspend(
+        macro: Macro,
+        previousJob: Job? = null,
+    ) {
         if (!PrivdClient.isConnected) return
 
         // Capture this coroutine's Job for race-safe map cleanup in finally.
@@ -186,6 +192,9 @@ object MacroExecutor {
 
         _runningMacroIds.update { it + macro.id }
         try {
+            // Ensure any cancelled previous run for this ID finishes lifting its active inputs
+            // in its finally block before this run injects fresh DOWN events on the same slots.
+            previousJob?.join()
             // Execute once, or loop indefinitely if loopEnabled (cancelled by stop()).
             do {
                 val randomizedMacro = macro.randomized()

@@ -114,4 +114,40 @@ class TouchRecordingSheetTest {
         composeTestRule.onNodeWithText("P1: 25.0%, 35.0%  •  P2: 75.0%, 85.0%").assertExists()
         composeTestRule.onNodeWithText("Stop & Save").assertExists()
     }
+
+    @Test
+    fun touchRecordingSheet_rendersSingleGestureModeWithoutStopButtonAndTriggersCancel() {
+        val testColors = paletteFor(ThemeMode.DARK)
+        var cancelled = false
+
+        val state =
+            TouchRecordingState.Recording(
+                mode = TouchRecordingMode.SINGLE_GESTURE,
+                recordedGestureCount = 0,
+                startElapsedRealtime = 1000L,
+                activePointers =
+                    listOf(
+                        TouchPointerState(slot = 0, normX = 0.2f, normY = 0.3f, trail = listOf(Pair(0.2f, 0.3f))),
+                        TouchPointerState(slot = 1, normX = 0.8f, normY = 0.7f, trail = listOf(Pair(0.8f, 0.7f))),
+                    ),
+            )
+
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalAppColors provides testColors) {
+                TouchRecordingSheet(
+                    state = state,
+                    onStop = {},
+                    onCancel = { cancelled = true },
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Single Touch Gesture").assertExists()
+        composeTestRule.onNodeWithText("2 fingers (2 pts)").assertExists()
+        composeTestRule.onNodeWithText("Stop & Save").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Cancel").assertExists()
+        composeTestRule.onNodeWithText("Cancel").performClick()
+
+        assertTrue("Cancel button must trigger onCancel callback in SINGLE_GESTURE mode", cancelled)
+    }
 }

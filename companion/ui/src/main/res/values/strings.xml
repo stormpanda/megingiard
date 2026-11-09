@@ -514,12 +514,15 @@ Open Settings to create a layout.</string>
     <!-- Touch recording flow -->
     <string name="touch_recording_title">Recording Screen Touch</string>
     <string name="touch_recording_mode_tap">Single Tap</string>
+    <string name="touch_recording_mode_single_gesture">Single Touch Gesture</string>
     <string name="touch_recording_mode_gesture">Touch Gesture</string>
     <string name="touch_recording_hint_tap">Tap the target location on the primary display. The tap position will be recorded automatically.</string>
+    <string name="touch_recording_hint_single_gesture">Draw a single or multi-finger gesture on the primary display. Recording finishes automatically when all fingers lift.</string>
     <string name="touch_recording_hint_gesture">Draw your touch gestures on the primary display. Tap Stop &amp; Save when finished.</string>
     <string name="touch_recording_radar_waiting">Waiting for touch input on primary display</string>
     <string name="touch_recording_radar_coords">X: %1$.1f%%  Y: %2$.1f%%</string>
     <string name="touch_recording_actions_tap" formatted="false">%1$d tap</string>
+    <string name="touch_recording_actions_single_gesture" formatted="false">%1$d fingers (%2$d pts)</string>
     <string name="touch_recording_actions_gestures" formatted="false">%1$d gestures (%2$d pts)</string>
     <string name="macropad_macro_test_run">Test Run</string>
     <string name="macropad_macro_loop_toggle">Loop macro</string>
@@ -641,7 +644,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_app_launcher">App Quick-Switch</string>
     <string name="macropad_action_group_app_launcher_desc">Quickly switch between Megingiard and another app</string>
     <string name="macropad_action_group_tools">Tools</string>
-    <string name="macropad_action_group_tools_desc">Open fullscreen mouse and keyboard overlays, take screenshots, tap coordinates, or stop macros</string>
+    <string name="macropad_action_group_tools_desc">Open fullscreen mouse and keyboard overlays, take screenshots, or stop macros</string>
     <string name="macropad_editor_button_type">Button Type</string>
 
     <!-- Log report export -->
@@ -1158,6 +1161,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_layout_next_desc">Switch to next layout in active profile</string>
     <string name="macropad_action_layout_previous_desc">Switch to previous layout in active profile</string>
     <string name="macropad_action_profile_switcher_desc">Open profile selection overlay</string>
+    <string name="macropad_gamepad_btn_mode">Home</string>
     <string name="macropad_gamepad_btn_dpad_up">D-Pad Up</string>
     <string name="macropad_gamepad_btn_dpad_down">D-Pad Down</string>
     <string name="macropad_gamepad_btn_dpad_left">D-Pad Left</string>
@@ -1384,19 +1388,35 @@ Open Settings to create a layout.</string>
     <string name="macropad_switch_layout_target_desc">Select which layout in this profile to activate</string>
     <string name="macropad_switch_layout_hold_title">Hold to Shift</string>
     <string name="macropad_switch_layout_hold_desc">Temporarily switch while held and return on release</string>
+    <string name="macropad_switch_layout_not_found_toast">Target layout no longer exists</string>
+    <string name="macropad_action_switch_to_profile">Switch to Profile</string>
+    <string name="macropad_action_switch_to_profile_desc">Jump directly to a specific profile</string>
+    <string name="macropad_display_switch_to_profile">Profile: %1$s</string>
+    <string name="macropad_switch_profile_target_title">Target Profile</string>
+    <string name="macropad_switch_profile_target_desc">Select which profile to activate</string>
+    <string name="macropad_switch_profile_not_found_toast">Target profile no longer exists</string>
+    <string name="macropad_button_missing_target_badge">Missing Target</string>
     <string name="macropad_action_switch_to_hub">Switch to Hub</string>
     <string name="macropad_action_switch_to_hub_desc">Open the Companion Hub on the bottom screen</string>
     <string name="macropad_action_stop_all_macros">Stop All Macros</string>
     <string name="macropad_action_stop_all_macros_desc">Cancel all running macros and release held virtual inputs</string>
+    <string name="macropad_action_group_touch">Touch</string>
+    <string name="macropad_action_group_touch_desc">Tap a screen coordinate or replay a recorded multi-finger gesture</string>
+    <string name="macropad_picker_touch_title">Touch Action</string>
+    <string name="macropad_touch_not_recorded">Not recorded</string>
     <string name="macropad_action_touch_tap">Touch Tap</string>
     <string name="macropad_action_touch_tap_desc">Tap a fixed coordinate on the primary screen while held</string>
     <string name="macropad_display_touch_tap">Touch Tap (%1$d%%, %2$d%%)</string>
     <string name="macropad_touch_tap_record_title">Record Screen Tap</string>
     <string name="macropad_touch_tap_record_desc">Tap the top screen directly to capture the target position</string>
-    <string name="macropad_touch_tap_x_title">Horizontal Position (X)</string>
-    <string name="macropad_touch_tap_x_desc">Horizontal screen coordinate from left (0%) to right (100%)</string>
-    <string name="macropad_touch_tap_y_title">Vertical Position (Y)</string>
-    <string name="macropad_touch_tap_y_desc">Vertical screen coordinate from top (0%) to bottom (100%)</string>
+    <string name="macropad_action_single_touch_gesture">Single Touch Gesture</string>
+    <string name="macropad_action_single_touch_gesture_desc">Replay a recorded single or multi-finger gesture on the primary screen</string>
+    <string name="macropad_display_single_touch_gesture_single_finger">Touch Gesture (1 finger, %1$s)</string>
+    <string name="macropad_display_single_touch_gesture_multi_finger">Touch Gesture (%1$d fingers, %2$s)</string>
+    <string name="macropad_single_touch_gesture_record_title">Record Screen Gesture</string>
+    <string name="macropad_single_touch_gesture_record_desc">Perform a single or multi-finger gesture on the top screen; recording finishes when all fingers lift</string>
+    <string name="macropad_single_touch_gesture_summary_single_finger">1 finger · %1$s</string>
+    <string name="macropad_single_touch_gesture_summary_multi_finger">%1$d fingers · %2$s</string>
     <string name="macropad_action_group_media">Media Controls</string>
     <string name="macropad_action_group_media_desc">Playback controls and audio mute</string>
     <string name="macropad_picker_media_title">Media Controls</string>

@@ -13,6 +13,8 @@ import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.MusicNote
@@ -40,10 +42,13 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import java.util.Locale
 import kotlin.math.roundToInt
 
 private const val TAG = "PadActionDisplay"
 private const val PAD_PERCENT_MULTIPLIER = 100f
+private const val PAD_MS_PER_SECOND = 1000f
+private const val PAD_DEFAULT_CENTER_POS = 0.5f
 
 internal enum class ActionGroup(
     val icon: ImageVector,
@@ -64,6 +69,11 @@ internal enum class ActionGroup(
         Icons.Rounded.Mouse,
         R.string.macropad_action_group_mouse,
         R.string.macropad_action_group_mouse_desc,
+    ),
+    TOUCH(
+        Icons.Rounded.TouchApp,
+        R.string.macropad_action_group_touch,
+        R.string.macropad_action_group_touch_desc,
     ),
     APP_LAUNCHER(
         Icons.Rounded.Apps,
@@ -116,7 +126,13 @@ internal enum class ActionCategory(
         Icons.Rounded.SportsEsports,
         R.string.macropad_action_gamepad_button,
         ActionGroup.GAMEPAD,
-        { PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A") },
+        {
+            val swap = MacroPadSettings.gamepadSwapFaceButtons.value
+            PadAction.GamepadButton(
+                btnCode = GamepadKeycodes.BTN_SOUTH,
+                label = gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_SOUTH, swap),
+            )
+        },
     ),
     MOUSE_BUTTON(
         Icons.Rounded.Mouse,
@@ -172,13 +188,27 @@ internal enum class ActionCategory(
         R.string.macropad_action_switch_to_layout,
         ActionGroup.LAYOUT,
         {
-            val profile = MacroPadState.activeProfile.value
+            val layouts =
+                MacroPadState.activeProfile.value
+                    ?.layouts
+                    .orEmpty()
             val activeId = MacroPadState.activeLayout.value?.id
-            val defaultTargetId =
-                profile?.layouts?.firstOrNull { it.id != activeId }?.id
-                    ?: profile?.layouts?.firstOrNull()?.id
-                    ?: ""
-            PadAction.SwitchToLayout(layoutId = defaultTargetId, holdToShift = false)
+            PadAction.SwitchToLayout(
+                layoutId = layouts.defaultSwitchTargetId(activeId),
+                holdToShift = false,
+            )
+        },
+    ),
+    SWITCH_TO_PROFILE(
+        Icons.Rounded.Folder,
+        R.string.macropad_action_switch_to_profile,
+        ActionGroup.LAYOUT,
+        {
+            val allProfiles = MacroPadState.profiles.value
+            val activeId = MacroPadState.activeProfile.value?.id
+            PadAction.SwitchToProfile(
+                profileId = allProfiles.defaultSwitchTargetId(activeId),
+            )
         },
     ),
     PROFILE_SWITCHER(
@@ -256,8 +286,14 @@ internal enum class ActionCategory(
     TOUCH_TAP(
         Icons.Rounded.AdsClick,
         R.string.macropad_action_touch_tap,
-        ActionGroup.TOOLS,
-        { PadAction.TouchTap() },
+        ActionGroup.TOUCH,
+        { PadAction.TouchTap(isRecorded = false) },
+    ),
+    SINGLE_TOUCH_GESTURE(
+        Icons.Rounded.Gesture,
+        R.string.macropad_action_single_touch_gesture,
+        ActionGroup.TOUCH,
+        { PadAction.SingleTouchGesture() },
     ),
     MEDIA_PLAY_PAUSE(
         Icons.Rounded.PlayArrow,
@@ -344,6 +380,10 @@ internal fun PadAction.toCategory(): ActionCategory =
             ActionCategory.SWITCH_TO_LAYOUT
         }
 
+        is PadAction.SwitchToProfile -> {
+            ActionCategory.SWITCH_TO_PROFILE
+        }
+
         is PadAction.ProfileSwitcher -> {
             ActionCategory.PROFILE_SWITCHER
         }
@@ -392,6 +432,10 @@ internal fun PadAction.toCategory(): ActionCategory =
             ActionCategory.TOUCH_TAP
         }
 
+        is PadAction.SingleTouchGesture -> {
+            ActionCategory.SINGLE_TOUCH_GESTURE
+        }
+
         is PadAction.MediaControl -> {
             when (mediaAction) {
                 MediaControlAction.PLAY_PAUSE -> ActionCategory.MEDIA_PLAY_PAUSE
@@ -417,6 +461,7 @@ internal fun ActionCategory.isAvailable(hasMacros: Boolean): Boolean =
 internal fun PadAction.displayLabel(): String {
     val context = LocalContext.current
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    val allProfiles by MacroPadState.profiles.collectAsStateWithLifecycle()
     val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
     return when (this) {
         is PadAction.KeyboardKey -> {
@@ -471,8 +516,12 @@ internal fun PadAction.displayLabel(): String {
                 activeProfile
                     ?.macros
                     ?.firstOrNull { it.id == macroId }
-                    ?.name ?: macroId
-            stringResource(R.string.macropad_display_macro, macroName)
+                    ?.name
+            if (macroName != null) {
+                stringResource(R.string.macropad_display_macro, macroName)
+            } else {
+                stringResource(R.string.macropad_action_macro)
+            }
         }
 
         is PadAction.BackgroundPeek -> {
@@ -497,6 +546,18 @@ internal fun PadAction.displayLabel(): String {
                 stringResource(R.string.macropad_display_switch_to_layout, layoutName)
             } else {
                 stringResource(R.string.macropad_action_switch_to_layout)
+            }
+        }
+
+        is PadAction.SwitchToProfile -> {
+            val profileName =
+                allProfiles
+                    .firstOrNull { it.id == profileId }
+                    ?.name
+            if (profileName != null) {
+                stringResource(R.string.macropad_display_switch_to_profile, profileName)
+            } else {
+                stringResource(R.string.macropad_action_switch_to_profile)
             }
         }
 
@@ -545,11 +606,29 @@ internal fun PadAction.displayLabel(): String {
         }
 
         is PadAction.TouchTap -> {
-            stringResource(
-                R.string.macropad_display_touch_tap,
-                (normX * PAD_PERCENT_MULTIPLIER).roundToInt(),
-                (normY * PAD_PERCENT_MULTIPLIER).roundToInt(),
-            )
+            if (!isRecorded) {
+                stringResource(R.string.macropad_action_touch_tap)
+            } else {
+                stringResource(
+                    R.string.macropad_display_touch_tap,
+                    (normX * PAD_PERCENT_MULTIPLIER).roundToInt(),
+                    (normY * PAD_PERCENT_MULTIPLIER).roundToInt(),
+                )
+            }
+        }
+
+        is PadAction.SingleTouchGesture -> {
+            if (samples.isEmpty()) {
+                stringResource(R.string.macropad_action_single_touch_gesture)
+            } else {
+                val fingerCount = countSingleTouchGestureFingers(samples)
+                val durationLabel = formatSingleTouchGestureDuration(samples)
+                if (fingerCount == 1) {
+                    stringResource(R.string.macropad_display_single_touch_gesture_single_finger, durationLabel)
+                } else {
+                    stringResource(R.string.macropad_display_single_touch_gesture_multi_finger, fingerCount, durationLabel)
+                }
+            }
         }
 
         is PadAction.MediaControl -> {
@@ -571,6 +650,18 @@ internal fun PadAction.displayLabel(): String {
             }
         }
     }
+}
+
+internal fun countSingleTouchGestureFingers(samples: List<TouchSample>): Int =
+    samples
+        .map { it.pointerId }
+        .distinct()
+        .size
+        .coerceAtLeast(1)
+
+internal fun formatSingleTouchGestureDuration(samples: List<TouchSample>): String {
+    val maxOffsetMs = samples.maxOfOrNull { it.offsetMs } ?: 0L
+    return String.format(Locale.US, "%.1fs", maxOffsetMs / PAD_MS_PER_SECOND)
 }
 
 internal fun resolveAppName(
@@ -737,3 +828,217 @@ internal fun gamepadCodeDisplayLabel(
 @Composable
 internal fun GamepadKeycodes.GamepadButtonPreset.localizedDisplayLabel(swapFaceButtons: Boolean): String =
     gamepadCodeDisplayLabel(code, swapFaceButtons)
+
+internal fun MouseButton.shortLabelResId(): Int =
+    when (this) {
+        MouseButton.LEFT -> R.string.kb_mouse_btn_left
+        MouseButton.RIGHT -> R.string.kb_mouse_btn_right
+        MouseButton.MIDDLE -> R.string.kb_mouse_btn_middle
+        MouseButton.MOUSE4 -> R.string.kb_mouse_btn_4
+        MouseButton.MOUSE5 -> R.string.kb_mouse_btn_5
+    }
+
+/**
+ * Pure JVM helper resolving non-resource default button labels for parameterized actions
+ * ([PadAction.KeyboardKey], [PadAction.GamepadButton], [PadAction.Macro],
+ * [PadAction.SwitchToLayout], [PadAction.SwitchToProfile]). Returns `null` when the caller
+ * should fall back to a localized string resource.
+ */
+internal fun PadAction.resolveDataDrivenDefaultLabel(
+    allProfiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+    swapFaceButtons: Boolean,
+    homeButtonLabel: String,
+): String? =
+    when (this) {
+        is PadAction.KeyboardKey -> {
+            if (modifiers.isEmpty()) {
+                label
+            } else {
+                val modNames =
+                    modifiers
+                        .mapNotNull { code ->
+                            MODIFIER_PRESETS.firstOrNull { it.first == code }?.second
+                        }.joinToString("+")
+                if (modNames.isEmpty()) label else "$modNames+$label"
+            }
+        }
+
+        is PadAction.GamepadButton -> {
+            fun codeShortLabel(code: Int): String =
+                if (code == GamepadKeycodes.BTN_MODE) {
+                    homeButtonLabel
+                } else {
+                    gamepadCodeDisplayShortLabel(code, swapFaceButtons)
+                }
+
+            val primary = codeShortLabel(btnCode)
+            if (extraBtnCodes.isEmpty()) {
+                primary
+            } else {
+                val extras = extraBtnCodes.joinToString("+") { codeShortLabel(it) }
+                "$primary+$extras"
+            }
+        }
+
+        is PadAction.Macro -> {
+            activeProfile
+                ?.macros
+                ?.firstOrNull { it.id == macroId }
+                ?.name
+                ?.takeIf { it.isNotBlank() }
+        }
+
+        is PadAction.SwitchToLayout -> {
+            activeProfile
+                ?.layouts
+                ?.firstOrNull { it.id == layoutId }
+                ?.name
+                ?.takeIf { it.isNotBlank() }
+        }
+
+        is PadAction.SwitchToProfile -> {
+            allProfiles
+                .firstOrNull { it.id == profileId }
+                ?.name
+                ?.takeIf { it.isNotBlank() }
+        }
+
+        else -> {
+            null
+        }
+    }
+
+/**
+ * Resolves the localized default [PadButton.label] for this [PadAction] when creating a button
+ * or changing its action while the previous default label is still untouched.
+ */
+internal fun PadAction.defaultButtonLabel(
+    context: Context,
+    allProfiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+    swapFaceButtons: Boolean,
+): String {
+    val homeLabel = context.getString(R.string.macropad_gamepad_btn_mode)
+    resolveDataDrivenDefaultLabel(
+        allProfiles = allProfiles,
+        activeProfile = activeProfile,
+        swapFaceButtons = swapFaceButtons,
+        homeButtonLabel = homeLabel,
+    )?.let { return it }
+
+    return when (this) {
+        is PadAction.MouseButton -> {
+            context.getString(button.shortLabelResId())
+        }
+
+        is PadAction.ScrollWheel -> {
+            context.getString(R.string.macropad_display_scroll_wheel)
+        }
+
+        is PadAction.TrackpointMove -> {
+            context.getString(R.string.macropad_display_trackpoint)
+        }
+
+        is PadAction.AppLauncher -> {
+            resolveAppName(context, packageName).ifBlank {
+                context.getString(R.string.macropad_action_app_launcher)
+            }
+        }
+
+        else -> {
+            context.getString(toCategory().labelResId)
+        }
+    }
+}
+
+/**
+ * Pure transition rule applying [newAction] to this [PadButton] while preserving user-customized
+ * labels and icons:
+ * - [PadButton.label] updates to [newDefaultLabel] iff blank, equal to [newButtonPlaceholder], or
+ *   still equal to [oldDefaultLabel].
+ * - [PadButton.iconName] is cleared to `null` for fixed-face actions (`!newAction.supportsCustomIcon()`),
+ *   or updated to `newAction.defaultIconName()` iff `iconName == action.defaultIconName()`.
+ */
+internal fun PadButton.withActionDefaultsResolved(
+    newAction: PadAction,
+    newButtonPlaceholder: String,
+    oldDefaultLabel: String,
+    newDefaultLabel: String,
+): PadButton {
+    val shouldUpdateLabel =
+        label.isBlank() ||
+            label == newButtonPlaceholder ||
+            label == oldDefaultLabel
+    val resolvedLabel =
+        if (shouldUpdateLabel && newDefaultLabel.isNotBlank()) {
+            newDefaultLabel
+        } else {
+            label
+        }
+    val resolvedIconName =
+        if (!newAction.supportsCustomIcon()) {
+            null
+        } else if (iconName == action.defaultIconName()) {
+            newAction.defaultIconName()
+        } else {
+            iconName
+        }
+    return copy(
+        label = resolvedLabel,
+        iconName = resolvedIconName,
+    ).withActionSizing(newAction)
+}
+
+internal fun PadButton.withActionDefaults(
+    newAction: PadAction,
+    context: Context,
+    allProfiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+    swapFaceButtons: Boolean,
+): PadButton {
+    val placeholder = context.getString(R.string.macropad_editor_new_button_default_label)
+    val oldDefault = action.defaultButtonLabel(context, allProfiles, activeProfile, swapFaceButtons)
+    val newDefault = newAction.defaultButtonLabel(context, allProfiles, activeProfile, swapFaceButtons)
+    val updated =
+        withActionDefaultsResolved(
+            newAction = newAction,
+            newButtonPlaceholder = placeholder,
+            oldDefaultLabel = oldDefault,
+            newDefaultLabel = newDefault,
+        )
+    AppLog.d(
+        TAG,
+        "withActionDefaults: ${action::class.simpleName} -> ${newAction::class.simpleName} " +
+            "label='${updated.label}' icon=${updated.iconName}",
+    )
+    return updated
+}
+
+internal fun createDefaultDraftButton(
+    id: String,
+    defaultAction: PadAction,
+    context: Context,
+    allProfiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+    swapFaceButtons: Boolean,
+    posX: Float = PAD_DEFAULT_CENTER_POS,
+    posY: Float = PAD_DEFAULT_CENTER_POS,
+): PadButton {
+    val defaultLabel = defaultAction.defaultButtonLabel(context, allProfiles, activeProfile, swapFaceButtons)
+    val defaultIcon = if (defaultAction.supportsCustomIcon()) defaultAction.defaultIconName() else null
+    val created =
+        PadButton(
+            id = id,
+            label = defaultLabel,
+            iconName = defaultIcon,
+            posX = posX,
+            posY = posY,
+            action = defaultAction,
+        ).withActionSizing(defaultAction)
+    AppLog.d(
+        TAG,
+        "createDefaultDraftButton: action=${defaultAction::class.simpleName} label='${created.label}' icon=${created.iconName}",
+    )
+    return created
+}

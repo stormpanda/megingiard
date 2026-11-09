@@ -1,12 +1,15 @@
 package com.stormpanda.megingiard.macropad
 
+import app.cash.turbine.test
 import com.stormpanda.megingiard.mirror.AnchorPoint
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.mirror.VisualAnchorSignature
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -1314,4 +1317,158 @@ class MacroPadStateTest {
         MacroPadState.endHoldToShiftLayout("l3")
         assertEquals("l1", MacroPadState.activeLayout.value?.id)
     }
+
+    @Test
+    fun `switchToProfile activates target profile remembered layout and clears shift state`() {
+        val p1l1 = testLayout(id = "p1-l1", name = "P1Base")
+        val p1l2 = testLayout(id = "p1-l2", name = "P1Shift")
+        val p1 = testProfile(id = "p1", name = "Profile 1", layouts = listOf(p1l1, p1l2), activeLayoutId = "p1-l1")
+
+        val p2l1 = testLayout(id = "p2-l1", name = "P2First")
+        val p2l2 = testLayout(id = "p2-l2", name = "P2Remembered")
+        val p2 = testProfile(id = "p2", name = "Profile 2", layouts = listOf(p2l1, p2l2), activeLayoutId = "p2-l2")
+
+        loadProfiles(p1, p2, activeId = "p1")
+        MacroPadState.beginHoldToShiftLayout("p1-l2")
+        assertEquals("p1-l2", MacroPadState.activeLayout.value?.id)
+
+        assertTrue(MacroPadState.switchToProfile("p2"))
+        assertEquals("p2", MacroPadState.activeProfile.value?.id)
+        assertEquals("p2-l2", MacroPadState.activeLayout.value?.id)
+
+        // Blank or non-existent target returns false and leaves active profile unchanged
+        assertFalse(MacroPadState.switchToProfile(""))
+        assertFalse(MacroPadState.switchToProfile("   "))
+        assertFalse(MacroPadState.switchToProfile("non-existent-id"))
+        assertEquals("p2", MacroPadState.activeProfile.value?.id)
+
+        // Switching to the already-active profile returns true and clears transient shift state
+        MacroPadState.beginHoldToShiftLayout("p2-l1")
+        assertEquals("p2-l1", MacroPadState.activeLayout.value?.id)
+        assertTrue(MacroPadState.switchToProfile("p2"))
+        assertEquals("p2-l2", MacroPadState.activeLayout.value?.id)
+    }
+
+    @Test
+    fun `duplicateProfile remaps self SwitchToProfile and preserves external SwitchToProfile across copy helpers`() {
+        val selfProfileBtn =
+            testButton(
+                id = "btn-self-prof",
+                action = PadAction.SwitchToProfile(profileId = "p1"),
+            )
+        val externalProfileBtn =
+            testButton(
+                id = "btn-ext-prof",
+                action = PadAction.SwitchToProfile(profileId = "p2"),
+            )
+        val l1 = testLayout(id = "l1", name = "Source", buttons = listOf(selfProfileBtn, externalProfileBtn))
+        val p1 = testProfile(id = "p1", name = "Profile1", layouts = listOf(l1), activeLayoutId = "l1")
+
+        val l2 = testLayout(id = "l2", name = "Target")
+        val p2 = testProfile(id = "p2", name = "Profile2", layouts = listOf(l2), activeLayoutId = "l2")
+        loadProfiles(p1, p2, activeId = "p1")
+
+        MacroPadState.duplicateProfile("p1")
+        val duplicatedProfile = MacroPadState.profiles.value.first { it.id != "p1" && it.id != "p2" }
+        val dupButtons = duplicatedProfile.layouts.single().buttons
+        assertEquals(duplicatedProfile.id, (dupButtons[0].action as PadAction.SwitchToProfile).profileId)
+        assertEquals("p2", (dupButtons[1].action as PadAction.SwitchToProfile).profileId)
+
+        // Copying layout or button to another profile preserves global profileId reference
+        val copiedLayoutId = MacroPadState.copyLayoutToProfile(l1, "p1", "p2")
+        assertNotNull(copiedLayoutId)
+        val p2AfterLayoutCopy = MacroPadState.profiles.value.first { it.id == "p2" }
+        val copiedLayout = p2AfterLayoutCopy.layouts.first { it.id == copiedLayoutId }
+        assertEquals("p1", (copiedLayout.buttons[0].action as PadAction.SwitchToProfile).profileId)
+        assertEquals("p2", (copiedLayout.buttons[1].action as PadAction.SwitchToProfile).profileId)
+
+        MacroPadState.copyButtonToLayout(selfProfileBtn, "p1", "p2", "l2")
+        val p2AfterButtonCopy = MacroPadState.profiles.value.first { it.id == "p2" }
+        val copiedBtn =
+            p2AfterButtonCopy.layouts
+                .first { it.id == "l2" }
+                .buttons
+                .single()
+        assertEquals("p1", (copiedBtn.action as PadAction.SwitchToProfile).profileId)
+    }
+
+    @Test
+    fun `switchToLayout and beginHoldToShiftLayout return false when target layout is blank or missing`() {
+        val l1 = testLayout(id = "l1", name = "Base")
+        val l2 = testLayout(id = "l2", name = "Target")
+        loadProfiles(testProfile(id = "p1", layouts = listOf(l1, l2), activeLayoutId = "l1"))
+
+        assertFalse(MacroPadState.switchToLayout(""))
+        assertFalse(MacroPadState.switchToLayout("   "))
+        assertFalse(MacroPadState.switchToLayout("missing-layout"))
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+
+        assertTrue(MacroPadState.switchToLayout("l2"))
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+        assertTrue(MacroPadState.switchToLayout("l2"))
+
+        assertFalse(MacroPadState.beginHoldToShiftLayout(""))
+        assertFalse(MacroPadState.beginHoldToShiftLayout("missing-layout"))
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+
+        assertTrue(MacroPadState.beginHoldToShiftLayout("l1"))
+        assertEquals("l1", MacroPadState.activeLayout.value?.id)
+        MacroPadState.endHoldToShiftLayout("l1")
+        assertEquals("l2", MacroPadState.activeLayout.value?.id)
+    }
+
+    @Test
+    fun `switchToProfile and switchToLayout skip redundant persistence when persisted target is unchanged`() =
+        runTest {
+            val p1l1 = testLayout(id = "p1-l1", name = "P1Base")
+            val p1l2 = testLayout(id = "p1-l2", name = "P1Shift")
+            val p1 = testProfile(id = "p1", name = "Profile 1", layouts = listOf(p1l1, p1l2), activeLayoutId = "p1-l1")
+            val p2 =
+                testProfile(
+                    id = "p2",
+                    name = "Profile 2",
+                    layouts = listOf(testLayout(id = "p2-l1", name = "P2Base")),
+                    activeLayoutId = "p2-l1",
+                )
+            loadProfiles(p1, p2, activeId = "p1")
+
+            MacroPadSettings.macroPadSaveRequests.test {
+                // Switching to a different profile triggers persistence
+                assertTrue(MacroPadState.switchToProfile("p2"))
+                assertEquals(Unit, awaitItem())
+
+                // Switching to the already-active profile skips persistence
+                assertTrue(MacroPadState.switchToProfile("p2"))
+                expectNoEvents()
+
+                // Switch back to p1 (persists), push a transient shift, then re-switch to p1 (clears shift, skips persistence)
+                assertTrue(MacroPadState.switchToProfile("p1"))
+                assertEquals(Unit, awaitItem())
+                assertTrue(MacroPadState.beginHoldToShiftLayout("p1-l2"))
+                expectNoEvents()
+                assertTrue(MacroPadState.switchToProfile("p1"))
+                assertEquals("p1-l1", MacroPadState.activeLayout.value?.id)
+                expectNoEvents()
+
+                // Tapping SwitchToLayout for the already-persisted base layout while shifted clears shift without persisting
+                assertTrue(MacroPadState.beginHoldToShiftLayout("p1-l2"))
+                assertEquals("p1-l2", MacroPadState.activeLayout.value?.id)
+                assertTrue(MacroPadState.switchToLayout("p1-l1"))
+                assertEquals("p1-l1", MacroPadState.activeLayout.value?.id)
+                expectNoEvents()
+            }
+        }
+
+    @Test
+    fun `switchToLayout and beginHoldToShiftLayout reject cleanly without toast when no active profile is loaded`() =
+        runTest {
+            MacroPadState.reorderProfiles(emptyList())
+            assertNull(MacroPadState.activeProfile.value)
+
+            MacroPadState.missingLayoutToastEvent.test {
+                assertFalse(MacroPadState.switchToLayout("l1"))
+                assertFalse(MacroPadState.beginHoldToShiftLayout("l1"))
+                expectNoEvents()
+            }
+        }
 }

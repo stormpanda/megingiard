@@ -53,6 +53,7 @@ import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -122,6 +123,7 @@ import kotlin.math.max
 private const val TAG = "MacroPadEditor"
 private val MPE_DECK_SPACING = 10.dp
 private val MPE_EMPTY_PADDING_V = 12.dp
+private val MPE_WARNING_BADGE_ICON_SIZE = 14.dp
 private const val MPE_BUTTON_HEADER_COUNT = 5
 
 private fun EditorSection.titleResId(): Int =
@@ -150,10 +152,26 @@ private fun EditorSection.icon(): ImageVector =
         EditorSection.MACROS -> Icons.AutoMirrored.Rounded.PlaylistPlay
     }
 
+private data class SubPageButtons(
+    val savedButton: PadButton?,
+    val effectiveButton: PadButton,
+)
+
 private fun applyActionToDraftButton(
     draftButton: PadButton,
     newAction: PadAction,
-): PadButton = draftButton.withActionSizing(newAction)
+    context: Context,
+    allProfiles: List<PadProfile>,
+    activeProfile: PadProfile?,
+    swapFaceButtons: Boolean,
+): PadButton =
+    draftButton.withActionDefaults(
+        newAction = newAction,
+        context = context,
+        allProfiles = allProfiles,
+        activeProfile = activeProfile,
+        swapFaceButtons = swapFaceButtons,
+    )
 
 private fun swapButtons(
     layout: PadLayout?,
@@ -178,6 +196,7 @@ fun MacroPadEditor(
     val scope = rememberCoroutineScope()
     val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
     val activeId by MacroPadState.activeProfileId.collectAsStateWithLifecycle()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
     val colors = LocalAppColors.current
 
     DisposableEffect(Unit) {
@@ -197,10 +216,52 @@ fun MacroPadEditor(
             profile?.layouts?.firstOrNull { it.id == layoutId } ?: profile?.layouts?.firstOrNull()
         }
 
+    fun applyDraftAction(
+        draftButton: PadButton,
+        newAction: PadAction,
+    ): PadButton =
+        applyActionToDraftButton(
+            draftButton = draftButton,
+            newAction = newAction,
+            context = context,
+            allProfiles = profiles,
+            activeProfile = profile,
+            swapFaceButtons = swapFaceButtons,
+        )
+
     val selectedSection by MacroPadNavState.selectedSection.collectAsStateWithLifecycle()
     val subPageStack by MacroPadNavState.subPageStack.collectAsStateWithLifecycle()
     val buttonDraft by MacroPadNavState.buttonDraft.collectAsStateWithLifecycle()
     val macroDraft by MacroPadNavState.macroDraft.collectAsStateWithLifecycle()
+
+    fun resolveSubPageButtons(
+        buttonId: String?,
+        fallbackAction: PadAction =
+            PadAction.GamepadButton(
+                btnCode = GamepadKeycodes.BTN_SOUTH,
+                label = gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_SOUTH, swapFaceButtons),
+            ),
+    ): SubPageButtons {
+        val savedButton =
+            buttonId?.let { id ->
+                activeLayout?.buttons?.firstOrNull { it.id == id }
+            }
+        val effectiveButton =
+            buttonDraft?.takeIf { buttonId == null || it.id == buttonId }
+                ?: savedButton
+                ?: createDefaultDraftButton(
+                    id = UUID.randomUUID().toString(),
+                    defaultAction = fallbackAction,
+                    context = context,
+                    allProfiles = profiles,
+                    activeProfile = profile,
+                    swapFaceButtons = swapFaceButtons,
+                )
+        return SubPageButtons(
+            savedButton = savedButton,
+            effectiveButton = effectiveButton,
+        )
+    }
 
     val macroTimelineFocusStepIndex by MacroPadNavState.macroTimelineFocusStepIndex.collectAsStateWithLifecycle()
     var appearanceDraft by remember { mutableStateOf<PadLayout?>(null) }
@@ -822,33 +883,26 @@ fun MacroPadEditor(
                                                 assignedPackages = emptySet(),
                                                 accentColor = colors.accent,
                                                 onSelectApp = { pkg ->
-                                                    val appName = resolveAppName(context, pkg)
-                                                    val defaultLabel = context.getString(R.string.macropad_editor_new_button_default_label)
                                                     val editPage = subPageStack.filterIsInstance<MacroPadSubPage.EditButton>().lastOrNull()
                                                     val savedBtn =
                                                         editPage?.buttonId?.let { id ->
                                                             activeLayout?.buttons?.firstOrNull { it.id == id }
                                                         }
-                                                    val draft =
-                                                        buttonDraft
-                                                            ?: savedBtn
-                                                            ?: PadButton(
-                                                                id = UUID.randomUUID().toString(),
-                                                                label = defaultLabel,
-                                                                posX = 0.5f,
-                                                                posY = 0.5f,
-                                                                action = PadAction.AppLauncher(pkg),
-                                                            )
+                                                    val newAction = PadAction.AppLauncher(pkg)
+                                                    val existing = buttonDraft ?: savedBtn
                                                     val newBtn =
-                                                        draft.copy(
-                                                            label =
-                                                                if (draft.label == defaultLabel || draft.label.isBlank()) {
-                                                                    appName.ifBlank { draft.label }
-                                                                } else {
-                                                                    draft.label
-                                                                },
-                                                            action = PadAction.AppLauncher(pkg),
-                                                        )
+                                                        if (existing != null) {
+                                                            applyDraftAction(existing, newAction)
+                                                        } else {
+                                                            createDefaultDraftButton(
+                                                                id = UUID.randomUUID().toString(),
+                                                                defaultAction = newAction,
+                                                                context = context,
+                                                                allProfiles = profiles,
+                                                                activeProfile = profile,
+                                                                swapFaceButtons = swapFaceButtons,
+                                                            )
+                                                        }
                                                     MacroPadNavState.setButtonDraft(newBtn)
                                                     MacroPadNavState.pop()
                                                 },
@@ -1295,12 +1349,13 @@ fun MacroPadEditor(
                                                             ?: group.actions().first()
                                                     val defaultAction = defaultCategory.defaultAction()
                                                     val newDraft =
-                                                        PadButton(
+                                                        createDefaultDraftButton(
                                                             id = UUID.randomUUID().toString(),
-                                                            label = context.getString(R.string.macropad_editor_new_button_default_label),
-                                                            posX = 0.5f,
-                                                            posY = 0.5f,
-                                                            action = defaultAction,
+                                                            defaultAction = defaultAction,
+                                                            context = context,
+                                                            allProfiles = profiles,
+                                                            activeProfile = profile,
+                                                            swapFaceButtons = swapFaceButtons,
                                                         )
                                                     MacroPadNavState.setButtonDraft(newDraft)
                                                     MacroPadNavState.setStack(
@@ -1320,20 +1375,8 @@ fun MacroPadEditor(
                                             MacroPadNavState.setButtonDraft(currentDraft)
                                             MacroPadNavState.push(subPage)
                                         }
-                                        val savedButton =
-                                            currentSubPage.buttonId?.let { id ->
-                                                activeLayout?.buttons?.firstOrNull { it.id == id }
-                                            }
-                                        val effectiveButton =
-                                            buttonDraft?.takeIf { currentSubPage.buttonId == null || it.id == currentSubPage.buttonId }
-                                                ?: savedButton
-                                                ?: PadButton(
-                                                    id = UUID.randomUUID().toString(),
-                                                    label = stringResource(R.string.macropad_editor_new_button_default_label),
-                                                    posX = 0.5f,
-                                                    posY = 0.5f,
-                                                    action = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
-                                                )
+                                        val (savedButton, effectiveButton) =
+                                            resolveSubPageButtons(currentSubPage.buttonId)
                                         val isNew = currentSubPage.buttonId == null
                                         GamepadDeck(
                                             breadcrumbs =
@@ -1388,6 +1431,14 @@ fun MacroPadEditor(
                                                     pushSubPageFromEdit(
                                                         currentDraft,
                                                         MacroPadSubPage.ChooseMouseAction(
+                                                            buttonId = currentSubPage.buttonId,
+                                                        ),
+                                                    )
+                                                },
+                                                onOpenTouchPicker = { currentDraft ->
+                                                    pushSubPageFromEdit(
+                                                        currentDraft,
+                                                        MacroPadSubPage.ChooseTouchAction(
                                                             buttonId = currentSubPage.buttonId,
                                                         ),
                                                     )
@@ -1476,20 +1527,8 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ButtonColor -> {
-                                        val savedButton =
-                                            currentSubPage.buttonId?.let { id ->
-                                                activeLayout?.buttons?.firstOrNull { it.id == id }
-                                            }
-                                        val effectiveButton =
-                                            buttonDraft
-                                                ?: savedButton
-                                                ?: PadButton(
-                                                    id = UUID.randomUUID().toString(),
-                                                    label = stringResource(R.string.macropad_editor_new_button_default_label),
-                                                    posX = 0.5f,
-                                                    posY = 0.5f,
-                                                    action = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
-                                                )
+                                        val (savedButton, effectiveButton) =
+                                            resolveSubPageButtons(currentSubPage.buttonId)
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
@@ -1537,20 +1576,8 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ChooseKeyboardKey -> {
-                                        val savedButton =
-                                            currentSubPage.buttonId?.let { id ->
-                                                activeLayout?.buttons?.firstOrNull { it.id == id }
-                                            }
                                         val effectiveButton =
-                                            buttonDraft
-                                                ?: savedButton
-                                                ?: PadButton(
-                                                    id = UUID.randomUUID().toString(),
-                                                    label = stringResource(R.string.macropad_editor_new_button_default_label),
-                                                    posX = 0.5f,
-                                                    posY = 0.5f,
-                                                    action = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
-                                                )
+                                            resolveSubPageButtons(currentSubPage.buttonId).effectiveButton
                                         val currentKeyAction = effectiveButton.action as? PadAction.KeyboardKey
                                         val currentKeycode = currentKeyAction?.keycode ?: LinuxKeycodes.KEY_SPACE
                                         GamepadDeck(
@@ -1579,7 +1606,7 @@ fun MacroPadEditor(
                                                             label = label,
                                                             modifiers = currentKeyAction?.modifiers ?: emptyList(),
                                                         )
-                                                    val updatedDraft = effectiveButton.copy(action = newAction)
+                                                    val updatedDraft = applyDraftAction(effectiveButton, newAction)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
                                                     MacroPadNavState.pop()
                                                 },
@@ -1588,20 +1615,8 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ChooseGamepadButton -> {
-                                        val savedButton =
-                                            currentSubPage.buttonId?.let { id ->
-                                                activeLayout?.buttons?.firstOrNull { it.id == id }
-                                            }
                                         val effectiveButton =
-                                            buttonDraft
-                                                ?: savedButton
-                                                ?: PadButton(
-                                                    id = UUID.randomUUID().toString(),
-                                                    label = stringResource(R.string.macropad_editor_new_button_default_label),
-                                                    posX = 0.5f,
-                                                    posY = 0.5f,
-                                                    action = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
-                                                )
+                                            resolveSubPageButtons(currentSubPage.buttonId).effectiveButton
                                         val currentBtnAction = effectiveButton.action as? PadAction.GamepadButton
                                         val slotIndex = currentSubPage.slotIndex
                                         val currentBtnCode =
@@ -1611,7 +1626,6 @@ fun MacroPadEditor(
                                                 3 -> currentBtnAction?.extraBtnCodes?.getOrNull(2) ?: -1
                                                 else -> currentBtnAction?.btnCode ?: GamepadKeycodes.BTN_SOUTH
                                             }
-                                        val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
                                         val slotTitle =
                                             when (slotIndex) {
                                                 1 -> stringResource(R.string.macropad_picker_label_extra_1)
@@ -1649,7 +1663,7 @@ fun MacroPadEditor(
                                                             selectedCode = preset.code,
                                                             swapFaceButtons = swapFaceButtons,
                                                         )
-                                                    val updatedDraft = effectiveButton.copy(action = newAction)
+                                                    val updatedDraft = applyDraftAction(effectiveButton, newAction)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
                                                     MacroPadNavState.pop()
                                                 },
@@ -1666,7 +1680,7 @@ fun MacroPadEditor(
                                                                     selectedCode = null,
                                                                     swapFaceButtons = swapFaceButtons,
                                                                 )
-                                                            val updatedDraft = effectiveButton.copy(action = newAction)
+                                                            val updatedDraft = applyDraftAction(effectiveButton, newAction)
                                                             MacroPadNavState.setButtonDraft(updatedDraft)
                                                             MacroPadNavState.pop()
                                                         }
@@ -1679,20 +1693,8 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ChooseMouseAction -> {
-                                        val savedButton =
-                                            currentSubPage.buttonId?.let { id ->
-                                                activeLayout?.buttons?.firstOrNull { it.id == id }
-                                            }
                                         val effectiveButton =
-                                            buttonDraft
-                                                ?: savedButton
-                                                ?: PadButton(
-                                                    id = UUID.randomUUID().toString(),
-                                                    label = stringResource(R.string.macropad_editor_new_button_default_label),
-                                                    posX = 0.5f,
-                                                    posY = 0.5f,
-                                                    action = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
-                                                )
+                                            resolveSubPageButtons(currentSubPage.buttonId).effectiveButton
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
@@ -1712,7 +1714,7 @@ fun MacroPadEditor(
                                             VisualMousePicker(
                                                 currentAction = effectiveButton.action,
                                                 onSelectAction = { act ->
-                                                    val updatedDraft = applyActionToDraftButton(effectiveButton, act)
+                                                    val updatedDraft = applyDraftAction(effectiveButton, act)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
                                                     MacroPadNavState.pop()
                                                 },
@@ -1721,20 +1723,8 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ChooseMirrorAction -> {
-                                        val savedButton =
-                                            currentSubPage.buttonId?.let { id ->
-                                                activeLayout?.buttons?.firstOrNull { it.id == id }
-                                            }
                                         val effectiveButton =
-                                            buttonDraft
-                                                ?: savedButton
-                                                ?: PadButton(
-                                                    id = UUID.randomUUID().toString(),
-                                                    label = stringResource(R.string.macropad_editor_new_button_default_label),
-                                                    posX = 0.5f,
-                                                    posY = 0.5f,
-                                                    action = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
-                                                )
+                                            resolveSubPageButtons(currentSubPage.buttonId).effectiveButton
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
@@ -1754,7 +1744,7 @@ fun MacroPadEditor(
                                             MirrorActionPickerSubPageContent(
                                                 currentAction = effectiveButton.action,
                                                 onSelectAction = { act ->
-                                                    val updatedDraft = applyActionToDraftButton(effectiveButton, act)
+                                                    val updatedDraft = applyDraftAction(effectiveButton, act)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
                                                     MacroPadNavState.pop()
                                                 },
@@ -1763,20 +1753,8 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ChooseToolsAction -> {
-                                        val savedButton =
-                                            currentSubPage.buttonId?.let { id ->
-                                                activeLayout?.buttons?.firstOrNull { it.id == id }
-                                            }
                                         val effectiveButton =
-                                            buttonDraft
-                                                ?: savedButton
-                                                ?: PadButton(
-                                                    id = UUID.randomUUID().toString(),
-                                                    label = stringResource(R.string.macropad_editor_new_button_default_label),
-                                                    posX = 0.5f,
-                                                    posY = 0.5f,
-                                                    action = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
-                                                )
+                                            resolveSubPageButtons(currentSubPage.buttonId).effectiveButton
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
@@ -1796,7 +1774,7 @@ fun MacroPadEditor(
                                             ToolsActionPickerSubPageContent(
                                                 currentAction = effectiveButton.action,
                                                 onSelectAction = { act ->
-                                                    val updatedDraft = applyActionToDraftButton(effectiveButton, act)
+                                                    val updatedDraft = applyDraftAction(effectiveButton, act)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
                                                     MacroPadNavState.pop()
                                                 },
@@ -1805,20 +1783,8 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ChooseLayoutAction -> {
-                                        val savedButton =
-                                            currentSubPage.buttonId?.let { id ->
-                                                activeLayout?.buttons?.firstOrNull { it.id == id }
-                                            }
                                         val effectiveButton =
-                                            buttonDraft
-                                                ?: savedButton
-                                                ?: PadButton(
-                                                    id = UUID.randomUUID().toString(),
-                                                    label = stringResource(R.string.macropad_editor_new_button_default_label),
-                                                    posX = 0.5f,
-                                                    posY = 0.5f,
-                                                    action = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
-                                                )
+                                            resolveSubPageButtons(currentSubPage.buttonId).effectiveButton
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
@@ -1838,7 +1804,40 @@ fun MacroPadEditor(
                                             LayoutActionPickerSubPageContent(
                                                 currentAction = effectiveButton.action,
                                                 onSelectAction = { act ->
-                                                    val updatedDraft = applyActionToDraftButton(effectiveButton, act)
+                                                    val updatedDraft = applyDraftAction(effectiveButton, act)
+                                                    MacroPadNavState.setButtonDraft(updatedDraft)
+                                                    MacroPadNavState.pop()
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ChooseTouchAction -> {
+                                        val effectiveButton =
+                                            resolveSubPageButtons(
+                                                buttonId = currentSubPage.buttonId,
+                                                fallbackAction = PadAction.TouchTap(isRecorded = false),
+                                            ).effectiveButton
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    effectiveButton.label.ifBlank {
+                                                        stringResource(
+                                                            if (currentSubPage.buttonId != null) {
+                                                                R.string.macropad_editor_section_button_settings
+                                                            } else {
+                                                                R.string.macropad_editor_add_button
+                                                            },
+                                                        )
+                                                    },
+                                                    stringResource(R.string.macropad_picker_touch_title),
+                                                ),
+                                        ) {
+                                            TouchActionPickerSubPageContent(
+                                                currentAction = effectiveButton.action,
+                                                onSelectAction = { act ->
+                                                    val updatedDraft = applyDraftAction(effectiveButton, act)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
                                                     MacroPadNavState.pop()
                                                 },
@@ -1847,20 +1846,8 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ChooseMediaAction -> {
-                                        val savedButton =
-                                            currentSubPage.buttonId?.let { id ->
-                                                activeLayout?.buttons?.firstOrNull { it.id == id }
-                                            }
                                         val effectiveButton =
-                                            buttonDraft
-                                                ?: savedButton
-                                                ?: PadButton(
-                                                    id = UUID.randomUUID().toString(),
-                                                    label = stringResource(R.string.macropad_editor_new_button_default_label),
-                                                    posX = 0.5f,
-                                                    posY = 0.5f,
-                                                    action = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
-                                                )
+                                            resolveSubPageButtons(currentSubPage.buttonId).effectiveButton
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
@@ -1880,7 +1867,7 @@ fun MacroPadEditor(
                                             MediaActionPickerSubPageContent(
                                                 currentAction = effectiveButton.action,
                                                 onSelectAction = { act ->
-                                                    val updatedDraft = applyActionToDraftButton(effectiveButton, act)
+                                                    val updatedDraft = applyDraftAction(effectiveButton, act)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
                                                     MacroPadNavState.pop()
                                                 },
@@ -1943,20 +1930,8 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ChooseMacroAction -> {
-                                        val savedButton =
-                                            currentSubPage.buttonId?.let { id ->
-                                                activeLayout?.buttons?.firstOrNull { it.id == id }
-                                            }
                                         val effectiveButton =
-                                            buttonDraft
-                                                ?: savedButton
-                                                ?: PadButton(
-                                                    id = UUID.randomUUID().toString(),
-                                                    label = stringResource(R.string.macropad_editor_new_button_default_label),
-                                                    posX = 0.5f,
-                                                    posY = 0.5f,
-                                                    action = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
-                                                )
+                                            resolveSubPageButtons(currentSubPage.buttonId).effectiveButton
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
@@ -1976,7 +1951,7 @@ fun MacroPadEditor(
                                             MacroActionPickerSubPageContent(
                                                 currentAction = effectiveButton.action,
                                                 onSelectAction = { act ->
-                                                    val updatedDraft = applyActionToDraftButton(effectiveButton, act)
+                                                    val updatedDraft = applyDraftAction(effectiveButton, act)
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
                                                     MacroPadNavState.pop()
                                                 },
@@ -2629,6 +2604,7 @@ private fun ButtonsDeck(
 ) {
     val colors = LocalAppColors.current
     val buttons = layout?.buttons ?: emptyList()
+    val allProfiles by MacroPadState.profiles.collectAsStateWithLifecycle()
     val gridMode by MacroPadState.gridMode.collectAsStateWithLifecycle()
     var isReordering by remember { mutableStateOf(false) }
 
@@ -2760,12 +2736,36 @@ private fun ButtonsDeck(
             }
         } else if (!isReordering) {
             items(buttons, key = { it.id }) { btn ->
+                val isOrphanedTarget =
+                    btn.action.hasMissingTarget(
+                        allProfiles = allProfiles,
+                        activeProfile = profile,
+                    )
                 GamepadActionCard(
                     title = btn.label.ifBlank { btn.action.displayLabel() },
                     description = describePadButton(btn),
                     icon = btn.action.toCategory().icon,
                     onClick = { onEditButton(btn) },
                     itemKey = btn.id,
+                    trailingContent =
+                        if (isOrphanedTarget) {
+                            {
+                                GamepadPill(
+                                    text = stringResource(R.string.macropad_button_missing_target_badge),
+                                    isDestructive = true,
+                                    leadingContent = {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Warning,
+                                            contentDescription = null,
+                                            tint = colors.error,
+                                            modifier = Modifier.size(MPE_WARNING_BADGE_ICON_SIZE),
+                                        )
+                                    },
+                                )
+                            }
+                        } else {
+                            null
+                        },
                     onFocusChanged = { isFocused ->
                         if (isFocused) {
                             MacroPadState.setSelectedButtonId(btn.id)

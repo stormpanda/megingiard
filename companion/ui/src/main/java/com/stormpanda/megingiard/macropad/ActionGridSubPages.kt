@@ -10,6 +10,8 @@ import androidx.compose.material.icons.rounded.AdsClick
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
@@ -118,11 +120,21 @@ private val TOOLS_ACTION_ITEMS =
             R.string.macropad_action_stop_all_macros_desc,
             Icons.Rounded.StopCircle,
         ),
+    )
+
+private val TOUCH_ACTION_ITEMS =
+    listOf(
         ActionGridItem(
-            PadAction.TouchTap(),
+            PadAction.TouchTap(isRecorded = false),
             R.string.macropad_action_touch_tap,
             R.string.macropad_action_touch_tap_desc,
             Icons.Rounded.AdsClick,
+        ),
+        ActionGridItem(
+            PadAction.SingleTouchGesture(),
+            R.string.macropad_action_single_touch_gesture,
+            R.string.macropad_action_single_touch_gesture_desc,
+            Icons.Rounded.Gesture,
         ),
     )
 
@@ -145,6 +157,12 @@ private val LAYOUT_ACTION_ITEMS =
             R.string.macropad_action_switch_to_layout,
             R.string.macropad_action_switch_to_layout_desc,
             Icons.AutoMirrored.Rounded.ViewQuilt,
+        ),
+        ActionGridItem(
+            PadAction.SwitchToProfile(),
+            R.string.macropad_action_switch_to_profile,
+            R.string.macropad_action_switch_to_profile_desc,
+            Icons.Rounded.Folder,
         ),
         ActionGridItem(
             PadAction.ProfileSwitcher,
@@ -216,10 +234,25 @@ private fun GenericActionGridPickerSubPageContent(
             icon = item.icon,
             actionText = if (isSelected) stringResource(R.string.gamepad_color_selected) else null,
             alwaysShowFullDescription = true,
-            onClick = { onSelectAction(item.action.toCategory().defaultAction()) },
+            onClick = { onSelectAction(if (isSelected) currentAction else item.action.toCategory().defaultAction()) },
             modifier = cardModifier,
         )
     }
+}
+
+@Composable
+internal fun TouchActionPickerSubPageContent(
+    currentAction: PadAction,
+    onSelectAction: (action: PadAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GenericActionGridPickerSubPageContent(
+        tag = "TouchActionPickerSubPageContent",
+        items = TOUCH_ACTION_ITEMS,
+        currentAction = currentAction,
+        onSelectAction = onSelectAction,
+        modifier = modifier,
+    )
 }
 
 @Composable

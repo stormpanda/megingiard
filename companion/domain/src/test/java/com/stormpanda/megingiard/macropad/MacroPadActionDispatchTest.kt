@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionCommand
 import com.stormpanda.megingiard.CompanionViewMode
+import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.privd.PrivdClient
@@ -18,6 +19,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -191,11 +193,84 @@ class MacroPadActionDispatchTest {
     }
 
     @Test
+    fun injectActionDown_switchToLayout_missingTargetEmitsToastOncePerPress() =
+        runTest {
+            val layoutA = PadLayout(id = "layout-a", name = "Main")
+            val profile =
+                PadProfile(
+                    id = "prof-1",
+                    name = "Test",
+                    layouts = listOf(layoutA),
+                    activeLayoutId = "layout-a",
+                )
+            MacroPadState.loadFrom(listOf(profile), "prof-1")
+
+            MacroPadState.missingLayoutToastEvent.test {
+                val missingTap = PadAction.SwitchToLayout(layoutId = "deleted-layout", holdToShift = false)
+                injectActionDown(missingTap)
+                assertEquals(Unit, awaitItem())
+                assertEquals("layout-a", MacroPadState.activeLayout.value?.id)
+                injectActionUp(missingTap)
+                expectNoEvents()
+
+                val missingShift = PadAction.SwitchToLayout(layoutId = "deleted-layout", holdToShift = true)
+                injectActionDown(missingShift)
+                assertEquals(Unit, awaitItem())
+                assertEquals("layout-a", MacroPadState.activeLayout.value?.id)
+                injectActionUp(missingShift)
+                expectNoEvents()
+            }
+        }
+
+    @Test
     fun injectActionDown_switchToHub() {
         AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
         injectActionDown(PadAction.SwitchToHub)
         assertEquals(CompanionViewMode.DASHBOARD, AppStateManager.companionViewMode.value)
     }
+
+    @Test
+    fun injectActionDown_switchToProfile_switchesProfileAndPinsMacroPadMode() =
+        runTest {
+            val p1 =
+                PadProfile(
+                    id = "prof-1",
+                    name = "Game A",
+                    layouts = listOf(PadLayout(id = "l1", name = "Main A")),
+                    activeLayoutId = "l1",
+                )
+            val p2 =
+                PadProfile(
+                    id = "prof-2",
+                    name = "Game B",
+                    layouts =
+                        listOf(
+                            PadLayout(id = "l2-a", name = "Main B"),
+                            PadLayout(id = "l2-b", name = "Combat B"),
+                        ),
+                    activeLayoutId = "l2-b",
+                )
+            MacroPadState.loadFrom(listOf(p1, p2), "prof-1")
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+
+            injectActionDown(PadAction.SwitchToProfile(profileId = "prof-2"))
+            assertEquals("prof-2", MacroPadState.activeProfile.value?.id)
+            assertEquals("l2-b", MacroPadState.activeLayout.value?.id)
+            assertEquals(CompanionViewMode.MACROPAD, AppStateManager.companionViewMode.value)
+
+            injectActionUp(PadAction.SwitchToProfile(profileId = "prof-2"))
+            assertEquals("prof-2", MacroPadState.activeProfile.value?.id)
+
+            // Missing target profile leaves active profile and AUTO view mode unchanged and emits toast event
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+            MacroPadState.missingProfileToastEvent.test {
+                injectActionDown(PadAction.SwitchToProfile(profileId = "deleted-profile-id"))
+                assertEquals(Unit, awaitItem())
+                assertEquals("prof-2", MacroPadState.activeProfile.value?.id)
+                assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 
     @Test
     fun injectActionDown_stopAllMacros() =
@@ -253,11 +328,65 @@ class MacroPadActionDispatchTest {
 
             injectActionUp(action)
             assertEquals("U $MP_TOUCH_TAP_SLOT\n", PrivdClient.pollCommandForTest())
+
+            // Unrecorded TouchTap must no-op on both down and up
+            val unrecorded = PadAction.TouchTap(normX = 0.5f, normY = 0.5f, isRecorded = false)
+            injectActionDown(unrecorded)
+            injectActionUp(unrecorded)
+            assertNull(PrivdClient.pollCommandForTest())
         } finally {
             PrivdClient.clearQueueForTest()
             PrivdClient.isConnectedForTest = null
         }
     }
+
+    @Test
+    fun injectActionDown_singleTouchGestureExecutesViaMacroExecutorAndStopsViaStopAllMacros() =
+        runBlocking {
+            PrivdClient.isConnectedForTest = true
+            PrivdClient.clearQueueForTest()
+            try {
+                // Empty SingleTouchGesture is a safe no-op
+                injectActionDown(PadAction.SingleTouchGesture(), buttonId = "btn-empty")
+                assertNull(PrivdClient.pollCommandForTest())
+
+                val gestureAction =
+                    PadAction.SingleTouchGesture(
+                        samples =
+                            listOf(
+                                TouchSample(0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.25f, normY = 0.5f),
+                                TouchSample(10L, pointerId = 1, action = TouchAction.DOWN, normX = 0.75f, normY = 0.5f),
+                                TouchSample(400L, pointerId = 0, action = TouchAction.UP, normX = 0.25f, normY = 0.5f),
+                                TouchSample(400L, pointerId = 1, action = TouchAction.UP, normX = 0.75f, normY = 0.5f),
+                            ),
+                    )
+                val execId = singleTouchGestureExecutionId("btn-pinch")
+                injectActionDown(gestureAction, buttonId = "btn-pinch")
+
+                val started =
+                    withTimeoutOrNull(1000L) {
+                        while (!MacroExecutor.isRunning(execId)) {
+                            delay(10L)
+                        }
+                        true
+                    } ?: false
+                assertTrue(started)
+
+                injectActionDown(PadAction.StopAllMacros)
+                val stopped =
+                    withTimeoutOrNull(1000L) {
+                        while (MacroExecutor.isRunning(execId)) {
+                            delay(10L)
+                        }
+                        true
+                    } ?: false
+                assertTrue(stopped)
+            } finally {
+                MacroExecutor.stopAll()
+                PrivdClient.clearQueueForTest()
+                PrivdClient.isConnectedForTest = null
+            }
+        }
 
     @Test
     fun injectActionDownAndUp_mediaControl() {

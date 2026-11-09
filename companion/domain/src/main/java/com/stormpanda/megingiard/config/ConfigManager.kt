@@ -8,8 +8,8 @@ import android.provider.OpenableColumns
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.BackgroundScaleMode
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.macropad.PadAction
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.remapTargetIds
 import com.stormpanda.megingiard.security.HmacUtil
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
@@ -697,8 +697,10 @@ object ConfigManager {
             masksDir.mkdirs()
         }
 
+        val profileIdMap = profiles.associate { profile -> profile.id to UUID.randomUUID().toString() }
+
         for (profile in profiles) {
-            val newProfileId = UUID.randomUUID().toString()
+            val newProfileId = profileIdMap.getValue(profile.id)
 
             // Build macro ID remap: old → new for all macros in this profile
             val macroIdMap = mutableMapOf<String, String>()
@@ -714,7 +716,7 @@ object ConfigManager {
             val layoutIdMap = layoutIdPairs.associate { (oldLayout, newId) -> oldLayout.id to newId }
             val fallbackLayoutId = layoutIdPairs.firstOrNull()?.second
 
-            // Remap macro and layout references in button actions and handle background/mask image copying/extraction
+            // Remap macro, layout, and profile references in button actions and handle background/mask image copying/extraction
             val remappedLayouts =
                 layoutIdPairs.map { (layout, newLayoutId) ->
                     val oldLayoutId = layout.id
@@ -723,11 +725,11 @@ object ConfigManager {
                             button.copy(
                                 id = UUID.randomUUID().toString(),
                                 action =
-                                    remapImportedAction(
-                                        action = button.action,
+                                    button.action.remapTargetIds(
                                         macroIdMap = macroIdMap,
                                         layoutIdMap = layoutIdMap,
                                         fallbackLayoutId = fallbackLayoutId,
+                                        profileIdMap = profileIdMap,
                                     ),
                             )
                         }
@@ -824,28 +826,6 @@ object ConfigManager {
             AppLog.d(TAG, "imported profile '${profile.name}' → $newProfileId (${remappedMacros.size} macros)")
         }
     }
-
-    private fun remapImportedAction(
-        action: PadAction,
-        macroIdMap: Map<String, String>,
-        layoutIdMap: Map<String, String>,
-        fallbackLayoutId: String?,
-    ): PadAction =
-        when (action) {
-            is PadAction.Macro -> {
-                val newMacroId = macroIdMap[action.macroId] ?: action.macroId
-                PadAction.Macro(macroId = newMacroId)
-            }
-
-            is PadAction.SwitchToLayout -> {
-                val newLayoutId = layoutIdMap[action.layoutId] ?: fallbackLayoutId ?: action.layoutId
-                action.copy(layoutId = newLayoutId)
-            }
-
-            else -> {
-                action
-            }
-        }
 
     // ── Checksum ─────────────────────────────────────────────────────────────
 
