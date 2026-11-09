@@ -553,16 +553,6 @@ internal fun EditButtonSubPageContent(
         }
     }
 
-    LaunchedEffect(macros) {
-        val currentAction = action
-        if (currentAction is PadAction.Macro) {
-            val macroExists = macros.any { it.id == currentAction.macroId }
-            if (!macroExists) {
-                action = initAction
-            }
-        }
-    }
-
     var posX by remember(button) { mutableFloatStateOf(button?.posX ?: PBD_DEFAULT_CENTER_POS) }
     var posY by remember(button) { mutableFloatStateOf(button?.posY ?: PBD_DEFAULT_CENTER_POS) }
     var isAdjusting by remember { mutableStateOf(false) }

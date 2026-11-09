@@ -70,7 +70,7 @@
 
 - `PadActionPicker` MUST provide a grouped action selection flow in `EditButtonSubPageContent`.
 - The button type group (`Keyboard`, `Gamepad`, `Mouse`, `Touch`, `App Quick-Switch`, `Macro`, `Layout`, `Mirror`, `Tools`, `Media Controls`) determines which action sub-page picker opens.
-- The second dropdown selects the concrete action inside the currently selected group. **If the selected group only has a single enabled concrete action, this second dropdown is hidden, and that action is automatically selected in the background.**
+- The detail sub-page (`ActionDetailPickerSubPageContent`) selects the concrete action inside the currently selected group. **If the selected group only has a single enabled concrete action, the detail sub-page is skipped, and that action is automatically selected when choosing the group.**
 - Group and action labels MUST come from `strings.xml` resources.
 - Existing action-specific inline editors (keyboard modifier slots, gamepad extra-button slots, macro picker, and Display 0 touch recording triggers for `TouchTap` and `SingleTouchGesture`) MUST appear after action selection. `TouchTap` configures coordinates strictly via Display 0 tap recording (no manual X/Y sliders), and both unrecorded `TouchTap` (`isRecorded == false`) and empty `SingleTouchGesture` (`samples.isEmpty()`) keep **Create / Save** disabled until recorded.
 - **No migration required:** existing saved buttons are unaffected; `iconName` defaults to `null` on deserialisation.
