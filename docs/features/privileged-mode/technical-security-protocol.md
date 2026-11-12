@@ -28,7 +28,7 @@ OS-level peer credential checks (`SO_PEERCRED` / `peerCredentials.uid` checks) a
 
 #### Mutual HMAC-SHA256 Handshake & Protocol Version Verification
 
-Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`, currently `19`):
+Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`, currently `20`):
 
 ```
 Daemon -> App     CHAL <32-hex-nonce1>\n
@@ -48,7 +48,7 @@ The first half (`CHAL/AUTH/OK`) proves the app knows the key before the daemon a
   - Legacy pre-versioning daemons ignore `VERSION` and produce no `VERSION_OK` response; the app's 1-second version read times out and treats the connection as failed.
   - Legacy pre-versioning apps fail to issue `VERSION` as their initial command; new daemons reject unverified initial commands with `VERSION_MISMATCH` and close the socket.
 - **Auto-Update & Reconnect Prompt**: Connection failure triggers background auto-rebootstrap (or `PrivdState.FAILED` with `PrivdError.DAEMON_UNREACHABLE`), guiding daemon replacement during app upgrades or downgrades.
-- **Mandatory Version Increment Rule**: Whenever the daemon source code (`megingiard_privd.c`) or protocol behavior is updated, developers and agents **must** increment `PRIVD_VERSION` in both `megingiard_privd.c` and `PrivdConstants.kt` and run `./scripts/build_megingiard_privd.sh`.
+- **Mandatory Version Increment Rule**: Whenever the daemon source code (`megingiard_privd.c`), `:mirrorserver` (`megingiard_mirror.dex`), or protocol behavior is updated, developers and agents **must** increment `PRIVD_VERSION` in both `megingiard_privd.c` and `PrivdConstants.kt` and run `./scripts/build_megingiard_privd.sh`.
 
 Malformed messages, missing messages, wrong HMAC values, version mismatch, or timeout expiration fail closed and close the socket. The handshake read timeout is 5 seconds for HMAC and 1 second for version check, and is reset to normal blocking I/O only after the full exchange succeeds.
 
@@ -183,7 +183,7 @@ When the socket fails, `markBroken()` acquires `stateLock`, runs `cleanupLocked(
 
 | File | Responsibility |
 | --- | --- |
-| `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` | Shared daemon version (`PRIVD_VERSION = 19`), asset names, canonical TCP ports (`51234` / `51244`), and remote file/process path helpers |
+| `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` | Shared daemon version (`PRIVD_VERSION = 20`), asset names, canonical TCP ports (`51234` / `51244`), and remote file/process path helpers |
 | `companion/ui/src/main/cpp/megingiard_privd.c` | Native daemon source (TCP loopback server, HMAC-SHA256 auth, dynamic primary touchscreen `EVIOCGABS` discovery, evdev/uinput writers, passive gamepad/touch streams, `SCREENSHOT` / `SCREENSHOT_B64`, `READ_FILE`, `LIST_PROCESSES`) |
 | `companion/ui/src/main/cpp/cmd_parsers.h` | Pure C command parsers (`parse_touch_command`, `parse_mouse_command`, `parse_key_command`, `parse_gamepad_command`, `is_primary_touch_device_name`) shared with native unit tests |
 | `companion/ui/src/main/assets/megingiard_privd_arm64` | Pre-built static arm64 daemon binary |

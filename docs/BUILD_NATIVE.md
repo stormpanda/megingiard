@@ -16,7 +16,7 @@ The checked-in asset binaries are part of the trusted runtime surface. Whenever 
 
 The agent workflow in [AGENTS.md](../AGENTS.md#3-checklist-for-every-change) mirrors this policy. If a script fails, fix the source error before proceeding.
 
-> **Daemon Versioning Mandatory Requirement:** Whenever `megingiard_privd.c` or any daemon protocol behavior is modified, you **must** increment `PRIVD_VERSION` in both `companion/ui/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then run `./scripts/build_megingiard_privd.sh`. This guarantees that the app detects version mismatches on already-running daemons after updates, failing the socket handshake and initiating an automatic binary update/re-push sequence.
+> **Daemon Versioning Mandatory Requirement:** Whenever `megingiard_privd.c`, `:mirrorserver` (`megingiard_mirror.dex`), or any daemon protocol behavior is modified, you **must** increment `PRIVD_VERSION` in both `companion/ui/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then run `./scripts/build_megingiard_privd.sh`. This guarantees that the app detects version mismatches on already-running daemons after updates, failing the socket handshake and initiating an automatic binary + DEX update/re-push sequence.
 
 ---
 
@@ -41,8 +41,8 @@ The `megingiard_privd` daemon uses a per-install HMAC key generated on the devic
 
 `companion/ui/src/main/cpp/megingiard_privd.c`
 
-The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug; current protocol `PRIVD_VERSION = 19`). It provides:
-1. Multi-touch injection (`D`/`M`/`U`) and touchscreen event observation (`SUB TOUCH`) via the dynamically discovered primary touchscreen `evdev` node (`INPUT_PROP_DIRECT` + `ABS_MT_POSITION_X/Y` + `EVIOCGABS`, excluding `*_sec` secondary panels; sensor dimensions reported in `VERSION_OK 19 <touchW> <touchH>`).
+The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug; current protocol `PRIVD_VERSION = 20`). It provides:
+1. Multi-touch injection (`D`/`M`/`U`) and touchscreen event observation (`SUB TOUCH`) via the dynamically discovered primary touchscreen `evdev` node (`INPUT_PROP_DIRECT` + `ABS_MT_POSITION_X/Y` + `EVIOCGABS`, excluding `*_sec` secondary panels; sensor dimensions reported in `VERSION_OK 20 <touchW> <touchH>`).
 2. Mouse event injection (`MM`/`MB`/`MW`/`MH`) via `/dev/uinput`.
 3. Keyboard key injection (`KB_START`/`KB_STOP`/`KD`/`KU`) via `/dev/uinput`.
 4. Gamepad input injection (`GD`/`GU`/`HD`/`JS`) and physical gamepad observation (`SUB GAMEPAD`) via `/dev/input/event*`.

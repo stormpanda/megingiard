@@ -1,140 +1,176 @@
 package com.stormpanda.megingiard.mirrorserver;
 
 import android.graphics.Rect;
+import android.hardware.display.DisplayManager;
+import android.hardware.display.VirtualDisplay;
 import android.os.Build;
 import android.os.IBinder;
 import android.view.Surface;
-
-import dalvik.system.PathClassLoader;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
 /**
- * Reflection wrappers for hidden {@code android.view.SurfaceControl} (API 33) and
- * {@code com.android.server.display.DisplayControl} (API 34+) virtual display APIs.
+ * Reflection wrappers for privileged direct-to-Surface display mirroring across Android 13–16+.
  *
- * <p>Android 14+ (API 34–36+) removed {@code SurfaceControl.createDisplay} and
- * {@code SurfaceControl.destroyDisplay}, moving virtual display token creation to
- * {@code com.android.server.display.DisplayControl} inside {@code services.jar}
- * (backed by {@code libandroid_servers.so}), while keeping {@code SurfaceControl.Transaction}
- * for surface, layer-stack, and projection binding.</p>
+ * <ul>
+ *   <li><b>API 33 (Android 13, e.g. AYN Thor):</b> Uses hidden
+ *       {@code SurfaceControl.createDisplay(name, secure=false)} +
+ *       {@code SurfaceControl.Transaction} ({@code setDisplaySurface},
+ *       {@code setDisplayLayerStack(0)}, {@code setDisplayProjection}).</li>
+ *   <li><b>API 34+ (Android 14–16+, e.g. Retroid Pocket Duo on SDK 36):</b>
+ *       Android 14 removed {@code SurfaceControl.createDisplay}, and Android 15 QPR / 16
+ *       enabled {@code reject_dupe_layerstacks: true} in SurfaceFlinger (filtering internal
+ *       Display 0 layers with {@code toInternalDisplay=true} so raw {@code DisplayControl}
+ *       virtual displays on {@code layerStack=0} render {@code 0 Layers}). Uses the framework
+ *       {@code @TestApi} helper
+ *       {@code DisplayManager.createVirtualDisplay(name, width, height, displayIdToMirror, surface)},
+ *       which allocates a private {@code VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR} virtual display on its
+ *       own dedicated {@code layerStack} and mirrors Display 0 via {@code WindowManagerService}'s
+ *       {@code ContentRecorder} ({@code SurfaceControl.mirrorSurface}).</li>
+ * </ul>
  */
 final class SurfaceControlReflect {
 
-    private static final String SERVICES_JAR_PATH = "/system/framework/services.jar";
-    private static final String SYSTEM_LIB_SEARCH_PATH = "/system/lib64:/system/lib";
-    private static final String SYSTEM_LIB_ANDROID_SERVERS = "/system/lib64/libandroid_servers.so";
-    private static final String DISPLAY_CONTROL_CLASS = "com.android.server.display.DisplayControl";
+    static final int SDK_ANDROID_14 = 34;
+    private static final int DISPLAY_ORIENTATION_0 = 0;
 
-    private static final Class<?> SURFACE_CONTROL;
-    private static final Method M_CREATE_DISPLAY;
-    private static final Method M_DESTROY_DISPLAY;
-
-    // SurfaceControl.Transaction — replaces openTransaction/closeTransaction on API 31+
-    private static final Constructor<?> TRANSACTION_CTOR;
-    private static final Method M_TX_SET_DISPLAY_SURFACE;
-    private static final Method M_TX_SET_DISPLAY_LAYER_STACK;
-    private static final Method M_TX_SET_DISPLAY_PROJECTION;
-    private static final Method M_TX_APPLY;
-
-    static {
-        try {
-            SURFACE_CONTROL = Class.forName("android.view.SurfaceControl");
-
-            Method createMethod;
-            Method destroyMethod;
-            if (Build.VERSION.SDK_INT < 34) {
-                try {
-                    createMethod = SURFACE_CONTROL.getMethod(
-                            "createDisplay", String.class, boolean.class);
-                    destroyMethod = SURFACE_CONTROL.getMethod(
-                            "destroyDisplay", IBinder.class);
-                } catch (NoSuchMethodException fallbackEx) {
-                    Class<?> displayControl = loadDisplayControlClass();
-                    createMethod = displayControl.getMethod(
-                            "createVirtualDisplay", String.class, boolean.class);
-                    destroyMethod = displayControl.getMethod(
-                            "destroyVirtualDisplay", IBinder.class);
-                }
-            } else {
-                Class<?> displayControl = loadDisplayControlClass();
-                createMethod = displayControl.getMethod(
-                        "createVirtualDisplay", String.class, boolean.class);
-                destroyMethod = displayControl.getMethod(
-                        "destroyVirtualDisplay", IBinder.class);
-            }
-            M_CREATE_DISPLAY = createMethod;
-            M_DESTROY_DISPLAY = destroyMethod;
-
-            Class<?> txClass = Class.forName("android.view.SurfaceControl$Transaction");
-            TRANSACTION_CTOR = txClass.getConstructor();
-            M_TX_SET_DISPLAY_SURFACE = txClass.getMethod(
-                    "setDisplaySurface", IBinder.class, Surface.class);
-            M_TX_SET_DISPLAY_LAYER_STACK = txClass.getMethod(
-                    "setDisplayLayerStack", IBinder.class, int.class);
-            M_TX_SET_DISPLAY_PROJECTION = txClass.getMethod(
-                    "setDisplayProjection",
-                    IBinder.class, int.class, Rect.class, Rect.class);
-            M_TX_APPLY = txClass.getMethod("apply");
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException("SurfaceControl/DisplayControl reflection setup failed", e);
-        }
+    enum BackendKind {
+        SURFACE_CONTROL_LEGACY,
+        DISPLAY_MANAGER_MIRROR,
     }
+
+    interface MirrorSession extends AutoCloseable {
+        @Override
+        void close();
+    }
+
+    private static Method sDisplayManagerCreateVirtualDisplay;
+    private static LegacySurfaceControlBindings sLegacyBindings;
 
     private SurfaceControlReflect() {}
 
-    private static Class<?> loadDisplayControlClass() throws ReflectiveOperationException {
-        PathClassLoader servicesLoader = new PathClassLoader(
-                SERVICES_JAR_PATH,
-                SYSTEM_LIB_SEARCH_PATH,
-                ClassLoader.getSystemClassLoader());
-        Class<?> displayControl = servicesLoader.loadClass(DISPLAY_CONTROL_CLASS);
-        try {
-            Method loadLibrary0 = Runtime.class.getDeclaredMethod(
-                    "loadLibrary0", Class.class, String.class);
-            loadLibrary0.setAccessible(true);
-            loadLibrary0.invoke(Runtime.getRuntime(), displayControl, "android_servers");
-        } catch (Throwable ignored) {
-            System.load(SYSTEM_LIB_ANDROID_SERVERS);
-        }
-        return displayControl;
+    static BackendKind selectBackendKind(int sdkInt) {
+        return sdkInt >= SDK_ANDROID_14
+                ? BackendKind.DISPLAY_MANAGER_MIRROR
+                : BackendKind.SURFACE_CONTROL_LEGACY;
     }
 
-    static IBinder createDisplay(String name, boolean secure) {
+    static <T> T requireNonNullVirtualDisplay(T virtualDisplay, String name) {
+        if (virtualDisplay == null) {
+            throw new IllegalStateException(
+                    "DisplayManager.createVirtualDisplay returned null for " + name);
+        }
+        return virtualDisplay;
+    }
+
+    static MirrorSession openMirrorSession(
+            String name,
+            int width,
+            int height,
+            int displayIdToMirror,
+            Surface surface) {
+        if (selectBackendKind(Build.VERSION.SDK_INT) == BackendKind.DISPLAY_MANAGER_MIRROR) {
+            return openDisplayManagerSession(name, width, height, displayIdToMirror, surface);
+        }
+        return openLegacyOrFallbackSession(name, width, height, displayIdToMirror, surface);
+    }
+
+    private static MirrorSession openDisplayManagerSession(
+            String name,
+            int width,
+            int height,
+            int displayIdToMirror,
+            Surface surface) {
         try {
-            return (IBinder) M_CREATE_DISPLAY.invoke(null, name, secure);
+            Method createMethod = getDisplayManagerCreateMethod();
+            VirtualDisplay rawDisplay = (VirtualDisplay) createMethod.invoke(
+                    null, name, width, height, displayIdToMirror, surface);
+            final VirtualDisplay virtualDisplay = requireNonNullVirtualDisplay(rawDisplay, name);
+            return new MirrorSession() {
+                private boolean closed;
+
+                @Override
+                public synchronized void close() {
+                    if (closed) return;
+                    closed = true;
+                    virtualDisplay.release();
+                }
+            };
         } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("DisplayManager.createVirtualDisplay failed", e);
         }
     }
 
-    static void destroyDisplay(IBinder token) {
+    private static MirrorSession openLegacyOrFallbackSession(
+            String name,
+            int width,
+            int height,
+            int displayIdToMirror,
+            Surface surface) {
+        LegacySurfaceControlBindings bindings;
         try {
-            M_DESTROY_DISPLAY.invoke(null, token);
+            bindings = getLegacyBindings();
+        } catch (NoSuchMethodException missingLegacyApi) {
+            return openDisplayManagerSession(name, width, height, displayIdToMirror, surface);
         } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("SurfaceControl reflection setup failed", e);
+        }
+
+        IBinder token = null;
+        try {
+            token = (IBinder) bindings.createDisplay.invoke(null, name, false);
+            if (token == null) {
+                throw new IllegalStateException(
+                        "SurfaceControl.createDisplay returned null for " + name);
+            }
+            Rect rect = new Rect(0, 0, width, height);
+            configureLegacyDisplay(bindings, token, surface, displayIdToMirror, rect, rect);
+            final IBinder activeToken = token;
+            final Method destroyMethod = bindings.destroyDisplay;
+            return new MirrorSession() {
+                private boolean closed;
+
+                @Override
+                public synchronized void close() {
+                    if (closed) return;
+                    closed = true;
+                    try {
+                        destroyMethod.invoke(null, activeToken);
+                    } catch (ReflectiveOperationException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            };
+        } catch (Throwable t) {
+            if (token != null) {
+                try {
+                    bindings.destroyDisplay.invoke(null, token);
+                } catch (Throwable ignored) {
+                }
+            }
+            if (t instanceof RuntimeException) {
+                throw (RuntimeException) t;
+            }
+            throw new RuntimeException("Failed to configure legacy SurfaceControl display", t);
         }
     }
 
-    /**
-     * Creates a {@link android.view.SurfaceControl.Transaction}, configures the
-     * virtual display projection atomically, and applies it.
-     *
-     * @param layerStack   layer-stack id of the physical display to capture
-     *                     (0 = main display)
-     * @param layerStackRect source region on the display layer stack
-     * @param displayRect  destination region on the virtual display surface
-     */
-    static void configureDisplay(IBinder displayToken, Surface surface,
-                                 int layerStack, Rect layerStackRect, Rect displayRect) {
+    private static void configureLegacyDisplay(
+            LegacySurfaceControlBindings bindings,
+            IBinder displayToken,
+            Surface surface,
+            int layerStack,
+            Rect layerStackRect,
+            Rect displayRect) throws ReflectiveOperationException {
         Object tx = null;
         try {
-            tx = TRANSACTION_CTOR.newInstance();
-            M_TX_SET_DISPLAY_SURFACE.invoke(tx, displayToken, surface);
-            configureDisplayTransaction(tx, displayToken, layerStack, 0, layerStackRect, displayRect);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException(e);
+            tx = bindings.transactionCtor.newInstance();
+            bindings.setDisplaySurface.invoke(tx, displayToken, surface);
+            bindings.setDisplayLayerStack.invoke(tx, displayToken, layerStack);
+            bindings.setDisplayProjection.invoke(
+                    tx, displayToken, DISPLAY_ORIENTATION_0, layerStackRect, displayRect);
+            bindings.apply.invoke(tx);
         } finally {
             if (tx instanceof AutoCloseable) {
                 try {
@@ -145,14 +181,76 @@ final class SurfaceControlReflect {
         }
     }
 
-    private static void configureDisplayTransaction(Object tx, IBinder displayToken,
-                                                    int layerStack,
-                                                    int orientation,
-                                                    Rect layerStackRect,
-                                                    Rect displayRect)
+    private static synchronized Method getDisplayManagerCreateMethod()
             throws ReflectiveOperationException {
-        M_TX_SET_DISPLAY_LAYER_STACK.invoke(tx, displayToken, layerStack);
-        M_TX_SET_DISPLAY_PROJECTION.invoke(tx, displayToken, orientation, layerStackRect, displayRect);
-        M_TX_APPLY.invoke(tx);
+        if (sDisplayManagerCreateVirtualDisplay == null) {
+            sDisplayManagerCreateVirtualDisplay = DisplayManager.class.getMethod(
+                    "createVirtualDisplay",
+                    String.class,
+                    int.class,
+                    int.class,
+                    int.class,
+                    Surface.class);
+        }
+        return sDisplayManagerCreateVirtualDisplay;
+    }
+
+    private static synchronized LegacySurfaceControlBindings getLegacyBindings()
+            throws ReflectiveOperationException {
+        if (sLegacyBindings == null) {
+            Class<?> scClass = Class.forName("android.view.SurfaceControl");
+            Method createDisplay = scClass.getMethod(
+                    "createDisplay", String.class, boolean.class);
+            Method destroyDisplay = scClass.getMethod(
+                    "destroyDisplay", IBinder.class);
+
+            Class<?> txClass = Class.forName("android.view.SurfaceControl$Transaction");
+            Constructor<?> txCtor = txClass.getConstructor();
+            Method setDisplaySurface = txClass.getMethod(
+                    "setDisplaySurface", IBinder.class, Surface.class);
+            Method setDisplayLayerStack = txClass.getMethod(
+                    "setDisplayLayerStack", IBinder.class, int.class);
+            Method setDisplayProjection = txClass.getMethod(
+                    "setDisplayProjection",
+                    IBinder.class, int.class, Rect.class, Rect.class);
+            Method apply = txClass.getMethod("apply");
+
+            sLegacyBindings = new LegacySurfaceControlBindings(
+                    createDisplay,
+                    destroyDisplay,
+                    txCtor,
+                    setDisplaySurface,
+                    setDisplayLayerStack,
+                    setDisplayProjection,
+                    apply);
+        }
+        return sLegacyBindings;
+    }
+
+    private static final class LegacySurfaceControlBindings {
+        final Method createDisplay;
+        final Method destroyDisplay;
+        final Constructor<?> transactionCtor;
+        final Method setDisplaySurface;
+        final Method setDisplayLayerStack;
+        final Method setDisplayProjection;
+        final Method apply;
+
+        LegacySurfaceControlBindings(
+                Method createDisplay,
+                Method destroyDisplay,
+                Constructor<?> transactionCtor,
+                Method setDisplaySurface,
+                Method setDisplayLayerStack,
+                Method setDisplayProjection,
+                Method apply) {
+            this.createDisplay = createDisplay;
+            this.destroyDisplay = destroyDisplay;
+            this.transactionCtor = transactionCtor;
+            this.setDisplaySurface = setDisplaySurface;
+            this.setDisplayLayerStack = setDisplayLayerStack;
+            this.setDisplayProjection = setDisplayProjection;
+            this.apply = apply;
+        }
     }
 }

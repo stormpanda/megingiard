@@ -26,6 +26,7 @@ import com.stormpanda.megingiard.macropad.BackgroundScaleMode
 import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.privd.PrivdClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -75,6 +76,8 @@ fun EmbeddedMirrorView(
             withContext(Dispatchers.IO) {
                 try {
                     bgBitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLog.e(TAG, "Failed to load background image for EmbeddedMirrorView", e)
                     bgBitmap = null
@@ -95,6 +98,8 @@ fun EmbeddedMirrorView(
             withContext(Dispatchers.IO) {
                 try {
                     maskBitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLog.e(TAG, "Failed to load mask image for EmbeddedMirrorView", e)
                     maskBitmap = null

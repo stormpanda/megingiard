@@ -11,6 +11,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 exec ./gradlew \
+  :mirrorserver:test \
   :shared:core:test \
   :shared:catalog:testDebugUnitTest \
   :shared:media:testDebugUnitTest \
