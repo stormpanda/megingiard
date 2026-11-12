@@ -146,15 +146,15 @@ private const val FTL_BACKGROUND_COLOR_DEBOUNCE_MS = 220L
 private const val FTL_BACKGROUND_UNCACHED_DEBOUNCE_MS = 120L
 private const val FTL_BACKGROUND_COLOR_ANIM_MS = 500
 private const val FTL_LETTER_NAV_DEBOUNCE_MS = 500L
-private const val FTL_LIBRARY_TRANSITION_MS = 350
+private const val FTL_LIBRARY_TRANSITION_MS = GameFocusMotionTokens.LIBRARY_TRANSITION_DURATION_MS
 private const val FTL_BG_PRIMARY_ALPHA = 0.20f
 private const val FTL_BG_SECONDARY_ALPHA = 0.10f
 
 private const val FTL_HIDDEN_BADGE_ALPHA = 1.0f
 private const val FTL_VISIBLE_BADGE_ALPHA = 0.0f
 private const val FTL_FULL_ALPHA = 1.0f
-private const val FTL_HIDE_ANIMATION_DURATION_MS = 300
-private const val FTL_CAROUSEL_ANIMATION_DURATION_MS = 120
+private const val FTL_HIDE_ANIMATION_DURATION_MS = GameFocusMotionTokens.HIDE_ANIMATION_DURATION_MS
+private const val FTL_CAROUSEL_ANIMATION_DURATION_MS = GameFocusMotionTokens.CAROUSEL_STEP_ANIM_DURATION_MS
 private const val FTL_TITLE_OVERLAY_Z_INDEX = 1f
 private const val FTL_MAX_RETAINED_CATEGORIES = 16
 private const val FTL_MAX_IN_FLIGHT_HEADROOM = 2
@@ -181,7 +181,7 @@ private val FTL_BUTTON_GAP = 2.dp
 private val FTL_SPLITSCREEN_BADGE_SIZE = 14.dp
 private val FTL_SUBTITLE_GAP = 2.dp
 private val FTL_BADGE_TEXT_GAP = 4.dp
-private const val FTL_PROMPT_ANIM_DURATION_MS = 200
+private const val FTL_PROMPT_ANIM_DURATION_MS = GameFocusMotionTokens.PROMPT_ANIM_DURATION_MS
 private const val FTL_PROMPT_SLIDE_DIVISOR = 2
 
 @Stable

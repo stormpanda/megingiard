@@ -1,16 +1,39 @@
 package com.stormpanda.megingiard.gamefocus
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.ui.ROLLING_CAROUSEL_ANIM_DURATION_MS
 
 private const val TAG = "GameFocusInputPacer"
-
-internal const val ITEM_REPEAT_INTERVAL_MS = 115L
-internal const val ITEM_INITIAL_HOLD_DELAY_MS = 240L
-internal const val CATEGORY_REPEAT_INTERVAL_MS = 210L
-internal const val CATEGORY_INITIAL_HOLD_DELAY_MS = 280L
-internal const val LIBRARY_TOGGLE_COOLDOWN_MS = 400L
-
 private const val NANOS_PER_MS = 1_000_000L
+private const val ITEM_HOLD_DELAY_MULTIPLIER = 2L
+private const val CATEGORY_SETTLE_MARGIN_MS = 10L
+private const val LIBRARY_TOGGLE_SETTLE_MARGIN_MS = 50L
+
+/**
+ * Canonical animation durations and paired controller/touch pacing budgets for Game Focus.
+ *
+ * Keeping transition durations and input cooldowns together prevents UI animations and repeat
+ * cadences from drifting out of sync when tuning feel.
+ */
+internal object GameFocusMotionTokens {
+    const val CAROUSEL_STEP_ANIM_DURATION_MS = 120
+    const val CATEGORY_ROLL_ANIM_DURATION_MS = ROLLING_CAROUSEL_ANIM_DURATION_MS
+    const val LIBRARY_TRANSITION_DURATION_MS = 350
+    const val PROMPT_ANIM_DURATION_MS = 200
+    const val HIDE_ANIMATION_DURATION_MS = 300
+
+    const val ITEM_REPEAT_INTERVAL_MS = 115L
+    const val ITEM_INITIAL_HOLD_DELAY_MS = CAROUSEL_STEP_ANIM_DURATION_MS * ITEM_HOLD_DELAY_MULTIPLIER
+    const val CATEGORY_REPEAT_INTERVAL_MS = CATEGORY_ROLL_ANIM_DURATION_MS + CATEGORY_SETTLE_MARGIN_MS
+    const val CATEGORY_INITIAL_HOLD_DELAY_MS = 280L
+    const val LIBRARY_TOGGLE_COOLDOWN_MS = LIBRARY_TRANSITION_DURATION_MS + LIBRARY_TOGGLE_SETTLE_MARGIN_MS
+}
+
+internal const val ITEM_REPEAT_INTERVAL_MS = GameFocusMotionTokens.ITEM_REPEAT_INTERVAL_MS
+internal const val ITEM_INITIAL_HOLD_DELAY_MS = GameFocusMotionTokens.ITEM_INITIAL_HOLD_DELAY_MS
+internal const val CATEGORY_REPEAT_INTERVAL_MS = GameFocusMotionTokens.CATEGORY_REPEAT_INTERVAL_MS
+internal const val CATEGORY_INITIAL_HOLD_DELAY_MS = GameFocusMotionTokens.CATEGORY_INITIAL_HOLD_DELAY_MS
+internal const val LIBRARY_TOGGLE_COOLDOWN_MS = GameFocusMotionTokens.LIBRARY_TOGGLE_COOLDOWN_MS
 
 /**
  * Independent pacing channels for Game Focus navigation and view transitions.
@@ -24,24 +47,24 @@ enum class GameFocusInputChannel(
     val initialHoldDelayMs: Long,
 ) {
     ITEM_HORIZONTAL(
-        minIntervalMs = ITEM_REPEAT_INTERVAL_MS,
-        initialHoldDelayMs = ITEM_INITIAL_HOLD_DELAY_MS,
+        minIntervalMs = GameFocusMotionTokens.ITEM_REPEAT_INTERVAL_MS,
+        initialHoldDelayMs = GameFocusMotionTokens.ITEM_INITIAL_HOLD_DELAY_MS,
     ),
     ITEM_VERTICAL(
-        minIntervalMs = ITEM_REPEAT_INTERVAL_MS,
-        initialHoldDelayMs = ITEM_INITIAL_HOLD_DELAY_MS,
+        minIntervalMs = GameFocusMotionTokens.ITEM_REPEAT_INTERVAL_MS,
+        initialHoldDelayMs = GameFocusMotionTokens.ITEM_INITIAL_HOLD_DELAY_MS,
     ),
     GALLERY_LETTER(
-        minIntervalMs = ITEM_REPEAT_INTERVAL_MS,
-        initialHoldDelayMs = ITEM_INITIAL_HOLD_DELAY_MS,
+        minIntervalMs = GameFocusMotionTokens.ITEM_REPEAT_INTERVAL_MS,
+        initialHoldDelayMs = GameFocusMotionTokens.ITEM_INITIAL_HOLD_DELAY_MS,
     ),
     CATEGORY_OR_TAB(
-        minIntervalMs = CATEGORY_REPEAT_INTERVAL_MS,
-        initialHoldDelayMs = CATEGORY_INITIAL_HOLD_DELAY_MS,
+        minIntervalMs = GameFocusMotionTokens.CATEGORY_REPEAT_INTERVAL_MS,
+        initialHoldDelayMs = GameFocusMotionTokens.CATEGORY_INITIAL_HOLD_DELAY_MS,
     ),
     LIBRARY_TOGGLE(
-        minIntervalMs = LIBRARY_TOGGLE_COOLDOWN_MS,
-        initialHoldDelayMs = LIBRARY_TOGGLE_COOLDOWN_MS,
+        minIntervalMs = GameFocusMotionTokens.LIBRARY_TOGGLE_COOLDOWN_MS,
+        initialHoldDelayMs = GameFocusMotionTokens.LIBRARY_TOGGLE_COOLDOWN_MS,
     ),
 }
 

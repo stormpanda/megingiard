@@ -49,59 +49,25 @@ import com.stormpanda.megingiard.gamefocus.domain.GameFocusPairManager
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusPreferences
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusSessionTracker
 import com.stormpanda.megingiard.gamefocus.domain.initGameFocusLaunchers
-import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_LIBRARY_GRID_COLUMNS
-import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_PAIRING_GRID_COLUMNS
 import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
 import com.stormpanda.megingiard.gamefocus.viewmodel.LauncherScrollDirection
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.ExpandableActionItem
-import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val TAG = "FocusTopLauncherAct"
-private const val JOYSTICK_THRESHOLD = 0.5f
-private const val JOYSTICK_NEGATIVE_THRESHOLD = -0.5f
 private const val PACKAGE_DATA_SCHEME = "package"
 
 internal const val LIBRARY_APP_ACTIONS_COUNT = 4
 internal const val LIBRARY_ROM_ACTIONS_COUNT = 2
-
-private enum class RepeatableInput {
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT,
-    L1,
-    R1,
-}
-
-private fun RepeatableInput.toScrollDirection(): LauncherScrollDirection =
-    when (this) {
-        RepeatableInput.UP -> LauncherScrollDirection.UP
-
-        RepeatableInput.DOWN -> LauncherScrollDirection.DOWN
-
-        RepeatableInput.LEFT -> LauncherScrollDirection.LEFT
-
-        RepeatableInput.RIGHT -> LauncherScrollDirection.RIGHT
-
-        RepeatableInput.L1,
-        RepeatableInput.R1,
-        -> LauncherScrollDirection.NONE
-    }
-
-private fun RepeatableInput.isDirectional(): Boolean = this != RepeatableInput.L1 && this != RepeatableInput.R1
 
 internal fun shouldHandlePackageBroadcast(
     action: String?,
@@ -314,7 +280,7 @@ internal fun buildLibraryMenuActions(
                 ),
             )
         }
-        if (isRetroArchSystem && currentRomFolder != null) {
+        if (isRetroArchSystem) {
             add(
                 ExpandableActionItem(
                     label = context.resolveMenuString(R.string.gamefocus_option_change_core),
@@ -354,9 +320,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val viewModel: FocusTopLauncherViewModel by viewModels()
 
     private var activeLibraryTabs: List<LibraryTab> = listOf(LibraryTab.GAMES, LibraryTab.APPS)
-    private var currentRepeatInput: RepeatableInput? = null
-    private var repeatJob: Job? = null
-
     private var activeCategories: List<GameFocusCategory> = GameFocusCategory.builtIns
     private var launchedTopScreenPackage: String? = null
     private var isPackageReceiverRegistered = false
@@ -458,6 +421,129 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private var cachedLibraryTab: LibraryTab? = null
     private var cachedLibraryResult: List<InstalledAppInfo> = emptyList()
 
+    private var cachedPairingAllApps: List<InstalledAppInfo>? = null
+    private var cachedPairingResult: List<InstalledAppInfo> = emptyList()
+
+    private val controllerHost =
+        object : GameFocusControllerHost {
+            override val activeCategories: List<GameFocusCategory>
+                get() = this@FocusTopLauncherActivity.activeCategories
+
+            override val activeLibraryTabs: List<LibraryTab>
+                get() = this@FocusTopLauncherActivity.activeLibraryTabs
+
+            override fun currentGalleryApps(): List<InstalledAppInfo> = this@FocusTopLauncherActivity.currentGalleryApps()
+
+            override fun currentLibraryApps(): List<InstalledAppInfo> = this@FocusTopLauncherActivity.currentLibraryApps()
+
+            override fun currentAvailableAndroidApps(): List<InstalledAppInfo> = this@FocusTopLauncherActivity.currentAvailableAndroidApps()
+
+            override fun romFolders(): List<CustomRomFolder> = RomManager.romFolders.value
+
+            override fun galleryMenuActionCount(): Int = currentGalleryMenuActions().size
+
+            override fun invokeGalleryMenuAction(index: Int) {
+                currentGalleryMenuActions().getOrNull(index)?.onClick?.invoke()
+            }
+
+            override fun libraryMenuActionCount(focusedApp: InstalledAppInfo?): Int = currentLibraryMenuActions(focusedApp).size
+
+            override fun invokeLibraryMenuAction(
+                focusedApp: InstalledAppInfo?,
+                index: Int,
+            ) {
+                currentLibraryMenuActions(focusedApp).getOrNull(index)?.onClick?.invoke()
+            }
+
+            override fun stepCoreChooserFocus(direction: LauncherScrollDirection): Boolean =
+                this@FocusTopLauncherActivity.stepCoreChooserFocus(direction)
+
+            override fun stepRemoveRomFolderFocus(direction: LauncherScrollDirection): Boolean =
+                this@FocusTopLauncherActivity.stepRemoveRomFolderFocus(direction)
+
+            override fun removeRomFolder(folder: CustomRomFolder) {
+                RomManager.removeRomFolder(this@FocusTopLauncherActivity, folder)
+            }
+
+            override fun confirmAppPair(
+                targetApp: InstalledAppInfo,
+                chosenApp: InstalledAppInfo,
+            ) {
+                GameFocusPairManager.setPair(this@FocusTopLauncherActivity, targetApp.packageName, chosenApp.packageName)
+            }
+
+            override fun launchGalleryTopApp(appInfo: InstalledAppInfo) {
+                this@FocusTopLauncherActivity.launchGalleryTopApp(appInfo)
+            }
+
+            override fun launchLibraryTopApp(appInfo: InstalledAppInfo) {
+                this@FocusTopLauncherActivity.launchLibraryTopApp(appInfo)
+            }
+
+            override fun launchBottomApp(
+                appInfo: InstalledAppInfo,
+                source: String,
+            ) {
+                this@FocusTopLauncherActivity.launchBottomApp(appInfo, source)
+            }
+
+            override fun toggleButtonPrompts() {
+                this@FocusTopLauncherActivity.toggleButtonPrompts()
+            }
+
+            override fun onHomeNavigation() {
+                GameFocusDefaultLauncherManager.handleHomeNavigation(this@FocusTopLauncherActivity)
+            }
+
+            override fun onGalleryDismiss() {
+                if (GameFocusSessionTracker.hasActiveSession()) {
+                    AppLog.i(TAG, "Active session found -> restoring previous session on Back")
+                    lifecycleScope.launch {
+                        GameFocusSessionTracker.restorePreviousSession(this@FocusTopLauncherActivity)
+                    }
+                } else {
+                    AppLog.d(TAG, "No previous session tracked -> consuming Back key to stay in gallery")
+                }
+            }
+
+            override fun onPrimaryOverlayBack() {
+                if (onBackPressedDispatcher.hasEnabledCallbacks()) {
+                    onBackPressedDispatcher.onBackPressed()
+                } else {
+                    viewModel.setEditingAppInfo(null)
+                    viewModel.setManageGalleriesOpen(false)
+                }
+            }
+
+            override fun dispatchPrimaryOverlayCenterDown() {
+                // Translate gamepad A into DPAD_CENTER so Compose clickables inside the overlay activate.
+                dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
+            }
+
+            override fun dispatchPrimaryOverlayCenterUp(): Boolean =
+                dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER))
+
+            override fun sendPrimaryOverlayFocusRecovery(keyCode: Int) {
+                PrimaryOverlayInputBridge.sendFocusRecovery(keyCode)
+            }
+
+            override fun playTickHaptic() {
+                GameFocusHaptics.tick(this@FocusTopLauncherActivity)
+            }
+
+            override fun playClickHaptic() {
+                GameFocusHaptics.click(this@FocusTopLauncherActivity)
+            }
+        }
+
+    private val controllerDispatcher by lazy(LazyThreadSafetyMode.NONE) {
+        GameFocusControllerDispatcher(
+            viewModel = viewModel,
+            scope = lifecycleScope,
+            host = controllerHost,
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -527,7 +613,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
             val availableAndroidApps =
                 remember(allApps) {
-                    getAvailableAndroidApps(allApps)
+                    currentAvailableAndroidApps(allApps)
                 }
 
             val allGalleryCategories =
@@ -761,7 +847,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        stopRepeat()
+        controllerDispatcher.stopRepeat()
     }
 
     override fun onStop() {
@@ -836,6 +922,16 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
     }
 
+    private fun launchLibraryTopApp(appInfo: InstalledAppInfo) {
+        AppLog.i(TAG, "Library launch on top display: ${appInfo.label}")
+        launchedTopScreenPackage = appInfo.packageName
+        GameFocusSessionTracker.recordTopLaunch(appInfo)
+        MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = appInfo.packageName)
+        lifecycleScope.launch {
+            InstalledAppsManager.launchAppOnPrimaryDisplay(this@FocusTopLauncherActivity, appInfo)
+        }
+    }
+
     private fun launchBottomApp(
         appInfo: InstalledAppInfo,
         source: String,
@@ -860,11 +956,20 @@ class FocusTopLauncherActivity : ComponentActivity() {
         AppLog.i(TAG, "Gamepad R3 pressed -> toggled button prompts visibility (now visible=$newVisible)")
     }
 
-    private fun getAvailableAndroidApps(allApps: List<InstalledAppInfo>): List<InstalledAppInfo> =
-        allApps.filter { !it.isRom && it.packageName != packageName }.sortedBy { it.label.lowercase() }
+    private fun currentAvailableAndroidApps(
+        allApps: List<InstalledAppInfo> = InstalledAppsManager.installedApps.value,
+    ): List<InstalledAppInfo> {
+        if (allApps === cachedPairingAllApps) {
+            return cachedPairingResult
+        }
+        val filtered = allApps.filter { !it.isRom && it.packageName != packageName }.sortedBy { it.label.lowercase() }
+        cachedPairingAllApps = allApps
+        cachedPairingResult = filtered
+        return filtered
+    }
 
     private fun openPairingDialogForApp(targetApp: InstalledAppInfo) {
-        val availableApps = getAvailableAndroidApps(InstalledAppsManager.installedApps.value)
+        val availableApps = currentAvailableAndroidApps()
         val currentPaired = GameFocusPairManager.getPairedPackage(targetApp.packageName)
         val initialIndex =
             if (currentPaired != null) {
@@ -924,18 +1029,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         return filtered
     }
 
-    private fun resetToGallery(): Boolean {
-        stopRepeat()
-        return viewModel.resetToGallery()
-    }
-
-    /** True while a primary overlay (Edit Game or Manage Galleries) owns gamepad input. */
-    private fun isPrimaryOverlayOpen(): Boolean = viewModel.editingAppInfo.value != null || viewModel.isManageGalleriesOpen.value
-
-    private fun stepLibraryFocus(direction: LauncherScrollDirection): Boolean {
-        val filteredApps = currentLibraryApps()
-        return viewModel.stepLibraryFocus(direction, filteredApps.size, DEFAULT_LIBRARY_GRID_COLUMNS)
-    }
+    private fun resetToGallery(): Boolean = controllerDispatcher.resetToGallery()
 
     private fun openCoreChooserForFolder(folder: CustomRomFolder) {
         val registry = InstalledEmulatorRegistry.forSystem(folder.systemId)
@@ -987,7 +1081,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             isPaired = isPaired,
             onToggleFavorite = { app -> InstalledAppsManager.toggleFavorite(this, app.packageName) },
             onEditGame = { app ->
-                stopRepeat()
+                controllerDispatcher.stopRepeat()
                 viewModel.openEditGameOverlay(app)
             },
             onToggleHidden = { app -> InstalledAppsManager.toggleHidden(this, app.packageName) },
@@ -995,7 +1089,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             onRemovePair = { app -> GameFocusPairManager.removePair(this, app.packageName) },
             onOpenManageGalleries = {
                 AppLog.i(TAG, "Opening Manage Galleries overlay from gallery menu")
-                stopRepeat()
+                controllerDispatcher.stopRepeat()
                 viewModel.setManageGalleriesOpen(true)
             },
             onDismissMenu = { viewModel.setMainOptionsMenuExpanded(false) },
@@ -1010,7 +1104,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             selectedTab = viewModel.librarySelectedTab.value,
             romFolders = RomManager.romFolders.value,
             onEditArtwork = { app ->
-                stopRepeat()
+                controllerDispatcher.stopRepeat()
                 viewModel.openEditGameOverlay(app)
             },
             onToggleHidden = { app ->
@@ -1040,636 +1134,39 @@ class FocusTopLauncherActivity : ComponentActivity() {
             },
             onOpenManageGalleries = {
                 AppLog.i(TAG, "Opening Manage Galleries overlay from Library menu")
-                stopRepeat()
+                controllerDispatcher.stopRepeat()
                 viewModel.setManageGalleriesOpen(true)
             },
             onDismissMenu = { viewModel.setLibraryOptionsMenuExpanded(false) },
         )
 
-    private fun isVerticalOnlyModalActive(): Boolean =
-        viewModel.newlyAddedFolder.value != null ||
-            viewModel.isRemoveRomFolderDialogOpen.value ||
-            viewModel.isMainOptionsMenuExpanded.value ||
-            viewModel.isLibraryOptionsMenuExpanded.value
-
-    private fun isSecondaryModalOpen(): Boolean =
-        viewModel.newlyAddedFolder.value != null ||
-            viewModel.folderToRemove.value != null ||
-            viewModel.isRemoveRomFolderDialogOpen.value ||
-            viewModel.pairingTargetApp.value != null
-
-    private fun isGalleryCategoryNavigationActive(): Boolean =
-        !isVerticalOnlyModalActive() &&
-            viewModel.pairingTargetApp.value == null &&
-            viewModel.folderToRemove.value == null &&
-            !viewModel.isLibraryOpen.value
-
-    private fun isRepeatableInputSupported(input: RepeatableInput): Boolean {
-        if (viewModel.folderToRemove.value != null) return false
-        return when (input) {
-            RepeatableInput.UP,
-            RepeatableInput.DOWN,
-            -> {
-                true
-            }
-
-            RepeatableInput.LEFT,
-            RepeatableInput.RIGHT,
-            -> {
-                !isVerticalOnlyModalActive() &&
-                    (
-                        viewModel.pairingTargetApp.value != null ||
-                            viewModel.isLibraryOpen.value ||
-                            currentGalleryApps().size > 1
-                    )
-            }
-
-            RepeatableInput.L1,
-            RepeatableInput.R1,
-            -> {
-                !isVerticalOnlyModalActive() &&
-                    viewModel.pairingTargetApp.value == null &&
-                    (viewModel.isLibraryOpen.value || currentGalleryApps().isNotEmpty())
-            }
-        }
-    }
-
-    private fun resolveInputChannel(input: RepeatableInput): GameFocusInputChannel =
-        when (input) {
-            RepeatableInput.L1,
-            RepeatableInput.R1,
-            -> {
-                if (viewModel.isLibraryOpen.value) {
-                    GameFocusInputChannel.CATEGORY_OR_TAB
-                } else {
-                    GameFocusInputChannel.GALLERY_LETTER
-                }
-            }
-
-            RepeatableInput.LEFT,
-            RepeatableInput.RIGHT,
-            -> {
-                GameFocusInputChannel.ITEM_HORIZONTAL
-            }
-
-            RepeatableInput.UP,
-            RepeatableInput.DOWN,
-            -> {
-                if (isGalleryCategoryNavigationActive()) {
-                    GameFocusInputChannel.CATEGORY_OR_TAB
-                } else {
-                    GameFocusInputChannel.ITEM_VERTICAL
-                }
-            }
-        }
-
-    private fun performRepeatableStep(input: RepeatableInput): Boolean {
-        if (!isRepeatableInputSupported(input)) return false
-
-        if (input == RepeatableInput.L1 || input == RepeatableInput.R1) {
-            if (viewModel.isLibraryOpen.value) {
-                val moved =
-                    if (input == RepeatableInput.L1) {
-                        viewModel.cycleLibraryTabUp(activeLibraryTabs)
-                    } else {
-                        viewModel.cycleLibraryTabDown(activeLibraryTabs)
-                    }
-                if (moved) {
-                    viewModel.setLibraryFocusedIndex(0)
-                    GameFocusHaptics.click(this)
-                }
-                return moved
-            }
-
-            if (input == RepeatableInput.L1) {
-                viewModel.triggerPrevLetter()
-            } else {
-                viewModel.triggerNextLetter()
-            }
-            GameFocusHaptics.click(this)
-            return true
-        }
-
-        val direction = input.toScrollDirection()
-        if (direction == LauncherScrollDirection.NONE) return false
-
-        return when {
-            viewModel.newlyAddedFolder.value != null -> {
-                stepCoreChooserFocus(direction)
-            }
-
-            viewModel.isRemoveRomFolderDialogOpen.value -> {
-                stepRemoveRomFolderFocus(direction)
-            }
-
-            viewModel.pairingTargetApp.value != null -> {
-                val availableApps = getAvailableAndroidApps(InstalledAppsManager.installedApps.value)
-                viewModel.stepPairingFocus(direction, availableApps.size, DEFAULT_PAIRING_GRID_COLUMNS)
-            }
-
-            viewModel.isLibraryOptionsMenuExpanded.value -> {
-                val focusedLibraryApp = currentLibraryApps().getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
-                val count = currentLibraryMenuActions(focusedLibraryApp).size
-                when (direction) {
-                    LauncherScrollDirection.UP -> viewModel.navigateLibraryMenuUp(count)
-                    LauncherScrollDirection.DOWN -> viewModel.navigateLibraryMenuDown(count)
-                    else -> false
-                }
-            }
-
-            viewModel.isMainOptionsMenuExpanded.value -> {
-                val count = currentGalleryMenuActions().size
-                when (direction) {
-                    LauncherScrollDirection.UP -> viewModel.navigateMainMenuUp(count)
-                    LauncherScrollDirection.DOWN -> viewModel.navigateMainMenuDown(count)
-                    else -> false
-                }
-            }
-
-            viewModel.isLibraryOpen.value -> {
-                val moved = stepLibraryFocus(direction)
-                if (moved) {
-                    GameFocusHaptics.tick(this)
-                }
-                moved
-            }
-
-            else -> {
-                when (direction) {
-                    LauncherScrollDirection.LEFT -> {
-                        viewModel.triggerDpadLeft()
-                        GameFocusHaptics.tick(this)
-                        true
-                    }
-
-                    LauncherScrollDirection.RIGHT -> {
-                        viewModel.triggerDpadStepRight()
-                        GameFocusHaptics.tick(this)
-                        true
-                    }
-
-                    LauncherScrollDirection.UP -> {
-                        val moved = viewModel.cycleCategoryUp(activeCategories)
-                        if (moved) {
-                            GameFocusHaptics.click(this)
-                        }
-                        moved
-                    }
-
-                    LauncherScrollDirection.DOWN -> {
-                        val moved = viewModel.cycleCategoryDown(activeCategories)
-                        if (moved) {
-                            GameFocusHaptics.click(this)
-                        }
-                        moved
-                    }
-
-                    LauncherScrollDirection.NONE -> {
-                        false
-                    }
-                }
-            }
-        }
-    }
-
-    private fun startRepeat(input: RepeatableInput) {
-        if (currentRepeatInput == input) return
-
-        currentRepeatInput = input
-        repeatJob?.cancel()
-
-        val initialChannel = resolveInputChannel(input)
-        val remainingCooldownMs = viewModel.inputPacer.remainingCooldownMs(initialChannel)
-        val firstWaitMs =
-            if (remainingCooldownMs == 0L) {
-                if (performRepeatableStep(input)) {
-                    viewModel.inputPacer.commit(initialChannel)
-                }
-                initialChannel.initialHoldDelayMs
-            } else {
-                AppLog.d(TAG, "Deferring rapid input $input on ${initialChannel.name} by ${remainingCooldownMs}ms")
-                remainingCooldownMs
-            }
-
-        repeatJob =
-            lifecycleScope.launch {
-                var nextWaitMs = firstWaitMs
-                while (isActive && currentRepeatInput == input) {
-                    delay(nextWaitMs)
-                    if (!isActive || currentRepeatInput != input) return@launch
-                    val channel = resolveInputChannel(input)
-                    val cooldownMs = viewModel.inputPacer.remainingCooldownMs(channel)
-                    if (cooldownMs > 0L) {
-                        nextWaitMs = cooldownMs
-                        continue
-                    }
-                    if (performRepeatableStep(input)) {
-                        viewModel.inputPacer.commit(channel)
-                    }
-                    nextWaitMs = channel.minIntervalMs
-                }
-            }
-    }
-
-    private fun stopRepeat() {
-        if (currentRepeatInput == null && repeatJob == null) return
-        AppLog.d(TAG, "stopRepeat: currentRepeatInput was $currentRepeatInput")
-        currentRepeatInput = null
-        repeatJob?.cancel()
-        repeatJob = null
-    }
-
-    private fun stopDirectionalRepeat() {
-        if (currentRepeatInput?.isDirectional() == true) {
-            stopRepeat()
-        }
-    }
-
-    private fun resolveJoystickInput(
-        x: Float,
-        y: Float,
-    ): RepeatableInput? {
-        if (viewModel.folderToRemove.value != null) return null
-        if (!isVerticalOnlyModalActive()) {
-            if (x < JOYSTICK_NEGATIVE_THRESHOLD) return RepeatableInput.LEFT
-            if (x > JOYSTICK_THRESHOLD) return RepeatableInput.RIGHT
-        }
-        return when {
-            y < JOYSTICK_NEGATIVE_THRESHOLD -> RepeatableInput.UP
-            y > JOYSTICK_THRESHOLD -> RepeatableInput.DOWN
-            else -> null
-        }
-    }
-
     override fun onKeyDown(
         keyCode: Int,
         event: KeyEvent?,
-    ): Boolean {
-        val isRepeat = (event?.repeatCount ?: 0) > 0
-
-        if (keyCode == KeyEvent.KEYCODE_HOME || keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
-            if (!isRepeat) {
-                AppLog.i(TAG, "Home key pressed (keyCode=$keyCode) -> returning to main gallery")
-                resetToGallery()
-                GameFocusDefaultLauncherManager.handleHomeNavigation(this)
-            }
-            return true
+    ): Boolean =
+        if (controllerDispatcher.handleKeyDown(keyCode, event?.repeatCount ?: 0)) {
+            true
+        } else {
+            super.onKeyDown(keyCode, event)
         }
-
-        if (isPrimaryOverlayOpen()) {
-            stopRepeat()
-            if (keyCode == KeyEvent.KEYCODE_BUTTON_THUMBL || keyCode == KeyEvent.KEYCODE_BUTTON_THUMBR) {
-                return true
-            }
-            if (isDismissKey(keyCode)) {
-                if (!isRepeat) {
-                    AppLog.i(TAG, "onKeyDown: Back/B-Button pressed while a primary overlay is open")
-                    if (onBackPressedDispatcher.hasEnabledCallbacks()) {
-                        onBackPressedDispatcher.onBackPressed()
-                    } else {
-                        viewModel.setEditingAppInfo(null)
-                        viewModel.setManageGalleriesOpen(false)
-                    }
-                }
-                return true
-            }
-            if (keyCode == GamePadButton.BUTTON_A.keyCode) {
-                if (!isRepeat) {
-                    // Translate gamepad A into DPAD_CENTER so Compose clickables inside the overlay activate.
-                    dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER))
-                }
-                return true
-            }
-            return super.onKeyDown(keyCode, event)
-        }
-
-        if (isRepeat) {
-            return if (isLauncherActionKey(keyCode) ||
-                isSecondaryModalOpen() ||
-                viewModel.isLibraryOpen.value ||
-                viewModel.isMainOptionsMenuExpanded.value
-            ) {
-                true
-            } else {
-                super.onKeyDown(keyCode, event)
-            }
-        }
-
-        keyCodeToRepeatableInput(keyCode)?.let { input ->
-            if (isRepeatableInputSupported(input)) {
-                startRepeat(input)
-            } else if (input.isDirectional()) {
-                stopDirectionalRepeat()
-            } else {
-                stopRepeat()
-            }
-            return true
-        }
-
-        if (viewModel.newlyAddedFolder.value != null) {
-            when {
-                isConfirmKey(keyCode) -> {
-                    stopRepeat()
-                    AppLog.i(TAG, "Confirming core chooser dialog via gamepad A")
-                    viewModel.triggerConfirmCoreChooser()
-                }
-
-                isDismissKey(keyCode) -> {
-                    stopRepeat()
-                    AppLog.i(TAG, "Dismissing core chooser dialog via gamepad B")
-                    viewModel.setNewlyAddedFolder(null)
-                }
-            }
-            return true
-        }
-
-        viewModel.folderToRemove.value?.let { folder ->
-            when {
-                isConfirmKey(keyCode) -> {
-                    stopRepeat()
-                    AppLog.i(TAG, "Confirming removal of ROM folder via gamepad A: ${folder.systemName}")
-                    RomManager.removeRomFolder(this, folder)
-                    viewModel.setFolderToRemove(null)
-                }
-
-                isDismissKey(keyCode) -> {
-                    stopRepeat()
-                    AppLog.i(TAG, "Cancelling folder removal via gamepad B")
-                    viewModel.setFolderToRemove(null)
-                }
-            }
-            return true
-        }
-
-        if (viewModel.isRemoveRomFolderDialogOpen.value) {
-            when {
-                isConfirmKey(keyCode) -> {
-                    stopRepeat()
-                    val selectedFolder = RomManager.romFolders.value.getOrNull(viewModel.removeRomFolderDialogSelectedIndex.value)
-                    if (selectedFolder != null) {
-                        AppLog.i(TAG, "Selected folder to remove via gamepad A: ${selectedFolder.systemName}")
-                        viewModel.setFolderToRemove(selectedFolder)
-                    }
-                    viewModel.setRemoveRomFolderDialogOpen(false)
-                }
-
-                isDismissKey(keyCode) -> {
-                    stopRepeat()
-                    AppLog.i(TAG, "Closing Remove ROM Folder dialog via gamepad B")
-                    viewModel.setRemoveRomFolderDialogOpen(false)
-                }
-            }
-            return true
-        }
-
-        viewModel.pairingTargetApp.value?.let { targetApp ->
-            when {
-                isConfirmKey(keyCode) -> {
-                    stopRepeat()
-                    val availableApps = getAvailableAndroidApps(InstalledAppsManager.installedApps.value)
-                    val chosenApp = availableApps.getOrNull(viewModel.pairingFocusedIndex.value)
-                    if (chosenApp != null) {
-                        AppLog.i(TAG, "Confirming app pairing via Gamepad A: ${targetApp.label} -> ${chosenApp.label}")
-                        GameFocusPairManager.setPair(this, targetApp.packageName, chosenApp.packageName)
-                    }
-                    viewModel.dismissPairingDialog()
-                }
-
-                isDismissKey(keyCode) -> {
-                    stopRepeat()
-                    AppLog.i(TAG, "Closing pairing dialog via Gamepad B")
-                    viewModel.dismissPairingDialog()
-                }
-            }
-            return true
-        }
-
-        if (viewModel.isLibraryOpen.value) {
-            val filteredApps = currentLibraryApps()
-            val focusedLibraryApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
-
-            if (viewModel.isLibraryOptionsMenuExpanded.value) {
-                when {
-                    isConfirmKey(keyCode) -> {
-                        stopRepeat()
-                        val selectedIndex = viewModel.libraryMenuSelectedIndex.value
-                        AppLog.i(TAG, "Library options menu confirmed at index $selectedIndex via gamepad A")
-                        currentLibraryMenuActions(focusedLibraryApp).getOrNull(selectedIndex)?.onClick?.invoke()
-                        viewModel.setLibraryOptionsMenuExpanded(false)
-                    }
-
-                    isMenuKey(keyCode) || isDismissKey(keyCode) -> {
-                        stopRepeat()
-                        AppLog.i(TAG, "Closing Library options menu")
-                        viewModel.setLibraryOptionsMenuExpanded(false)
-                    }
-                }
-                return true
-            }
-
-            when {
-                isMenuKey(keyCode) -> {
-                    stopRepeat()
-                    AppLog.i(
-                        TAG,
-                        "Gamepad Y/Menu pressed in Library -> Opening Library options menu (focused=${focusedLibraryApp?.label})",
-                    )
-                    viewModel.setLibraryOptionsMenuExpanded(true)
-                }
-
-                keyCode == GamePadButton.BUTTON_R2.keyCode -> {
-                    stopRepeat()
-                    if (viewModel.requestLibraryOpen(false)) {
-                        AppLog.i(TAG, "Gamepad R2 pressed -> Closing Library section")
-                        GameFocusHaptics.click(this)
-                    }
-                }
-
-                isDismissKey(keyCode) -> {
-                    AppLog.i(TAG, "Dismiss/Back pressed in Library -> Closing Library section")
-                    stopRepeat()
-                    viewModel.setLibraryOpen(false)
-                    viewModel.inputPacer.commit(GameFocusInputChannel.LIBRARY_TOGGLE)
-                    GameFocusHaptics.click(this)
-                }
-
-                isConfirmKey(keyCode) -> {
-                    stopRepeat()
-                    if (focusedLibraryApp != null) {
-                        AppLog.i(TAG, "Library launch on top display: ${focusedLibraryApp.label}")
-                        launchedTopScreenPackage = focusedLibraryApp.packageName
-                        GameFocusSessionTracker.recordTopLaunch(focusedLibraryApp)
-                        MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = focusedLibraryApp.packageName)
-                        lifecycleScope.launch {
-                            InstalledAppsManager.launchAppOnPrimaryDisplay(this@FocusTopLauncherActivity, focusedLibraryApp)
-                        }
-                    }
-                }
-
-                keyCode == GamePadButton.BUTTON_X.keyCode || keyCode == KeyEvent.KEYCODE_X -> {
-                    if (viewModel.libraryFocusedIndex.value >= 0) {
-                        stopRepeat()
-                        val targetApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value)
-                        if (targetApp != null) {
-                            launchBottomApp(targetApp, "Library X")
-                        }
-                    }
-                }
-
-                keyCode == KeyEvent.KEYCODE_BUTTON_THUMBR -> {
-                    toggleButtonPrompts()
-                }
-
-                keyCode == KeyEvent.KEYCODE_BUTTON_THUMBL -> {
-                    AppLog.d(TAG, "Gamepad L3 pressed in Library -> consumed to prevent synthetic DPAD_CENTER launch")
-                }
-            }
-            return true
-        }
-
-        if (viewModel.isMainOptionsMenuExpanded.value) {
-            when {
-                isConfirmKey(keyCode) -> {
-                    stopRepeat()
-                    val selectedIndex = viewModel.mainMenuSelectedIndex.value
-                    AppLog.i(
-                        TAG,
-                        "Main options menu confirmed at index $selectedIndex via gamepad A for ${viewModel.focusedApp.value?.label}",
-                    )
-                    currentGalleryMenuActions().getOrNull(selectedIndex)?.onClick?.invoke()
-                    viewModel.setMainOptionsMenuExpanded(false)
-                }
-
-                isMenuKey(keyCode) || isDismissKey(keyCode) -> {
-                    stopRepeat()
-                    AppLog.i(TAG, "Closing Main options menu")
-                    viewModel.setMainOptionsMenuExpanded(false)
-                }
-            }
-            return true
-        }
-
-        when {
-            isMenuKey(keyCode) -> {
-                AppLog.i(TAG, "Gamepad Y/Menu pressed in gallery -> opening gallery options menu (entries=${currentGalleryApps().size})")
-                stopRepeat()
-                viewModel.setMainOptionsMenuExpanded(true)
-                return true
-            }
-
-            isConfirmKey(keyCode) -> {
-                val targetApp = viewModel.focusedApp.value
-                if (targetApp != null) {
-                    stopRepeat()
-                    launchGalleryTopApp(targetApp)
-                    return true
-                }
-            }
-
-            keyCode == GamePadButton.BUTTON_X.keyCode || keyCode == KeyEvent.KEYCODE_X -> {
-                val targetApp = viewModel.focusedApp.value
-                if (targetApp != null) {
-                    stopRepeat()
-                    launchBottomApp(targetApp, "Gallery X")
-                    return true
-                }
-            }
-
-            keyCode == GamePadButton.BUTTON_R2.keyCode -> {
-                stopRepeat()
-                if (viewModel.requestLibraryOpen(true)) {
-                    AppLog.i(TAG, "Gamepad R2 pressed -> Opening Library section")
-                    GameFocusHaptics.click(this)
-                }
-                return true
-            }
-
-            isDismissKey(keyCode) -> {
-                AppLog.i(TAG, "Dismiss/Back key pressed on main gallery (keyCode=$keyCode)")
-                if (GameFocusSessionTracker.hasActiveSession()) {
-                    AppLog.i(TAG, "Active session found -> restoring previous session on Back")
-                    lifecycleScope.launch {
-                        GameFocusSessionTracker.restorePreviousSession(this@FocusTopLauncherActivity)
-                    }
-                } else {
-                    AppLog.d(TAG, "No previous session tracked -> consuming Back key to stay in gallery")
-                }
-                return true
-            }
-
-            keyCode == KeyEvent.KEYCODE_BUTTON_THUMBR -> {
-                toggleButtonPrompts()
-                return true
-            }
-
-            keyCode == KeyEvent.KEYCODE_BUTTON_THUMBL -> {
-                AppLog.d(TAG, "Gamepad L3 pressed -> consumed to prevent synthetic DPAD_CENTER launch")
-                return true
-            }
-        }
-        return super.onKeyDown(keyCode, event)
-    }
 
     override fun onKeyUp(
         keyCode: Int,
         event: KeyEvent?,
-    ): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_HOME || keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
-            return true
+    ): Boolean =
+        if (controllerDispatcher.handleKeyUp(keyCode)) {
+            true
+        } else {
+            super.onKeyUp(keyCode, event)
         }
-
-        if (keyCode == KeyEvent.KEYCODE_BUTTON_THUMBL || keyCode == KeyEvent.KEYCODE_BUTTON_THUMBR) {
-            return true
-        }
-
-        val releasedInput = keyCodeToRepeatableInput(keyCode)
-        if (releasedInput != null && (releasedInput.isDirectional() || !isPrimaryOverlayOpen())) {
-            if (currentRepeatInput == releasedInput) {
-                stopRepeat()
-            }
-            return true
-        }
-
-        if (!isPrimaryOverlayOpen() && keyCode == GamePadButton.BUTTON_R2.keyCode) {
-            return true
-        }
-
-        if (isDismissKey(keyCode)) {
-            return true
-        }
-
-        if (isPrimaryOverlayOpen()) {
-            if (keyCode == GamePadButton.BUTTON_A.keyCode) {
-                val dpadCenterUp = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER)
-                val handled = dispatchKeyEvent(dpadCenterUp)
-                if (!handled) {
-                    PrimaryOverlayInputBridge.sendFocusRecovery(GamePadButton.BUTTON_A.keyCode)
-                }
-                return true
-            }
-            return super.onKeyUp(keyCode, event)
-        }
-
-        if (isSecondaryModalOpen()) {
-            return true
-        }
-
-        return super.onKeyUp(keyCode, event)
-    }
 
     override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
         if (event != null && (event.source and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) {
-            val axisHatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
-            val axisHatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
-            val x = if (axisHatX != 0f) axisHatX else event.getAxisValue(MotionEvent.AXIS_X)
-            val y = if (axisHatY != 0f) axisHatY else event.getAxisValue(MotionEvent.AXIS_Y)
-
-            if (isPrimaryOverlayOpen()) {
-                stopRepeat()
+            if (controllerDispatcher.isPrimaryOverlayOpen()) {
+                controllerDispatcher.stopRepeat()
                 // A primary overlay owns all joystick input; translate axes into D-pad key events for Compose focus.
                 PrimaryOverlayInputBridge.processGenericMotionEvent(event) { action, dpadKeyCode ->
-                    val keyEvent = KeyEvent(action, dpadKeyCode)
-                    val handled = dispatchKeyEvent(keyEvent)
+                    val handled = dispatchKeyEvent(KeyEvent(action, dpadKeyCode))
                     if (!handled && action == KeyEvent.ACTION_DOWN) {
                         PrimaryOverlayInputBridge.sendFocusRecovery(dpadKeyCode)
                     }
@@ -1677,87 +1174,21 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 return true
             }
 
-            val stickInput = resolveJoystickInput(x, y)
-            if (stickInput != null) {
-                if (isRepeatableInputSupported(stickInput)) {
-                    startRepeat(stickInput)
-                } else {
-                    stopDirectionalRepeat()
-                }
-                return true
-            }
-
-            stopDirectionalRepeat()
-            if (isSecondaryModalOpen() ||
-                viewModel.isMainOptionsMenuExpanded.value ||
-                viewModel.isLibraryOptionsMenuExpanded.value ||
-                viewModel.isLibraryOpen.value
-            ) {
+            val axisHatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+            val axisHatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+            val x = if (axisHatX != 0f) axisHatX else event.getAxisValue(MotionEvent.AXIS_X)
+            val y = if (axisHatY != 0f) axisHatY else event.getAxisValue(MotionEvent.AXIS_Y)
+            if (controllerDispatcher.handleJoystickAxes(x, y)) {
                 return true
             }
         }
-        return if (isPrimaryOverlayOpen() || viewModel.pairingTargetApp.value != null) {
+        return if (controllerDispatcher.consumesUnhandledMotionEvents()) {
             true
         } else {
             super.onGenericMotionEvent(event)
         }
     }
 }
-
-private fun keyCodeToRepeatableInput(keyCode: Int): RepeatableInput? =
-    when {
-        isUpKey(keyCode) -> RepeatableInput.UP
-        isDownKey(keyCode) -> RepeatableInput.DOWN
-        isLeftKey(keyCode) -> RepeatableInput.LEFT
-        isRightKey(keyCode) -> RepeatableInput.RIGHT
-        keyCode == GamePadButton.BUTTON_L1.keyCode -> RepeatableInput.L1
-        keyCode == GamePadButton.BUTTON_R1.keyCode -> RepeatableInput.R1
-        else -> null
-    }
-
-private fun isLauncherActionKey(keyCode: Int): Boolean =
-    keyCodeToRepeatableInput(keyCode) != null ||
-        isConfirmKey(keyCode) ||
-        isDismissKey(keyCode) ||
-        isMenuKey(keyCode) ||
-        keyCode == GamePadButton.BUTTON_R2.keyCode ||
-        keyCode == GamePadButton.BUTTON_X.keyCode ||
-        keyCode == KeyEvent.KEYCODE_X ||
-        keyCode == KeyEvent.KEYCODE_BUTTON_THUMBL ||
-        keyCode == KeyEvent.KEYCODE_BUTTON_THUMBR
-
-private fun isUpKey(keyCode: Int): Boolean =
-    keyCode == KeyEvent.KEYCODE_DPAD_UP ||
-        keyCode == KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP ||
-        keyCode == GamePadButton.DPAD_UP.keyCode
-
-private fun isDownKey(keyCode: Int): Boolean =
-    keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
-        keyCode == KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN ||
-        keyCode == GamePadButton.DPAD_DOWN.keyCode
-
-private fun isLeftKey(keyCode: Int): Boolean =
-    keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
-        keyCode == KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT ||
-        keyCode == GamePadButton.DPAD_LEFT.keyCode
-
-private fun isRightKey(keyCode: Int): Boolean =
-    keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
-        keyCode == KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT ||
-        keyCode == GamePadButton.DPAD_RIGHT.keyCode
-
-private fun isConfirmKey(keyCode: Int): Boolean =
-    keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-        keyCode == GamePadButton.BUTTON_A.keyCode ||
-        keyCode == KeyEvent.KEYCODE_ENTER ||
-        keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
-
-private fun isDismissKey(keyCode: Int): Boolean =
-    keyCode == KeyEvent.KEYCODE_BACK ||
-        keyCode == KeyEvent.KEYCODE_ESCAPE ||
-        keyCode == GamePadButton.BUTTON_B.keyCode
-
-private fun isMenuKey(keyCode: Int): Boolean = keyCode == GamePadButton.BUTTON_Y.keyCode || keyCode == KeyEvent.KEYCODE_MENU
 
 private class LastCatalogRef(
     var apps: List<InstalledAppInfo>,

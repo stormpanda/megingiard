@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.gamefocus
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.ui.ROLLING_CAROUSEL_ANIM_DURATION_MS
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -14,8 +15,28 @@ private const val PARTIAL_CATEGORY_ELAPSED_MS = 100L
 private const val EXPECTED_CATEGORY_REMAINING_MS = 110L
 private const val PARTIAL_LIBRARY_ELAPSED_MS = 150L
 private const val EXPECTED_LIBRARY_REMAINING_MS = 250L
+private const val EXPECTED_HOLD_MULTIPLIER = 2L
 
 class GameFocusInputPacerTest {
+    @Test
+    fun motionTokensAlignWithChannelIntervalsAndTransitionBudgets() {
+        AppLog.d(TAG, "Verifying GameFocusMotionTokens invariants against UI animation durations")
+        assertEquals(ROLLING_CAROUSEL_ANIM_DURATION_MS, GameFocusMotionTokens.CATEGORY_ROLL_ANIM_DURATION_MS)
+        assertEquals(
+            GameFocusMotionTokens.CAROUSEL_STEP_ANIM_DURATION_MS * EXPECTED_HOLD_MULTIPLIER,
+            GameFocusMotionTokens.ITEM_INITIAL_HOLD_DELAY_MS,
+        )
+        assertTrue(GameFocusMotionTokens.CATEGORY_REPEAT_INTERVAL_MS > GameFocusMotionTokens.CATEGORY_ROLL_ANIM_DURATION_MS)
+        assertTrue(GameFocusMotionTokens.CATEGORY_INITIAL_HOLD_DELAY_MS > GameFocusMotionTokens.CATEGORY_REPEAT_INTERVAL_MS)
+        assertTrue(GameFocusMotionTokens.LIBRARY_TOGGLE_COOLDOWN_MS > GameFocusMotionTokens.LIBRARY_TRANSITION_DURATION_MS)
+
+        assertEquals(GameFocusMotionTokens.ITEM_REPEAT_INTERVAL_MS, GameFocusInputChannel.ITEM_HORIZONTAL.minIntervalMs)
+        assertEquals(GameFocusMotionTokens.ITEM_REPEAT_INTERVAL_MS, GameFocusInputChannel.ITEM_VERTICAL.minIntervalMs)
+        assertEquals(GameFocusMotionTokens.ITEM_REPEAT_INTERVAL_MS, GameFocusInputChannel.GALLERY_LETTER.minIntervalMs)
+        assertEquals(GameFocusMotionTokens.CATEGORY_REPEAT_INTERVAL_MS, GameFocusInputChannel.CATEGORY_OR_TAB.minIntervalMs)
+        assertEquals(GameFocusMotionTokens.LIBRARY_TOGGLE_COOLDOWN_MS, GameFocusInputChannel.LIBRARY_TOGGLE.minIntervalMs)
+    }
+
     @Test
     fun initialRunSucceedsImmediatelyIncludingAtZeroAndNegativeClock() {
         AppLog.d(TAG, "Testing initial execution across zero and negative monotonic clock origins")

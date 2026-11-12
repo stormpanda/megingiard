@@ -37,6 +37,8 @@ import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
+const val ROLLING_CAROUSEL_ANIM_DURATION_MS = 200
+
 private const val TAG = "VerticalRollingCarousel"
 private const val VRC_ROLL_ANGLE_DEG = 35f
 private const val VRC_ROLL_ANGLE_COMPACT_DEG = 22.5f
@@ -44,7 +46,7 @@ private const val VRC_SCALE_DECAY = 0.05f
 private const val VRC_SCALE_DECAY_COMPACT = 0.075f
 private const val VRC_ALPHA_DECAY = 0.65f
 private const val VRC_ALPHA_DECAY_COMPACT = 0.375f
-private const val VRC_ANIM_DURATION_MS = 200
+private const val VRC_ANIM_DURATION_MS = ROLLING_CAROUSEL_ANIM_DURATION_MS
 private val VRC_BUTTON_SLIDE_OFFSET = 10.dp
 private const val VRC_CAMERA_DISTANCE_FACTOR = 16
 private const val VRC_DEFAULT_VISIBLE_COUNT = 3
