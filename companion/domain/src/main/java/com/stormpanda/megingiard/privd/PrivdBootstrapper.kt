@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 
 private const val TAG = "PrivdBootstrapper"
 
-private const val MIRROR_DEX_REMOTE_MODE_RAW = 33188 // 0100644 = regular + rw-r--r--
+private const val MIRROR_DEX_REMOTE_MODE_RAW = 33060 // 0100444 = regular + r--r--r-- (read-only required on Android 14+)
 
 // Marker echoed by the daemon's --provision mode on success (exits 0, then shell echoes this).
 private const val PROVISION_OK_MARKER = "MGRD_PROVISION_OK"
@@ -365,7 +365,8 @@ object PrivdBootstrapper {
         val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
         val processName = PrivdConstants.getDaemonProcessName(isDebug)
         val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
-        val killCmd = "shell:kill -9 \$(pidof $processName 2>/dev/null) 2>/dev/null; rm -f $remotePath; sleep 1"
+        val dexRemotePath = PrivdConstants.getMirrorDexRemotePath(isDebug)
+        val killCmd = "shell:kill -9 \$(pidof $processName 2>/dev/null) 2>/dev/null; rm -f $remotePath $dexRemotePath; sleep 1"
         AppLog.d(TAG, "stopExistingDaemon cmd: $killCmd")
         runCatching {
             mgr.openStream(killCmd)?.use { s ->

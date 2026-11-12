@@ -29,7 +29,7 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
 ### FR-T4: Privileged Mode Requirement
 
 - The touchpad requires **Privileged Mode** (`megingiard_privd` running as `shell` UID 2000) rather than root access.
-- Because the unprivileged app process (`untrusted_app` SELinux domain) cannot open `/dev/uinput` or `/dev/input/event6` directly, `PrivdClient` connects to `megingiard_privd` over a local loopback TCP socket (`127.0.0.1`, release ports `51234..51238` / debug ports `51244..51248`) authenticated via an HMAC-SHA256 challenge-response handshake, and the `shell`-UID daemon performs the kernel input writes.
+- Because the unprivileged app process (`untrusted_app` SELinux domain) cannot open `/dev/uinput` or `/dev/input/event*` directly, `PrivdClient` connects to `megingiard_privd` over a local loopback TCP socket (`127.0.0.1`, release ports `51234..51238` / debug ports `51244..51248`) authenticated via an HMAC-SHA256 challenge-response handshake, and the `shell`-UID daemon performs the kernel input writes.
 
 ### FR-T5: Input Modes & Settings
 
@@ -59,7 +59,7 @@ Android's `adb shell input` APIs perform synchronous Binder IPC to `InputManager
 Megingiard uses the mandatory **Megingiard System Service** (`megingiard_privd`) running with `shell` privileges (UID 2000) for low-latency (< 1 ms) direct Linux input injection over an HMAC-SHA256-authenticated loopback TCP socket (`127.0.0.1`, ports `51234..51238` in release / `51244..51248` in debug):
 
 1. **Mouse Mode**: The daemon initializes a virtual input device via `/dev/uinput` (`uinput_mouse`) and accepts socket commands to simulate relative mouse motion (`REL_X`/`REL_Y`), mouse button presses (`BTN_LEFT`/`BTN_RIGHT`/`BTN_MIDDLE`/`BTN_SIDE`/`BTN_EXTRA`), and vertical/horizontal scroll wheel events (`REL_WHEEL`/`REL_HWHEEL`).
-2. **Touch Mode**: Used in Touch Mode and Mirror Touch Projection. The daemon opens the touchscreen device node `/dev/input/event6` directly and writes Linux `struct input_event` Multi-Touch Protocol Type B structures.
+2. **Touch Mode**: Used in Touch Mode and Mirror Touch Projection. The daemon dynamically discovers the primary touchscreen `evdev` node (`discover_primary_touch_fd()` checking `INPUT_PROP_DIRECT` + `ABS_MT_POSITION_X/Y` + `EVIOCGABS` and excluding `*_sec` secondary panels — e.g. `/dev/input/event6` on AYN Thor, `/dev/input/event5` on Retroid Pocket Duo), reports its sensor dimensions `(touchW, touchH)` during `VERSION_OK`, and writes Linux `struct input_event` Multi-Touch Protocol Type B structures.
 
 ### System Service: Socket Protocol & Lifecycle
 
@@ -123,11 +123,7 @@ In relative **Mouse Mode** (`useMouse = true`):
 
 In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch Projection):
 
-- Normalised logical coordinates (`normalizedX`, `normalizedY` ∈ [0.0, 1.0]) are converted to the touchscreen's raw physical portrait space (`x ∈ [0, 1080]`, `y ∈ [0, 1920]`) with rotation-correction:
-  ```kotlin
-  sensorX = (1.0f - normalizedY) * 1080
-  sensorY = normalizedX * 1920
-  ```
+- Normalised logical coordinates (`normalizedX`, `normalizedY` ∈ [0.0, 1.0]) are converted via `TouchSensorMath.normalizedToSensor` (`:shared:core`) to the primary touchscreen's raw `EVIOCGABS` sensor space (`sensorW × sensorH` reported by `PrivdClient.touchSensorWidth/Height`, defaulting to `1080 × 1920`) across all 4 display rotations (`ROT_0`, `ROT_90`, `ROT_180`, `ROT_270` from `TouchInjector.primaryDisplayRotation`; e.g., at `ROT_90`: `sensorX = (1.0f - normalizedY) * sensorW`, `sensorY = normalizedX * sensorH`).
 - These coordinates are sent to slot-aware `TouchInjector.injectTouch(slot, action, normX, normY)` which maps concurrent pointer contacts to distinct Linux input slots (`0..9`) and transmits commands directly to `PrivdClient`, enabling slot-aware multi-touch on the absolute touchpad.
 - When `TouchInjector.releaseAllSlots()` is called (for example by `InjectorLifecycleManager` on backgrounding), the injector sends slot-specific `UP` commands for all supported touch slots (`0..9`). This prevents Android from retaining a visible touch indicator.
 - **Mode Switching Safety:** `Modifier.touchpadSurfaceInput` is keyed on `(processor, useMouse)`. When toggling dynamically between Mouse Mode and Touch Mode or disposing the surface while fingers are down, its `finally` block invokes `TouchpadGestureProcessor.onCancel()`, which unconditionally releases all active touch slots (`TouchAction.UP`) and mouse drag/click states. This prevents orphaned pointer slots or stuck mouse buttons.

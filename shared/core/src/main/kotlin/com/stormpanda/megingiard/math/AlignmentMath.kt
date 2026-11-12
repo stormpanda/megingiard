@@ -21,10 +21,9 @@ const val ALIGNMENT_FINE_STEP_PX = 1f
 private const val MIN_DENSITY_EPSILON = 0.001f
 
 /**
- * Reference dimensions for bottom MacroPad canvas.
- * Note: [ALIGNMENT_CANVAS_WIDTH_PX] / [ALIGNMENT_CANVAS_HEIGHT_PX] (1080x1240) represent the portrait display coordinate space
- * used for system alignment calculations, whereas [MPE_CANVAS_WIDTH_PX] / [MPE_CANVAS_HEIGHT_PX] (1240x1080) represent the
- * physical landscape canvas of the bottom screen used as default fallback when runtime metrics are unavailable.
+ * Headless / unit-test fallback reference dimensions for the secondary MacroPad canvas.
+ * Runtime UI callers pass measured canvas bounds or live secondary display metrics via
+ * `DisplayDetector`; these constants apply only before layout measurement or in JVM tests.
  */
 const val ALIGNMENT_CANVAS_WIDTH_PX = 1080f
 const val ALIGNMENT_CANVAS_HEIGHT_PX = 1240f

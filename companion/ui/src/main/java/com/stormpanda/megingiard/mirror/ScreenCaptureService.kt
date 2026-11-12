@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.hardware.display.DisplayManager
+import android.os.Build
 import android.os.IBinder
 import android.view.Display
 import android.view.Surface
@@ -31,6 +32,7 @@ import kotlinx.coroutines.launch
 private const val TAG = "ScreenCaptureService"
 private const val DIRECT_MIRROR_MAX_RETRIES = 3
 private const val DIRECT_MIRROR_RETRY_DELAY_MS = 200L
+private const val FOREGROUND_NOTIFICATION_ID = 1
 
 const val ACTION_START_PRIVD = "START_PRIVD"
 const val ACTION_STOP = "STOP"
@@ -119,7 +121,7 @@ class ScreenCaptureService : Service() {
         return startPrivdPath()
     }
 
-    private fun startForegroundNotificationConnectedDevice() {
+    private fun startForegroundNotificationSpecialUse() {
         val channelId = "screen_capture_channel"
         val channel = NotificationChannel(channelId, "Screen Mirroring", NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -132,11 +134,15 @@ class ScreenCaptureService : Service() {
                 .setSmallIcon(android.R.drawable.ic_menu_view)
                 .build()
 
-        startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(FOREGROUND_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else {
+            startForeground(FOREGROUND_NOTIFICATION_ID, notification)
+        }
     }
 
     private fun startPrivdPath(): Int {
-        startForegroundNotificationConnectedDevice()
+        startForegroundNotificationSpecialUse()
         if (ScreenCaptureManager.isCapturing.value) {
             AppLog.d(TAG, "Direct Privd capture already running, ignoring duplicate start")
             return START_NOT_STICKY

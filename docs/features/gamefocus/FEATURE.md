@@ -16,19 +16,19 @@
 
 ### Overview
 
-Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpanda.megingiard.gamefocus`) providing a dual-screen experience on handheld devices such as the AYN Thor. It displays an endless 2:3 vertical poster carousel of all installed applications on the primary top display (Display 0) while maintaining the full Megingiard companion controls (MacroPad, Touchpad, Keyboard, Mirror Card, Quick Menu) on the secondary bottom display (Display 4).
+Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpanda.megingiard.gamefocus`) providing a dual-screen experience on handheld devices such as the AYN Thor and Retroid Pocket Duo. It displays an endless 2:3 vertical poster carousel of all installed applications on the primary top display (Display 0) while maintaining the full Megingiard companion controls (MacroPad, Touchpad, Keyboard, Mirror Card, Quick Menu) on the secondary bottom display (`DisplayDetector.findSecondaryDisplay`).
 
 > [!IMPORTANT]
 > **Release Status & Companion Decoupling Principle**
 >
 > - **Not Released to the Public:** Megingiard Game Focus is currently an experimental, unreleased build variant.
-> - **Optional Usage:** Users are **never** required or forced to use Game Focus. Megingiard Companion runs standalone and works with stock Android, Thor/Odin launchers, or any third-party launcher (Nova, Daijisho, Beacon, ES-DE, etc.).
+> - **Optional Usage:** Users are **never** required or forced to use Game Focus. Megingiard Companion runs standalone and works with stock Android, vendor launchers (Thor/Odin, Retroid), or any third-party launcher (Nova, Daijisho, Beacon, ES-DE, etc.).
 > - **Zero Dependency & Bug Fixing Rule:** Megingiard Companion has zero runtime dependencies on Game Focus. Any bug, crash, or unexpected behavior occurring in Megingiard Companion MUST be fixed entirely within Megingiard Companion (`:companion:*`) or shared modules (`:shared:*`). Fixing or partially fixing Companion bugs via changes in Game Focus is strictly prohibited.
 
 ### FR-GF1: Dual-Screen Execution
 
-- Megingiard Game Focus (`FocusTopLauncherActivity`) MUST run on the primary top display (`Display.DEFAULT_DISPLAY`, Display 0) as a standalone launcher application (`com.stormpanda.megingiard.gamefocus`).
-- Megingiard Companion (`MainActivity` in `:companion:ui`) runs independently on the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`, Display 4) without launching or depending on `FocusTopLauncherActivity`.
+- Megingiard Game Focus (`FocusTopLauncherActivity`) MUST run on the primary top display (`Display.DEFAULT_DISPLAY`, Display 0) as a standalone launcher application (`com.stormpanda.megingiard.gamefocus`), hiding both status and navigation bars immersively (`WindowInsetsCompat.Type.systemBars()`).
+- Megingiard Companion (`MainActivity` in `:companion:ui`) runs independently on the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`) without launching or depending on `FocusTopLauncherActivity`.
 
 ### FR-GF2: 2:3 Poster Carousel & Gamepad Navigation
 
@@ -95,7 +95,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 ### FR-GF6: Dual-Display Target App Launching
 
 - Pressing the Gamepad **A** button (`KEYCODE_BUTTON_A` / `KEYCODE_DPAD_CENTER` / `ENTER`) MUST launch the highlighted application on the primary top display (`Display.DEFAULT_DISPLAY`, Display 0).
-- Pressing the Gamepad **X** button (`KEYCODE_BUTTON_X` or `KEYCODE_X`) MUST launch the highlighted application on the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`, Display 4).
+- Pressing the Gamepad **X** button (`KEYCODE_BUTTON_X` or `KEYCODE_X`) MUST launch the highlighted application on the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`).
 - The bottom-right corner of the launcher UI MUST present subdued touch-enabled indicator buttons ("Top Screen" with cutout letter **A** circle icon and "Bottom Screen" with cutout letter **X** circle icon) styled framelessly (`onSurfaceSecondary`, no background box, no border) for touch launching.
 
 ### FR-GF7: Interactive Categories & Dual-Plane Layout System

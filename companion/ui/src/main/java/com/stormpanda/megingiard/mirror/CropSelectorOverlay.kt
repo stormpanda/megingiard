@@ -18,11 +18,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
@@ -69,8 +71,10 @@ fun CropSelectorOverlay(
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else CS_FALLBACK_SRC_WIDTH
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else CS_FALLBACK_SRC_HEIGHT
 
-    val secScreenW = CS_FALLBACK_SEC_WIDTH
-    val secScreenH = CS_FALLBACK_SEC_HEIGHT
+    val context = LocalContext.current
+    val secDisplaySize = remember(context) { DisplayDetector.resolveSecondaryDisplaySize(context) }
+    val secScreenW = secDisplaySize?.widthPx?.toFloat() ?: CS_FALLBACK_SEC_WIDTH
+    val secScreenH = secDisplaySize?.heightPx?.toFloat() ?: CS_FALLBACK_SEC_HEIGHT
 
     fun updateCutoutWithNewCrop(
         cutout: ScreenCutout,

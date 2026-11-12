@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# pull_screenshots.sh — Capture both AYN Thor screens via ADB and save locally.
-# TOP  = port 131 (Built-in Screen), BOTTOM = port 132 (Screen-2).
-# screencap -d takes the 64-bit unique display ID reported by SurfaceFlinger.
+# pull_screenshots.sh — Capture both screens of a dual-screen Android handheld via ADB and save locally.
+# Resolves TOP (HWC display 0) and BOTTOM (HWC display 1) 64-bit physical SurfaceFlinger display IDs
+# dynamically (works across AYN Thor, Retroid Pocket Duo, and future dual-screen handhelds).
 set -euo pipefail
 
 ADB="${ADB:-$(command -v adb 2>/dev/null || echo "$HOME/Library/Android/sdk/platform-tools/adb")}"
@@ -24,7 +24,7 @@ if [[ -z "$DEVICE" ]]; then
   done
 
   if [[ ${#devices[@]} -eq 0 ]]; then
-    echo "ERROR: No connected Thor/Android device found via ADB." >&2
+    echo "ERROR: No connected Android handheld found via ADB." >&2
     exit 1
   elif [[ ${#devices[@]} -eq 1 ]]; then
     DEVICE="${devices[0]}"
@@ -45,18 +45,24 @@ ADB_CMD=("$ADB" "-s" "$DEVICE")
 
 mkdir -p "$OUTDIR"
 
-# Resolve unique display IDs from SurfaceFlinger (by hardware port number).
+# Resolve unique physical display IDs from SurfaceFlinger (HWC display 0 = top, HWC display 1 = bottom).
 if ! SF_IDS=$("${ADB_CMD[@]}" shell dumpsys SurfaceFlinger --display-id 2>&1); then
   echo "ERROR: Failed to query display IDs via SurfaceFlinger on device ($DEVICE):" >&2
   echo "$SF_IDS" >&2
   exit 1
 fi
 
-ID_TOP=$(echo "$SF_IDS"    | grep 'port=131' | grep -oE 'Display [0-9]+' | awk '{print $2}' | head -1 || true)
-ID_BOTTOM=$(echo "$SF_IDS" | grep 'port=132' | grep -oE 'Display [0-9]+' | awk '{print $2}' | head -1 || true)
+ID_TOP=$(echo "$SF_IDS"    | grep '(HWC display 0)' | grep -oE 'Display [0-9]+' | awk '{print $2}' | head -1 || true)
+ID_BOTTOM=$(echo "$SF_IDS" | grep '(HWC display 1)' | grep -oE 'Display [0-9]+' | awk '{print $2}' | head -1 || true)
+
+# Fallback to first two physical SurfaceFlinger displays if HWC annotations differ
+if [[ -z "$ID_TOP" || -z "$ID_BOTTOM" ]]; then
+  ID_TOP=$(echo "$SF_IDS"    | grep -oE 'Display [0-9]+' | awk 'NR==1 {print $2}' || true)
+  ID_BOTTOM=$(echo "$SF_IDS" | grep -oE 'Display [0-9]+' | awk 'NR==2 {print $2}' || true)
+fi
 
 if [[ -z "$ID_TOP" || -z "$ID_BOTTOM" ]]; then
-  echo "ERROR: Could not resolve display IDs for Thor (port 131 / 132). Output:" >&2
+  echo "ERROR: Could not resolve TOP and BOTTOM SurfaceFlinger display IDs. Output:" >&2
   echo "$SF_IDS" >&2
   exit 1
 fi
@@ -66,14 +72,14 @@ echo "TOP    display ID: $ID_TOP"
 echo "BOTTOM display ID: $ID_BOTTOM"
 
 echo "Capturing TOP screen…"
-"${ADB_CMD[@]}" shell screencap -d "$ID_TOP" -p /sdcard/mgnrd_top.png
-"${ADB_CMD[@]}" pull /sdcard/mgnrd_top.png "$OUTDIR/${TS}_TOP.png"
+"${ADB_CMD[@]}" shell screencap -d "$ID_TOP" -p /data/local/tmp/mgnrd_top.png
+"${ADB_CMD[@]}" pull /data/local/tmp/mgnrd_top.png "$OUTDIR/${TS}_TOP.png"
 
 echo "Capturing BOTTOM screen…"
-"${ADB_CMD[@]}" shell screencap -d "$ID_BOTTOM" -p /sdcard/mgnrd_bottom.png
-"${ADB_CMD[@]}" pull /sdcard/mgnrd_bottom.png "$OUTDIR/${TS}_BOTTOM.png"
+"${ADB_CMD[@]}" shell screencap -d "$ID_BOTTOM" -p /data/local/tmp/mgnrd_bottom.png
+"${ADB_CMD[@]}" pull /data/local/tmp/mgnrd_bottom.png "$OUTDIR/${TS}_BOTTOM.png"
 
-"${ADB_CMD[@]}" shell rm -f /sdcard/mgnrd_top.png /sdcard/mgnrd_bottom.png
+"${ADB_CMD[@]}" shell rm -f /data/local/tmp/mgnrd_top.png /data/local/tmp/mgnrd_bottom.png
 
 echo "Saved:"
 echo "  $OUTDIR/${TS}_TOP.png"

@@ -4,7 +4,7 @@ This document is the entry point for Megingiard's security model. It summarizes 
 
 ## Scope and Threat Model
 
-Megingiard is a local, device-specific companion app for the AYN Thor. The strongest trust boundary is the Android app sandbox: the normal app process runs as an untrusted app, while Privileged Mode starts a helper daemon under the shell UID through ADB Wireless Debugging.
+Megingiard is a local companion app for dual-screen Android gaming handhelds (such as the AYN Thor and Retroid Pocket Duo). The strongest trust boundary is the Android app sandbox: the normal app process runs as an untrusted app, while Privileged Mode starts a helper daemon under the shell UID through the vendor hardware root bridge (`PServerBinder`) or ADB Wireless Debugging.
 
 The current security concept focuses on these threats:
 

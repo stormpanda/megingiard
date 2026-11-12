@@ -28,7 +28,7 @@ OS-level peer credential checks (`SO_PEERCRED` / `peerCredentials.uid` checks) a
 
 #### Mutual HMAC-SHA256 Handshake & Protocol Version Verification
 
-Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`, currently `17`):
+Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`, currently `19`):
 
 ```
 Daemon -> App     CHAL <32-hex-nonce1>\n
@@ -37,12 +37,12 @@ Daemon -> App     OK\n
 App    -> Daemon  VERIFY <32-hex-nonce2>\n
 Daemon -> App     PROOF <64-hex-hmac2>\n   HMAC-SHA256(key, nonce2)
 App    -> Daemon  VERSION <app_version>\n  Protocol version check
-Daemon -> App     VERSION_OK <daemon_ver>\n Version match confirmed
+Daemon -> App     VERSION_OK <daemon_ver> <touch_w> <touch_h>\n Version match + primary touch sensor dimensions
 ```
 
-The first half (`CHAL/AUTH/OK`) proves the app knows the key before the daemon accepts commands. The second half (`VERIFY/PROOF`) proves the daemon knows the key before the app sends privileged commands. The third phase (`VERSION/VERSION_OK`) validates daemon protocol compatibility:
+The first half (`CHAL/AUTH/OK`) proves the app knows the key before the daemon accepts commands. The second half (`VERIFY/PROOF`) proves the daemon knows the key before the app sends privileged commands. The third phase (`VERSION/VERSION_OK`) validates daemon protocol compatibility and reports kernel `EVIOCGABS` primary touch sensor bounds:
 
-- **Version Matching**: The app sends `VERSION <app_version>\n`. If `<app_version> == daemon_version`, the daemon responds with `VERSION_OK <daemon_ver>\n`.
+- **Version Matching & Touch Sensor Discovery**: The app sends `VERSION <app_version>\n`. If `<app_version> == daemon_version`, the daemon responds with `VERSION_OK <daemon_ver> <touch_w> <touch_h>\n` (`0 0` if no primary touchscreen node was discovered). `PrivdClient` exposes the positive `touchSensorWidth` and `touchSensorHeight` for `TouchInjector` and `TouchScreenObserver`.
 - **Version Mismatch Handling**: If `<app_version> != daemon_version`, the daemon responds with `VERSION_MISMATCH <daemon_ver>\n` and closes the socket.
 - **Legacy Daemon / Legacy App Handling**:
   - Legacy pre-versioning daemons ignore `VERSION` and produce no `VERSION_OK` response; the app's 1-second version read times out and treats the connection as failed.
@@ -56,7 +56,7 @@ The daemon compares the app's `AUTH` proof with a constant-time XOR accumulator.
 
 #### Native Asset Verification & Pre-Push Cleanup During Bootstrap
 
-`PServerBootstrapper` and `PrivdBootstrapper` kill any running daemon process (`kill -9`) and delete `/data/local/tmp/megingiard_privd` prior to staging/pushing fresh binaries to clear `ETXTBSY` file locks from active daemon instances. Both bootstrappers verify the SHA-256 pin of `megingiard_privd_arm64` and `megingiard_mirror.dex` via `BinaryIntegrity.verify()` before deployment. A verification failure aborts bootstrap.
+`PServerBootstrapper` and `PrivdBootstrapper` kill any running daemon process (`kill -9`) and delete `/data/local/tmp/megingiard_privd` as well as any existing read-only `/data/local/tmp/megingiard_mirror*.dex` prior to staging/pushing fresh binaries to clear `ETXTBSY` file locks and read-only permission blocks. `megingiard_mirror.dex` is deployed with mode `0444` (`0100444`) as required by Android 14+ dynamic DEX loading. Both bootstrappers verify the SHA-256 pin of `megingiard_privd_arm64` and `megingiard_mirror.dex` via `BinaryIntegrity.verify()` before deployment. A verification failure aborts bootstrap.
 
 Upon daemon replacement and reconnection, active subsystems automatically recover:
 - **Screen Mirroring (`ScreenCaptureService`):** Observes `PrivdClient.state` and automatically starts a new `DirectPrivdMirrorSession` on the new daemon, restoring mirror output without user intervention.
@@ -108,6 +108,8 @@ the existing protocol.
 | D → App | `MIRROR_STOPPED\n` | Mirror child has been reaped |
 | App → D | `SCREENSHOT [<display_id>] <path>\n` | Take display screenshot (defaults to primary if display_id omitted), output to path |
 | D → App | `SCREENSHOT_OK\n` | Screenshot completed successfully |
+| App → D | `SCREENSHOT_B64 [<display_id>]\n` | Capture screenshot to temporary file in `/data/local/tmp` (resolving 64-bit SurfaceFlinger HWC display 0 ID when omitted), unlink, and stream base64 PNG |
+| D → App | `SCREENSHOT_BEGIN\n` / `<b64>\n` / `SCREENSHOT_END\n` | Streamed base64 PNG payload markers and lines |
 | D → App | `SCREENSHOT_ERR <reason>\n` | Screenshot failed (e.g. invalid path / execution error) |
 | App → D | `READ_FILE <path>\n` | Read text file (up to 128KB) from storage under shell UID |
 | D → App | `READ_BEGIN\n` | Stream file contents start marker |
@@ -121,7 +123,7 @@ the existing protocol.
 
 For the privileged mirror (`MIRROR START_DIRECT`), the `app_process` child registers the Binder service `megingiard.direct.surface` to receive multiple target `Surface` instances and their physical dimensions. This allows the direct mirror server to set up and capture multiple concurrent virtual displays mapping to different cutout regions without process restarts.
 
-`SUB GAMEPAD` and `SUB TOUCH` open the physical evdev nodes (`/dev/input/event*` for gamepad, `/dev/input/event6` for touchscreen) read-only/read-write and start dedicated reader threads that forward filtered `EVT` and `EVT_TOUCH` lines to the app. The fds are **not** grabbed via `EVIOCGRAB` — evdev is multicast, so Android's EventHub continues to dispatch the same events to the foreground game in parallel. Recording is therefore purely passive observation; nothing is intercepted or replayed.
+`SUB GAMEPAD` and `SUB TOUCH` open the physical evdev nodes (`/dev/input/event*` for gamepad, dynamically discovered primary touchscreen via `discover_primary_touch_fd()` checking `INPUT_PROP_DIRECT` + `ABS_MT_POSITION_X/Y` + `EVIOCGABS` and excluding `*_sec` secondary panels) read-only/read-write and start dedicated reader threads that forward filtered `EVT` and `EVT_TOUCH` lines to the app. The fds are **not** grabbed via `EVIOCGRAB` — evdev is multicast, so Android's EventHub continues to dispatch the same events to the foreground game in parallel. Recording is therefore purely passive observation; nothing is intercepted or replayed.
 
 Active multi-touch slots are automatically tracked; when a client disconnects or sends `QUIT`, any remaining active touch slots are automatically released (via synthesized UP events) to prevent stuck touch points on the screen.
 
@@ -169,28 +171,28 @@ is exposed by `PrivdBootstrapper.stage` for the manual wizard UI.
 1. **Writer (`PrivdClientWriter`)** — drains a `LinkedBlockingQueue<String>` of ASCII commands into the TCP `Socket` output stream (`BufferedWriter`), flushing whenever the queue empties.
 2. **Reader (`PrivdClientReader`)** — continuously reads `\n`-terminated daemon lines; routes `EVT ` and `EVT_TOUCH ` lines to `SharedFlow`s and dispatches request-response lines to the active `PendingRpc` (`SingleLine` or `MultiLine`).
 
-All 6 request-response RPCs (`ping`, `startDirectMirror`, `stopMirror`, `takeScreenshot`, `readTextFile`, `getRunningProcesses`) are serialized through `commandMutex` and share a single `@Volatile private var pendingRpc: PendingRpc?` reference (`executeSingleLineRpc` / `executeMultiLineRpc`).
+All 7 request-response RPCs (`ping`, `startDirectMirror`, `stopMirror`, `takeScreenshot`, `captureScreenshotPng`, `readTextFile`, `getRunningProcesses`) are serialized through `commandMutex` and share a single `@Volatile private var pendingRpc: PendingRpc?` reference (`executeSingleLineRpc` / `executeMultiLineRpc`).
 
 When the socket fails, `markBroken()` acquires `stateLock`, runs `cleanupLocked()` directly to close the socket and cancel any pending RPC, transitions `_state` to `DISCONNECTED`, and notifies `PrivdManager.onClientDisconnected()`.
 
 ### Megingiard System Service Requirement in GamepadInjector
 
-`GamepadInjector` routes directly to `PrivdGamepadInjector` for kernel evdev merge into the physical controller (`g_gamepad_fd`) when `PrivdClient.isConnected`. When Megingiard System Service is offline, gamepad injection is suppressed and buttons render with disabled styling, avoiding dual-controller conflicts from `/dev/uinput` virtual devices on the AYN Thor. Standalone uinput virtual gamepad fallback is retired.
+`GamepadInjector` routes directly to `PrivdGamepadInjector` for kernel evdev merge into the physical controller (`g_gamepad_fd`) when `PrivdClient.isConnected`. When Megingiard System Service is offline, gamepad injection is suppressed and buttons render with disabled styling, avoiding dual-controller conflicts from `/dev/uinput` virtual devices on dual-screen handhelds. Standalone uinput virtual gamepad fallback is retired.
 
 ### Source Files
 
 | File | Responsibility |
 | --- | --- |
-| `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` | Shared daemon version (`PRIVD_VERSION = 17`), asset names, canonical TCP ports (`51234` / `51244`), and remote file/process path helpers |
-| `companion/ui/src/main/cpp/megingiard_privd.c` | Native daemon source (TCP loopback server, HMAC-SHA256 auth, evdev/uinput writers, passive gamepad/touch streams, `SCREENSHOT`, `READ_FILE`, `LIST_PROCESSES`) |
-| `companion/ui/src/main/cpp/cmd_parsers.h` | Pure C command parsers (`parse_touch_command`, `parse_mouse_command`, `parse_key_command`, `parse_gamepad_command`) shared with native unit tests |
+| `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` | Shared daemon version (`PRIVD_VERSION = 19`), asset names, canonical TCP ports (`51234` / `51244`), and remote file/process path helpers |
+| `companion/ui/src/main/cpp/megingiard_privd.c` | Native daemon source (TCP loopback server, HMAC-SHA256 auth, dynamic primary touchscreen `EVIOCGABS` discovery, evdev/uinput writers, passive gamepad/touch streams, `SCREENSHOT` / `SCREENSHOT_B64`, `READ_FILE`, `LIST_PROCESSES`) |
+| `companion/ui/src/main/cpp/cmd_parsers.h` | Pure C command parsers (`parse_touch_command`, `parse_mouse_command`, `parse_key_command`, `parse_gamepad_command`, `is_primary_touch_device_name`) shared with native unit tests |
 | `companion/ui/src/main/assets/megingiard_privd_arm64` | Pre-built static arm64 daemon binary |
 | `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdPairKey.kt` | Per-install Keystore-encrypted HMAC key: `generateAndStore()`, `load()`, `delete()` |
-| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdClient.kt` | Loopback TCP transport singleton (writer + reader threads, `PendingRpc` single-flight RPC framing, evdev/touch event streams) |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdClient.kt` | Loopback TCP transport singleton (writer + reader threads, `PendingRpc` single-flight RPC framing, primary touch sensor dimension capture, `captureScreenshotPng`, evdev/touch event streams) |
 | `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdConnectionState.kt` | Transport connection-state enum (`DISCONNECTED`, `CONNECTING`, `CONNECTED`) |
 | `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdGamepadInjector.kt` | Sends `GD`/`GU`/`HD`/`JS` gamepad commands via `PrivdClient` for physical evdev merge |
 | `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdManager.kt` | Top-level reactive state machine (`PrivdState`, `PrivdError`), Tier-1/Tier-2 connect orchestration |
-| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PServiceBridge.kt` | Binder IPC client for the AYN Thor `/system/bin/pservice` hardware root service (`PServerBinder`) |
+| `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PServiceBridge.kt` | Binder IPC client for the Moorechip `/system/bin/pservice` hardware root service (`PServerBinder`) |
 | `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PServerBootstrapper.kt` | Tier-1 root-bridge bootstrapper: stages binaries, verifies SHA-256 hashes, provisions HMAC key, and spawns daemon under UID 2000 |
 | `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdAdbConnectionManager.kt` | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `noBackupFilesDir`, `pair`/`connect` |
 | `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdBootstrapper.kt` | Tier-2 ADB Wireless Debugging bootstrapper (`BootstrapStage` flow, `pair`, `sync:` push, HMAC key provisioning, daemon spawn, verify) |

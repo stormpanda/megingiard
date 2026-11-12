@@ -29,7 +29,7 @@ daemon listens on a local TCP socket loopback (`127.0.0.1:51234` for release var
 commands, and the daemon performs the privileged kernel I/O on its behalf.
 
 Megingiard uses a two-tier bootstrap architecture:
-- **Tier 1 (Fast-Track Hardware Root Bridge):** On the AYN Thor handheld, Android ships with an on-device root service (`PServerBinder` registered by `/system/bin/pservice`). In permissive SELinux mode, apps can execute root commands via Binder IPC without root prompts or ADB setup. Megingiard utilizes `PServiceBridge` and `PServerBootstrapper` to deploy `megingiard_privd`, provision HMAC authentication keys, and launch the system service in 1 tap without Developer Options, Wireless Debugging, Wi-Fi pairing, or port inputs.
+- **Tier 1 (Fast-Track Hardware Root Bridge):** On Moorechip dual-screen handhelds (such as the AYN Thor and Retroid Pocket Duo), Android ships with an on-device root service (`PServerBinder` registered by `/system/bin/pservice`). In permissive SELinux mode, apps can execute root commands via Binder IPC without root prompts or ADB setup. Megingiard utilizes `PServiceBridge` and `PServerBootstrapper` to deploy `megingiard_privd`, provision HMAC authentication keys, and launch the system service in 1 tap without Developer Options, Wireless Debugging, Wi-Fi pairing, or port inputs.
 - **Tier 2 (ADB Wireless Debugging Fallback):** On devices without `PServerBinder` or when SELinux is actively Enforcing, the app transparently falls back to Android's built-in ADB Wireless Debugging facility via `PrivdBootstrapper` (either automated via `MegingiardAccessibilityService.startMultiStageAutoSetup(context)` or manually via `PrivdSetupWizardDialog`).
 
 ### FR-PV1: Mandatory Megingiard System Service Requirement
@@ -79,9 +79,9 @@ Megingiard uses a two-tier bootstrap architecture:
 
 | Feature | Implementation & Capabilities |
 | --- | --- |
-| **Direct screen mirroring** | Direct `SurfaceControl` mirror via `mirrorserver` DEX spawned by the daemon directly onto app Surface. Zero consent prompts, zero MediaProjection overhead. |
-| **Top screen capture** | High-speed screen capture via daemon `/system/bin/screencap`. Zero permission dialogs. |
-| **Multi-touch injection** | Low-latency multi-touch injection via direct raw `input_event` writes to `/dev/input/event6` (AYN Thor touchscreen). |
+| **Direct screen mirroring** | Direct `SurfaceControl` / `DisplayControl` mirror via `mirrorserver` DEX spawned by the daemon directly onto app Surface. Zero consent prompts, zero MediaProjection overhead. |
+| **Top screen capture** | High-speed screen capture via daemon `/system/bin/screencap` (`SCREENSHOT_B64` loopback PNG streaming, resolving 64-bit SurfaceFlinger HWC physical IDs on Android 14+). Zero permission dialogs. |
+| **Multi-touch injection** | Low-latency multi-touch injection via direct raw `input_event` writes to the dynamically discovered primary touchscreen `evdev` node (`INPUT_PROP_DIRECT` + `EVIOCGABS`, e.g. `/dev/input/event6` on AYN Thor, `/dev/input/event5` on Retroid Pocket Duo). |
 | **Relative mouse** | Low-latency virtual mouse injection via kernel `/dev/uinput`. |
 | **Virtual keyboard** | Low-latency virtual keyboard key injection via kernel `/dev/uinput`. |
 | **Gamepad merge & physical recording** | Single-controller emulation merging MacroPad events into physical controller evdev stream, plus raw controller event recording. |
@@ -122,7 +122,7 @@ Megingiard supports three bootstrap pathways depending on device capabilities:
 
 1. **Tier-1 Hardware Root Bridge (`PServiceBridge` + `PServerBootstrapper`):**
    - Queries `/system/bin/pservice` Binder (`PServerBinder`, transaction code `0`).
-   - Copies `megingiard_privd_arm64` and `megingiard_mirror.dex` into `context.cacheDir`, verifies SHA-256 hashes via `BinaryIntegrity.verify()`, generates a per-install 32-byte HMAC key via `PrivdPairKey.generateAndStore()`, and executes a single root command script that copies the binaries to `/data/local/tmp/`, sets `chown 2000:2000` (`shell:shell`), provisions the HMAC key (`--provision <key_hex>`), and spawns the detached daemon in the background.
+   - Copies `megingiard_privd_arm64` and `megingiard_mirror.dex` into `context.cacheDir`, verifies SHA-256 hashes via `BinaryIntegrity.verify()`, generates a per-install 32-byte HMAC key via `PrivdPairKey.generateAndStore()`, and executes a single root command script that removes stale binaries, copies the binaries to `/data/local/tmp/`, marks `megingiard_mirror.dex` read-only (`chmod 0444` for Android 14+ dynamic code loading), sets `chown 2000:2000` (`shell:shell`), provisions the HMAC key (`--provision <key_hex>`), and spawns the detached daemon in the background.
    - Verifies connectivity via `PrivdManager.verifyConnect()`.
 
 2. **Tier-2 Automated Accessibility Setup (`MegingiardAccessibilityService.startMultiStageAutoSetup`):**
@@ -137,7 +137,7 @@ Megingiard supports three bootstrap pathways depending on device capabilities:
    - **Step 3 (Pairing Code & Pairing Port Entry + Progress Checklist):** Collects the 6-digit pairing code and 5-digit pairing port from the "Pair device with pairing code" dialog, then runs `GlobalSettingsViewModel.privdPairAndBootstrap()`, progressing through `PAIRING → CONNECTING_ADB → PUSHING_BINARY → SPAWNING_DAEMON → VERIFYING → DONE`:
      - `PAIRING` calls `PrivdAdbConnectionManager.pair("127.0.0.1", pairPort, code)` and persists the RSA keypair only after pairing succeeds.
      - `CONNECTING_ADB` connects to `127.0.0.1:connectPort` (discovered via `getprop service.adb.tls.port`, `screenConnectPort`, or the manual port entry).
-     - `PUSHING_BINARY` verifies SHA-256 hashes, pushes `megingiard_privd_arm64` and `megingiard_mirror.dex` to `/data/local/tmp/` via the ADB `sync:` service, verifies remote byte sizes, and provisions the per-install HMAC key (`--provision <key_hex>`).
+     - `PUSHING_BINARY` verifies SHA-256 hashes, removes stale `/data/local/tmp/megingiard_mirror*.dex` files, pushes `megingiard_privd_arm64` (`0755`) and `megingiard_mirror.dex` (`0444` read-only) to `/data/local/tmp/` via the ADB `sync:` service, verifies remote byte sizes, and provisions the per-install HMAC key (`--provision <key_hex>`).
      - `SPAWNING_DAEMON` starts the daemon on `127.0.0.1:51234` (or `51244` for debug) and reads its readiness token (`R`).
      - `VERIFYING` retries `PrivdManager.verifyConnect()` up to 20 times (300 ms interval).
    - **Step 4 (Finished):** Displays completion confirmation (`FinishedStepContent`).

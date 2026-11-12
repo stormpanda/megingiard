@@ -316,6 +316,24 @@ static void test_gamepad_protocol_parsing(void) {
     printf("PASS\n");
 }
 
+static void test_primary_touch_device_name_filtering(void) {
+    printf("[TEST] Primary touchscreen device name filtering... ");
+    assert(is_primary_touch_device_name("fts_ts") == 2);
+    assert(is_primary_touch_device_name("goodix_ts") == 1);
+    assert(is_primary_touch_device_name("synaptics_dsx") == 1);
+    assert(is_primary_touch_device_name("fts_ts_sec") == 0);
+    assert(is_primary_touch_device_name("goodix_ts_sec") == 0);
+    assert(is_primary_touch_device_name("goodix-sec") == 0);
+    assert(is_primary_touch_device_name("fts_ts_SEC") == 0);
+    assert(is_primary_touch_device_name("Touchscreen Secondary") == 0);
+    assert(is_primary_touch_device_name("secondary_touch") == 0);
+    assert(is_primary_touch_device_name("Megingiard Virtual Mouse") == 0);
+    assert(is_primary_touch_device_name("megingiard_touch") == 0);
+    assert(is_primary_touch_device_name("") == 0);
+    assert(is_primary_touch_device_name(NULL) == 0);
+    printf("PASS\n");
+}
+
 int main(void) {
     printf("=== Megingiard Native C Unit Tests ===\n");
     test_input_event_struct_size();
@@ -323,6 +341,7 @@ int main(void) {
     test_mouse_protocol_parsing();
     test_touch_protocol_parsing();
     test_gamepad_protocol_parsing();
+    test_primary_touch_device_name_filtering();
     printf("All Native C unit tests PASSED successfully!\n");
     return 0;
 }

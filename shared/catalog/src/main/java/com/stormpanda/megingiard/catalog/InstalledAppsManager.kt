@@ -60,7 +60,6 @@ private const val ROM_PACKAGE_PREFIX = "rom."
 private const val MAX_RECENT_APPS = 10
 private const val INTENT_CATEGORY_GAME = "android.intent.category.GAME"
 private const val INTENT_CATEGORY_APP_GAMES = "android.intent.category.APP_GAMES"
-private const val THOR_SECONDARY_DISPLAY_FALLBACK_ID = 4
 
 object InstalledAppsManager {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -1136,8 +1135,11 @@ object InstalledAppsManager {
         appInfo: InstalledAppInfo,
     ): Boolean {
         val secondaryDisplay = DisplayDetector.findSecondaryDisplay(context)
-        val displayId = secondaryDisplay?.displayId ?: THOR_SECONDARY_DISPLAY_FALLBACK_ID // Fallback to secondary display ID 4 on AYN Thor
-        return launchAppOnDisplay(context, appInfo, displayId)
+        if (secondaryDisplay == null) {
+            AppLog.w(TAG, "Cannot launch '${appInfo.label}' on secondary display: no secondary display attached")
+            return false
+        }
+        return launchAppOnDisplay(context, appInfo, secondaryDisplay.displayId)
     }
 
     suspend fun launchAppOnDisplay(

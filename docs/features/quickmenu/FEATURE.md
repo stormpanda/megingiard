@@ -76,7 +76,7 @@ the universal "go back" mechanism throughout the app.
       with `colors.accent` when frozen. Disabled when not capturing or when in Companion Hub.
   - **Take Screenshot Card (Right Card):**
     - Headline: "TAKE SCREENSHOT" (`R.string.quick_menu_take_screenshot`). All three screenshot buttons are unconditionally enabled.
-    - **Top Screenshot** icon button: captures Display 0 (Top Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP)`. Uses Material Symbol `splitscreen_bottom` (inverted per layout orientation convention) with label "Top". Automatically triggers a one-shot capture prompt if neither mirroring nor Privileged Mode is active.
+    - **Top Screenshot** icon button: captures Display 0 (Top Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP)` (streaming PNG bytes over loopback via `PrivdClient.captureScreenshotPng()` when Privileged Mode is active and saving via `MediaStore`). Uses Material Symbol `splitscreen_bottom` (inverted per layout orientation convention) with label "Top".
     - **Bottom Screenshot** icon button: captures the secondary display (Bottom Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTTOM)`. Uses Material Symbol `splitscreen_top` with label "Bottom". Auto-dismisses the Quick Menu overlay to capture a clean MacroPad/companion screen.
     - **Both Screenshot** icon button: captures both screens simultaneously via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH)` and composites them into a vertical dual-screen image. Uses Material Symbol `splitscreen` with label "Both".
 - All icon buttons in these cards have compact vertical spacing with clear text labels rendered directly beneath each icon.
@@ -84,7 +84,7 @@ the universal "go back" mechanism throughout the app.
 ### FR-PM6: Centralized Injector Lifecycle
 
 - Input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) are centrally managed by `InjectorLifecycleManager.watch()`, which is started once in `MainActivity.onCreate()`.
-- Standard injectors remain active whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), keeping the virtual keyboard attached while the Quick Menu is open to avoid OEM launcher focus-steal behavior on AYN Thor firmware when keyboard availability toggles (`qwerty` ↔ `-keyb`).
+- Standard injectors remain active whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), keeping the virtual keyboard attached while the Quick Menu is open to avoid OEM launcher focus-steal behavior on dual-screen handheld firmware when keyboard availability toggles (`qwerty` ↔ `-keyb`).
 - `KeyInjector` is paused only when Megingiard is backgrounded or when Android's software IME is required (`AppStateManager.isPrivdSetupWizardActive`). Neither `QuickMenu` nor `MacroPadScreen` directly starts or stops injector processes.
 
 ---

@@ -6,6 +6,38 @@
 #define MAX_TOUCH_SLOTS 10
 
 /**
+ * Classifies an evdev device name for primary touchscreen selection.
+ *
+ * Returns:
+ *   0 — reject (NULL, empty, virtual "Megingiard*" device, or secondary "*_sec" / "*-sec" / "*Secondary*" panel)
+ *   2 — preferred primary touchscreen match (exact "fts_ts")
+ *   1 — generic candidate primary touchscreen
+ */
+static inline int is_primary_touch_device_name(const char* devname) {
+    if (!devname || devname[0] == '\0') return 0;
+    if (strncmp(devname, "Megingiard", 10) == 0 || strncmp(devname, "megingiard", 10) == 0) {
+        return 0;
+    }
+    size_t len = strlen(devname);
+    if (len >= 4) {
+        const char* suffix = devname + (len - 4);
+        if (strcmp(suffix, "_sec") == 0 || strcmp(suffix, "-sec") == 0 ||
+            strcmp(suffix, "_SEC") == 0 || strcmp(suffix, "-SEC") == 0) {
+            return 0;
+        }
+    }
+    if (strstr(devname, "_sec_") != NULL ||
+        strstr(devname, "Secondary") != NULL ||
+        strstr(devname, "secondary") != NULL) {
+        return 0;
+    }
+    if (strcmp(devname, "fts_ts") == 0) {
+        return 2;
+    }
+    return 1;
+}
+
+/**
  * Parses and dispatches multi-touch commands:
  *   D <slot> <x> <y>
  *   M <slot> <x> <y>

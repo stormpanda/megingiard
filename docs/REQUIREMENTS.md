@@ -16,7 +16,7 @@ Detailed functional requirements (including acceptance criteria and edge cases) 
 
 ### Hardware Environment & Multi-Display Architecture
 
-Megingiard is strictly designed for **dual-screen Android gaming handhelds** (specifically the AYN Thor). Single-screen hardware (phones, tablets, and single-screen emulators) is **permanently unsupported**. The system requires concurrent physical multi-display topology where the companion UI runs exclusively on the secondary display and configuration overlays project to the primary display. Single-screen fallbacks are intentionally excluded from the architecture.
+Megingiard is strictly designed for **dual-screen Android gaming handhelds** (including the AYN Thor and Retroid Pocket Duo; see [docs/devices/](devices/)). Single-screen hardware (phones, tablets, and single-screen emulators) is **permanently unsupported**. The system requires concurrent physical multi-display topology where the companion UI runs exclusively on the secondary display and configuration overlays project to the primary display. Single-screen fallbacks are intentionally excluded from the architecture.
 
 ### Battery Efficiency
 

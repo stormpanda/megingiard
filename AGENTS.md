@@ -12,27 +12,28 @@
 
 ## 1 Project Identity
 
-| Key               | Value |
-| ----------------- | ----- |
-| **Package**       | `com.stormpanda.megingiard` |
-| **Language**      | Kotlin 2.0+. Only `:mirrorserver` is Java (shell-UID DEX for `app_process`). No new Java modules. |
-| **UI Framework**  | Jetpack Compose (Material 3, BOM-managed) |
-| **Min SDK**       | 33 — **must not be raised** |
-| **Target SDK**    | 35 |
-| **Build System**  | Gradle (Kotlin DSL), version catalog `gradle/libs.versions.toml` |
-| **Device Target** | AYN Thor dual-screen handheld (Display 0 = top, Display 4 = bottom). **Dual-screen only — single-screen is permanently unsupported.** |
+| Key | Value |
+| --- | --- |
+| **Package** | `com.stormpanda.megingiard` |
+| **Language** | Kotlin 2.0+. Only `:mirrorserver` is Java (shell-UID DEX for `app_process`). No new Java modules. |
+| **UI Framework** | Jetpack Compose (Material 3, BOM-managed) |
+| **Min SDK** | 33 — **must not be raised** |
+| **Target SDK** | 35 |
+| **Build System** | Gradle (Kotlin DSL), version catalog `gradle/libs.versions.toml` |
+| **Device Target** | Dual-screen Android handhelds (AYN Thor, Retroid Pocket Duo; Display 0 = top, non-0 = bottom). **Single-screen permanently unsupported.** |
 
 ---
 
 ## 2 Documentation Map
 
 | Document | Purpose |
-| -------- | ------- |
+| --- | --- |
 | `README.md` / `LICENSE` / `CONTRIBUTING.md` | Overview · Source-Available License 1.0 · contribution & licensing rules |
 | `SECURITY_CONCEPT.md` | Threat model, hardening layers, links to detailed docs |
 | `docs/agents/CODING_GUIDE.md` | **Full rules & examples for §7–§16** |
 | `docs/ARCHITECTURE.md` | Architecture overview & key design decisions |
 | `docs/BUILD_NATIVE.md` | Native C binaries: build & protocol specs |
+| `docs/devices/*.md` | Device hardware & firmware specs (AYN Thor, Retroid Pocket Duo, template) |
 | `docs/GAMEPAD_NAVIGATION.md` | Gamepad focus traversal, isolation & recovery |
 | `docs/MANUAL_VERIFICATION.md` | Manual regression tests & PR sanity checklists |
 | `docs/REQUIREMENTS.md` | Functional & non-functional requirements |

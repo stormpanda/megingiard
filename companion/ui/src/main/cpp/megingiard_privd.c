@@ -65,12 +65,19 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 18
+#define PRIVD_VERSION 19
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
 #define INPUT_PATH_PREFIX "/dev/input/event"
 #define MAX_LINE 512
+
+#ifndef INPUT_PROP_DIRECT
+#define INPUT_PROP_DIRECT 0x01
+#endif
+#ifndef INPUT_PROP_MAX
+#define INPUT_PROP_MAX 0x1f
+#endif
 
 /* test_bit for evdev capability bitmaps */
 #define BITS_PER_LONG    (sizeof(long) * 8)
@@ -87,6 +94,9 @@ static int g_gamepad_fd = -1;
 static int g_mouse_fd = -1;
 static int g_keyboard_fd = -1;
 static int g_touch_fd = -1;
+static int g_touch_width = 0;
+static int g_touch_height = 0;
+static char g_primary_sf_display_id[32] = {0};
 
 /* ---------------------------------------------------------------------------
  * Per-install shared secret — loaded from STATE_FILE at daemon startup and
@@ -397,6 +407,87 @@ static int discover_gamepad_fd(void) {
         }
     }
     return -1;
+}
+
+/*
+ * Walks /dev/input/event0..eventN and selects the primary direct touchscreen:
+ *   - has INPUT_PROP_DIRECT (excludes external controller touchpads)
+ *   - has ABS_MT_POSITION_X and ABS_MT_POSITION_Y multi-touch axes
+ *   - passes is_primary_touch_device_name() (excludes virtual "Megingiard*"
+ *     nodes and secondary "*_sec" / "*Secondary*" panels such as fts_ts_sec)
+ *   - prefers exact "fts_ts" (rank 2) if multiple candidates exist
+ *
+ * Writes hardware sensor pixel dimensions (maximum - minimum + 1) to out_width /
+ * out_height and returns an O_RDWR | O_CLOEXEC fd, or -1 if none is found.
+ */
+static int discover_primary_touch_fd(int *out_width, int *out_height) {
+    char path[64];
+    unsigned long abs_bits[NBITS(ABS_MAX + 1)];
+    unsigned long prop_bits[NBITS(INPUT_PROP_MAX + 1)];
+    char devname[256];
+
+    int best_fd = -1;
+    int best_rank = 0;
+    int best_w = 0;
+    int best_h = 0;
+
+    for (int i = 0; i < SCAN_MAX; i++) {
+        snprintf(path, sizeof(path), "%s%d", INPUT_PATH_PREFIX, i);
+
+        int probe_fd = open(path, O_RDONLY | O_CLOEXEC);
+        if (probe_fd < 0) continue;
+
+        memset(abs_bits, 0, sizeof(abs_bits));
+        memset(prop_bits, 0, sizeof(prop_bits));
+        memset(devname, 0, sizeof(devname));
+
+        if (ioctl(probe_fd, EVIOCGBIT(EV_ABS, sizeof(abs_bits)), abs_bits) < 0 ||
+            ioctl(probe_fd, EVIOCGPROP(sizeof(prop_bits)), prop_bits) < 0 ||
+            ioctl(probe_fd, EVIOCGNAME(sizeof(devname)), devname) < 0) {
+            close(probe_fd);
+            continue;
+        }
+
+        int rank = is_primary_touch_device_name(devname);
+        if (rank <= 0 ||
+            !test_bit(INPUT_PROP_DIRECT, prop_bits) ||
+            !test_bit(ABS_MT_POSITION_X, abs_bits) ||
+            !test_bit(ABS_MT_POSITION_Y, abs_bits)) {
+            close(probe_fd);
+            continue;
+        }
+
+        struct input_absinfo abs_x;
+        struct input_absinfo abs_y;
+        memset(&abs_x, 0, sizeof(abs_x));
+        memset(&abs_y, 0, sizeof(abs_y));
+        int w = 0;
+        int h = 0;
+        if (ioctl(probe_fd, EVIOCGABS(ABS_MT_POSITION_X), &abs_x) == 0 &&
+            ioctl(probe_fd, EVIOCGABS(ABS_MT_POSITION_Y), &abs_y) == 0) {
+            w = abs_x.maximum - abs_x.minimum + 1;
+            h = abs_y.maximum - abs_y.minimum + 1;
+        }
+        close(probe_fd);
+
+        if (rank <= best_rank) continue;
+
+        int rw_fd = open(path, O_RDWR | O_CLOEXEC);
+        if (rw_fd >= 0) {
+            if (best_fd >= 0) close(best_fd);
+            best_fd = rw_fd;
+            best_rank = rank;
+            best_w = (w > 0) ? w : 0;
+            best_h = (h > 0) ? h : 0;
+            fprintf(stderr, "privd: touch=%s name=\"%s\" sensor=%dx%d rank=%d\n",
+                    path, devname, best_w, best_h, rank);
+            if (rank == 2) break;
+        }
+    }
+
+    if (out_width) *out_width = best_w;
+    if (out_height) *out_height = best_h;
+    return best_fd;
 }
 
 
@@ -961,8 +1052,9 @@ static int authenticate_client(int client_fd) {
         return 0;
     }
 
-    char ok_msg[64];
-    int ok_len = snprintf(ok_msg, sizeof(ok_msg), "VERSION_OK %d\n", PRIVD_VERSION);
+    char ok_msg[96];
+    int ok_len = snprintf(ok_msg, sizeof(ok_msg), "VERSION_OK %d %d %d\n",
+                          PRIVD_VERSION, g_touch_width, g_touch_height);
     if (write(client_fd, ok_msg, (size_t)ok_len) != (ssize_t)ok_len) return 0;
 
     return 1;
@@ -1054,6 +1146,167 @@ static void handle_list_processes(int client_fd) {
 
     (void)write(client_fd, "PROC_END\n", 9);
     pthread_mutex_unlock(&g_send_mutex);
+}
+
+static int write_all(int fd, const char *buf, size_t len) {
+    size_t sent = 0;
+    while (sent < len) {
+        ssize_t r = write(fd, buf + sent, len - sent);
+        if (r < 0) {
+            if (errno == EINTR) continue;
+            return -1;
+        }
+        if (r == 0) return -1;
+        sent += (size_t)r;
+    }
+    return 0;
+}
+
+/*
+ * Resolves the 64-bit physical SurfaceFlinger display ID for (HWC display 0)
+ * from `dumpsys SurfaceFlinger --display-id`, caching it across calls.
+ * Required on Android 14-16 where `screencap -d` expects the physical ID.
+ */
+static const char *resolve_primary_sf_display_id(void) {
+    if (g_primary_sf_display_id[0] != '\0') {
+        return g_primary_sf_display_id;
+    }
+    FILE *fp = popen("/system/bin/dumpsys SurfaceFlinger --display-id 2>/dev/null", "r");
+    if (!fp) {
+        return "";
+    }
+    char line[512];
+    while (fgets(line, sizeof(line), fp) != NULL) {
+        if (strstr(line, "(HWC display 0)") != NULL) {
+            const char *disp = strstr(line, "Display ");
+            if (disp != NULL) {
+                disp += 8;
+                while (*disp == ' ') disp++;
+                size_t idx = 0;
+                while (*disp >= '0' && *disp <= '9' && idx < sizeof(g_primary_sf_display_id) - 1) {
+                    g_primary_sf_display_id[idx++] = *disp++;
+                }
+                g_primary_sf_display_id[idx] = '\0';
+                if (idx > 0) break;
+            }
+        }
+    }
+    pclose(fp);
+    return g_primary_sf_display_id;
+}
+
+static int run_screencap_to_file(const char *display_id_str, const char *out_path) {
+    pid_t pid = fork();
+    if (pid < 0) return -1;
+    if (pid == 0) {
+        if (display_id_str != NULL && display_id_str[0] != '\0') {
+            char *args[] = {
+                (char *)"/system/bin/screencap",
+                (char *)"-d",
+                (char *)display_id_str,
+                (char *)"-p",
+                (char *)out_path,
+                NULL
+            };
+            execv(args[0], args);
+        } else {
+            char *args[] = {
+                (char *)"/system/bin/screencap",
+                (char *)"-p",
+                (char *)out_path,
+                NULL
+            };
+            execv(args[0], args);
+        }
+        _exit(127);
+    }
+    int status = 0;
+    if (waitpid(pid, &status, 0) != pid) return -1;
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) return -1;
+    struct stat st;
+    if (stat(out_path, &st) != 0 || st.st_size <= 0) return -1;
+    return 0;
+}
+
+static void handle_screenshot_b64(int client_fd, const char *explicit_display_id) {
+    static const char b64_table[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    char tmp_path[128];
+    snprintf(tmp_path, sizeof(tmp_path), "/data/local/tmp/mgrd_shot_%d.png", g_port_start);
+    unlink(tmp_path);
+
+    const char *target_id = explicit_display_id;
+    if (target_id == NULL || target_id[0] == '\0') {
+        target_id = resolve_primary_sf_display_id();
+    }
+
+    int ok = (run_screencap_to_file(target_id, tmp_path) == 0);
+    if (!ok && (explicit_display_id == NULL || explicit_display_id[0] == '\0') &&
+        target_id != NULL && target_id[0] != '\0') {
+        /* Fallback to default screencap without -d if physical ID lookup failed. */
+        unlink(tmp_path);
+        ok = (run_screencap_to_file(NULL, tmp_path) == 0);
+    }
+
+    if (!ok) {
+        unlink(tmp_path);
+        pthread_mutex_lock(&g_send_mutex);
+        (void)write_all(client_fd, "SCREENSHOT_ERR CAPTURE_FAILED\n", 30);
+        pthread_mutex_unlock(&g_send_mutex);
+        return;
+    }
+
+    FILE *fp = fopen(tmp_path, "rb");
+    if (!fp) {
+        unlink(tmp_path);
+        pthread_mutex_lock(&g_send_mutex);
+        (void)write_all(client_fd, "SCREENSHOT_ERR OPEN_FAILED\n", 27);
+        pthread_mutex_unlock(&g_send_mutex);
+        return;
+    }
+
+    pthread_mutex_lock(&g_send_mutex);
+    if (write_all(client_fd, "SCREENSHOT_BEGIN\n", 17) == 0) {
+        uint8_t in_buf[768];
+        char out_buf[1028];
+        size_t n;
+        while ((n = fread(in_buf, 1, sizeof(in_buf), fp)) > 0) {
+            size_t o = 0;
+            size_t i = 0;
+            while (i + 2 < n) {
+                uint32_t v = (((uint32_t)in_buf[i]) << 16) |
+                             (((uint32_t)in_buf[i + 1]) << 8) |
+                             ((uint32_t)in_buf[i + 2]);
+                out_buf[o++] = b64_table[(v >> 18) & 0x3F];
+                out_buf[o++] = b64_table[(v >> 12) & 0x3F];
+                out_buf[o++] = b64_table[(v >> 6) & 0x3F];
+                out_buf[o++] = b64_table[v & 0x3F];
+                i += 3;
+            }
+            if (n - i == 1) {
+                uint32_t v = ((uint32_t)in_buf[i]) << 16;
+                out_buf[o++] = b64_table[(v >> 18) & 0x3F];
+                out_buf[o++] = b64_table[(v >> 12) & 0x3F];
+                out_buf[o++] = '=';
+                out_buf[o++] = '=';
+            } else if (n - i == 2) {
+                uint32_t v = (((uint32_t)in_buf[i]) << 16) |
+                             (((uint32_t)in_buf[i + 1]) << 8);
+                out_buf[o++] = b64_table[(v >> 18) & 0x3F];
+                out_buf[o++] = b64_table[(v >> 12) & 0x3F];
+                out_buf[o++] = b64_table[(v >> 6) & 0x3F];
+                out_buf[o++] = '=';
+            }
+            out_buf[o++] = '\n';
+            if (write_all(client_fd, out_buf, o) != 0) break;
+        }
+        (void)write_all(client_fd, "SCREENSHOT_END\n", 15);
+    }
+    pthread_mutex_unlock(&g_send_mutex);
+
+    fclose(fp);
+    unlink(tmp_path);
 }
 
 /*
@@ -1191,6 +1444,32 @@ static int serve_client(int client_fd) {
             pthread_mutex_lock(&g_send_mutex);
             (void)write(client_fd, resp, strlen(resp));
             pthread_mutex_unlock(&g_send_mutex);
+            continue;
+        }
+
+        if (strncmp(line, "SCREENSHOT_B64", 14) == 0 &&
+            (line[14] == '\0' || line[14] == ' ' || line[14] == '\r' || line[14] == '\n')) {
+            char *arg = line + 14;
+            while (*arg == ' ') arg++;
+            size_t alen = strlen(arg);
+            while (alen > 0 && (arg[alen - 1] == '\n' || arg[alen - 1] == '\r' || arg[alen - 1] == ' ')) {
+                arg[--alen] = '\0';
+            }
+            /* Validate optional display ID contains only digits. */
+            int valid_id = 1;
+            for (size_t k = 0; k < alen; k++) {
+                if (arg[k] < '0' || arg[k] > '9') {
+                    valid_id = 0;
+                    break;
+                }
+            }
+            if (!valid_id) {
+                pthread_mutex_lock(&g_send_mutex);
+                (void)write_all(client_fd, "SCREENSHOT_ERR INVALID_ID\n", 26);
+                pthread_mutex_unlock(&g_send_mutex);
+            } else {
+                handle_screenshot_b64(client_fd, (alen > 0) ? arg : NULL);
+            }
             continue;
         }
 
@@ -1369,9 +1648,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    g_touch_fd = open("/dev/input/event6", O_RDWR);
+    g_touch_fd = discover_primary_touch_fd(&g_touch_width, &g_touch_height);
     if (g_touch_fd < 0) {
-        fprintf(stderr, "privd: warning: failed to open touchscreen node event6 (touch injection/observation disabled) errno=%d\n", errno);
+        fprintf(stderr, "privd: warning: failed to discover primary touchscreen node (touch injection/observation disabled)\n");
     }
 
     int bound_port = 0;

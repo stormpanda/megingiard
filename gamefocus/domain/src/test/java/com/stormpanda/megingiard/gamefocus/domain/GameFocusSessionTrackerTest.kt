@@ -104,6 +104,37 @@ class GameFocusSessionTrackerTest {
     }
 
     @Test
+    fun testRecordWindowChangedSupportsDisplayId2AndNoOpsWhenSecondaryDisplayAbsent() =
+        runTest {
+            // Retroid Pocket Duo secondary displayId = 2
+            GameFocusSessionTracker.recordWindowChanged(
+                displayId = 2,
+                packageName = PKG_BOTTOM,
+                secondaryDisplayId = 2,
+            )
+            assertEquals(PKG_BOTTOM, GameFocusSessionTracker.lastBottomPackage)
+
+            GameFocusSessionTracker.clearSession()
+            // When secondaryDisplayId is null, Display 4 must NOT be guessed as secondary
+            GameFocusSessionTracker.recordWindowChanged(
+                displayId = 4,
+                packageName = PKG_BOTTOM,
+                secondaryDisplayId = null,
+            )
+            assertNull(GameFocusSessionTracker.lastBottomPackage)
+
+            // Bottom restore must also no-op cleanly when no secondary display is attached
+            GameFocusSessionTracker.recordBottomLaunch(
+                InstalledAppInfo(
+                    packageName = PKG_BOTTOM,
+                    activityName = "$PKG_BOTTOM.MainActivity",
+                    label = "Bottom Companion",
+                ),
+            )
+            assertFalse(GameFocusSessionTracker.restorePreviousSession(context))
+        }
+
+    @Test
     fun testRecordWindowChangedPreservesRomSessionWhenEmulatorWindowChanges() {
         val romApp =
             InstalledAppInfo(

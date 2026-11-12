@@ -837,8 +837,8 @@ Open Settings to create a layout.</string>
     <string name="help_settings_export_profile_desc">Saves a single profile to a file to share layout and macros with other players without exposing your entire app configuration.</string>
     <string name="help_settings_import_profile_desc">Imports a profile shared by another user from a .mgrd file and adds it alongside your existing profiles without overwriting your global settings.</string>
     <string name="help_settings_add_to_obtainium_desc">Opens Obtainium (if installed) with the pre-filled Megingiard repository link. If Obtainium is not installed, it opens the Obtainium GitHub releases page in the browser.</string>
-    <string name="help_settings_privd_desc">Establishes a background system connection (via the native Thor hardware bridge or Wireless Debugging) to access system input devices not reachable by regular apps. This enables:\n\n• Gamepad Merge: Combines virtual and physical gamepads so games see only one controller (improving compatibility).\n• Physical Gamepad Recording: Record macro inputs from your physical controller.\n• Direct Screen Mirroring: Starts mirroring without prompting for screen capture permissions on every run.\n• Screenshots: Save screenshots of the primary screen directly from the Quick Menu overlay without screen mirroring being active.</string>
-    <string name="help_settings_deadzone_desc">Ensures analog stick recordings don\'t capture drift or noise. Match these percentages with the dead zone settings in the Thor system settings for best accuracy.</string>
+    <string name="help_settings_privd_desc">Establishes a background system connection (via the native hardware root bridge or Wireless Debugging) to access system input devices not reachable by regular apps. This enables:\n\n• Gamepad Merge: Combines virtual and physical gamepads so games see only one controller (improving compatibility).\n• Physical Gamepad Recording: Record macro inputs from your physical controller.\n• Direct Screen Mirroring: Starts mirroring without prompting for screen capture permissions on every run.\n• Screenshots: Save screenshots of the primary screen directly from the Quick Menu overlay without screen mirroring being active.</string>
+    <string name="help_settings_deadzone_desc">Ensures analog stick recordings don\'t capture drift or noise. Match these percentages with the dead zone settings in your handheld\'s system settings for best accuracy.</string>
     <string name="help_settings_log_level_desc">Leave at Warn or Info for normal gameplay. Set to Debug or Verbose only when reproducing an issue to gather detailed logs for a bug report.</string>
     <string name="help_settings_save_log_desc">Exports the latest system logs. Generate this immediately after experiencing a bug or crash to attach it to a GitHub issue or developer report.</string>
     <!-- Keyboard settings help -->
@@ -888,7 +888,7 @@ Open Settings to create a layout.</string>
 
     <!-- Welcome Tutorial & Reset -->
     <string name="welcome_title">Welcome to Megingiard!</string>
-    <string name="welcome_desc">Megingiard is a companion app for the AYN Thor dual-screen handheld. It allows you to configure custom MacroPad profiles, virtual keyboard maps, virtual touchpads, and screen mirroring between displays.</string>
+    <string name="welcome_desc">Megingiard is a companion app for dual-screen Android handhelds. It allows you to configure custom MacroPad profiles, virtual keyboard maps, virtual touchpads, and screen mirroring between displays.</string>
     <string name="welcome_help_title">How to Get Help</string>
     <string name="welcome_help_intro">Look for the help icon (?) in the top-right corner of each screen to view detailed guides and best practices for that feature.</string>
     <string name="settings_reset_tutorials">Reset tutorials</string>
@@ -911,7 +911,7 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_auto_setup">Start Auto Setup</string>
     <string name="privd_reconnect_title">Reconnect Megingiard System Service</string>
     <string name="privd_reconnect_desc">Megingiard System Service was disconnected, for example because of a device reboot or because Wireless Debugging was deactivated.</string>
-    <string name="privd_reconnect_root_bridge_desc">Megingiard System Service was disconnected. Activate the System Service via the AYN Thor hardware bridge to continue.</string>
+    <string name="privd_reconnect_root_bridge_desc">Megingiard System Service was disconnected. Activate the System Service via the native hardware root bridge to continue.</string>
     <string name="privd_reconnect_auto_button">Auto Reconnect</string>
     <string name="privd_reconnect_all_set">You\'re All Set!</string>
     <string name="privd_reconnect_btn_close">Close</string>
@@ -926,7 +926,7 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_manual_step_2">2. Open Global Settings → Megingiard System Service.</string>
     <string name="onboarding_privd_manual_step_3">3. Follow the manual pairing instructions there to activate the System Service.</string>
     <string name="onboarding_privd_root_bridge_title">Megingiard System Service (Hardware Bridge Detected)</string>
-    <string name="onboarding_privd_root_bridge_desc">The AYN Thor hardware root bridge is ready. Activate the System Service for single-controller gamepad merge and direct display mirroring.</string>
+    <string name="onboarding_privd_root_bridge_desc">The native hardware root bridge is ready. Activate the System Service for single-controller gamepad merge and direct display mirroring.</string>
     <string name="onboarding_privd_activate_btn">Activate System Service</string>
     <string name="onboarding_privd_retry_btn">Retry Activation</string>
     <string name="onboarding_privd_activating">Connecting to system service…</string>

@@ -111,6 +111,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.math.calculateGamepadCutoutMove
@@ -261,8 +262,9 @@ fun MirrorEditorTopOverlay(
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else METO_FALLBACK_SRC_WIDTH
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else METO_FALLBACK_SRC_HEIGHT
 
-    val secScreenW = METO_FALLBACK_SEC_WIDTH
-    val secScreenH = METO_FALLBACK_SEC_HEIGHT
+    val secDisplaySize = remember(context) { DisplayDetector.resolveSecondaryDisplaySize(context) }
+    val secScreenW = secDisplaySize?.widthPx?.toFloat() ?: METO_FALLBACK_SEC_WIDTH
+    val secScreenH = secDisplaySize?.heightPx?.toFloat() ?: METO_FALLBACK_SEC_HEIGHT
 
     var topHToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
     var topVToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }

@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.input
 
+import com.stormpanda.megingiard.math.DisplayRotationDegrees
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import org.junit.After
@@ -11,12 +12,16 @@ class TouchInjectorTest {
     @Before
     fun setUp() {
         PrivdClient.setStateForTesting(PrivdConnectionState.CONNECTED)
+        PrivdClient.setTouchSensorDimensionsForTesting()
+        TouchInjector.updatePrimaryDisplayRotation(DisplayRotationDegrees.ROT_90)
         PrivdClient.clearQueueForTest()
     }
 
     @After
     fun tearDown() {
         PrivdClient.clearQueueForTest()
+        PrivdClient.setTouchSensorDimensionsForTesting()
+        TouchInjector.updatePrimaryDisplayRotation(DisplayRotationDegrees.ROT_90)
         PrivdClient.setStateForTesting(null)
     }
 
@@ -31,6 +36,15 @@ class TouchInjectorTest {
         // normalizedY = 3.0 -> cy = 1.5 -> px = -540
         TouchInjector.injectTouch(TouchAction.MOVE, -2.0f, 3.0f)
         assertEquals("M 0 -540 -960\n", PrivdClient.pollCommandForTest())
+    }
+
+    @Test
+    fun testDynamicSensorDimensionsAndRotationConversion() {
+        PrivdClient.setTouchSensorDimensionsForTesting(width = 1920, height = 1080)
+        TouchInjector.updatePrimaryDisplayRotation(DisplayRotationDegrees.ROT_0)
+
+        TouchInjector.injectTouch(TouchAction.DOWN, 0.25f, 0.5f)
+        assertEquals("D 0 480 540\n", PrivdClient.pollCommandForTest())
     }
 
     @Test

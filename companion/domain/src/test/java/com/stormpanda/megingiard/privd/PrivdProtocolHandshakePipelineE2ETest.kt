@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -27,6 +28,7 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
 import java.security.SecureRandom
+import java.util.Base64
 
 /**
  * End-to-End integration test suite verifying the Privileged Mode Daemon (privd)
@@ -47,12 +49,14 @@ class PrivdProtocolHandshakePipelineE2ETest {
     fun setUp() {
         testScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         PrivdClient.disconnect()
+        PrivdClient.setTouchSensorDimensionsForTesting()
         PrivdClient.setKey(testKey)
     }
 
     @After
     fun tearDown() {
         PrivdClient.disconnect()
+        PrivdClient.setTouchSensorDimensionsForTesting()
         testScope.cancel()
     }
 
@@ -105,8 +109,8 @@ class PrivdProtocolHandshakePipelineE2ETest {
                         assertNotNull(versionLine)
                         assertEquals("VERSION ${PrivdConstants.PRIVD_VERSION}", versionLine)
 
-                        // 7. Daemon confirms version
-                        writer.write("VERSION_OK ${PrivdConstants.PRIVD_VERSION}\n")
+                        // 7. Daemon confirms version + touch sensor dimensions
+                        writer.write("VERSION_OK ${PrivdConstants.PRIVD_VERSION} 1080 1920\n")
                         writer.flush()
 
                         // Daemon command handling loop
@@ -115,6 +119,14 @@ class PrivdProtocolHandshakePipelineE2ETest {
                             when {
                                 cmd == "PING" -> {
                                     writer.write("PONG\n")
+                                    writer.flush()
+                                }
+
+                                cmd.startsWith("SCREENSHOT_B64") -> {
+                                    val pngSample = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+                                    writer.write("SCREENSHOT_BEGIN\n")
+                                    writer.write("${Base64.getEncoder().encodeToString(pngSample)}\n")
+                                    writer.write("SCREENSHOT_END\n")
                                     writer.flush()
                                 }
 
@@ -156,10 +168,20 @@ class PrivdProtocolHandshakePipelineE2ETest {
             val connectResult = PrivdClient.connect()
             assertTrue("Expected PrivdClient to connect and complete mutual handshake", connectResult)
             assertEquals(PrivdConnectionState.CONNECTED, PrivdClient.state.value)
+            assertEquals(1080, PrivdClient.touchSensorWidth)
+            assertEquals(1920, PrivdClient.touchSensorHeight)
 
             // Test PING
             val pong = PrivdClient.ping()
             assertTrue("Expected PONG from daemon", pong)
+
+            // Test SCREENSHOT_B64 loopback streaming
+            val screenshotBytes = PrivdClient.captureScreenshotPng("4630947039571902866")
+            assertNotNull(screenshotBytes)
+            assertArrayEquals(
+                byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A),
+                screenshotBytes,
+            )
 
             // Test READ_FILE multi-line framing
             val fileContent = PrivdClient.readTextFile("/etc/passwd")

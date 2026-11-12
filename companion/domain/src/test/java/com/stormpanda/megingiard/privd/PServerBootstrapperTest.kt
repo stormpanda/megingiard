@@ -33,10 +33,17 @@ class PServerBootstrapperTest {
 
         // 3. Mirror DEX copy and permission setup
         assertTrue(
+            "Must unlink existing read-only DEX before copying",
+            script.contains("rm -f /data/local/tmp/megingiard_mirror.dex"),
+        )
+        assertTrue(
             "Must copy staged DEX when valid",
             script.contains("cp /data/user/0/com.stormpanda.megingiard/cache/privd_dex /data/local/tmp/megingiard_mirror.dex"),
         )
-        assertTrue("Must set DEX permissions", script.contains("chmod 644 /data/local/tmp/megingiard_mirror.dex"))
+        assertTrue(
+            "Must set read-only 0444 DEX permissions required on Android 14+",
+            script.contains("chmod 0444 /data/local/tmp/megingiard_mirror.dex"),
+        )
         assertTrue("Must chown DEX to shell:shell", script.contains("chown 2000:2000 /data/local/tmp/megingiard_mirror.dex"))
 
         // 4. Key provisioning

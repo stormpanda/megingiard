@@ -426,11 +426,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Hide top system status bar for immersive fullscreen gamepad browsing
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        controller.hide(WindowInsetsCompat.Type.statusBars())
+        // Hide system status and navigation bars for immersive fullscreen gamepad browsing
+        applyImmersiveSystemBars()
 
         AppLog.i(TAG, "FocusTopLauncherActivity created on primary display (fullscreen)")
 
@@ -689,8 +686,23 @@ class FocusTopLauncherActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         AppLog.d(TAG, "FocusTopLauncherActivity resumed, refreshing installed apps")
+        applyImmersiveSystemBars()
         InstalledAppsManager.loadInstalledApps(this)
         launchedTopScreenPackage = null
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            applyImmersiveSystemBars()
+        }
+    }
+
+    private fun applyImmersiveSystemBars() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.hide(WindowInsetsCompat.Type.systemBars())
     }
 
     override fun onPause() {

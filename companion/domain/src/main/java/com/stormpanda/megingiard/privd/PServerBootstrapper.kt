@@ -13,7 +13,7 @@ private const val VERIFY_RETRY_DELAY_MS = 300L
 private const val SPAWN_OK_MARKER = "MGRD_SPAWN_OK"
 
 /**
- * Orchestrates Tier-1 fast-track deployment of `megingiard_privd` using the AYN Thor native root bridge.
+ * Orchestrates Tier-1 fast-track deployment of `megingiard_privd` using the native hardware root bridge (`PServerBinder`).
  *
  * Deploys the native daemon binary and mirror DEX to `/data/local/tmp`, provisions the per-install
  * HMAC-SHA256 authentication key into a shell-owned 0600 state file, and spawns the daemon in the
@@ -149,8 +149,9 @@ object PServerBootstrapper {
         chown 2000:2000 $remoteBinPath
         ${if (hasValidDex) {
             """
+            rm -f $remoteDexPath
             cp $stagedDexPath $remoteDexPath
-            chmod 644 $remoteDexPath
+            chmod 0444 $remoteDexPath
             chown 2000:2000 $remoteDexPath
             """.trimIndent()
         } else {

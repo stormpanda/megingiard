@@ -1,6 +1,6 @@
-# Megingiard for **AYN Thor**
+# Megingiard
 
-Welcome to **Megingiard**, a bespoke companion application specifically designed for the **AYN Thor** dual-screen Android handheld. Megingiard combines deep Android hardware video stream manipulation with modern Jetpack Compose interfaces to turn your secondary display into a fully interactive tool belt: a latency-free, multi-cutout mirror of your primary screen, a virtual keyboard, a virtual touchpad, a configurable MacroPad, and a virtual gamepad — all driven by native input injection for sub-millisecond response.
+Welcome to **Megingiard**, a companion application purpose-built for **dual-screen Android gaming handhelds** including the **AYN Thor** and **Retroid Pocket Duo**. Megingiard combines deep Android hardware video stream manipulation with modern Jetpack Compose interfaces to turn your secondary display into a fully interactive tool belt: a latency-free, multi-cutout mirror of your primary screen, a virtual keyboard, a virtual touchpad, a configurable MacroPad, and a virtual gamepad — all driven by native input injection for sub-millisecond response.
 
 <p align="center">
   <a href="https://youtu.be/vgs6X9piswA?si=K8TbTrWHGzLIRxe3">
@@ -21,13 +21,10 @@ Welcome to **Megingiard**, a bespoke companion application specifically designed
 
 ## Device Compatibility
 
-- **Target device:** AYN Thor (gaming handheld with two displays)
-- **Minimum Android version:** 13 / API 33 (which is what the Thor comes with)
+- **Supported devices:** Dual-screen Android gaming handhelds (**[AYN Thor](docs/devices/AYN_THOR.md)** and **[Retroid Pocket Duo](docs/devices/RETROID_POCKET_DUO.md)**)
+- **Minimum Android version:** Android 13 / API 33 (tested through Android 16 / API 36)
 - **Single-Screen Devices:** **Permanently unsupported.** Megingiard is architected strictly as an inter-screen companion system where the primary (top) display and secondary (bottom) display operate concurrently. Single-screen phones, tablets, and emulators are not supported.
-- **Other devices:** Not supported. Megingiard depends on hardware-specific
-  paths (`/dev/input/event*`, the secondary display, the AYN Thor input layout)
-  that might not exist on other phones or handhelds. Also, I just don't have any
-  other dual screen handhelds 😅
+- **Other dual-screen handhelds:** Megingiard dynamically inspects `DisplayManager` geometry, display rotation, and kernel `evdev` touchscreen dimensions (`EVIOCGABS`), paired with declarative hardware profiles in [`docs/devices/`](docs/devices/). Additional dual-screen handhelds may work via the standard Wireless Debugging bootstrap or can be added via [`DEVICE_PROFILE_TEMPLATE.md`](docs/devices/DEVICE_PROFILE_TEMPLATE.md).
 
 ---
 
@@ -69,7 +66,7 @@ Given its hardware-specific approach and advanced features, this project is exte
 - **Configurable Button Pad:** Create named profiles with multiple custom layouts, featuring free-placement buttons of varying size, shape, and actions.
 - **Rich Action Mapping & Visual Pickers:** Bind buttons to keyboard keystrokes, gamepad buttons, mouse buttons, scroll wheels, trackpoints (relative mouse movement or virtual touch), layout/mirror actions, or direct app launchers. Features intuitive visual sub-page pickers:
   - **Visual Keyboard Picker:** Interactive full virtual keyboard layout to pick keys and modifiers.
-  - **Visual Gamepad Picker:** Interactive controller layout matching the physical AYN Thor handheld to select buttons, shoulder triggers, sticks, and combo inputs.
+  - **Visual Gamepad Picker:** Interactive controller layout matching physical handheld controllers to select buttons, shoulder triggers, sticks, and combo inputs.
   - **Visual Mouse & Action Pickers:** Reusable grid cards for mouse clicks, scroll wheels, overlays, and mirror tools.
 - **Smart Alignment Guides & Snapping:** Dragging buttons magnetically snaps to rectangular or radial grids, or dynamically snaps to aligned X/Y centers of sibling buttons with PowerPoint-style dashed guidelines.
 - **App-Aware Profile Auto-Switching:** Bind profiles to specific Android applications. When a mapped app is launched on the primary screen, Megingiard instantly switches to its associated MacroPad profile on the secondary screen. This event-driven feature uses a dedicated, highly efficient **Accessibility Service** (with system UI exclusions to prevent focus loops).
@@ -222,7 +219,7 @@ _The Megingiard System Service setup & settings card. Easily pair on-device via 
 ## Installation
 
 1. Download the latest signed `Megingiard-vX.Y.Z.apk` from the [Releases](../../releases) tab on GitHub.
-2. On the AYN Thor, allow your browser or file manager to install unknown apps (Android Settings → Apps → \<your file manager\> → "Install unknown apps").
+2. On your handheld, allow your browser or file manager to install unknown apps (Android Settings → Apps → \<your file manager\> → "Install unknown apps").
 3. Open the APK to install.
 4. Launch the app and start configuring!
 
@@ -259,7 +256,7 @@ Megingiard System Service is an **opt-in feature** that unlocks advanced feature
 
 ### What it is (Technical Details)
 
-Megingiard packages a lightweight, native on-device helper daemon (`megingiard_privd`) inside the APK. When you activate Megingiard System Service on the AYN Thor, Megingiard utilizes the device's native hardware root bridge (`PServerBinder`) for instant, 1-tap setup and seamless background execution. On other devices or as a fallback, it leverages Android's built-in **Wireless Debugging** facility (available since Android 11) to deploy the service binary to `/data/local/tmp` and run it under the **shell user** (UID 2000) — the same security domain used by an `adb shell` session. The app then establishes a secure local TCP loopback connection (`127.0.0.1:51234–51238`) to communicate with the service, bypassing restrictive SELinux domain policies.
+Megingiard packages a lightweight, native on-device helper daemon (`megingiard_privd`) inside the APK. When you activate Megingiard System Service on supported Moorechip handhelds (such as the AYN Thor and Retroid Pocket Duo), Megingiard utilizes the device's native hardware root bridge (`PServerBinder`) for instant, 1-tap setup and seamless background execution. On other devices or as a fallback, it leverages Android's built-in **Wireless Debugging** facility (available since Android 11) to deploy the service binary to `/data/local/tmp` and run it under the **shell user** (UID 2000) — the same security domain used by an `adb shell` session. The app then establishes a secure local TCP loopback connection (`127.0.0.1:51234–51238`) to communicate with the service, bypassing restrictive SELinux domain policies.
 
 This architecture requires **no USB cables, no PC, and no external servers**. The entire bootstrap runs completely on the device itself through the wizard or 1-tap activation in Global Settings.
 
@@ -278,10 +275,10 @@ The standard Android application sandbox (running in the `untrusted_app` SELinux
 
 ### Convenience Benefits
 
-- **Auto-Connect:** Once configured, Megingiard silently reconnects to the local system service on cold starts. On the AYN Thor, the native root bridge automatically respawns the service after a device reboot without any user interaction or manual re-pairing.
+- **Auto-Connect:** Once configured, Megingiard silently reconnects to the local system service on cold starts. On devices with the native hardware root bridge (AYN Thor, Retroid Pocket Duo), Megingiard automatically respawns the service after a device reboot without any user interaction or manual re-pairing.
 - **Automatic Feature Promotion:** When Megingiard System Service is running, all supported capabilities (Gamepad Merge, Controller Recording, Direct Mirroring, Quick Screenshots) activate automatically without tedious per-feature configuration. If disconnected, features seamlessly fall back to sandbox equivalents.
-- **1-Tap Auto-Setup:** Integrates with the native Thor root bridge for instantaneous activation, or with the Accessibility Service to automatically unlock Developer Mode, enable USB/Wireless Debugging, and extract/pair credentials in seconds without manual port typing.
-- **Reboot Behavior:** While background processes (including `megingiard_privd`) terminate when the device shuts down, files in `/data/local/tmp` remain permanently intact on flash storage across reboots. On the AYN Thor, Megingiard automatically restarts the system service in the background via the native root bridge upon cold start. When using the ADB fallback, simply tap Auto Reconnect (or re-run Auto Setup in ~5–10 seconds) if Wireless Debugging was reset.
+- **1-Tap Auto-Setup:** Integrates with the native hardware root bridge for instantaneous activation, or with the Accessibility Service to automatically unlock Developer Mode, enable USB/Wireless Debugging, and extract/pair credentials in seconds without manual port typing.
+- **Reboot Behavior:** While background processes (including `megingiard_privd`) terminate when the device shuts down, files in `/data/local/tmp` remain permanently intact on flash storage across reboots. On devices with the native root bridge, Megingiard automatically restarts the system service in the background upon cold start. When using the ADB fallback, simply tap Auto Reconnect (or re-run Auto Setup in ~5–10 seconds) if Wireless Debugging was reset.
 
 ### Security and Trust
 
@@ -357,9 +354,9 @@ Ensure the output matches the checksum in the `.txt` file exactly before sideloa
 
 > This is default Android behavior. Enable Megingiard System Service to automatically engage the **Direct Mirror**, skipping this prompt permanently.
 
-**Megingiard System Service shows "OFF" after I rebooted my Thor.**
+**Megingiard System Service shows "OFF" after I rebooted my handheld.**
 
-> When the device shuts down, active background processes (including the system service) are terminated by Android (note that files in `/data/local/tmp` remain permanently intact on flash storage, but RAM processes terminate). On the AYN Thor, Megingiard automatically respawns the system service in the background via the native root bridge upon cold start. If relying on the ADB fallback and Wireless Debugging was reset or assigned a new dynamic port during boot, simply tap **Auto Reconnect** or re-run Auto Setup (~5–10 seconds).
+> When the device shuts down, active background processes (including the system service) are terminated by Android (note that files in `/data/local/tmp` remain permanently intact on flash storage, but RAM processes terminate). On handhelds with the native hardware root bridge (AYN Thor, Retroid Pocket Duo), Megingiard automatically respawns the system service in the background upon cold start. If relying on the ADB fallback and Wireless Debugging was reset or assigned a new dynamic port during boot, simply tap **Auto Reconnect** or re-run Auto Setup (~5–10 seconds).
 
 **My game sees two controllers when using the MacroPad.**
 
@@ -379,7 +376,7 @@ Ensure the output matches the checksum in the `.txt` file exactly before sideloa
 
 **Can I run this on other dual-screen devices or phones?**
 
-> No. Megingiard targets the specific screen geometry, hardware-specific mapping paths, and physical event codes of the AYN Thor. It will not work on different hardware configurations.
+> Megingiard supports dual-screen Android gaming handhelds such as the **AYN Thor** and **Retroid Pocket Duo**, discovering display geometry, rotation, and primary touchscreen capabilities dynamically at runtime. Single-screen phones, tablets, and single-screen handhelds are permanently unsupported.
 
 **Why isn't automatic profile switching working?**
 

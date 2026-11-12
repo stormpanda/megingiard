@@ -39,6 +39,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.catalog.DisplayDetector
+import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
@@ -380,6 +381,7 @@ object PrimaryOverlayManager {
                 AppLog.e(TAG, "Primary display (DEFAULT_DISPLAY) not found")
                 return
             }
+            TouchInjector.updatePrimaryDisplayRotation(DisplayDetector.resolvePrimaryDisplayRotation(hostContext))
 
             val windowContext = hostContext.createWindowContext(primaryDisplay, windowType, null)
             val wm = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -403,6 +405,7 @@ object PrimaryOverlayManager {
                     width = WindowManager.LayoutParams.MATCH_PARENT
                     height = WindowManager.LayoutParams.MATCH_PARENT
                     gravity = Gravity.CENTER
+                    setFitInsetsTypes(0)
                 }
 
             val composeView =

@@ -54,7 +54,7 @@ object GameFocusDefaultLauncherManager {
     }
 
     /**
-     * Brings the Megingiard Companion app to the foreground on the secondary display (Display 4).
+     * Brings the Megingiard Companion app to the foreground on the secondary bottom display.
      *
      * Preserves the active Companion view/layout using [Intent.FLAG_ACTIVITY_NEW_TASK] and
      * [Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED].

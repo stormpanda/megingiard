@@ -3,6 +3,8 @@ package com.stormpanda.megingiard.mirror
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.math.DisplayRotationDegrees
+import com.stormpanda.megingiard.math.TouchSensorMath
 import com.stormpanda.megingiard.privd.EvdevEvent
 import com.stormpanda.megingiard.privd.PrivdClient
 import kotlinx.coroutines.CoroutineScope
@@ -56,6 +58,9 @@ internal class TouchEventParser(
     private val onDown: (slot: Int, normX: Float, normY: Float) -> Unit,
     private val onMove: (slot: Int, normX: Float, normY: Float) -> Unit,
     private val onUp: (slot: Int, normX: Float, normY: Float) -> Unit,
+    private val sensorWidthProvider: () -> Int = { TouchInjector.activeSensorWidth },
+    private val sensorHeightProvider: () -> Int = { TouchInjector.activeSensorHeight },
+    private val rotationProvider: () -> DisplayRotationDegrees = { TouchInjector.primaryDisplayRotation },
 ) {
     private val slots = Array(MAX_TOUCH_SLOTS) { SlotTracker(it) }
     private var currentSlot = 0
@@ -109,8 +114,16 @@ internal class TouchEventParser(
                         val rx = slot.rawX
                         val ry = slot.rawY
                         if (rx != null && ry != null) {
-                            val nx = (ry.toFloat() / TouchInjector.THOR_SENSOR_H).coerceIn(0f, 1f)
-                            val ny = (1.0f - (rx.toFloat() / TouchInjector.THOR_SENSOR_W)).coerceIn(0f, 1f)
+                            val norm =
+                                TouchSensorMath.sensorToNormalized(
+                                    rawX = rx,
+                                    rawY = ry,
+                                    sensorWidth = sensorWidthProvider(),
+                                    sensorHeight = sensorHeightProvider(),
+                                    rotation = rotationProvider(),
+                                )
+                            val nx = norm.x
+                            val ny = norm.y
 
                             if (slot.isNewDown) {
                                 slot.isNewDown = false
@@ -136,7 +149,7 @@ internal class TouchEventParser(
 }
 
 /**
- * Passive evdev reader for the primary touchscreen device node (`/dev/input/event6`).
+ * Passive evdev reader for the primary touchscreen device node discovered by `megingiard_privd`.
  *
  * Monitors physical touches on Display 0 in real time without grabbing the device (`EVIOCGRAB`),
  * allowing the foreground game or emulator to receive all native touches unimpeded with zero latency.

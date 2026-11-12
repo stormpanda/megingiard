@@ -52,7 +52,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
     - **Snap to Alignment (Cutout Snapping Toggle):** Toggles magnetic alignment snapping (`MirrorSettings.cutoutAlignmentSnapping`) for cutout destination centers. When enabled, dragging or moving cutouts with gamepad magnetically snaps their centers to align with sibling cutouts.
     - **Delete Cutout:** Two-step confirmation (`[ DEL ]` → `[ CONFIRM ]`) deletes the selected cutout.
     - **Save Changes / Exit Row:** Commits cutout changes to active layout or prompts for Save/Discard on back.
-  - **Bottom Screen (Display 4):** `CutoutLayoutEditor` renders an unobstructed touch canvas with destination bounding boxes and draggable corner/edge resize handles for direct touch manipulation without floating toolbar obstruction. To keep the active area clear when calibrating small cuts, the center name badge is omitted for the selected cutout, and for unselected cutouts it is only rendered if height is at least 24 dp. Touch resize handles enforce a 5% minimum (`MIN_TOUCH_CUTOUT_SIZE = 0.05f`); when either width or height is below 5%, touch resize handles are hidden while moving via touch remains available. It also hosts the PowerPoint-style Smart Alignment Guides overlay (`CutoutAlignmentGuidesOverlay`), dynamically displaying dashed lines and concentric rings/dots whenever the selected cutout's center aligns with any sibling cutout's center X or Y coordinate.
+  - **Bottom Screen (Secondary Display):** `CutoutLayoutEditor` renders an unobstructed touch canvas with destination bounding boxes and draggable corner/edge resize handles for direct touch manipulation without floating toolbar obstruction. To keep the active area clear when calibrating small cuts, the center name badge is omitted for the selected cutout, and for unselected cutouts it is only rendered if height is at least 24 dp. Touch resize handles enforce a 5% minimum (`MIN_TOUCH_CUTOUT_SIZE = 0.05f`); when either width or height is below 5%, touch resize handles are hidden while moving via touch remains available. It also hosts the PowerPoint-style Smart Alignment Guides overlay (`CutoutAlignmentGuidesOverlay`), dynamically displaying dashed lines and concentric rings/dots whenever the selected cutout's center aligns with any sibling cutout's center X or Y coordinate.
 
 ### FR-M3: Freeze Frame
 
@@ -115,7 +115,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - Screen mirroring operates exclusively through the **Megingiard System Service** (`megingiard_privd`) when the daemon is `RUNNING`, starting immediately without a system `MediaProjection` consent dialog.
 - The privileged direct path is transparent to all other mirror features (FR-M2 viewport, FR-M3 freeze, FR-M6 lock, FR-M7 touch projection, FR-M8 auto-start gating).
 - The privileged direct path uses direct `SurfaceControl` output by passing the app-owned target `Surface` (`GpuMotionSmoother.inputSurface` feeding `MasterSurfaceRegistry`) over Binder to the shell `app_process` mirror server (`DirectMirrorServer`).
-- DRM-protected video frames render as black on the privileged path (`SurfaceControl.createDisplay(name, secure=false)`) — the same limitation as `scrcpy`.
+- DRM-protected video frames render as black on the privileged path (`SurfaceControl.createDisplay` / `DisplayControl.createVirtualDisplay(name, secure=false)`) — the same limitation as `scrcpy`.
 
 ### FR-M10: Follow Touch Mode
 

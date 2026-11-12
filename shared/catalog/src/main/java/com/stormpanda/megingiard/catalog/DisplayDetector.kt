@@ -1,17 +1,25 @@
 package com.stormpanda.megingiard.catalog
 
 import android.content.Context
+import android.graphics.Point
 import android.hardware.display.DisplayManager
 import android.view.Display // hardware abstraction, not a UI component — accepted :domain exception
+import android.view.Surface
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.math.DisplayRotationDegrees
 
 private const val TAG = "DisplayDetector"
 
+data class DisplayPixelSize(
+    val widthPx: Int,
+    val heightPx: Int,
+)
+
 /**
- * Utility for multi-display detection on the AYN Thor.
+ * Utility for multi-display discovery and live display geometry queries on dual-screen handhelds.
  *
- * Encapsulates the logic for finding the secondary display and
- * validating whether the app is running on the correct screen.
+ * Encapsulates finding the secondary display, resolving logical rotated pixel dimensions and
+ * aspect ratios without device-specific hardcoding, and validating secondary-screen execution.
  */
 object DisplayDetector {
     /**
@@ -26,11 +34,79 @@ object DisplayDetector {
                 .getDisplays()
                 .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
         if (secondary == null) {
-            AppLog.e(TAG, "No secondary display found!")
+            AppLog.w(TAG, "No secondary display found")
         } else {
-            AppLog.i(TAG, "Secondary display found: id=${secondary.displayId} name=${secondary.name}")
+            AppLog.d(TAG, "Secondary display found: id=${secondary.displayId} name=${secondary.name}")
         }
         return secondary
+    }
+
+    /**
+     * Find the primary default display (`Display.DEFAULT_DISPLAY`).
+     */
+    fun findPrimaryDisplay(context: Context): Display? {
+        val displayManager = context.getSystemService(DisplayManager::class.java) ?: return null
+        return displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+    }
+
+    /**
+     * Resolves the current rotation of the primary display (`Display.DEFAULT_DISPLAY`)
+     * mapped to [DisplayRotationDegrees].
+     */
+    fun resolvePrimaryDisplayRotation(context: Context): DisplayRotationDegrees {
+        val primary = findPrimaryDisplay(context) ?: return DisplayRotationDegrees.ROT_90
+        return DisplayRotationDegrees.fromSurfaceRotation(primary.rotation)
+    }
+
+    /**
+     * Resolves the logical (rotation-adjusted) full pixel dimensions of [display], or `null`
+     * if valid positive dimensions cannot be determined.
+     */
+    fun resolveDisplaySize(display: Display): DisplayPixelSize? {
+        val mode = display.mode
+        if (mode != null && mode.physicalWidth > 0 && mode.physicalHeight > 0) {
+            val swapAxes =
+                display.rotation == Surface.ROTATION_90 ||
+                    display.rotation == Surface.ROTATION_270
+            val w = if (swapAxes) mode.physicalHeight else mode.physicalWidth
+            val h = if (swapAxes) mode.physicalWidth else mode.physicalHeight
+            return DisplayPixelSize(widthPx = w, heightPx = h)
+        }
+        val point = Point()
+        @Suppress("DEPRECATION")
+        display.getRealSize(point)
+        return if (point.x > 0 && point.y > 0) {
+            DisplayPixelSize(widthPx = point.x, heightPx = point.y)
+        } else {
+            null
+        }
+    }
+
+    /**
+     * Resolves the logical (rotation-adjusted) pixel dimensions of the secondary display,
+     * or `null` if no secondary display is attached.
+     */
+    fun resolveSecondaryDisplaySize(context: Context): DisplayPixelSize? {
+        val secondary = findSecondaryDisplay(context) ?: return null
+        val resolved = resolveDisplaySize(secondary)
+        AppLog.d(TAG, "resolveSecondaryDisplaySize -> $resolved")
+        return resolved
+    }
+
+    /**
+     * Resolves the width-to-height aspect ratio of the secondary display, or [fallbackAspectRatio]
+     * if no secondary display is currently attached.
+     */
+    fun resolveSecondaryAspectRatio(
+        context: Context,
+        fallbackAspectRatio: Float,
+    ): Float {
+        val size = resolveSecondaryDisplaySize(context) ?: return fallbackAspectRatio
+        return if (size.heightPx > 0) {
+            size.widthPx.toFloat() / size.heightPx.toFloat()
+        } else {
+            fallbackAspectRatio
+        }
     }
 
     /**
@@ -38,7 +114,7 @@ object DisplayDetector {
      *
      * Call from `Activity.onConfigurationChanged()` and during initial setup.
      *
-     * @param displayId  the current display ID (from `display?.displayId`)
+     * @param displayId the current display ID (from `display?.displayId`)
      */
     fun updateDisplayValidity(displayId: Int) {
         val isValid = isValidScreen(displayId)
@@ -48,11 +124,6 @@ object DisplayDetector {
     /**
      * Determines whether the companion activity should attempt to retarget itself
      * to the secondary display.
-     *
-     * @param currentDisplayId the display ID where the Activity is currently executing
-     * @param secondaryDisplayId the display ID of the detected secondary display, or null if none
-     * @param retargetAttempted whether a retarget has already been attempted for this launch/intent
-     * @return true if the Activity is on the default display, a secondary display exists, and no retarget was attempted
      */
     fun shouldRetarget(
         currentDisplayId: Int,
@@ -65,9 +136,6 @@ object DisplayDetector {
 
     /**
      * Checks whether the given display ID is valid for the companion interface (must not be the default display).
-     *
-     * @param currentDisplayId the display ID where the Activity or composable is running
-     * @return true if running on a non-default (secondary) display
      */
     fun isValidScreen(currentDisplayId: Int): Boolean = currentDisplayId != Display.DEFAULT_DISPLAY
 }

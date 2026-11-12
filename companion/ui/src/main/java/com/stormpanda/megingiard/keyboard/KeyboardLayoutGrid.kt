@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private const val KB_NUMERIC_GRID_ROW_COUNT = 3
+
+// Pre-layout initial width fallback before onGloballyPositioned delivers the live secondary screen width.
 private const val KB_DEFAULT_BOX_WIDTH_PX = 1240
 private const val KB_NUMERIC_TOP_ROW_WEIGHT = 3f
 private const val KB_NUMERIC_OPS_COL_WEIGHT = 1.3f

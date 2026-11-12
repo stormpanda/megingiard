@@ -1,6 +1,6 @@
 ---
 name: pull-screenshots
-description: "Capture screenshots from both AYN Thor screens (TOP = display 0, BOTTOM = display 4) via ADB and save them to the screenshots/ folder. Use when: you need a visual snapshot of the current device state. Requires the Thor connected via USB Debugging."
+description: "Capture screenshots from both dual-screen handheld displays (TOP = HWC display 0, BOTTOM = HWC display 1, e.g. AYN Thor or Retroid Pocket Duo) via ADB and save them to the screenshots/ folder. Use when: you need a visual snapshot of the current device state. Requires the device connected via USB Debugging."
 argument-hint: "Optional: ADB serial (e.g. f33f97c7) if multiple devices are connected"
 ---
 

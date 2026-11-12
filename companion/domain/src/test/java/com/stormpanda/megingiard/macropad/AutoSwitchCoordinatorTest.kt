@@ -116,6 +116,10 @@ class AutoSwitchCoordinatorTest {
             "com.odin.dualscreen.assistant",
             "com.odin.mapping",
             "com.odin.settings",
+            "com.retroidpocket.dualscreen.assistant",
+            "com.rp.mapping",
+            "com.rp.gameassistant",
+            "com.rp.settings",
             "com.google.android.gms",
             "com.google.android.gms.auth.api.signin",
             "com.google.android.play.games",
@@ -124,6 +128,23 @@ class AutoSwitchCoordinatorTest {
             assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
         }
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+    }
+
+    @Test
+    fun `onPackageChanged treats Retroid home launcher as launcher rather than ignored overlay`() {
+        SystemRoleClassifier.setLaunchersForTesting(setOf("com.retroidpocket.gamelauncher"))
+        AutoSwitchCoordinator.onPackageChanged("com.citra.emu")
+        assertEquals(profile2.id, MacroPadState.activeProfileId.value)
+
+        // Transient Retroid overlay is completely ignored (foregroundApp stays Citra)
+        AutoSwitchCoordinator.onPackageChanged("com.retroidpocket.dualscreen.assistant")
+        assertEquals("com.citra.emu", AutoSwitchCoordinator.foregroundApp.value)
+
+        // Retroid home launcher is recorded as foregroundApp while preserving active game session/profile
+        AutoSwitchCoordinator.onPackageChanged("com.retroidpocket.gamelauncher")
+        assertEquals("com.retroidpocket.gamelauncher", AutoSwitchCoordinator.foregroundApp.value)
+        assertEquals("com.citra.emu", AppStateManager.focusedAppPackageName.value)
+        assertEquals(profile2.id, MacroPadState.activeProfileId.value)
     }
 
     @Test

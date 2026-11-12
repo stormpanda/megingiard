@@ -837,7 +837,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_import_profile_desc">從 .mgrd 檔案匯入其他使用者分享的設定檔並新增至現有設定檔中，不會覆寫您的全域設定。</string>
     <string name="help_settings_add_to_obtainium_desc">開啟 Obtainium (如果已安裝) 並預填 Megingiard 儲存庫連結。如果未安裝 Obtainium，則會在瀏覽器中開啟 Obtainium 的 GitHub 版本發佈頁面。</string>
     <string name="help_settings_privd_desc">透過無線偵錯或原廠硬體橋接建立背景系統連線，以寫入一般應用程式無法存取的系統輸入裝置。這將啟用：\n\n• 手把合併：結合虛擬與實體手把，使遊戲僅看到一個控制器 (提高相容性)。\n• 實體手把錄製：錄製來自實體控制器的巨集輸入。\n• 直接螢幕投影：無需在每次啟動時提示螢幕擷取權限即可開始投影。\n• 螢幕截圖：在未開啟螢幕投影的情況下，直接從快速選單覆蓋層儲存上螢幕截圖。</string>
-    <string name="help_settings_deadzone_desc">確保類比搖桿錄製不會捕捉到漂移或雜訊。將這些百分比與 Thor 系統設定中的死區設定匹配以獲得最佳準確性。</string>
+    <string name="help_settings_deadzone_desc">確保類比搖桿錄製不會捕捉到漂移或雜訊。將這些百分比與掌機系統設定中的死區設定匹配以獲得最佳準確性。</string>
     <string name="help_settings_log_level_desc">正常遊戲時請保持在 Warn 或 Info。僅在重現問題以收集詳細日誌以供錯誤報告時才設定為 Debug 或 Verbose。</string>
     <string name="help_settings_save_log_desc">匯出最新的系統日誌。在遇到錯誤或當機後立即產生此日誌，並將其附加到 GitHub 議題或開發者報告中。</string>
     <!-- Keyboard settings help -->
@@ -887,7 +887,7 @@ Open Settings to create a layout.</string>
 
     <!-- Welcome Tutorial & Reset -->
     <string name="welcome_title">歡迎使用 Megingiard！</string>
-    <string name="welcome_desc">Megingiard 是 AYN Thor 雙螢幕掌機的助手應用程式。它讓您能配置自訂 MacroPad 設定檔、虛擬鍵盤對應、虛擬觸控板以及螢幕間的投影。</string>
+    <string name="welcome_desc">Megingiard 是專為雙螢幕 Android 掌機設計的助手應用程式。它讓您能配置自訂 MacroPad 設定檔、虛擬鍵盤對應、虛擬觸控板以及螢幕間的投影。</string>
     <string name="welcome_help_title">如何獲取幫助</string>
     <string name="welcome_help_intro">尋找各個螢幕右上角的說明圖示 (?)，以查看該功能的詳細指南與最佳實踐。</string>
     <string name="settings_reset_tutorials">重設教學</string>
@@ -910,7 +910,7 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_auto_setup">開始自動設定</string>
     <string name="privd_reconnect_title">重新連線 Megingiard 系統服務</string>
     <string name="privd_reconnect_desc">Megingiard 系統服務已中斷（可能是裝置重新開機或無線除錯被關閉）。</string>
-    <string name="privd_reconnect_root_bridge_desc">Megingiard 系統服務已中斷連線。請透過 AYN Thor 原廠硬體橋接啟用系統服務以繼續。</string>
+    <string name="privd_reconnect_root_bridge_desc">Megingiard 系統服務已中斷連線。請透過原廠硬體橋接啟用系統服務以繼續。</string>
     <string name="privd_reconnect_auto_button">自動重新連線</string>
     <string name="privd_reconnect_all_set">已全部設定完成！</string>
     <string name="privd_reconnect_btn_close">關閉</string>
@@ -925,7 +925,7 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_manual_step_2">2. 開啟全域設定 → Megingiard 系統服務進行配對。</string>
     <string name="onboarding_privd_manual_step_3">3. 依照該處的手動配對說明啟用系統服務。</string>
     <string name="onboarding_privd_root_bridge_title">Megingiard 系統服務 (偵測到硬體橋接)</string>
-    <string name="onboarding_privd_root_bridge_desc">AYN Thor 原廠硬體橋接已就緒。啟用系統服務以享受單手把整合與直接螢幕投影功能。</string>
+    <string name="onboarding_privd_root_bridge_desc">原廠硬體橋接已就緒。啟用系統服務以享受單手把整合與直接螢幕投影功能。</string>
     <string name="onboarding_privd_activate_btn">啟用系統服務</string>
     <string name="onboarding_privd_retry_btn">重試啟用</string>
     <string name="onboarding_privd_activating">正在連線至系統服務…</string>
