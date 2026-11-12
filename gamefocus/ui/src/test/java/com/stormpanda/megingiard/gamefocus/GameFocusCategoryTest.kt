@@ -4,6 +4,7 @@ import com.stormpanda.megingiard.catalog.CustomRomFolder
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.gamefocus.domain.GalleryCollection
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -244,5 +245,75 @@ class GameFocusCategoryTest {
         }
         assertEquals(listOf(snesRom, app1), byId[GameFocusCategory.LAST_USED.id])
         assertTrue(byId[emptyCollection.id]!!.isEmpty())
+    }
+
+    @Test
+    fun testCategoryStepDirection_forwardBackwardWrapAndSingleItem() {
+        assertEquals(1, categoryStepDirection(GameFocusCategory.GAMES, GameFocusCategory.APPS, categories))
+        assertEquals(1, categoryStepDirection(GameFocusCategory.FAVORITES, GameFocusCategory.GAMES, categories))
+        assertEquals(-1, categoryStepDirection(GameFocusCategory.APPS, GameFocusCategory.GAMES, categories))
+        assertEquals(-1, categoryStepDirection(GameFocusCategory.GAMES, GameFocusCategory.FAVORITES, categories))
+        assertEquals(0, categoryStepDirection(GameFocusCategory.GAMES, GameFocusCategory.GAMES, categories))
+        assertEquals(0, categoryStepDirection(GameFocusCategory.GAMES, GameFocusCategory.APPS, listOf(GameFocusCategory.GAMES)))
+    }
+
+    @Test
+    fun testCategoryTransitionController_prewarmRetainAndMidFlightReversal() {
+        val controller = CategoryTransitionController(initialCategory = GameFocusCategory.GAMES, maxRetained = 3)
+        assertEquals(1, controller.entries.size)
+
+        // Pre-warm next neighbor while idle: stays inactive at +1f
+        assertTrue(controller.prewarm(GameFocusCategory.APPS, initialOffset = 1f))
+        assertFalse(controller.prewarm(GameFocusCategory.APPS, initialOffset = 1f))
+        val prewarmedApps = controller.entries.first { it.category == GameFocusCategory.APPS }
+        assertFalse(prewarmedApps.isActive)
+        assertFalse(prewarmedApps.isSelected)
+        assertEquals(1f, prewarmedApps.renderOffset, 0.0001f)
+
+        // Step down GAMES -> APPS: reuses prewarmed entry without growing pool
+        controller.onSelectedCategoryChanged(GameFocusCategory.APPS, categories)
+        assertEquals(2, controller.entries.size)
+        val outgoingGames = controller.entries.first { it.category == GameFocusCategory.GAMES }
+        assertTrue(outgoingGames.isActive)
+        assertFalse(outgoingGames.isSelected)
+        assertEquals(-1f, outgoingGames.targetOffset, 0.0001f)
+        assertTrue(prewarmedApps.isActive)
+        assertTrue(prewarmedApps.isSelected)
+        assertEquals(1f, prewarmedApps.renderOffset, 0.0001f)
+        assertEquals(0f, prewarmedApps.targetOffset, 0.0001f)
+        assertTrue(prewarmedApps.zOrder > outgoingGames.zOrder)
+
+        // Simulate mid-flight positions (-0.45f and +0.55f) and reverse back UP to GAMES
+        outgoingGames.renderOffset = -0.45f
+        prewarmedApps.renderOffset = 0.55f
+        controller.onSelectedCategoryChanged(GameFocusCategory.GAMES, categories)
+        assertEquals(-0.45f, outgoingGames.renderOffset, 0.0001f)
+        assertEquals(0f, outgoingGames.targetOffset, 0.0001f)
+        assertTrue(outgoingGames.isSelected)
+        assertEquals(0.55f, prewarmedApps.renderOffset, 0.0001f)
+        assertEquals(1f, prewarmedApps.targetOffset, 0.0001f)
+        assertFalse(prewarmedApps.isSelected)
+
+        // Settle both entries: APPS becomes inactive at +1f, GAMES settles at 0f
+        controller.onEntrySettled(prewarmedApps)
+        controller.onEntrySettled(outgoingGames)
+        assertFalse(prewarmedApps.isActive)
+        assertEquals(1f, prewarmedApps.renderOffset, 0.0001f)
+        assertTrue(outgoingGames.isActive)
+        assertEquals(0f, outgoingGames.renderOffset, 0.0001f)
+
+        // Pre-warm two more categories -> LRU evicts oldest inactive entry (APPS) down to maxRetained = 3
+        assertTrue(controller.prewarm(GameFocusCategory.LAST_USED, initialOffset = 1f))
+        assertTrue(controller.prewarm(GameFocusCategory.FAVORITES, initialOffset = -1f))
+        assertEquals(3, controller.entries.size)
+        assertEquals(
+            setOf(GameFocusCategory.GAMES.id, GameFocusCategory.LAST_USED.id, GameFocusCategory.FAVORITES.id),
+            controller.entries.map { it.category.id }.toSet(),
+        )
+
+        // Reset on dispose collapses pool back to active selected category only
+        controller.resetToSelected()
+        assertEquals(listOf(GameFocusCategory.GAMES.id), controller.entries.map { it.category.id })
+        assertEquals(0f, controller.entries.single().renderOffset, 0.0001f)
     }
 }

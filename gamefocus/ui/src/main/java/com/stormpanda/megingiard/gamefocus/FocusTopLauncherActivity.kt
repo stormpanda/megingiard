@@ -506,9 +506,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     getAvailableAndroidApps(allApps)
                 }
 
-            val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
-            val isLibraryOpen by viewModel.isLibraryOpen.collectAsStateWithLifecycle()
-
             val allGalleryCategories =
                 remember(customRomFolders, galleryConfig.collections, galleryConfig.order) {
                     GameFocusCategory.buildOrderedGalleries(customRomFolders, galleryConfig.collections, galleryConfig.order)
@@ -526,14 +523,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
             SideEffect {
                 activeCategories = categories
                 activeLibraryTabs = libraryTabs
-            }
-
-            SideEffect {
-                if (selectedCategory !in categories) {
-                    val fallbackCategory = categories.first()
-                    AppLog.i(TAG, "Selected gallery ${selectedCategory.id} is not visible -> falling back to ${fallbackCategory.id}")
-                    viewModel.setSelectedCategory(fallbackCategory)
-                }
             }
 
             LaunchedEffect(libraryTabs) {
@@ -558,7 +547,27 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
             }
 
-            val frozenHidden = remember(allApps, selectedCategory, isLibraryOpen) { hidden }
+            var frozenHidden by remember { mutableStateOf(hidden) }
+            val lastCatalogTracker = remember { LastCatalogRef(allApps) }
+            if (lastCatalogTracker.apps !== allApps) {
+                lastCatalogTracker.apps = allApps
+                if (frozenHidden != hidden) {
+                    frozenHidden = hidden
+                }
+            }
+            val handleSnapHidden: (Set<String>) -> Unit =
+                remember {
+                    { snapped -> frozenHidden = snapped }
+                }
+
+            LauncherSelectionGuard(
+                viewModel = viewModel,
+                categories = categories,
+                liveHidden = hidden,
+                frozenHidden = frozenHidden,
+                onSnapHidden = handleSnapHidden,
+            )
+
             SideEffect {
                 frozenHiddenSetForInput = frozenHidden
             }
@@ -1793,6 +1802,44 @@ private fun isDismissKey(keyCode: Int): Boolean =
 
 private fun isMenuKey(keyCode: Int): Boolean = keyCode == GamePadButton.BUTTON_Y.keyCode || keyCode == KeyEvent.KEYCODE_MENU
 
+private class LastCatalogRef(
+    var apps: List<InstalledAppInfo>,
+)
+
+private class LastSelectionTracker(
+    var category: GameFocusCategory,
+    var isLibraryOpen: Boolean,
+)
+
+@Composable
+private fun LauncherSelectionGuard(
+    viewModel: FocusTopLauncherViewModel,
+    categories: List<GameFocusCategory>,
+    liveHidden: Set<String>,
+    frozenHidden: Set<String>,
+    onSnapHidden: (Set<String>) -> Unit,
+) {
+    val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
+    val isLibraryOpen by viewModel.isLibraryOpen.collectAsStateWithLifecycle()
+
+    val selectionTracker = remember { LastSelectionTracker(selectedCategory, isLibraryOpen) }
+    if (selectionTracker.category != selectedCategory || selectionTracker.isLibraryOpen != isLibraryOpen) {
+        selectionTracker.category = selectedCategory
+        selectionTracker.isLibraryOpen = isLibraryOpen
+        if (frozenHidden != liveHidden) {
+            onSnapHidden(liveHidden)
+        }
+    }
+
+    SideEffect {
+        if (selectedCategory !in categories) {
+            val fallbackCategory = categories.first()
+            AppLog.i(TAG, "Selected gallery ${selectedCategory.id} is not visible -> falling back to ${fallbackCategory.id}")
+            viewModel.setSelectedCategory(fallbackCategory)
+        }
+    }
+}
+
 @Composable
 private fun CompanionHoverStateSync(
     context: Context,
@@ -1831,7 +1878,8 @@ private fun CompanionHoverStateSync(
         if (isStarted && !hasLaunchedTopPackage()) {
             val palette =
                 currentHoveredApp?.let { app ->
-                    AppPaletteExtractor.extractColorsAsync(app, appColors.accent, appColors.appBackground)
+                    AppPaletteExtractor.getCachedColorsOrNull(app)
+                        ?: AppPaletteExtractor.extractColorsAsync(app, appColors.accent, appColors.appBackground)
                 }
             val primaryArgb = palette?.primaryColor?.toArgb()
             val secondaryArgb = palette?.secondaryColor?.toArgb()

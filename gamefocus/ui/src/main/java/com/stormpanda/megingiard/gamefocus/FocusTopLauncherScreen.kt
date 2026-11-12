@@ -13,8 +13,11 @@ import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -33,7 +36,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,7 +60,10 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -66,13 +71,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -81,7 +85,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
@@ -101,6 +108,7 @@ import com.stormpanda.megingiard.gamefocus.domain.GalleryConfig
 import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
 import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.ui.AppColors
+import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
@@ -115,6 +123,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.abs
 
 private const val TAG = "FocusTopLauncherScreen"
 
@@ -134,6 +143,7 @@ private val FTL_FALLBACK_ICON_SIZE = 48.dp
 private val FTL_BADGE_PADDING = 10.dp
 private val FTL_BADGE_ICON_SIZE = 22.dp
 private const val FTL_BACKGROUND_COLOR_DEBOUNCE_MS = 220L
+private const val FTL_BACKGROUND_UNCACHED_DEBOUNCE_MS = 120L
 private const val FTL_BACKGROUND_COLOR_ANIM_MS = 500
 private const val FTL_LETTER_NAV_DEBOUNCE_MS = 500L
 private const val FTL_LIBRARY_TRANSITION_MS = 350
@@ -142,9 +152,21 @@ private const val FTL_BG_SECONDARY_ALPHA = 0.10f
 
 private const val FTL_HIDDEN_BADGE_ALPHA = 1.0f
 private const val FTL_VISIBLE_BADGE_ALPHA = 0.0f
+private const val FTL_FULL_ALPHA = 1.0f
 private const val FTL_HIDE_ANIMATION_DURATION_MS = 300
 private const val FTL_CAROUSEL_ANIMATION_DURATION_MS = 120
 private const val FTL_TITLE_OVERLAY_Z_INDEX = 1f
+private const val FTL_MAX_RETAINED_CATEGORIES = 16
+private const val FTL_MAX_IN_FLIGHT_HEADROOM = 2
+private const val FTL_PREWARM_DELAY_MS = 480L
+private const val FTL_IDLE_BATCH_PREWARM_GAP_MS = 120L
+private const val FTL_SLIDE_VISIBILITY_THRESHOLD = 0.001f
+private const val FTL_DIRECTION_NEXT = 1
+private const val FTL_DIRECTION_PREV = -1
+private const val FTL_NEXT_NEIGHBOR_OFFSET = 1f
+private const val FTL_PREV_NEIGHBOR_OFFSET = -1f
+private const val FTL_INACTIVE_PARK_MULTIPLIER = 2f
+private const val FTL_INACTIVE_Z_ORDER = -1f
 
 private val FTL_CAROUSEL_HEIGHT = 310.dp
 private val FTL_LETTER_NAV_PADDING = 40.dp
@@ -166,6 +188,277 @@ private const val FTL_PROMPT_SLIDE_DIVISOR = 2
 private class LetterNavigationOverlayState {
     var isActive by mutableStateOf(false)
     var selectedIndex by mutableIntStateOf(0)
+}
+
+internal fun categoryStepDirection(
+    previous: GameFocusCategory,
+    target: GameFocusCategory,
+    categories: List<GameFocusCategory>,
+): Int {
+    if (previous == target || categories.size <= 1) return 0
+    return if (previous.next(categories) == target) FTL_DIRECTION_NEXT else FTL_DIRECTION_PREV
+}
+
+@Stable
+internal class CategorySlideEntry(
+    category: GameFocusCategory,
+    initialOffset: Float,
+    initiallyActive: Boolean,
+    initiallySelected: Boolean,
+    initialZOrder: Float,
+    initialLastUsedTick: Long,
+) {
+    var category by mutableStateOf(category)
+    var renderOffset by mutableFloatStateOf(initialOffset)
+    var targetOffset: Float = initialOffset
+    var isActive by mutableStateOf(initiallyActive)
+    var isSelected by mutableStateOf(initiallySelected)
+    var zOrder by mutableFloatStateOf(initialZOrder)
+    var animGeneration by mutableIntStateOf(0)
+    var lastUsedTick: Long = initialLastUsedTick
+}
+
+@Stable
+internal class CategoryTransitionController(
+    initialCategory: GameFocusCategory,
+    private val maxRetained: Int = FTL_MAX_RETAINED_CATEGORIES,
+) {
+    private var lastSelectedCategory: GameFocusCategory = initialCategory
+    private var nextZOrder: Int = 1
+    private var lruCounter: Long = 1L
+    private var lastCategoriesRef: List<GameFocusCategory>? = null
+    private var latestAllowedIds: Set<String> = setOf(initialCategory.id)
+
+    val entries =
+        mutableStateListOf(
+            CategorySlideEntry(
+                category = initialCategory,
+                initialOffset = 0f,
+                initiallyActive = true,
+                initiallySelected = true,
+                initialZOrder = 1f,
+                initialLastUsedTick = 1L,
+            ),
+        )
+
+    private fun findEntryById(categoryId: String): CategorySlideEntry? {
+        for (i in 0 until entries.size) {
+            val candidate = entries[i]
+            if (candidate.category.id == categoryId) {
+                return candidate
+            }
+        }
+        return null
+    }
+
+    private fun updateAllowedIdsIfNeeded(
+        selectedCategory: GameFocusCategory,
+        categories: List<GameFocusCategory>,
+    ): Boolean {
+        if (categories === lastCategoriesRef && selectedCategory.id in latestAllowedIds) {
+            return false
+        }
+        val allowedIds = HashSet<String>(categories.size + 1)
+        for (i in categories.indices) {
+            allowedIds.add(categories[i].id)
+        }
+        allowedIds.add(selectedCategory.id)
+        lastCategoriesRef = categories
+        latestAllowedIds = allowedIds
+        return true
+    }
+
+    fun onSelectedCategoryChanged(
+        selectedCategory: GameFocusCategory,
+        categories: List<GameFocusCategory>,
+    ) {
+        Snapshot.withoutReadObservation {
+            val categoriesChanged = updateAllowedIdsIfNeeded(selectedCategory, categories)
+
+            if (selectedCategory == lastSelectedCategory) {
+                val existing = findEntryById(selectedCategory.id)
+                if (existing != null && existing.category !== selectedCategory) {
+                    existing.category = selectedCategory
+                }
+                if (categoriesChanged) {
+                    pruneRemovedInactive(latestAllowedIds)
+                }
+                return@withoutReadObservation
+            }
+
+            val previousCategory = lastSelectedCategory
+            lastSelectedCategory = selectedCategory
+            val direction = categoryStepDirection(previousCategory, selectedCategory, categories)
+            val effectiveDirection = if (direction == 0) FTL_DIRECTION_NEXT else direction
+            val exitTargetOffset = -effectiveDirection.toFloat()
+
+            var outgoing: CategorySlideEntry? = null
+            var incoming: CategorySlideEntry? = null
+            for (i in 0 until entries.size) {
+                val item = entries[i]
+                when (item.category.id) {
+                    previousCategory.id -> {
+                        outgoing = item
+                    }
+
+                    selectedCategory.id -> {
+                        incoming = item
+                    }
+
+                    else -> {
+                        if (item.isActive) {
+                            item.isSelected = false
+                            item.targetOffset = exitTargetOffset
+                            item.animGeneration++
+                        }
+                    }
+                }
+            }
+
+            if (outgoing != null) {
+                outgoing.isSelected = false
+                outgoing.isActive = true
+                outgoing.targetOffset = exitTargetOffset
+                outgoing.lastUsedTick = ++lruCounter
+                outgoing.animGeneration++
+            }
+
+            val newZOrder = (++nextZOrder).toFloat()
+            val newTick = ++lruCounter
+            if (incoming != null) {
+                incoming.category = selectedCategory
+                if (!incoming.isActive) {
+                    incoming.renderOffset = effectiveDirection.toFloat()
+                }
+                incoming.isSelected = true
+                incoming.isActive = true
+                incoming.targetOffset = 0f
+                incoming.zOrder = newZOrder
+                incoming.lastUsedTick = newTick
+                incoming.animGeneration++
+            } else {
+                entries.add(
+                    CategorySlideEntry(
+                        category = selectedCategory,
+                        initialOffset = effectiveDirection.toFloat(),
+                        initiallyActive = true,
+                        initiallySelected = true,
+                        initialZOrder = newZOrder,
+                        initialLastUsedTick = newTick,
+                    ),
+                )
+            }
+
+            if (categoriesChanged) {
+                pruneRemovedInactive(latestAllowedIds)
+            }
+            // Avoid Frame-1 disposal work during single switches; only cap runaway continuous holds immediately.
+            evictDownTo(maxRetained + FTL_MAX_IN_FLIGHT_HEADROOM)
+        }
+    }
+
+    fun prewarm(
+        category: GameFocusCategory,
+        initialOffset: Float,
+    ): Boolean =
+        Snapshot.withoutReadObservation {
+            if (findEntryById(category.id) != null) {
+                return@withoutReadObservation false
+            }
+            var activeCount = 0
+            for (i in 0 until entries.size) {
+                if (entries[i].isActive) activeCount++
+            }
+            if (activeCount >= maxRetained) {
+                return@withoutReadObservation false
+            }
+            entries.add(
+                CategorySlideEntry(
+                    category = category,
+                    initialOffset = initialOffset,
+                    initiallyActive = false,
+                    initiallySelected = false,
+                    initialZOrder = 0f,
+                    initialLastUsedTick = ++lruCounter,
+                ),
+            )
+            evictDownTo(maxRetained, protectId = category.id)
+            true
+        }
+
+    fun onEntrySettled(entry: CategorySlideEntry) {
+        Snapshot.withoutReadObservation {
+            if (!entry.isSelected && entry.targetOffset != 0f) {
+                entry.renderOffset = entry.targetOffset
+                entry.isActive = false
+                pruneRemovedInactive(latestAllowedIds)
+                evictDownTo(maxRetained)
+            } else if (entry.isSelected) {
+                entry.renderOffset = 0f
+            }
+        }
+    }
+
+    fun resetToSelected() {
+        Snapshot.withoutReadObservation {
+            val selectedId = lastSelectedCategory.id
+            entries.removeAll { it.category.id != selectedId }
+            val current = entries.firstOrNull()
+            if (current != null) {
+                current.isSelected = true
+                current.isActive = true
+                current.renderOffset = 0f
+                current.targetOffset = 0f
+                current.zOrder = 1f
+                nextZOrder = 1
+            } else {
+                nextZOrder = 1
+                entries.add(
+                    CategorySlideEntry(
+                        category = lastSelectedCategory,
+                        initialOffset = 0f,
+                        initiallyActive = true,
+                        initiallySelected = true,
+                        initialZOrder = 1f,
+                        initialLastUsedTick = ++lruCounter,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun pruneRemovedInactive(allowedIds: Set<String>) {
+        var hasRemovable = false
+        for (i in 0 until entries.size) {
+            val item = entries[i]
+            if (!item.isActive && !item.isSelected && item.category.id !in allowedIds) {
+                hasRemovable = true
+                break
+            }
+        }
+        if (hasRemovable) {
+            entries.removeAll { !it.isActive && !it.isSelected && it.category.id !in allowedIds }
+        }
+    }
+
+    private fun evictDownTo(
+        limit: Int,
+        protectId: String? = null,
+    ) {
+        while (entries.size > limit) {
+            var victim: CategorySlideEntry? = null
+            for (i in 0 until entries.size) {
+                val item = entries[i]
+                if (!item.isActive && !item.isSelected && item.category.id != protectId) {
+                    if (victim == null || item.lastUsedTick < victim.lastUsedTick) {
+                        victim = item
+                    }
+                }
+            }
+            if (victim == null) break
+            entries.remove(victim)
+        }
+    }
 }
 
 @Composable
@@ -197,7 +490,7 @@ fun FocusTopLauncherScreen(
     onConfirmPairApp: (InstalledAppInfo, InstalledAppInfo) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
-    val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val selectedCategoryState = viewModel.selectedCategory.collectAsState()
     val isLibraryOpen by viewModel.isLibraryOpen.collectAsState()
     val isMainOptionsMenuExpanded by viewModel.isMainOptionsMenuExpanded.collectAsState()
     val newlyAddedFolder by viewModel.newlyAddedFolder.collectAsState()
@@ -224,12 +517,11 @@ fun FocusTopLauncherScreen(
     val availableAppsByPackage = remember(availableAndroidApps) { availableAndroidApps.associateBy { it.packageName } }
 
     val allKnownCategories =
-        remember(categories, allGalleryCategories, selectedCategory) {
+        remember(categories, allGalleryCategories) {
             buildList {
                 addAll(GameFocusCategory.builtIns)
                 addAll(categories)
                 addAll(allGalleryCategories)
-                add(selectedCategory)
             }.distinctBy { it.id }
         }
 
@@ -247,12 +539,32 @@ fun FocusTopLauncherScreen(
             )
         }
     val appsByCategoryIdState = rememberUpdatedState(appsByCategoryId)
+    val allAppsState = rememberUpdatedState(allApps)
+    val favoritesSetState = rememberUpdatedState(favoritesSet)
+    val hiddenSetState = rememberUpdatedState(hiddenSet)
+    val lastUsedState = rememberUpdatedState(lastUsed)
+    val collectionMembersState = rememberUpdatedState(collectionMembers)
+    val uniqueLettersByCategoryId =
+        remember(appsByCategoryId) {
+            appsByCategoryId.mapValues { (_, apps) ->
+                LetterNavigationHelper.getUniqueStartingLetters(apps)
+            }
+        }
+    val uniqueLettersByCategoryIdState = rememberUpdatedState(uniqueLettersByCategoryId)
 
-    fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
-        appsByCategoryId[cat.id] ?: cat.filterApps(allApps, favoritesSet, hiddenSet, lastUsed, collectionMembers)
-
-    val categoryApps = getAppsForCategory(selectedCategory)
-    val uniqueLetters = remember(categoryApps) { LetterNavigationHelper.getUniqueStartingLetters(categoryApps) }
+    val resolveCategoryApps: (GameFocusCategory) -> List<InstalledAppInfo> =
+        remember {
+            { cat ->
+                appsByCategoryIdState.value[cat.id]
+                    ?: cat.filterApps(
+                        allAppsState.value,
+                        favoritesSetState.value,
+                        hiddenSetState.value,
+                        lastUsedState.value,
+                        collectionMembersState.value,
+                    )
+            }
+        }
 
     // Plain non-Compose map: only read on category switch, so updating focused package memory never triggers recomposition.
     val lastHighlightedPackages = remember { HashMap<String, String>() }
@@ -271,90 +583,67 @@ fun FocusTopLauncherScreen(
         }
     romPagerStates.keys.retainAll(activeGalleryIds)
 
-    fun getPagerStateForCategory(cat: GameFocusCategory): PagerState =
-        when (cat) {
-            GameFocusCategory.GAMES -> {
-                gamesPagerState
-            }
+    val pagerStateProvider: (GameFocusCategory) -> PagerState =
+        remember(gamesPagerState, appsPagerState, favoritesPagerState, lastUsedPagerState, romPagerStates) {
+            { cat ->
+                when (cat) {
+                    GameFocusCategory.GAMES -> {
+                        gamesPagerState
+                    }
 
-            GameFocusCategory.APPS -> {
-                appsPagerState
-            }
+                    GameFocusCategory.APPS -> {
+                        appsPagerState
+                    }
 
-            GameFocusCategory.FAVORITES -> {
-                favoritesPagerState
-            }
+                    GameFocusCategory.FAVORITES -> {
+                        favoritesPagerState
+                    }
 
-            GameFocusCategory.LAST_USED -> {
-                lastUsedPagerState
-            }
+                    GameFocusCategory.LAST_USED -> {
+                        lastUsedPagerState
+                    }
 
-            is GameFocusCategory.RomSystem,
-            is GameFocusCategory.CustomCollection,
-            -> {
-                val categoryId = cat.id
-                romPagerStates.getOrPut(categoryId) {
-                    RomPagerState(0, 0f) { appsByCategoryIdState.value[categoryId]?.size ?: 0 }
+                    is GameFocusCategory.RomSystem,
+                    is GameFocusCategory.CustomCollection,
+                    -> {
+                        val categoryId = cat.id
+                        romPagerStates.getOrPut(categoryId) {
+                            RomPagerState(0, 0f) { appsByCategoryIdState.value[categoryId]?.size ?: 0 }
+                        }
+                    }
                 }
             }
         }
 
-    val activePagerState = getPagerStateForCategory(selectedCategory)
-
-    // Clamp active pager state if list shrinks (e.g. app hidden)
-    LaunchedEffect(categoryApps) {
-        if (categoryApps.isNotEmpty() && activePagerState.currentPage >= categoryApps.size) {
-            val safeIndex = (categoryApps.size - 1).coerceAtLeast(0)
-            activePagerState.scrollToPage(safeIndex)
-        }
-    }
-
-    // Sync active pager state with package memory when category changes
-    LaunchedEffect(selectedCategory) {
-        val lastPkg = lastHighlightedPackages[selectedCategory.id]
-        val targetIndex =
-            if (lastPkg != null) {
-                val found = categoryApps.indexOfFirst { it.packageName == lastPkg }
-                if (found >= 0) found else 0
-            } else {
-                0
-            }
-        if (categoryApps.isNotEmpty() && activePagerState.currentPage != targetIndex) {
-            val safeIndex = targetIndex.coerceIn(0, categoryApps.size - 1)
-            AppLog.d(TAG, "Category switched to ${selectedCategory.id} -> scrolling to remembered index $safeIndex (package=$lastPkg)")
-            activePagerState.scrollToPage(safeIndex)
-        }
-    }
-
     val letterNavState = remember { LetterNavigationOverlayState() }
-    val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(categoryApps, isLibraryOpen) {
-        if (!isLibraryOpen && categoryApps.isNotEmpty()) {
-            focusRequester.requestFocus()
+    val categoryTransitionController =
+        remember {
+            CategoryTransitionController(Snapshot.withoutReadObservation { selectedCategoryState.value })
         }
-    }
 
-    // Derived focused app state: never read in FocusTopLauncherScreen's own scope so page crossings
-    // only recompose the small leaf Composables that display or sync the focused app.
+    // Single stable derived focused-app State: never read in FocusTopLauncherScreen's own scope so
+    // neither horizontal page crossings nor vertical category switches recompose the root screen.
     val currentAppState =
-        remember(activePagerState, categoryApps) {
+        remember(selectedCategoryState, pagerStateProvider) {
             derivedStateOf {
+                val cat = selectedCategoryState.value
+                val categoryApps = resolveCategoryApps(cat)
                 if (categoryApps.isEmpty()) {
                     null
                 } else {
-                    categoryApps.getOrNull(activePagerState.currentPage.coerceIn(0, categoryApps.lastIndex))
+                    val activePager = pagerStateProvider(cat)
+                    categoryApps.getOrNull(activePager.currentPage.coerceIn(0, categoryApps.lastIndex))
                 }
             }
         }
 
     GalleryNavigationEffects(
         viewModel = viewModel,
-        selectedCategory = selectedCategory,
+        selectedCategoryState = selectedCategoryState,
         editingAppInfo = editingAppInfo,
-        categoryApps = categoryApps,
-        uniqueLetters = uniqueLetters,
-        activePagerState = activePagerState,
+        resolveCategoryApps = resolveCategoryApps,
+        uniqueLettersByCategoryIdState = uniqueLettersByCategoryIdState,
+        pagerStateProvider = pagerStateProvider,
         currentAppState = currentAppState,
         letterNavState = letterNavState,
         lastHighlightedPackages = lastHighlightedPackages,
@@ -423,9 +712,20 @@ fun FocusTopLauncherScreen(
                 } else {
                     Box(modifier = Modifier.fillMaxSize()) {
                         DynamicLauncherBackground(
-                            activePagerState = activePagerState,
-                            categoryApps = categoryApps,
+                            selectedCategoryState = selectedCategoryState,
+                            pagerStateProvider = pagerStateProvider,
+                            currentAppState = currentAppState,
                             appColors = appColors,
+                        )
+
+                        GalleryCategoryCoordinator(
+                            controller = categoryTransitionController,
+                            selectedCategoryState = selectedCategoryState,
+                            categories = categories,
+                            appsByCategoryId = appsByCategoryId,
+                            resolveCategoryApps = resolveCategoryApps,
+                            lastHighlightedPackages = lastHighlightedPackages,
+                            pagerStateProvider = pagerStateProvider,
                         )
 
                         if (isMainOptionsMenuExpanded) {
@@ -441,181 +741,48 @@ fun FocusTopLauncherScreen(
                             )
                         }
 
-                        // Plane 1: Full-Screen Gallery & App Title Plane
-                        Box(
+                        // Plane 1: Full-Screen Gallery & App Title Plane (Retained 120 Hz Carousel Pool)
+                        GalleryCategoryCarouselStack(
+                            controller = categoryTransitionController,
+                            appsByCategoryId = appsByCategoryId,
+                            resolveCategoryApps = resolveCategoryApps,
+                            uniqueLettersByCategoryId = uniqueLettersByCategoryId,
+                            favoritesSet = favoritesSet,
+                            hiddenSet = hiddenSet,
+                            pairedApps = pairedApps,
+                            availableAppsByPackage = availableAppsByPackage,
+                            isScreenReaderActive = isScreenReaderActive,
+                            letterNavState = letterNavState,
+                            appColors = appColors,
+                            pagerStateProvider = pagerStateProvider,
+                            onAppClickTop = onAppClickTop,
                             modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            AnimatedContent(
-                                targetState = selectedCategory,
-                                transitionSpec = {
-                                    val direction = if (initialState.next(categories) == targetState) 1 else -1
-                                    (slideInVertically { height -> height * direction } + fadeIn())
-                                        .togetherWith(slideOutVertically { height -> -height * direction } + fadeOut())
-                                },
-                                label = "CarouselCategoryTransition",
-                                modifier = Modifier.fillMaxSize(),
-                            ) { category ->
-                                val currentCategoryApps = getAppsForCategory(category)
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    if (currentCategoryApps.isEmpty()) {
-                                        Box(
-                                            modifier =
-                                                Modifier
-                                                    .height(FTL_CAROUSEL_HEIGHT)
-                                                    .fillMaxWidth(),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Text(
-                                                text =
-                                                    when (category) {
-                                                        GameFocusCategory.GAMES -> {
-                                                            stringResource(R.string.gamefocus_no_games)
-                                                        }
-
-                                                        GameFocusCategory.APPS -> {
-                                                            stringResource(R.string.gamefocus_no_apps_category)
-                                                        }
-
-                                                        GameFocusCategory.FAVORITES -> {
-                                                            stringResource(R.string.gamefocus_no_favorites)
-                                                        }
-
-                                                        GameFocusCategory.LAST_USED -> {
-                                                            stringResource(R.string.gamefocus_no_last_used)
-                                                        }
-
-                                                        is GameFocusCategory.CustomCollection -> {
-                                                            stringResource(
-                                                                R.string.gamefocus_no_collection_items,
-                                                            )
-                                                        }
-
-                                                        else -> {
-                                                            stringResource(R.string.focus_launcher_no_apps)
-                                                        }
-                                                    },
-                                                style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
-                                            )
-                                        }
-                                    } else {
-                                        val categoryPagerState = getPagerStateForCategory(category)
-                                        val currentOnAppClickTop by rememberUpdatedState(onAppClickTop)
-                                        val keyProvider: (Int) -> Any =
-                                            remember(category.id, currentCategoryApps) {
-                                                { page ->
-                                                    "${category.id}_${currentCategoryApps.getOrNull(page)?.packageName ?: page}"
-                                                }
-                                            }
-                                        val handleCarouselItemClick: (Int) -> Unit =
-                                            remember(currentCategoryApps) {
-                                                { actualIndex ->
-                                                    val appInfo = currentCategoryApps.getOrNull(actualIndex)
-                                                    if (appInfo != null) currentOnAppClickTop(appInfo)
-                                                }
-                                            }
-                                        val isItemHiddenProvider: (Int) -> Boolean =
-                                            remember(currentCategoryApps, hiddenSet) {
-                                                { actualIndex ->
-                                                    currentCategoryApps.getOrNull(actualIndex)?.let {
-                                                        hiddenSet.contains(it.packageName)
-                                                    } ?: false
-                                                }
-                                            }
-
-                                        Column(
-                                            modifier = Modifier.padding(top = FTL_GALLERY_TOP_OFFSET),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                        ) {
-                                            HorizontalPosterCarousel(
-                                                itemCount = currentCategoryApps.size,
-                                                pagerState = categoryPagerState,
-                                                modifier =
-                                                    if (category == selectedCategory) {
-                                                        Modifier.focusRequester(focusRequester)
-                                                    } else {
-                                                        Modifier
-                                                    },
-                                                key = keyProvider,
-                                                onItemClick = handleCarouselItemClick,
-                                                posterWidth = FTL_POSTER_WIDTH,
-                                                posterHeight = FTL_POSTER_HEIGHT,
-                                                posterSpacing = FTL_POSTER_SPACING,
-                                                carouselHeight = FTL_CAROUSEL_HEIGHT,
-                                                posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
-                                                cardBackgroundColor = { actualIndex, isSelected ->
-                                                    val appInfo = currentCategoryApps.getOrNull(actualIndex)
-                                                    if (appInfo == null) {
-                                                        if (isSelected) appColors.surfaceVariant else appColors.surface
-                                                    } else {
-                                                        val palette = rememberAppPalette(appInfo)
-                                                        if (palette != null && palette.isExtracted) {
-                                                            palette.darkenedPrimaryColor
-                                                        } else if (isSelected) {
-                                                            appColors.surfaceVariant
-                                                        } else {
-                                                            appColors.surface
-                                                        }
-                                                    }
-                                                },
-                                                isHidden = isItemHiddenProvider,
-                                            ) { actualIndex, _ ->
-                                                val appInfo = currentCategoryApps[actualIndex]
-                                                PosterCardContent(
-                                                    appInfo = appInfo,
-                                                    isFavorite = favoritesSet.contains(appInfo.packageName),
-                                                    isHidden = hiddenSet.contains(appInfo.packageName),
-                                                )
-                                            }
-
-                                            Spacer(modifier = Modifier.height(FTL_TITLE_GAP))
-
-                                            val categoryCurrentAppState =
-                                                remember(categoryPagerState, currentCategoryApps) {
-                                                    derivedStateOf {
-                                                        if (currentCategoryApps.isEmpty()) {
-                                                            null
-                                                        } else {
-                                                            currentCategoryApps.getOrNull(
-                                                                categoryPagerState.currentPage.coerceIn(0, currentCategoryApps.lastIndex),
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            GalleryTitleOrLetterSection(
-                                                currentAppState =
-                                                    if (category ==
-                                                        selectedCategory
-                                                    ) {
-                                                        currentAppState
-                                                    } else {
-                                                        categoryCurrentAppState
-                                                    },
-                                                uniqueLetters = uniqueLetters,
-                                                letterNavState = letterNavState,
-                                                isSelectedCategory = category == selectedCategory,
-                                                pairedApps = pairedApps,
-                                                availableAppsByPackage = availableAppsByPackage,
-                                                appColors = appColors,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        )
 
                         // Plane 2: Hovering Controls Layer (Categories, Actions, Touch Launch Buttons)
                         val isControlsEnabled =
                             editingAppInfo == null && pairingTargetApp == null && !isLibraryOpen && !isManageGalleriesOpen
+                        val currentCategories by rememberUpdatedState(categories)
+                        val handleCategoryUp =
+                            remember(viewModel) {
+                                {
+                                    viewModel.cycleCategoryUp(currentCategories)
+                                    Unit
+                                }
+                            }
+                        val handleCategoryDown =
+                            remember(viewModel) {
+                                {
+                                    viewModel.cycleCategoryDown(currentCategories)
+                                    Unit
+                                }
+                            }
 
                         InteractiveCategoryHeader(
-                            selectedCategory = selectedCategory,
+                            selectedCategoryState = selectedCategoryState,
                             categories = categories,
-                            onCategoryUp = { viewModel.cycleCategoryUp(categories) },
-                            onCategoryDown = { viewModel.cycleCategoryDown(categories) },
+                            onCategoryUp = handleCategoryUp,
+                            onCategoryDown = handleCategoryDown,
                             enabled = isControlsEnabled,
                             areButtonPromptsVisible = areButtonPromptsVisible,
                             modifier =
@@ -725,14 +892,36 @@ fun FocusTopLauncherScreen(
     }
 }
 
+private data class LetterOverlayResetKey(
+    val category: GameFocusCategory,
+    val editingAppInfo: InstalledAppInfo?,
+)
+
+private data class FocusedCategoryObservation(
+    val category: GameFocusCategory,
+    val categoryApps: List<InstalledAppInfo>,
+    val currentApp: InstalledAppInfo?,
+)
+
+private data class BackgroundFocusObservation(
+    val app: InstalledAppInfo?,
+    val isScrolling: Boolean,
+)
+
+private data class CategoryPrewarmSnapshot(
+    val selectedCategory: GameFocusCategory,
+    val categories: List<GameFocusCategory>,
+    val appsByCategoryId: Map<String, List<InstalledAppInfo>>,
+)
+
 @Composable
 private fun GalleryNavigationEffects(
     viewModel: FocusTopLauncherViewModel,
-    selectedCategory: GameFocusCategory,
+    selectedCategoryState: State<GameFocusCategory>,
     editingAppInfo: InstalledAppInfo?,
-    categoryApps: List<InstalledAppInfo>,
-    uniqueLetters: List<Char>,
-    activePagerState: PagerState,
+    resolveCategoryApps: (GameFocusCategory) -> List<InstalledAppInfo>,
+    uniqueLettersByCategoryIdState: State<Map<String, List<Char>>>,
+    pagerStateProvider: (GameFocusCategory) -> PagerState,
     currentAppState: State<InstalledAppInfo?>,
     letterNavState: LetterNavigationOverlayState,
     lastHighlightedPackages: MutableMap<String, String>,
@@ -742,76 +931,101 @@ private fun GalleryNavigationEffects(
     val dpadLeftTrigger by viewModel.dpadLeftTrigger.collectAsState()
     val dpadStepRightTrigger by viewModel.dpadStepRightTrigger.collectAsState()
     val scope = rememberCoroutineScope()
-    val currentActivePagerState by rememberUpdatedState(activePagerState)
+    val currentEditingAppInfo by rememberUpdatedState(editingAppInfo)
+    val currentResolveCategoryApps by rememberUpdatedState(resolveCategoryApps)
+    val currentPagerStateProvider by rememberUpdatedState(pagerStateProvider)
 
-    // Dismiss letter overlay without action if user manually scrolls the pager
+    // Dismiss letter overlay without action if user manually scrolls the active pager
     LaunchedEffect(Unit) {
-        snapshotFlow { currentActivePagerState.isScrollInProgress }
-            .collectLatest { isScrolling ->
-                if (isScrolling && letterNavState.isActive) {
-                    AppLog.i(TAG, "Pager scroll in progress while letter carousel active -> cancelling overlay without action")
-                    letterNavState.isActive = false
-                }
+        snapshotFlow {
+            val activePager = currentPagerStateProvider(selectedCategoryState.value)
+            activePager.isScrollInProgress
+        }.collectLatest { isScrolling ->
+            if (isScrolling && letterNavState.isActive) {
+                AppLog.i(TAG, "Pager scroll in progress while letter carousel active -> cancelling overlay without action")
+                letterNavState.isActive = false
             }
+        }
     }
 
     // Handle D-pad LEFT step with wrap-around
     LaunchedEffect(dpadLeftTrigger) {
-        if (dpadLeftTrigger > 0 && categoryApps.isNotEmpty()) {
-            if (letterNavState.isActive) {
-                AppLog.i(TAG, "D-pad LEFT pressed while letter carousel active -> cancelling overlay without action")
-                letterNavState.isActive = false
-            } else {
-                val baseIndex = if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
-                val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
-                val prevIndex = if (safeBase > 0) safeBase - 1 else categoryApps.size - 1
-                AppLog.d(
-                    TAG,
-                    "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$prevIndex",
-                )
-                activePagerState.animateScrollToPage(
-                    page = prevIndex,
-                    animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
-                )
+        if (dpadLeftTrigger > 0) {
+            val selectedCategory = selectedCategoryState.value
+            val categoryApps = currentResolveCategoryApps(selectedCategory)
+            if (categoryApps.isNotEmpty()) {
+                if (letterNavState.isActive) {
+                    AppLog.i(TAG, "D-pad LEFT pressed while letter carousel active -> cancelling overlay without action")
+                    letterNavState.isActive = false
+                } else {
+                    val activePagerState = currentPagerStateProvider(selectedCategory)
+                    val baseIndex =
+                        if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
+                    val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
+                    val prevIndex = if (safeBase > 0) safeBase - 1 else categoryApps.size - 1
+                    AppLog.d(
+                        TAG,
+                        "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$prevIndex",
+                    )
+                    activePagerState.animateScrollToPage(
+                        page = prevIndex,
+                        animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
+                    )
+                }
             }
         }
     }
 
     // Handle D-pad RIGHT step with wrap-around
     LaunchedEffect(dpadStepRightTrigger) {
-        if (dpadStepRightTrigger > 0 && categoryApps.isNotEmpty()) {
-            if (letterNavState.isActive) {
-                AppLog.i(TAG, "D-pad RIGHT pressed while letter carousel active -> cancelling overlay without action")
-                letterNavState.isActive = false
-            } else {
-                val baseIndex = if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
-                val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
-                val nextIndex = if (safeBase < categoryApps.size - 1) safeBase + 1 else 0
-                AppLog.d(
-                    TAG,
-                    "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$nextIndex",
-                )
-                activePagerState.animateScrollToPage(
-                    page = nextIndex,
-                    animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
-                )
+        if (dpadStepRightTrigger > 0) {
+            val selectedCategory = selectedCategoryState.value
+            val categoryApps = currentResolveCategoryApps(selectedCategory)
+            if (categoryApps.isNotEmpty()) {
+                if (letterNavState.isActive) {
+                    AppLog.i(TAG, "D-pad RIGHT pressed while letter carousel active -> cancelling overlay without action")
+                    letterNavState.isActive = false
+                } else {
+                    val activePagerState = currentPagerStateProvider(selectedCategory)
+                    val baseIndex =
+                        if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
+                    val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
+                    val nextIndex = if (safeBase < categoryApps.size - 1) safeBase + 1 else 0
+                    AppLog.d(
+                        TAG,
+                        "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$nextIndex",
+                    )
+                    activePagerState.animateScrollToPage(
+                        page = nextIndex,
+                        animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
+                    )
+                }
             }
         }
     }
 
-    // Reset letter overlay on category switch or dialog edit
-    LaunchedEffect(selectedCategory, editingAppInfo) {
-        letterNavState.isActive = false
+    // Reset letter overlay on category switch or dialog edit without tearing down LaunchedEffect
+    LaunchedEffect(Unit) {
+        snapshotFlow { LetterOverlayResetKey(selectedCategoryState.value, currentEditingAppInfo) }
+            .collectLatest {
+                if (letterNavState.isActive) {
+                    letterNavState.isActive = false
+                }
+            }
     }
 
     // Auto-hide and commit letter navigation after debounce
     LaunchedEffect(letterNavState.isActive, letterNavState.selectedIndex, prevLetterTrigger, nextLetterTrigger) {
         if (letterNavState.isActive) {
             delay(FTL_LETTER_NAV_DEBOUNCE_MS)
+            val selectedCategory = selectedCategoryState.value
+            val categoryApps = currentResolveCategoryApps(selectedCategory)
+            val uniqueLetters = uniqueLettersByCategoryIdState.value[selectedCategory.id].orEmpty()
             val targetLetter = uniqueLetters.getOrNull(letterNavState.selectedIndex)
             letterNavState.isActive = false
-            if (targetLetter != null) {
+            if (targetLetter != null && categoryApps.isNotEmpty()) {
                 val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(categoryApps, targetLetter)
+                val activePagerState = currentPagerStateProvider(selectedCategory)
                 AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
                 scope.launch {
                     activePagerState.animateScrollToPage(targetAppIndex)
@@ -822,65 +1036,133 @@ private fun GalleryNavigationEffects(
 
     // Handle Gamepad L1 step (previous starting letter in letter carousel)
     LaunchedEffect(prevLetterTrigger) {
-        if (prevLetterTrigger > 0 && categoryApps.isNotEmpty() && uniqueLetters.isNotEmpty()) {
-            if (!letterNavState.isActive) {
-                letterNavState.isActive = true
-                val currentLetter = currentAppState.value?.let { LetterNavigationHelper.getStartingLetter(it.label) }
-                val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
-                letterNavState.selectedIndex = initialIndex
+        if (prevLetterTrigger > 0) {
+            val selectedCategory = selectedCategoryState.value
+            val categoryApps = currentResolveCategoryApps(selectedCategory)
+            val uniqueLetters = uniqueLettersByCategoryIdState.value[selectedCategory.id].orEmpty()
+            if (categoryApps.isNotEmpty() && uniqueLetters.isNotEmpty()) {
+                if (!letterNavState.isActive) {
+                    letterNavState.isActive = true
+                    val currentLetter = currentAppState.value?.let { LetterNavigationHelper.getStartingLetter(it.label) }
+                    val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
+                    letterNavState.selectedIndex = initialIndex
+                }
+                letterNavState.selectedIndex = (letterNavState.selectedIndex - 1).coerceAtLeast(0)
+                AppLog.d(
+                    TAG,
+                    "L1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
+                )
             }
-            letterNavState.selectedIndex = (letterNavState.selectedIndex - 1).coerceAtLeast(0)
-            AppLog.d(
-                TAG,
-                "L1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
-            )
         }
     }
 
     // Handle Gamepad R1 step (next starting letter in letter carousel)
     LaunchedEffect(nextLetterTrigger) {
-        if (nextLetterTrigger > 0 && categoryApps.isNotEmpty() && uniqueLetters.isNotEmpty()) {
-            if (!letterNavState.isActive) {
-                letterNavState.isActive = true
-                val currentLetter = currentAppState.value?.let { LetterNavigationHelper.getStartingLetter(it.label) }
-                val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
-                letterNavState.selectedIndex = initialIndex
+        if (nextLetterTrigger > 0) {
+            val selectedCategory = selectedCategoryState.value
+            val categoryApps = currentResolveCategoryApps(selectedCategory)
+            val uniqueLetters = uniqueLettersByCategoryIdState.value[selectedCategory.id].orEmpty()
+            if (categoryApps.isNotEmpty() && uniqueLetters.isNotEmpty()) {
+                if (!letterNavState.isActive) {
+                    letterNavState.isActive = true
+                    val currentLetter = currentAppState.value?.let { LetterNavigationHelper.getStartingLetter(it.label) }
+                    val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
+                    letterNavState.selectedIndex = initialIndex
+                }
+                letterNavState.selectedIndex = (letterNavState.selectedIndex + 1).coerceAtMost(uniqueLetters.size - 1)
+                AppLog.d(
+                    TAG,
+                    "R1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
+                )
             }
-            letterNavState.selectedIndex = (letterNavState.selectedIndex + 1).coerceAtMost(uniqueLetters.size - 1)
-            AppLog.d(
-                TAG,
-                "R1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
-            )
         }
     }
 
-    // Bi-directional synchronization: update lastHighlightedPackages and notify focused app
-    val currentApp = currentAppState.value
-    LaunchedEffect(currentApp, selectedCategory) {
-        viewModel.setFocusedApp(currentApp)
-        if (currentApp != null) {
-            lastHighlightedPackages[selectedCategory.id] = currentApp.packageName
-            AppLog.d(TAG, "Focused game changed for ${selectedCategory.id}: package=${currentApp.packageName}, label=${currentApp.label}")
+    // Persistent bi-directional synchronization: restore remembered category page on cold/changed switches,
+    // then update lastHighlightedPackages and notify focused app without LaunchedEffect teardown churn.
+    LaunchedEffect(Unit) {
+        var syncedCategoryId: String? = null
+        var syncedCategoryAppsRef: List<InstalledAppInfo>? = null
+        var lastReportedCategoryId: String? = null
+        var lastReportedApp: InstalledAppInfo? = null
+
+        snapshotFlow {
+            val cat = selectedCategoryState.value
+            FocusedCategoryObservation(
+                category = cat,
+                categoryApps = currentResolveCategoryApps(cat),
+                currentApp = currentAppState.value,
+            )
+        }.collectLatest { observation ->
+            val category = observation.category
+            val categoryApps = observation.categoryApps
+            if (category.id != syncedCategoryId || categoryApps !== syncedCategoryAppsRef) {
+                if (categoryApps.isNotEmpty()) {
+                    val pager = currentPagerStateProvider(category)
+                    val lastPkg = lastHighlightedPackages[category.id]
+                    val targetIndex =
+                        if (lastPkg != null) {
+                            val found = categoryApps.indexOfFirst { it.packageName == lastPkg }
+                            if (found >= 0) found else pager.currentPage.coerceIn(0, categoryApps.lastIndex)
+                        } else {
+                            pager.currentPage.coerceIn(0, categoryApps.lastIndex)
+                        }
+                    if (!pager.isScrollInProgress && pager.currentPage != targetIndex) {
+                        pager.scrollToPage(targetIndex)
+                    }
+                }
+                syncedCategoryId = category.id
+                syncedCategoryAppsRef = categoryApps
+            }
+
+            val resolvedApp =
+                if (categoryApps.isEmpty()) {
+                    null
+                } else {
+                    val pager = currentPagerStateProvider(category)
+                    categoryApps.getOrNull(pager.currentPage.coerceIn(0, categoryApps.lastIndex))
+                }
+
+            if (category.id != lastReportedCategoryId || resolvedApp != lastReportedApp) {
+                lastReportedCategoryId = category.id
+                lastReportedApp = resolvedApp
+                viewModel.setFocusedApp(resolvedApp)
+                if (resolvedApp != null) {
+                    lastHighlightedPackages[category.id] = resolvedApp.packageName
+                    AppLog.d(TAG, "Focused game changed for ${category.id}: package=${resolvedApp.packageName}, label=${resolvedApp.label}")
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun DynamicLauncherBackground(
-    activePagerState: PagerState,
-    categoryApps: List<InstalledAppInfo>,
+    selectedCategoryState: State<GameFocusCategory>,
+    pagerStateProvider: (GameFocusCategory) -> PagerState,
+    currentAppState: State<InstalledAppInfo?>,
     appColors: AppColors,
 ) {
-    var backgroundApp by remember { mutableStateOf<InstalledAppInfo?>(null) }
+    var backgroundApp by remember {
+        mutableStateOf(Snapshot.withoutReadObservation { currentAppState.value })
+    }
+    val currentPagerStateProvider by rememberUpdatedState(pagerStateProvider)
+    val currentFocusedAppState by rememberUpdatedState(currentAppState)
 
-    // Throttle background color updates during rapid gallery navigation
-    LaunchedEffect(activePagerState, categoryApps) {
+    // Single persistent observer (never torn down on category switch) with scroll & uncached-palette debounce
+    LaunchedEffect(Unit) {
         snapshotFlow {
-            val page = activePagerState.currentPage
-            categoryApps.getOrNull(page)
-        }.collectLatest { target ->
-            if (activePagerState.isScrollInProgress) {
+            val activePager = currentPagerStateProvider(selectedCategoryState.value)
+            BackgroundFocusObservation(
+                app = currentFocusedAppState.value,
+                isScrolling = activePager.isScrollInProgress,
+            )
+        }.collectLatest { observation ->
+            val target = observation.app
+            if (observation.isScrolling) {
                 delay(FTL_BACKGROUND_COLOR_DEBOUNCE_MS)
+            } else if (target != null && AppPaletteExtractor.getCachedColorsOrNull(target) == null) {
+                delay(FTL_BACKGROUND_UNCACHED_DEBOUNCE_MS)
             }
             backgroundApp = target
         }
@@ -951,16 +1233,420 @@ private fun DynamicLauncherBackground(
 }
 
 @Composable
+private fun GalleryCategoryCoordinator(
+    controller: CategoryTransitionController,
+    selectedCategoryState: State<GameFocusCategory>,
+    categories: List<GameFocusCategory>,
+    appsByCategoryId: Map<String, List<InstalledAppInfo>>,
+    resolveCategoryApps: (GameFocusCategory) -> List<InstalledAppInfo>,
+    lastHighlightedPackages: Map<String, String>,
+    pagerStateProvider: (GameFocusCategory) -> PagerState,
+) {
+    val selectedCategory = selectedCategoryState.value
+    controller.onSelectedCategoryChanged(selectedCategory, categories)
+
+    val currentCategories by rememberUpdatedState(categories)
+    val currentAppsByCategoryId by rememberUpdatedState(appsByCategoryId)
+    val currentResolveCategoryApps by rememberUpdatedState(resolveCategoryApps)
+    val currentPagerStateProvider by rememberUpdatedState(pagerStateProvider)
+
+    LaunchedEffect(Unit) {
+        snapshotFlow {
+            CategoryPrewarmSnapshot(
+                selectedCategory = selectedCategoryState.value,
+                categories = currentCategories,
+                appsByCategoryId = currentAppsByCategoryId,
+            )
+        }.collectLatest { snapshot ->
+            val categoryList = snapshot.categories
+            if (categoryList.size <= 1) return@collectLatest
+            // Wait until any in-flight StiffnessMediumLow slide has completely settled before pre-warming
+            delay(FTL_PREWARM_DELAY_MS)
+
+            val active = snapshot.selectedCategory
+            val nextCategory = active.next(categoryList)
+            if (nextCategory != active) {
+                syncRememberedCategoryPage(
+                    category = nextCategory,
+                    apps = snapshot.appsByCategoryId[nextCategory.id] ?: currentResolveCategoryApps(nextCategory),
+                    lastHighlightedPackages = lastHighlightedPackages,
+                    pagerStateProvider = currentPagerStateProvider,
+                )
+                if (controller.prewarm(nextCategory, FTL_NEXT_NEIGHBOR_OFFSET)) {
+                    AppLog.d(TAG, "Pre-warmed next gallery carousel: ${nextCategory.id}")
+                    delay(FTL_IDLE_BATCH_PREWARM_GAP_MS)
+                }
+            }
+
+            val prevCategory = active.previous(categoryList)
+            if (prevCategory != active && prevCategory != nextCategory) {
+                syncRememberedCategoryPage(
+                    category = prevCategory,
+                    apps = snapshot.appsByCategoryId[prevCategory.id] ?: currentResolveCategoryApps(prevCategory),
+                    lastHighlightedPackages = lastHighlightedPackages,
+                    pagerStateProvider = currentPagerStateProvider,
+                )
+                if (controller.prewarm(prevCategory, FTL_PREV_NEIGHBOR_OFFSET)) {
+                    AppLog.d(TAG, "Pre-warmed previous gallery carousel: ${prevCategory.id}")
+                    delay(FTL_IDLE_BATCH_PREWARM_GAP_MS)
+                }
+            }
+
+            // Stagger remaining galleries during idle stillness so full gallery sweeps stay 100% pre-composed
+            for (candidate in categoryList) {
+                if (controller.entries.size >= FTL_MAX_RETAINED_CATEGORIES) break
+                if (candidate == active || candidate == nextCategory || candidate == prevCategory) continue
+                syncRememberedCategoryPage(
+                    category = candidate,
+                    apps = snapshot.appsByCategoryId[candidate.id] ?: currentResolveCategoryApps(candidate),
+                    lastHighlightedPackages = lastHighlightedPackages,
+                    pagerStateProvider = currentPagerStateProvider,
+                )
+                if (controller.prewarm(candidate, FTL_NEXT_NEIGHBOR_OFFSET)) {
+                    AppLog.d(TAG, "Pre-warmed gallery carousel during idle: ${candidate.id}")
+                    delay(FTL_IDLE_BATCH_PREWARM_GAP_MS)
+                }
+            }
+        }
+    }
+}
+
+private suspend fun syncRememberedCategoryPage(
+    category: GameFocusCategory,
+    apps: List<InstalledAppInfo>,
+    lastHighlightedPackages: Map<String, String>,
+    pagerStateProvider: (GameFocusCategory) -> PagerState,
+) {
+    if (apps.isEmpty()) return
+    val pagerState = pagerStateProvider(category)
+    val lastPkg = lastHighlightedPackages[category.id]
+    val targetIndex =
+        if (lastPkg != null) {
+            val found = apps.indexOfFirst { it.packageName == lastPkg }
+            if (found >= 0) found else 0
+        } else {
+            0
+        }
+    val safeIndex = targetIndex.coerceIn(0, apps.lastIndex)
+    if (pagerState.currentPage != safeIndex) {
+        pagerState.scrollToPage(safeIndex)
+    }
+}
+
+@Composable
+private fun GalleryCategoryCarouselStack(
+    controller: CategoryTransitionController,
+    appsByCategoryId: Map<String, List<InstalledAppInfo>>,
+    resolveCategoryApps: (GameFocusCategory) -> List<InstalledAppInfo>,
+    uniqueLettersByCategoryId: Map<String, List<Char>>,
+    favoritesSet: Set<String>,
+    hiddenSet: Set<String>,
+    pairedApps: Map<String, String>,
+    availableAppsByPackage: Map<String, InstalledAppInfo>,
+    isScreenReaderActive: Boolean,
+    letterNavState: LetterNavigationOverlayState,
+    appColors: AppColors,
+    pagerStateProvider: (GameFocusCategory) -> PagerState,
+    onAppClickTop: (InstalledAppInfo) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    var stackWidthPx by remember { mutableIntStateOf(0) }
+    val containerWidth =
+        if (stackWidthPx > 0) {
+            with(density) { stackWidthPx.toDp() }
+        } else {
+            configuration.screenWidthDp.dp
+        }
+    val onSettled: (CategorySlideEntry) -> Unit =
+        remember(controller) {
+            { settledEntry ->
+                controller.onEntrySettled(settledEntry)
+            }
+        }
+
+    DisposableEffect(controller) {
+        onDispose {
+            controller.resetToSelected()
+        }
+    }
+
+    // Gallery gamepad input is dispatched directly via FocusTopLauncherActivity.onKeyDown/onGenericMotionEvent
+    // (primary overlays sit outside this stack), so disabling Compose focus targets here eliminates ~2.8 ms
+    // of FocusOwnerImpl.clearFocus + full-tree 2D focus search on every category switch.
+    Box(
+        modifier =
+            modifier
+                .focusProperties { canFocus = false }
+                .onSizeChanged { size ->
+                    if (stackWidthPx != size.width) {
+                        stackWidthPx = size.width
+                    }
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        for (entry in controller.entries) {
+            key(entry.category.id) {
+                val pageCategory = entry.category
+                val pageApps = appsByCategoryId[pageCategory.id] ?: resolveCategoryApps(pageCategory)
+                val pageUniqueLetters =
+                    uniqueLettersByCategoryId[pageCategory.id]
+                        ?: LetterNavigationHelper.getUniqueStartingLetters(pageApps)
+                val pagePagerState = pagerStateProvider(pageCategory)
+
+                GalleryCategoryPage(
+                    entry = entry,
+                    categoryApps = pageApps,
+                    uniqueLetters = pageUniqueLetters,
+                    pagerState = pagePagerState,
+                    containerWidth = containerWidth,
+                    favoritesSet = favoritesSet,
+                    hiddenSet = hiddenSet,
+                    pairedApps = pairedApps,
+                    availableAppsByPackage = availableAppsByPackage,
+                    isScreenReaderActive = isScreenReaderActive,
+                    letterNavState = letterNavState,
+                    appColors = appColors,
+                    onSettled = onSettled,
+                    onAppClickTop = onAppClickTop,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GalleryCategoryPage(
+    entry: CategorySlideEntry,
+    categoryApps: List<InstalledAppInfo>,
+    uniqueLetters: List<Char>,
+    pagerState: PagerState,
+    containerWidth: Dp,
+    favoritesSet: Set<String>,
+    hiddenSet: Set<String>,
+    pairedApps: Map<String, String>,
+    availableAppsByPackage: Map<String, InstalledAppInfo>,
+    isScreenReaderActive: Boolean,
+    letterNavState: LetterNavigationOverlayState,
+    appColors: AppColors,
+    onSettled: (CategorySlideEntry) -> Unit,
+    onAppClickTop: (InstalledAppInfo) -> Unit,
+) {
+    val category = entry.category
+
+    CategorySlideEffect(
+        entry = entry,
+        onSettled = onSettled,
+    )
+
+    // Keep Placeable placed off-screen with alpha=0f when inactive so SubcomposeLayout (HorizontalPager)
+    // never deactivates or tears down its 11 visible card subcompositions across category switches,
+    // while HardwareUI short-circuits alpha=0f RenderNodes in 0.00 ms on RenderThread.
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .then(
+                    if (isScreenReaderActive && !entry.isSelected) {
+                        Modifier.clearAndSetSemantics {}
+                    } else {
+                        Modifier
+                    },
+                ).layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    layout(constraints.maxWidth, constraints.maxHeight) {
+                        val z = if (entry.isActive) entry.zOrder else FTL_INACTIVE_Z_ORDER
+                        placeable.placeWithLayer(0, 0, zIndex = z) {
+                            if (entry.isActive) {
+                                val offset = entry.renderOffset
+                                translationY = offset * constraints.maxHeight
+                                alpha = (FTL_FULL_ALPHA - abs(offset)).coerceIn(0f, FTL_FULL_ALPHA)
+                            } else {
+                                translationY = FTL_INACTIVE_PARK_MULTIPLIER * constraints.maxHeight
+                                alpha = 0f
+                            }
+                        }
+                    }
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (categoryApps.isEmpty()) {
+            Box(
+                modifier =
+                    Modifier
+                        .height(FTL_CAROUSEL_HEIGHT)
+                        .fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text =
+                        when (category) {
+                            GameFocusCategory.GAMES -> {
+                                stringResource(R.string.gamefocus_no_games)
+                            }
+
+                            GameFocusCategory.APPS -> {
+                                stringResource(R.string.gamefocus_no_apps_category)
+                            }
+
+                            GameFocusCategory.FAVORITES -> {
+                                stringResource(R.string.gamefocus_no_favorites)
+                            }
+
+                            GameFocusCategory.LAST_USED -> {
+                                stringResource(R.string.gamefocus_no_last_used)
+                            }
+
+                            is GameFocusCategory.CustomCollection -> {
+                                stringResource(R.string.gamefocus_no_collection_items)
+                            }
+
+                            else -> {
+                                stringResource(R.string.focus_launcher_no_apps)
+                            }
+                        },
+                    style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
+                )
+            }
+        } else {
+            val currentOnAppClickTop by rememberUpdatedState(onAppClickTop)
+            val keyProvider: (Int) -> Any =
+                remember(category.id, categoryApps) {
+                    { page ->
+                        "${category.id}_${categoryApps.getOrNull(page)?.packageName ?: page}"
+                    }
+                }
+            val handleCarouselItemClick: (Int) -> Unit =
+                remember(categoryApps) {
+                    { actualIndex ->
+                        val appInfo = categoryApps.getOrNull(actualIndex)
+                        if (appInfo != null) currentOnAppClickTop(appInfo)
+                    }
+                }
+            val isItemHiddenProvider: (Int) -> Boolean =
+                remember(categoryApps, hiddenSet) {
+                    { actualIndex ->
+                        categoryApps.getOrNull(actualIndex)?.let {
+                            hiddenSet.contains(it.packageName)
+                        } ?: false
+                    }
+                }
+            val pageCurrentAppState =
+                remember(pagerState, categoryApps) {
+                    derivedStateOf {
+                        if (categoryApps.isEmpty()) {
+                            null
+                        } else {
+                            categoryApps.getOrNull(pagerState.currentPage.coerceIn(0, categoryApps.lastIndex))
+                        }
+                    }
+                }
+
+            Column(
+                modifier = Modifier.padding(top = FTL_GALLERY_TOP_OFFSET),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                HorizontalPosterCarousel(
+                    itemCount = categoryApps.size,
+                    pagerState = pagerState,
+                    key = keyProvider,
+                    containerWidth = containerWidth,
+                    onItemClick = handleCarouselItemClick,
+                    posterWidth = FTL_POSTER_WIDTH,
+                    posterHeight = FTL_POSTER_HEIGHT,
+                    posterSpacing = FTL_POSTER_SPACING,
+                    carouselHeight = FTL_CAROUSEL_HEIGHT,
+                    posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
+                    cardBackgroundColor = { actualIndex, isSelected ->
+                        val appInfo = categoryApps.getOrNull(actualIndex)
+                        if (appInfo == null) {
+                            if (isSelected) appColors.surfaceVariant else appColors.surface
+                        } else {
+                            val palette = rememberAppPalette(appInfo)
+                            if (palette != null && palette.isExtracted) {
+                                palette.darkenedPrimaryColor
+                            } else if (isSelected) {
+                                appColors.surfaceVariant
+                            } else {
+                                appColors.surface
+                            }
+                        }
+                    },
+                    isHidden = isItemHiddenProvider,
+                ) { actualIndex, _ ->
+                    val appInfo = categoryApps[actualIndex]
+                    PosterCardContent(
+                        appInfo = appInfo,
+                        isFavorite = favoritesSet.contains(appInfo.packageName),
+                        isHidden = hiddenSet.contains(appInfo.packageName),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(FTL_TITLE_GAP))
+
+                GalleryTitleOrLetterSection(
+                    currentAppState = pageCurrentAppState,
+                    uniqueLetters = uniqueLetters,
+                    letterNavState = letterNavState,
+                    entry = entry,
+                    pairedApps = pairedApps,
+                    availableAppsByPackage = availableAppsByPackage,
+                    appColors = appColors,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategorySlideEffect(
+    entry: CategorySlideEntry,
+    onSettled: (CategorySlideEntry) -> Unit,
+) {
+    val currentOnSettled by rememberUpdatedState(onSettled)
+    LaunchedEffect(entry) {
+        snapshotFlow { entry.animGeneration }
+            .collectLatest {
+                val start = Snapshot.withoutReadObservation { entry.renderOffset }
+                val target = Snapshot.withoutReadObservation { entry.targetOffset }
+                if (start == target) {
+                    if (!Snapshot.withoutReadObservation { entry.isSelected } && target != 0f) {
+                        currentOnSettled(entry)
+                    }
+                    return@collectLatest
+                }
+                animate(
+                    initialValue = start,
+                    targetValue = target,
+                    animationSpec =
+                        spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow,
+                            visibilityThreshold = FTL_SLIDE_VISIBILITY_THRESHOLD,
+                        ),
+                ) { value, _ ->
+                    entry.renderOffset = value
+                }
+                entry.renderOffset = target
+                currentOnSettled(entry)
+            }
+    }
+}
+
+@Composable
 private fun GalleryTitleOrLetterSection(
     currentAppState: State<InstalledAppInfo?>,
     uniqueLetters: List<Char>,
     letterNavState: LetterNavigationOverlayState,
-    isSelectedCategory: Boolean,
+    entry: CategorySlideEntry,
     pairedApps: Map<String, String>,
     availableAppsByPackage: Map<String, InstalledAppInfo>,
     appColors: AppColors,
 ) {
-    val showLetterOverlay = isSelectedCategory && letterNavState.isActive
+    val showLetterOverlay by remember(entry, letterNavState) {
+        derivedStateOf { letterNavState.isActive && entry.isSelected }
+    }
     AnimatedContent(
         targetState = showLetterOverlay,
         transitionSpec = {
@@ -1067,8 +1753,17 @@ private fun GalleryBottomControls(
 ) {
     val context = LocalContext.current
     val mainMenuSelectedIndex by viewModel.mainMenuSelectedIndex.collectAsState()
-    val currentApp = currentAppState.value
-    val isCurrentPaired = currentApp != null && pairedApps.containsKey(currentApp.packageName)
+    val pairedAppsState = rememberUpdatedState(pairedApps)
+    val isCurrentPaired by remember(currentAppState) {
+        derivedStateOf {
+            val app = currentAppState.value
+            app != null && pairedAppsState.value.containsKey(app.packageName)
+        }
+    }
+    val appInfoProvider: () -> InstalledAppInfo? =
+        remember(currentAppState) {
+            { currentAppState.value }
+        }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Bottom-Left Main Actions Menu hovering over the gallery plane
@@ -1087,31 +1782,47 @@ private fun GalleryBottomControls(
                     .align(Alignment.BottomStart)
                     .padding(start = FTL_BOTTOM_BAR_PADDING_START, bottom = FTL_BOTTOM_BAR_PADDING_BOTTOM),
         ) {
-            val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
-            val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
-            val actions =
-                remember(currentApp, isCurrentFavorite, isCurrentHidden, isCurrentPaired) {
-                    buildGalleryMenuActions(
-                        context = context,
-                        currentApp = currentApp,
-                        isFavorite = isCurrentFavorite,
-                        isHidden = isCurrentHidden,
-                        isPaired = isCurrentPaired,
-                        onToggleFavorite = onToggleFavorite,
-                        onEditGame = viewModel::openEditGameOverlay,
-                        onToggleHidden = onToggleHidden,
-                        onOpenPairingDialog = onOpenPairingDialog,
-                        onRemovePair = onRemovePair,
-                        onOpenManageGalleries = { viewModel.setManageGalleriesOpen(true) },
-                        onDismissMenu = { viewModel.setMainOptionsMenuExpanded(false) },
-                    )
-                }
+            val lastActionsHolder = remember { mutableStateOf<List<ExpandableActionItem>>(emptyList()) }
+            val lastDividerHolder = remember { mutableStateOf<Int?>(null) }
+            val actions: List<ExpandableActionItem>
+            val dividerAfterIndex: Int?
+            if (isMainOptionsMenuExpanded) {
+                val currentApp = currentAppState.value
+                val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
+                val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
+                actions =
+                    remember(currentApp, isCurrentFavorite, isCurrentHidden, isCurrentPaired) {
+                        buildGalleryMenuActions(
+                            context = context,
+                            currentApp = currentApp,
+                            isFavorite = isCurrentFavorite,
+                            isHidden = isCurrentHidden,
+                            isPaired = isCurrentPaired,
+                            onToggleFavorite = onToggleFavorite,
+                            onEditGame = viewModel::openEditGameOverlay,
+                            onToggleHidden = onToggleHidden,
+                            onOpenPairingDialog = onOpenPairingDialog,
+                            onRemovePair = onRemovePair,
+                            onOpenManageGalleries = { viewModel.setManageGalleriesOpen(true) },
+                            onDismissMenu = { viewModel.setMainOptionsMenuExpanded(false) },
+                        )
+                    }.also { built ->
+                        lastActionsHolder.value = built
+                    }
+                dividerAfterIndex =
+                    (if (currentApp != null && actions.size > 1) actions.lastIndex - 1 else null).also { div ->
+                        lastDividerHolder.value = div
+                    }
+            } else {
+                actions = lastActionsHolder.value
+                dividerAfterIndex = lastDividerHolder.value
+            }
             ExpandableActionsMenu(
                 isExpanded = isMainOptionsMenuExpanded,
                 onExpandedChange = viewModel::setMainOptionsMenuExpanded,
                 actions = actions,
                 selectedIndex = mainMenuSelectedIndex,
-                dividerAfterIndex = if (currentApp != null) actions.lastIndex - 1 else null,
+                dividerAfterIndex = dividerAfterIndex,
                 enabled = isControlsEnabled,
             )
         }
@@ -1133,11 +1844,11 @@ private fun GalleryBottomControls(
                     .padding(end = FTL_BOTTOM_BAR_PADDING_END, bottom = FTL_BOTTOM_BAR_PADDING_BOTTOM),
         ) {
             DualScreenLaunchButtons(
-                appInfo = currentApp,
                 isPaired = isCurrentPaired,
                 enabled = isControlsEnabled && !isMainOptionsMenuExpanded,
                 onLaunchTop = onAppClickTop,
                 onLaunchBottom = onAppClickBottom,
+                appInfoProvider = appInfoProvider,
             )
         }
     }
@@ -1704,13 +2415,32 @@ internal fun GameFocusFallbackIcon(
 
 @Composable
 internal fun DualScreenLaunchButtons(
-    appInfo: InstalledAppInfo?,
+    appInfo: InstalledAppInfo? = null,
     isPaired: Boolean = false,
     enabled: Boolean,
     onLaunchTop: (InstalledAppInfo) -> Unit,
     onLaunchBottom: (InstalledAppInfo) -> Unit,
     modifier: Modifier = Modifier,
+    appInfoProvider: () -> InstalledAppInfo? = { appInfo },
 ) {
+    val currentOnLaunchTop by rememberUpdatedState(onLaunchTop)
+    val currentOnLaunchBottom by rememberUpdatedState(onLaunchBottom)
+    val currentAppInfoProvider by rememberUpdatedState(appInfoProvider)
+    val handleLaunchTop =
+        remember {
+            {
+                val target = currentAppInfoProvider()
+                if (target != null) currentOnLaunchTop(target)
+            }
+        }
+    val handleLaunchBottom =
+        remember {
+            {
+                val target = currentAppInfoProvider()
+                if (target != null) currentOnLaunchBottom(target)
+            }
+        }
+
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -1719,9 +2449,7 @@ internal fun DualScreenLaunchButtons(
             button = GamePadButton.BUTTON_A,
             text = stringResource(if (isPaired) R.string.gamefocus_launch_dual else R.string.gamefocus_launch_top),
             enabled = enabled,
-            onClick = {
-                if (appInfo != null) onLaunchTop(appInfo)
-            },
+            onClick = handleLaunchTop,
         )
 
         Spacer(modifier = Modifier.width(FTL_BUTTON_GAP))
@@ -1730,9 +2458,7 @@ internal fun DualScreenLaunchButtons(
             button = GamePadButton.BUTTON_X,
             text = stringResource(R.string.gamefocus_launch_bottom),
             enabled = enabled,
-            onClick = {
-                if (appInfo != null) onLaunchBottom(appInfo)
-            },
+            onClick = handleLaunchBottom,
         )
     }
 }
@@ -1840,7 +2566,7 @@ private fun getCategoryName(category: GameFocusCategory): String =
 
 @Composable
 private fun InteractiveCategoryHeader(
-    selectedCategory: GameFocusCategory,
+    selectedCategoryState: State<GameFocusCategory>,
     categories: List<GameFocusCategory>,
     onCategoryUp: () -> Unit = {},
     onCategoryDown: () -> Unit = {},
@@ -1848,27 +2574,45 @@ private fun InteractiveCategoryHeader(
     areButtonPromptsVisible: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
+    val selectedCategory = selectedCategoryState.value
     val selectedIndex =
         remember(selectedCategory, categories) {
             categories.indexOf(selectedCategory).coerceAtLeast(0)
+        }
+    val currentSelectedIndex by rememberUpdatedState(selectedIndex)
+    val currentSelectedCategory by rememberUpdatedState(selectedCategory)
+    val currentCategories by rememberUpdatedState(categories)
+    val currentOnCategoryUp by rememberUpdatedState(onCategoryUp)
+    val currentOnCategoryDown by rememberUpdatedState(onCategoryDown)
+    val labelProvider: @Composable (GameFocusCategory) -> String =
+        remember {
+            { category ->
+                getCategoryName(category)
+            }
+        }
+
+    val handleIndexChange: (Int) -> Unit =
+        remember {
+            { index ->
+                val list = currentCategories
+                if (index in list.indices) {
+                    val targetCategory = list[index]
+                    if (targetCategory != currentSelectedCategory) {
+                        if ((currentSelectedIndex + 1).floorMod(list.size) == index) {
+                            currentOnCategoryDown()
+                        } else {
+                            currentOnCategoryUp()
+                        }
+                    }
+                }
+            }
         }
 
     VerticalRollingCarousel(
         selectedIndex = selectedIndex,
         items = categories,
-        onSelectedIndexChange = { index ->
-            val targetCategory = categories[index]
-            if (targetCategory != selectedCategory) {
-                if ((selectedIndex + 1).floorMod(categories.size) == index) {
-                    onCategoryDown()
-                } else {
-                    onCategoryUp()
-                }
-            }
-        },
-        labelProvider = { category ->
-            getCategoryName(category)
-        },
+        onSelectedIndexChange = handleIndexChange,
+        labelProvider = labelProvider,
         enabled = enabled,
         showButtonIcons = areButtonPromptsVisible,
         showNeighboringItems = true,
@@ -1887,14 +2631,25 @@ private fun PosterCardContent(
     val coverBitmap = rememberCoverBitmap(appInfo)
     val iconBitmap = rememberIconBitmap(appInfo, enabled = coverBitmap == null)
 
-    val visibilityOffAlphaState =
-        animateFloatAsState(
-            targetValue = if (isHidden) FTL_HIDDEN_BADGE_ALPHA else FTL_VISIBLE_BADGE_ALPHA,
-            animationSpec = tween(durationMillis = FTL_HIDE_ANIMATION_DURATION_MS),
-            label = "LauncherVisibilityOffAlpha",
-        )
-    val showVisibilityBadge by remember {
-        derivedStateOf { visibilityOffAlphaState.value > 0f }
+    val initiallyHidden = remember { isHidden }
+    var wasEverHidden by remember { mutableStateOf(isHidden) }
+    if (isHidden && !wasEverHidden) {
+        wasEverHidden = true
+    }
+
+    val visibilityOffAlphaAnim =
+        if (wasEverHidden) {
+            val anim = remember { Animatable(if (initiallyHidden) FTL_HIDDEN_BADGE_ALPHA else FTL_VISIBLE_BADGE_ALPHA) }
+            LaunchedEffect(isHidden) {
+                val target = if (isHidden) FTL_HIDDEN_BADGE_ALPHA else FTL_VISIBLE_BADGE_ALPHA
+                anim.animateTo(target, tween(durationMillis = FTL_HIDE_ANIMATION_DURATION_MS))
+            }
+            anim
+        } else {
+            null
+        }
+    val showVisibilityBadge by remember(visibilityOffAlphaAnim) {
+        derivedStateOf { (visibilityOffAlphaAnim?.value ?: 0f) > 0f }
     }
 
     Box(
@@ -1920,9 +2675,7 @@ private fun PosterCardContent(
                             .heightIn(max = FTL_ICON_SIZE)
                             .padding(horizontal = FTL_ROM_LOGO_HORIZONTAL_PADDING)
                     } else {
-                        Modifier
-                            .size(FTL_ICON_SIZE)
-                            .aspectRatio(FTL_SQUARE_ASPECT_RATIO)
+                        Modifier.size(FTL_ICON_SIZE)
                     },
             )
         } else {
@@ -1963,7 +2716,7 @@ private fun PosterCardContent(
                     Modifier
                         .fillMaxSize()
                         .padding(FTL_BADGE_PADDING)
-                        .graphicsLayer { alpha = visibilityOffAlphaState.value },
+                        .graphicsLayer { alpha = visibilityOffAlphaAnim?.value ?: 0f },
                 contentAlignment = Alignment.TopStart,
             ) {
                 MaterialSymbol(
