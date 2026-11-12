@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.gamefocus
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ComponentName
 import android.content.Context
 import android.graphics.Bitmap
@@ -7,6 +8,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.util.LruCache
+import android.view.accessibility.AccessibilityManager
 import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -29,7 +31,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -49,10 +50,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -78,8 +82,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -96,6 +100,7 @@ import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.gamefocus.domain.GalleryConfig
 import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
 import com.stormpanda.megingiard.math.floorMod
+import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
@@ -122,17 +127,24 @@ private val FTL_GALLERY_TOP_OFFSET = 10.dp
 private val FTL_TITLE_GAP = 25.dp
 private val FTL_ROM_ICON_CORNER_RADIUS = 14.dp
 private val FTL_ROM_ICON_SHAPE = RoundedCornerShape(FTL_ROM_ICON_CORNER_RADIUS)
+private val FTL_ROM_LOGO_HORIZONTAL_PADDING = 4.dp
+private const val FTL_ROM_LOGO_WIDTH_FRACTION = 0.85f
+private const val FTL_SQUARE_ASPECT_RATIO = 1f
 private val FTL_FALLBACK_ICON_SIZE = 48.dp
 private val FTL_BADGE_PADDING = 10.dp
 private val FTL_BADGE_ICON_SIZE = 22.dp
 private const val FTL_BACKGROUND_COLOR_DEBOUNCE_MS = 220L
 private const val FTL_BACKGROUND_COLOR_ANIM_MS = 500
 private const val FTL_LETTER_NAV_DEBOUNCE_MS = 500L
+private const val FTL_LIBRARY_TRANSITION_MS = 350
+private const val FTL_BG_PRIMARY_ALPHA = 0.20f
+private const val FTL_BG_SECONDARY_ALPHA = 0.10f
 
 private const val FTL_HIDDEN_BADGE_ALPHA = 1.0f
 private const val FTL_VISIBLE_BADGE_ALPHA = 0.0f
 private const val FTL_HIDE_ANIMATION_DURATION_MS = 300
 private const val FTL_CAROUSEL_ANIMATION_DURATION_MS = 120
+private const val FTL_TITLE_OVERLAY_Z_INDEX = 1f
 
 private val FTL_CAROUSEL_HEIGHT = 310.dp
 private val FTL_LETTER_NAV_PADDING = 40.dp
@@ -149,6 +161,12 @@ private val FTL_SUBTITLE_GAP = 2.dp
 private val FTL_BADGE_TEXT_GAP = 4.dp
 private const val FTL_PROMPT_ANIM_DURATION_MS = 200
 private const val FTL_PROMPT_SLIDE_DIVISOR = 2
+
+@Stable
+private class LetterNavigationOverlayState {
+    var isActive by mutableStateOf(false)
+    var selectedIndex by mutableIntStateOf(0)
+}
 
 @Composable
 fun FocusTopLauncherScreen(
@@ -181,30 +199,19 @@ fun FocusTopLauncherScreen(
 ) {
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val isLibraryOpen by viewModel.isLibraryOpen.collectAsState()
-    val librarySelectedTab by viewModel.librarySelectedTab.collectAsState()
-    val libraryFocusedIndex by viewModel.libraryFocusedIndex.collectAsState()
     val isMainOptionsMenuExpanded by viewModel.isMainOptionsMenuExpanded.collectAsState()
-    val mainMenuSelectedIndex by viewModel.mainMenuSelectedIndex.collectAsState()
-    val isLibraryOptionsMenuExpanded by viewModel.isLibraryOptionsMenuExpanded.collectAsState()
-    val libraryMenuSelectedIndex by viewModel.libraryMenuSelectedIndex.collectAsState()
     val newlyAddedFolder by viewModel.newlyAddedFolder.collectAsState()
-    val isRemoveRomFolderDialogOpen by viewModel.isRemoveRomFolderDialogOpen.collectAsState()
-    val removeRomFolderDialogSelectedIndex by viewModel.removeRomFolderDialogSelectedIndex.collectAsState()
-    val folderToRemove by viewModel.folderToRemove.collectAsState()
     val coreChooserDialogSelectedIndex by viewModel.coreChooserDialogSelectedIndex.collectAsState()
     val confirmCoreChooserTrigger by viewModel.confirmCoreChooserTrigger.collectAsState()
     val editingAppInfo by viewModel.editingAppInfo.collectAsState()
     val isManageGalleriesOpen by viewModel.isManageGalleriesOpen.collectAsState()
-    val prevLetterTrigger by viewModel.prevLetterTrigger.collectAsState()
-    val nextLetterTrigger by viewModel.nextLetterTrigger.collectAsState()
-    val dpadLeftTrigger by viewModel.dpadLeftTrigger.collectAsState()
-    val dpadStepRightTrigger by viewModel.dpadStepRightTrigger.collectAsState()
     val pairingTargetApp by viewModel.pairingTargetApp.collectAsState()
     val pairingFocusedIndex by viewModel.pairingFocusedIndex.collectAsState()
     val areButtonPromptsVisible by viewModel.areButtonPromptsVisible.collectAsState()
 
     val appColors = LocalAppColors.current
     val context = LocalContext.current
+    val isScreenReaderActive = rememberScreenReaderActive(context)
     val apiKey by remember(context) { MegingiardSettingsClient.observeSteamGridDbApiToken(context) }
         .collectAsState(initial = "")
 
@@ -216,39 +223,55 @@ fun FocusTopLauncherScreen(
 
     val availableAppsByPackage = remember(availableAndroidApps) { availableAndroidApps.associateBy { it.packageName } }
 
+    val allKnownCategories =
+        remember(categories, allGalleryCategories, selectedCategory) {
+            buildList {
+                addAll(GameFocusCategory.builtIns)
+                addAll(categories)
+                addAll(allGalleryCategories)
+                add(selectedCategory)
+            }.distinctBy { it.id }
+        }
+
+    // Memoize filtered category lists once per catalog/filter change so PagerState.pageCount
+    // (invoked ~100x per animation frame by HorizontalPager) is an O(1) map lookup with zero allocations.
+    val appsByCategoryId =
+        remember(allKnownCategories, allApps, favoritesSet, hiddenSet, lastUsed, collectionMembers) {
+            GameFocusCategory.buildAppsByCategoryId(
+                categories = allKnownCategories,
+                allApps = allApps,
+                favorites = favoritesSet,
+                hidden = hiddenSet,
+                lastUsed = lastUsed,
+                collectionMembers = collectionMembers,
+            )
+        }
+    val appsByCategoryIdState = rememberUpdatedState(appsByCategoryId)
+
     fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
-        cat.filterApps(allApps, favoritesSet, hiddenSet, lastUsed, collectionMembers)
+        appsByCategoryId[cat.id] ?: cat.filterApps(allApps, favoritesSet, hiddenSet, lastUsed, collectionMembers)
 
     val categoryApps = getAppsForCategory(selectedCategory)
     val uniqueLetters = remember(categoryApps) { LetterNavigationHelper.getUniqueStartingLetters(categoryApps) }
 
-    var lastHighlightedPackages by remember { mutableStateOf<Map<GameFocusCategory, String>>(emptyMap()) }
+    // Plain non-Compose map: only read on category switch, so updating focused package memory never triggers recomposition.
+    val lastHighlightedPackages = remember { HashMap<String, String>() }
 
-    val gamesPagerState = rememberPagerState(initialPage = 0) { getAppsForCategory(GameFocusCategory.GAMES).size }
-    val appsPagerState = rememberPagerState(initialPage = 0) { getAppsForCategory(GameFocusCategory.APPS).size }
-    val favoritesPagerState = rememberPagerState(initialPage = 0) { getAppsForCategory(GameFocusCategory.FAVORITES).size }
-    val lastUsedPagerState = rememberPagerState(initialPage = 0) { getAppsForCategory(GameFocusCategory.LAST_USED).size }
+    val gamesPagerState = rememberPagerState(initialPage = 0) { appsByCategoryIdState.value[GameFocusCategory.GAMES.id]?.size ?: 0 }
+    val appsPagerState = rememberPagerState(initialPage = 0) { appsByCategoryIdState.value[GameFocusCategory.APPS.id]?.size ?: 0 }
+    val favoritesPagerState =
+        rememberPagerState(initialPage = 0) { appsByCategoryIdState.value[GameFocusCategory.FAVORITES.id]?.size ?: 0 }
+    val lastUsedPagerState =
+        rememberPagerState(initialPage = 0) { appsByCategoryIdState.value[GameFocusCategory.LAST_USED.id]?.size ?: 0 }
 
     val romPagerStates = remember { mutableMapOf<String, PagerState>() }
     val activeGalleryIds =
-        remember(categories, allGalleryCategories, selectedCategory) {
-            buildSet {
-                categories.forEach { add(it.id) }
-                allGalleryCategories.forEach { add(it.id) }
-                add(selectedCategory.id)
-            }
+        remember(allKnownCategories) {
+            allKnownCategories.mapTo(HashSet(allKnownCategories.size)) { it.id }
         }
     romPagerStates.keys.retainAll(activeGalleryIds)
 
-    // Collection galleries read their page count through this updated state so membership
-    // changes are reflected without recreating the remembered pager state.
-    val collectionPageCountProvider: (GameFocusCategory) -> Int = { cat -> getAppsForCategory(cat).size }
-    val collectionPageCount = rememberUpdatedState(collectionPageCountProvider)
-
-    fun getPagerStateForCategory(
-        cat: GameFocusCategory,
-        size: Int,
-    ): PagerState =
+    fun getPagerStateForCategory(cat: GameFocusCategory): PagerState =
         when (cat) {
             GameFocusCategory.GAMES -> {
                 gamesPagerState
@@ -266,16 +289,17 @@ fun FocusTopLauncherScreen(
                 lastUsedPagerState
             }
 
-            is GameFocusCategory.RomSystem -> {
-                romPagerStates.getOrPut(cat.id) { RomPagerState(0, 0f) { size } }
-            }
-
-            is GameFocusCategory.CustomCollection -> {
-                romPagerStates.getOrPut(cat.id) { RomPagerState(0, 0f) { collectionPageCount.value(cat) } }
+            is GameFocusCategory.RomSystem,
+            is GameFocusCategory.CustomCollection,
+            -> {
+                val categoryId = cat.id
+                romPagerStates.getOrPut(categoryId) {
+                    RomPagerState(0, 0f) { appsByCategoryIdState.value[categoryId]?.size ?: 0 }
+                }
             }
         }
 
-    val activePagerState = getPagerStateForCategory(selectedCategory, categoryApps.size)
+    val activePagerState = getPagerStateForCategory(selectedCategory)
 
     // Clamp active pager state if list shrinks (e.g. app hidden)
     LaunchedEffect(categoryApps) {
@@ -287,7 +311,7 @@ fun FocusTopLauncherScreen(
 
     // Sync active pager state with package memory when category changes
     LaunchedEffect(selectedCategory) {
-        val lastPkg = lastHighlightedPackages[selectedCategory]
+        val lastPkg = lastHighlightedPackages[selectedCategory.id]
         val targetIndex =
             if (lastPkg != null) {
                 val found = categoryApps.indexOfFirst { it.packageName == lastPkg }
@@ -302,10 +326,7 @@ fun FocusTopLauncherScreen(
         }
     }
 
-    val scope = rememberCoroutineScope()
-    var isLetterOverlayActive by remember { mutableStateOf(false) }
-    var selectedLetterNavIndex by remember { mutableIntStateOf(0) }
-
+    val letterNavState = remember { LetterNavigationOverlayState() }
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(categoryApps, isLibraryOpen) {
@@ -314,266 +335,99 @@ fun FocusTopLauncherScreen(
         }
     }
 
-    // Dismiss letter overlay without action if user manually scrolls the pager
-    LaunchedEffect(Unit) {
-        snapshotFlow { activePagerState.isScrollInProgress }
-            .collectLatest { isScrolling ->
-                if (isScrolling && isLetterOverlayActive) {
-                    AppLog.i(TAG, "Pager scroll in progress while letter carousel active -> cancelling overlay without action")
-                    isLetterOverlayActive = false
-                }
-            }
-    }
-
-    // Handle D-pad LEFT step with wrap-around
-    LaunchedEffect(dpadLeftTrigger) {
-        if (dpadLeftTrigger > 0 && categoryApps.isNotEmpty()) {
-            if (isLetterOverlayActive) {
-                AppLog.i(TAG, "D-pad LEFT pressed while letter carousel active -> cancelling overlay without action")
-                isLetterOverlayActive = false
-            } else {
-                val baseIndex = if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
-                val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
-                val prevIndex = if (safeBase > 0) safeBase - 1 else categoryApps.size - 1
-                AppLog.d(
-                    TAG,
-                    "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$prevIndex",
-                )
-                activePagerState.animateScrollToPage(
-                    page = prevIndex,
-                    animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
-                )
-            }
-        }
-    }
-
-    // Handle D-pad RIGHT step with wrap-around
-    LaunchedEffect(dpadStepRightTrigger) {
-        if (dpadStepRightTrigger > 0 && categoryApps.isNotEmpty()) {
-            if (isLetterOverlayActive) {
-                AppLog.i(TAG, "D-pad RIGHT pressed while letter carousel active -> cancelling overlay without action")
-                isLetterOverlayActive = false
-            } else {
-                val baseIndex = if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
-                val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
-                val nextIndex = if (safeBase < categoryApps.size - 1) safeBase + 1 else 0
-                AppLog.d(
-                    TAG,
-                    "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$nextIndex",
-                )
-                activePagerState.animateScrollToPage(
-                    page = nextIndex,
-                    animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
-                )
-            }
-        }
-    }
-
-    val currentApp =
-        remember(activePagerState.currentPage, categoryApps) {
-            categoryApps.getOrNull(activePagerState.currentPage.coerceIn(0, (categoryApps.size - 1).coerceAtLeast(0)))
-        }
-
-    // Reset letter overlay on category switch or dialog edit
-    LaunchedEffect(selectedCategory, editingAppInfo) {
-        isLetterOverlayActive = false
-    }
-
-    // Auto-hide and commit letter navigation after debounce
-    LaunchedEffect(isLetterOverlayActive, selectedLetterNavIndex, prevLetterTrigger, nextLetterTrigger) {
-        if (isLetterOverlayActive) {
-            delay(FTL_LETTER_NAV_DEBOUNCE_MS)
-            val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
-            isLetterOverlayActive = false
-            if (targetLetter != null) {
-                val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(categoryApps, targetLetter)
-                AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
-                scope.launch {
-                    activePagerState.animateScrollToPage(targetAppIndex)
+    // Derived focused app state: never read in FocusTopLauncherScreen's own scope so page crossings
+    // only recompose the small leaf Composables that display or sync the focused app.
+    val currentAppState =
+        remember(activePagerState, categoryApps) {
+            derivedStateOf {
+                if (categoryApps.isEmpty()) {
+                    null
+                } else {
+                    categoryApps.getOrNull(activePagerState.currentPage.coerceIn(0, categoryApps.lastIndex))
                 }
             }
         }
-    }
 
-    // Handle Gamepad L1 step (previous starting letter in letter carousel)
-    LaunchedEffect(prevLetterTrigger) {
-        if (prevLetterTrigger > 0 && categoryApps.isNotEmpty()) {
-            if (uniqueLetters.isNotEmpty()) {
-                if (!isLetterOverlayActive) {
-                    isLetterOverlayActive = true
-                    val currentLetter = currentApp?.let { LetterNavigationHelper.getStartingLetter(it.label) }
-                    val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
-                    selectedLetterNavIndex = initialIndex
-                }
-                selectedLetterNavIndex = (selectedLetterNavIndex - 1).coerceAtLeast(0)
-                AppLog.d(
-                    TAG,
-                    "L1 letter carousel step for ${selectedCategory.id}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
-                )
-            }
-        }
-    }
-
-    // Handle Gamepad R1 step (next starting letter in letter carousel)
-    LaunchedEffect(nextLetterTrigger) {
-        if (nextLetterTrigger > 0 && categoryApps.isNotEmpty()) {
-            if (uniqueLetters.isNotEmpty()) {
-                if (!isLetterOverlayActive) {
-                    isLetterOverlayActive = true
-                    val currentLetter = currentApp?.let { LetterNavigationHelper.getStartingLetter(it.label) }
-                    val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
-                    selectedLetterNavIndex = initialIndex
-                }
-                selectedLetterNavIndex = (selectedLetterNavIndex + 1).coerceAtMost(uniqueLetters.size - 1)
-                AppLog.d(
-                    TAG,
-                    "R1 letter carousel step for ${selectedCategory.id}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
-                )
-            }
-        }
-    }
-
-    // Bi-directional synchronization: update lastHighlightedPackages and notify focused app
-    LaunchedEffect(currentApp, selectedCategory) {
-        viewModel.setFocusedApp(currentApp)
-        if (currentApp != null) {
-            lastHighlightedPackages = lastHighlightedPackages + (selectedCategory to currentApp.packageName)
-            AppLog.d(TAG, "Focused game changed for ${selectedCategory.id}: package=${currentApp.packageName}, label=${currentApp.label}")
-        }
-    }
-
-    var backgroundApp by remember { mutableStateOf<InstalledAppInfo?>(null) }
-
-    // Throttle background color updates during rapid gallery navigation
-    LaunchedEffect(activePagerState, categoryApps) {
-        snapshotFlow {
-            val page = activePagerState.currentPage
-            categoryApps.getOrNull(page)
-        }.collectLatest { target ->
-            if (activePagerState.isScrollInProgress) {
-                delay(FTL_BACKGROUND_COLOR_DEBOUNCE_MS)
-            }
-            backgroundApp = target
-        }
-    }
-
-    // Extract dynamic 2 main colors asynchronously off the UI thread using AndroidX Palette API
-    val defaultPalette =
-        remember(appColors.accent, appColors.appBackground) {
-            ExtractedAppPalette(
-                primaryColor = appColors.accent,
-                secondaryColor = appColors.appBackground,
-                isExtracted = false,
-            )
-        }
-
-    val backgroundIconVersion =
-        backgroundApp?.let { if (it.isRom) it.logoLastModified else it.lastUpdateTime } ?: 0L
-    val activePalette by produceState(
-        initialValue = backgroundApp?.let { AppPaletteExtractor.getCachedColorsOrNull(it) } ?: defaultPalette,
-        backgroundApp?.packageName,
-        backgroundApp?.coverPath,
-        backgroundApp?.coverLastModified,
-        backgroundIconVersion,
-    ) {
-        val cached = backgroundApp?.let { AppPaletteExtractor.getCachedColorsOrNull(it) }
-        if (cached != null) {
-            value = cached
-        } else if (backgroundApp != null) {
-            value = AppPaletteExtractor.extractColorsAsync(backgroundApp!!, appColors.accent, appColors.appBackground)
-        } else {
-            value = defaultPalette
-        }
-    }
-
-    val animatedPrimaryColor by animateColorAsState(
-        targetValue = activePalette.primaryColor,
-        animationSpec = tween(durationMillis = FTL_BACKGROUND_COLOR_ANIM_MS),
-        label = "animatedPrimaryColor",
-    )
-
-    val animatedSecondaryColor by animateColorAsState(
-        targetValue = activePalette.secondaryColor,
-        animationSpec = tween(durationMillis = FTL_BACKGROUND_COLOR_ANIM_MS),
-        label = "animatedSecondaryColor",
+    GalleryNavigationEffects(
+        viewModel = viewModel,
+        selectedCategory = selectedCategory,
+        editingAppInfo = editingAppInfo,
+        categoryApps = categoryApps,
+        uniqueLetters = uniqueLetters,
+        activePagerState = activePagerState,
+        currentAppState = currentAppState,
+        letterNavState = letterNavState,
+        lastHighlightedPackages = lastHighlightedPackages,
     )
 
     Surface(
         modifier = modifier.fillMaxSize(),
         color = appColors.appBackground,
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        // Prune 120 Hz scrolling semantics when only non-screen-reader services (e.g. Companion's
+        // MegingiardAccessibilityService or OEM foreground monitors) are enabled, avoiding ~8 ms/frame
+        // full-tree bounds walks and Binder IPC while keeping overlays/dialogs fully accessible.
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (isScreenReaderActive) {
+                            Modifier
+                        } else {
+                            Modifier.clearAndSetSemantics {}
+                        },
+                    ),
+        ) {
             AnimatedContent(
                 targetState = isLibraryOpen,
                 transitionSpec = {
                     if (targetState) {
-                        (slideInHorizontally(animationSpec = tween(350), initialOffsetX = { it }) + fadeIn(animationSpec = tween(350)))
-                            .togetherWith(
-                                slideOutHorizontally(animationSpec = tween(350), targetOffsetX = { -it }) +
-                                    fadeOut(animationSpec = tween(350)),
-                            )
+                        (
+                            slideInHorizontally(animationSpec = tween(FTL_LIBRARY_TRANSITION_MS), initialOffsetX = { it }) +
+                                fadeIn(animationSpec = tween(FTL_LIBRARY_TRANSITION_MS))
+                        ).togetherWith(
+                            slideOutHorizontally(animationSpec = tween(FTL_LIBRARY_TRANSITION_MS), targetOffsetX = { -it }) +
+                                fadeOut(animationSpec = tween(FTL_LIBRARY_TRANSITION_MS)),
+                        )
                     } else {
-                        (slideInHorizontally(animationSpec = tween(350), initialOffsetX = { -it }) + fadeIn(animationSpec = tween(350)))
-                            .togetherWith(
-                                slideOutHorizontally(animationSpec = tween(350), targetOffsetX = { it }) +
-                                    fadeOut(animationSpec = tween(350)),
-                            )
+                        (
+                            slideInHorizontally(animationSpec = tween(FTL_LIBRARY_TRANSITION_MS), initialOffsetX = { -it }) +
+                                fadeIn(animationSpec = tween(FTL_LIBRARY_TRANSITION_MS))
+                        ).togetherWith(
+                            slideOutHorizontally(animationSpec = tween(FTL_LIBRARY_TRANSITION_MS), targetOffsetX = { it }) +
+                                fadeOut(animationSpec = tween(FTL_LIBRARY_TRANSITION_MS)),
+                        )
                     }
                 },
                 label = "LibrarySlideTransition",
                 modifier = Modifier.fillMaxSize(),
             ) { showLibrary ->
                 if (showLibrary) {
-                    FocusLibraryScreen(
+                    FocusLibraryHost(
+                        viewModel = viewModel,
                         allApps = allApps,
-                        selectedTab = librarySelectedTab,
-                        onTabSelected = viewModel::setLibrarySelectedTab,
-                        focusedIndex = libraryFocusedIndex,
-                        onFocusedIndexChange = viewModel::setLibraryFocusedIndex,
                         hiddenSet = hiddenSet,
-                        isOptionsMenuExpanded = isLibraryOptionsMenuExpanded,
-                        onOptionsMenuExpandedChange = viewModel::setLibraryOptionsMenuExpanded,
-                        selectedIndex = libraryMenuSelectedIndex,
+                        libraryTabs = libraryTabs,
+                        enabled = isLibraryOpen && editingAppInfo == null && pairingTargetApp == null && !isManageGalleriesOpen,
+                        areButtonPromptsVisible = areButtonPromptsVisible,
                         onToggleHidden = onToggleHidden,
-                        onEditArtwork = viewModel::openEditGameOverlay,
                         onOpenAppInfo = onOpenAppInfo,
                         onUninstallApp = onUninstallApp,
                         onChangeCore = onChangeCore,
                         onAddRomFolder = onAddRomFolder,
                         onRemoveRomFolder = onRemoveRomFolder,
-                        onOpenManageGalleries = { viewModel.setManageGalleriesOpen(true) },
                         onAppClickTop = onAppClickTop,
                         onAppClickBottom = onAppClickBottom,
-                        onCloseRequested = { viewModel.setLibraryOpen(false) },
-                        enabled = isLibraryOpen && editingAppInfo == null && pairingTargetApp == null && !isManageGalleriesOpen,
-                        tabs = libraryTabs,
-                        isRemoveRomFolderDialogOpen = isRemoveRomFolderDialogOpen,
-                        onRemoveRomFolderDialogOpenChange = viewModel::setRemoveRomFolderDialogOpen,
-                        removeRomFolderDialogSelectedIndex = removeRomFolderDialogSelectedIndex,
-                        onRemoveRomFolderDialogSelectedIndexChange = viewModel::setRemoveRomFolderDialogSelectedIndex,
-                        folderToRemove = folderToRemove,
-                        onFolderToRemoveChange = viewModel::setFolderToRemove,
-                        areButtonPromptsVisible = areButtonPromptsVisible,
                     )
                 } else {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .drawBehind {
-                                    drawRect(
-                                        brush =
-                                            Brush.verticalGradient(
-                                                colors =
-                                                    listOf(
-                                                        animatedPrimaryColor.copy(alpha = 0.20f),
-                                                        animatedSecondaryColor.copy(alpha = 0.10f),
-                                                        appColors.appBackground,
-                                                    ),
-                                            ),
-                                    )
-                                },
-                    ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        DynamicLauncherBackground(
+                            activePagerState = activePagerState,
+                            categoryApps = categoryApps,
+                            appColors = appColors,
+                        )
+
                         if (isMainOptionsMenuExpanded) {
                             Box(
                                 modifier =
@@ -648,31 +502,45 @@ fun FocusTopLauncherScreen(
                                             )
                                         }
                                     } else {
+                                        val categoryPagerState = getPagerStateForCategory(category)
+                                        val currentOnAppClickTop by rememberUpdatedState(onAppClickTop)
+                                        val keyProvider: (Int) -> Any =
+                                            remember(category.id, currentCategoryApps) {
+                                                { page ->
+                                                    "${category.id}_${currentCategoryApps.getOrNull(page)?.packageName ?: page}"
+                                                }
+                                            }
+                                        val handleCarouselItemClick: (Int) -> Unit =
+                                            remember(currentCategoryApps) {
+                                                { actualIndex ->
+                                                    val appInfo = currentCategoryApps.getOrNull(actualIndex)
+                                                    if (appInfo != null) currentOnAppClickTop(appInfo)
+                                                }
+                                            }
+                                        val isItemHiddenProvider: (Int) -> Boolean =
+                                            remember(currentCategoryApps, hiddenSet) {
+                                                { actualIndex ->
+                                                    currentCategoryApps.getOrNull(actualIndex)?.let {
+                                                        hiddenSet.contains(it.packageName)
+                                                    } ?: false
+                                                }
+                                            }
+
                                         Column(
                                             modifier = Modifier.padding(top = FTL_GALLERY_TOP_OFFSET),
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                         ) {
-                                            // Carousel
-                                            val categoryPagerState = getPagerStateForCategory(category, currentCategoryApps.size)
                                             HorizontalPosterCarousel(
                                                 itemCount = currentCategoryApps.size,
                                                 pagerState = categoryPagerState,
                                                 modifier =
-                                                    if (category ==
-                                                        selectedCategory
-                                                    ) {
+                                                    if (category == selectedCategory) {
                                                         Modifier.focusRequester(focusRequester)
                                                     } else {
                                                         Modifier
                                                     },
-                                                key = { page ->
-                                                    "${category.id}_${currentCategoryApps.getOrNull(page)?.packageName ?: page}"
-                                                },
-                                                targetPage = categoryPagerState.targetPage,
-                                                onItemClick = { actualIndex ->
-                                                    val appInfo = currentCategoryApps.getOrNull(actualIndex)
-                                                    if (appInfo != null) onAppClickTop(appInfo)
-                                                },
+                                                key = keyProvider,
+                                                onItemClick = handleCarouselItemClick,
                                                 posterWidth = FTL_POSTER_WIDTH,
                                                 posterHeight = FTL_POSTER_HEIGHT,
                                                 posterSpacing = FTL_POSTER_SPACING,
@@ -693,11 +561,7 @@ fun FocusTopLauncherScreen(
                                                         }
                                                     }
                                                 },
-                                                isHidden = { actualIndex ->
-                                                    currentCategoryApps.getOrNull(actualIndex)?.let {
-                                                        hiddenSet.contains(it.packageName)
-                                                    } ?: false
-                                                },
+                                                isHidden = isItemHiddenProvider,
                                             ) { actualIndex, _ ->
                                                 val appInfo = currentCategoryApps[actualIndex]
                                                 PosterCardContent(
@@ -709,91 +573,34 @@ fun FocusTopLauncherScreen(
 
                                             Spacer(modifier = Modifier.height(FTL_TITLE_GAP))
 
-                                            // Focused App Title or Horizontal Letter Carousel Overlay
-                                            AnimatedContent(
-                                                targetState = isLetterOverlayActive,
-                                                transitionSpec = {
-                                                    (slideInVertically { height -> height / 2 } + fadeIn())
-                                                        .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut())
-                                                },
-                                                label = "TitleLetterCarouselTransition",
-                                                modifier =
-                                                    Modifier
-                                                        .zIndex(1f)
-                                                        .padding(horizontal = FTL_LETTER_NAV_PADDING),
-                                            ) { isOverlay ->
-                                                if (isOverlay && uniqueLetters.isNotEmpty()) {
-                                                    HorizontalLetterCarousel(
-                                                        letters = uniqueLetters,
-                                                        selectedIndex = selectedLetterNavIndex,
-                                                    )
-                                                } else {
-                                                    if (currentApp != null) {
-                                                        Column(
-                                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                                        ) {
-                                                            Text(
-                                                                text = currentApp.label,
-                                                                style =
-                                                                    MaterialTheme.typography.headlineLarge.copy(
-                                                                        fontWeight = FontWeight.ExtraBold,
-                                                                        color = appColors.onSurface,
-                                                                    ),
-                                                                maxLines = 1,
-                                                                overflow = TextOverflow.Ellipsis,
-                                                                textAlign = TextAlign.Center,
+                                            val categoryCurrentAppState =
+                                                remember(categoryPagerState, currentCategoryApps) {
+                                                    derivedStateOf {
+                                                        if (currentCategoryApps.isEmpty()) {
+                                                            null
+                                                        } else {
+                                                            currentCategoryApps.getOrNull(
+                                                                categoryPagerState.currentPage.coerceIn(0, currentCategoryApps.lastIndex),
                                                             )
-                                                            val currentPairedPackage = pairedApps[currentApp.packageName]
-                                                            val pairedApp =
-                                                                if (currentPairedPackage != null) {
-                                                                    availableAppsByPackage[currentPairedPackage]
-                                                                } else {
-                                                                    null
-                                                                }
-                                                            if (pairedApp != null) {
-                                                                Box(
-                                                                    modifier =
-                                                                        Modifier.layout { measurable, constraints ->
-                                                                            val placeable = measurable.measure(constraints)
-                                                                            layout(placeable.width, 0) {
-                                                                                placeable.placeRelative(0, 0)
-                                                                            }
-                                                                        },
-                                                                    contentAlignment = Alignment.Center,
-                                                                ) {
-                                                                    Column(
-                                                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                                                    ) {
-                                                                        Spacer(modifier = Modifier.height(FTL_SUBTITLE_GAP))
-                                                                        Row(
-                                                                            verticalAlignment = Alignment.CenterVertically,
-                                                                            horizontalArrangement = Arrangement.Center,
-                                                                        ) {
-                                                                            MaterialSymbol(
-                                                                                name = "splitscreen",
-                                                                                size = FTL_SPLITSCREEN_BADGE_SIZE,
-                                                                                tint = appColors.onSurfaceSecondary,
-                                                                            )
-                                                                            Spacer(modifier = Modifier.width(FTL_BADGE_TEXT_GAP))
-                                                                            Text(
-                                                                                text = pairedApp.label,
-                                                                                style =
-                                                                                    MaterialTheme.typography.labelMedium.copy(
-                                                                                        fontWeight = FontWeight.Medium,
-                                                                                        color = appColors.onSurfaceSecondary,
-                                                                                    ),
-                                                                                maxLines = 1,
-                                                                                overflow = TextOverflow.Ellipsis,
-                                                                                modifier = Modifier.weight(1f, fill = false),
-                                                                            )
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
                                                         }
                                                     }
                                                 }
-                                            }
+                                            GalleryTitleOrLetterSection(
+                                                currentAppState =
+                                                    if (category ==
+                                                        selectedCategory
+                                                    ) {
+                                                        currentAppState
+                                                    } else {
+                                                        categoryCurrentAppState
+                                                    },
+                                                uniqueLetters = uniqueLetters,
+                                                letterNavState = letterNavState,
+                                                isSelectedCategory = category == selectedCategory,
+                                                pairedApps = pairedApps,
+                                                availableAppsByPackage = availableAppsByPackage,
+                                                appColors = appColors,
+                                            )
                                         }
                                     }
                                 }
@@ -801,12 +608,9 @@ fun FocusTopLauncherScreen(
                         }
 
                         // Plane 2: Hovering Controls Layer (Categories, Actions, Touch Launch Buttons)
-
-                        // Top-Right Library navigation button hovering over the gallery plane
                         val isControlsEnabled =
                             editingAppInfo == null && pairingTargetApp == null && !isLibraryOpen && !isManageGalleriesOpen
 
-                        // Top-Left Category Header hovering over the gallery plane
                         InteractiveCategoryHeader(
                             selectedCategory = selectedCategory,
                             categories = categories,
@@ -851,78 +655,22 @@ fun FocusTopLauncherScreen(
                             )
                         }
 
-                        val currentPairedPackage = if (currentApp != null) pairedApps[currentApp.packageName] else null
-                        val isCurrentPaired = currentPairedPackage != null
-
-                        // Bottom-Left Main Actions Menu hovering over the gallery plane
-                        AnimatedVisibility(
-                            visible = areButtonPromptsVisible || isMainOptionsMenuExpanded,
-                            enter =
-                                fadeIn(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
-                                    slideInVertically(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) { it / FTL_PROMPT_SLIDE_DIVISOR },
-                            exit =
-                                fadeOut(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
-                                    slideOutVertically(
-                                        animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS),
-                                    ) { it / FTL_PROMPT_SLIDE_DIVISOR },
-                            modifier =
-                                Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(start = FTL_BOTTOM_BAR_PADDING_START, bottom = FTL_BOTTOM_BAR_PADDING_BOTTOM),
-                        ) {
-                            val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
-                            val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
-                            val actions =
-                                remember(currentApp, isCurrentFavorite, isCurrentHidden, isCurrentPaired) {
-                                    buildGalleryMenuActions(
-                                        context = context,
-                                        currentApp = currentApp,
-                                        isFavorite = isCurrentFavorite,
-                                        isHidden = isCurrentHidden,
-                                        isPaired = isCurrentPaired,
-                                        onToggleFavorite = onToggleFavorite,
-                                        onEditGame = viewModel::openEditGameOverlay,
-                                        onToggleHidden = onToggleHidden,
-                                        onOpenPairingDialog = onOpenPairingDialog,
-                                        onRemovePair = onRemovePair,
-                                        onOpenManageGalleries = { viewModel.setManageGalleriesOpen(true) },
-                                        onDismissMenu = { viewModel.setMainOptionsMenuExpanded(false) },
-                                    )
-                                }
-                            ExpandableActionsMenu(
-                                isExpanded = isMainOptionsMenuExpanded,
-                                onExpandedChange = viewModel::setMainOptionsMenuExpanded,
-                                actions = actions,
-                                selectedIndex = mainMenuSelectedIndex,
-                                dividerAfterIndex = if (currentApp != null) actions.lastIndex - 1 else null,
-                                enabled = isControlsEnabled,
-                            )
-                        }
-
-                        // Bottom-Right subdued touch buttons hovering over the gallery plane
-                        AnimatedVisibility(
-                            visible = areButtonPromptsVisible,
-                            enter =
-                                fadeIn(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
-                                    slideInVertically(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) { it / FTL_PROMPT_SLIDE_DIVISOR },
-                            exit =
-                                fadeOut(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
-                                    slideOutVertically(
-                                        animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS),
-                                    ) { it / FTL_PROMPT_SLIDE_DIVISOR },
-                            modifier =
-                                Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .padding(end = FTL_BOTTOM_BAR_PADDING_END, bottom = FTL_BOTTOM_BAR_PADDING_BOTTOM),
-                        ) {
-                            DualScreenLaunchButtons(
-                                appInfo = currentApp,
-                                isPaired = isCurrentPaired,
-                                enabled = isControlsEnabled && !isMainOptionsMenuExpanded,
-                                onLaunchTop = onAppClickTop,
-                                onLaunchBottom = onAppClickBottom,
-                            )
-                        }
+                        GalleryBottomControls(
+                            viewModel = viewModel,
+                            currentAppState = currentAppState,
+                            favoritesSet = favoritesSet,
+                            hiddenSet = hiddenSet,
+                            pairedApps = pairedApps,
+                            areButtonPromptsVisible = areButtonPromptsVisible,
+                            isMainOptionsMenuExpanded = isMainOptionsMenuExpanded,
+                            isControlsEnabled = isControlsEnabled,
+                            onAppClickTop = onAppClickTop,
+                            onAppClickBottom = onAppClickBottom,
+                            onToggleFavorite = onToggleFavorite,
+                            onToggleHidden = onToggleHidden,
+                            onOpenPairingDialog = onOpenPairingDialog,
+                            onRemovePair = onRemovePair,
+                        )
                     }
                 }
             }
@@ -977,14 +725,515 @@ fun FocusTopLauncherScreen(
     }
 }
 
+@Composable
+private fun GalleryNavigationEffects(
+    viewModel: FocusTopLauncherViewModel,
+    selectedCategory: GameFocusCategory,
+    editingAppInfo: InstalledAppInfo?,
+    categoryApps: List<InstalledAppInfo>,
+    uniqueLetters: List<Char>,
+    activePagerState: PagerState,
+    currentAppState: State<InstalledAppInfo?>,
+    letterNavState: LetterNavigationOverlayState,
+    lastHighlightedPackages: MutableMap<String, String>,
+) {
+    val prevLetterTrigger by viewModel.prevLetterTrigger.collectAsState()
+    val nextLetterTrigger by viewModel.nextLetterTrigger.collectAsState()
+    val dpadLeftTrigger by viewModel.dpadLeftTrigger.collectAsState()
+    val dpadStepRightTrigger by viewModel.dpadStepRightTrigger.collectAsState()
+    val scope = rememberCoroutineScope()
+    val currentActivePagerState by rememberUpdatedState(activePagerState)
+
+    // Dismiss letter overlay without action if user manually scrolls the pager
+    LaunchedEffect(Unit) {
+        snapshotFlow { currentActivePagerState.isScrollInProgress }
+            .collectLatest { isScrolling ->
+                if (isScrolling && letterNavState.isActive) {
+                    AppLog.i(TAG, "Pager scroll in progress while letter carousel active -> cancelling overlay without action")
+                    letterNavState.isActive = false
+                }
+            }
+    }
+
+    // Handle D-pad LEFT step with wrap-around
+    LaunchedEffect(dpadLeftTrigger) {
+        if (dpadLeftTrigger > 0 && categoryApps.isNotEmpty()) {
+            if (letterNavState.isActive) {
+                AppLog.i(TAG, "D-pad LEFT pressed while letter carousel active -> cancelling overlay without action")
+                letterNavState.isActive = false
+            } else {
+                val baseIndex = if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
+                val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
+                val prevIndex = if (safeBase > 0) safeBase - 1 else categoryApps.size - 1
+                AppLog.d(
+                    TAG,
+                    "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$prevIndex",
+                )
+                activePagerState.animateScrollToPage(
+                    page = prevIndex,
+                    animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
+                )
+            }
+        }
+    }
+
+    // Handle D-pad RIGHT step with wrap-around
+    LaunchedEffect(dpadStepRightTrigger) {
+        if (dpadStepRightTrigger > 0 && categoryApps.isNotEmpty()) {
+            if (letterNavState.isActive) {
+                AppLog.i(TAG, "D-pad RIGHT pressed while letter carousel active -> cancelling overlay without action")
+                letterNavState.isActive = false
+            } else {
+                val baseIndex = if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
+                val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
+                val nextIndex = if (safeBase < categoryApps.size - 1) safeBase + 1 else 0
+                AppLog.d(
+                    TAG,
+                    "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$nextIndex",
+                )
+                activePagerState.animateScrollToPage(
+                    page = nextIndex,
+                    animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
+                )
+            }
+        }
+    }
+
+    // Reset letter overlay on category switch or dialog edit
+    LaunchedEffect(selectedCategory, editingAppInfo) {
+        letterNavState.isActive = false
+    }
+
+    // Auto-hide and commit letter navigation after debounce
+    LaunchedEffect(letterNavState.isActive, letterNavState.selectedIndex, prevLetterTrigger, nextLetterTrigger) {
+        if (letterNavState.isActive) {
+            delay(FTL_LETTER_NAV_DEBOUNCE_MS)
+            val targetLetter = uniqueLetters.getOrNull(letterNavState.selectedIndex)
+            letterNavState.isActive = false
+            if (targetLetter != null) {
+                val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(categoryApps, targetLetter)
+                AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
+                scope.launch {
+                    activePagerState.animateScrollToPage(targetAppIndex)
+                }
+            }
+        }
+    }
+
+    // Handle Gamepad L1 step (previous starting letter in letter carousel)
+    LaunchedEffect(prevLetterTrigger) {
+        if (prevLetterTrigger > 0 && categoryApps.isNotEmpty() && uniqueLetters.isNotEmpty()) {
+            if (!letterNavState.isActive) {
+                letterNavState.isActive = true
+                val currentLetter = currentAppState.value?.let { LetterNavigationHelper.getStartingLetter(it.label) }
+                val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
+                letterNavState.selectedIndex = initialIndex
+            }
+            letterNavState.selectedIndex = (letterNavState.selectedIndex - 1).coerceAtLeast(0)
+            AppLog.d(
+                TAG,
+                "L1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
+            )
+        }
+    }
+
+    // Handle Gamepad R1 step (next starting letter in letter carousel)
+    LaunchedEffect(nextLetterTrigger) {
+        if (nextLetterTrigger > 0 && categoryApps.isNotEmpty() && uniqueLetters.isNotEmpty()) {
+            if (!letterNavState.isActive) {
+                letterNavState.isActive = true
+                val currentLetter = currentAppState.value?.let { LetterNavigationHelper.getStartingLetter(it.label) }
+                val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
+                letterNavState.selectedIndex = initialIndex
+            }
+            letterNavState.selectedIndex = (letterNavState.selectedIndex + 1).coerceAtMost(uniqueLetters.size - 1)
+            AppLog.d(
+                TAG,
+                "R1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
+            )
+        }
+    }
+
+    // Bi-directional synchronization: update lastHighlightedPackages and notify focused app
+    val currentApp = currentAppState.value
+    LaunchedEffect(currentApp, selectedCategory) {
+        viewModel.setFocusedApp(currentApp)
+        if (currentApp != null) {
+            lastHighlightedPackages[selectedCategory.id] = currentApp.packageName
+            AppLog.d(TAG, "Focused game changed for ${selectedCategory.id}: package=${currentApp.packageName}, label=${currentApp.label}")
+        }
+    }
+}
+
+@Composable
+private fun DynamicLauncherBackground(
+    activePagerState: PagerState,
+    categoryApps: List<InstalledAppInfo>,
+    appColors: AppColors,
+) {
+    var backgroundApp by remember { mutableStateOf<InstalledAppInfo?>(null) }
+
+    // Throttle background color updates during rapid gallery navigation
+    LaunchedEffect(activePagerState, categoryApps) {
+        snapshotFlow {
+            val page = activePagerState.currentPage
+            categoryApps.getOrNull(page)
+        }.collectLatest { target ->
+            if (activePagerState.isScrollInProgress) {
+                delay(FTL_BACKGROUND_COLOR_DEBOUNCE_MS)
+            }
+            backgroundApp = target
+        }
+    }
+
+    val defaultPalette =
+        remember(appColors.accent, appColors.appBackground) {
+            ExtractedAppPalette(
+                primaryColor = appColors.accent,
+                secondaryColor = appColors.appBackground,
+                isExtracted = false,
+            )
+        }
+
+    val backgroundIconVersion =
+        backgroundApp?.let { if (it.isRom) it.logoLastModified else it.lastUpdateTime } ?: 0L
+    val activePalette by produceState(
+        initialValue = backgroundApp?.let { AppPaletteExtractor.getCachedColorsOrNull(it) } ?: defaultPalette,
+        backgroundApp?.packageName,
+        backgroundApp?.coverPath,
+        backgroundApp?.coverLastModified,
+        backgroundIconVersion,
+    ) {
+        val currentTarget = backgroundApp
+        val cached = currentTarget?.let { AppPaletteExtractor.getCachedColorsOrNull(it) }
+        value =
+            if (cached != null) {
+                cached
+            } else if (currentTarget != null) {
+                AppPaletteExtractor.extractColorsAsync(currentTarget, appColors.accent, appColors.appBackground)
+            } else {
+                defaultPalette
+            }
+    }
+
+    val animatedPrimaryColorState =
+        animateColorAsState(
+            targetValue = activePalette.primaryColor,
+            animationSpec = tween(durationMillis = FTL_BACKGROUND_COLOR_ANIM_MS),
+            label = "animatedPrimaryColor",
+        )
+
+    val animatedSecondaryColorState =
+        animateColorAsState(
+            targetValue = activePalette.secondaryColor,
+            animationSpec = tween(durationMillis = FTL_BACKGROUND_COLOR_ANIM_MS),
+            label = "animatedSecondaryColor",
+        )
+
+    Spacer(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    drawRect(
+                        brush =
+                            Brush.verticalGradient(
+                                colors =
+                                    listOf(
+                                        animatedPrimaryColorState.value.copy(alpha = FTL_BG_PRIMARY_ALPHA),
+                                        animatedSecondaryColorState.value.copy(alpha = FTL_BG_SECONDARY_ALPHA),
+                                        appColors.appBackground,
+                                    ),
+                            ),
+                    )
+                },
+    )
+}
+
+@Composable
+private fun GalleryTitleOrLetterSection(
+    currentAppState: State<InstalledAppInfo?>,
+    uniqueLetters: List<Char>,
+    letterNavState: LetterNavigationOverlayState,
+    isSelectedCategory: Boolean,
+    pairedApps: Map<String, String>,
+    availableAppsByPackage: Map<String, InstalledAppInfo>,
+    appColors: AppColors,
+) {
+    val showLetterOverlay = isSelectedCategory && letterNavState.isActive
+    AnimatedContent(
+        targetState = showLetterOverlay,
+        transitionSpec = {
+            (slideInVertically { height -> height / FTL_PROMPT_SLIDE_DIVISOR } + fadeIn())
+                .togetherWith(slideOutVertically { height -> -height / FTL_PROMPT_SLIDE_DIVISOR } + fadeOut())
+        },
+        label = "TitleLetterCarouselTransition",
+        modifier =
+            Modifier
+                .zIndex(FTL_TITLE_OVERLAY_Z_INDEX)
+                .padding(horizontal = FTL_LETTER_NAV_PADDING),
+    ) { isOverlay ->
+        if (isOverlay && uniqueLetters.isNotEmpty()) {
+            HorizontalLetterCarousel(
+                letters = uniqueLetters,
+                selectedIndex = letterNavState.selectedIndex,
+            )
+        } else {
+            val currentApp = currentAppState.value
+            if (currentApp != null) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text = currentApp.label,
+                        style =
+                            MaterialTheme.typography.headlineLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                color = appColors.onSurface,
+                            ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                    )
+                    val currentPairedPackage = pairedApps[currentApp.packageName]
+                    val pairedApp =
+                        if (currentPairedPackage != null) {
+                            availableAppsByPackage[currentPairedPackage]
+                        } else {
+                            null
+                        }
+                    if (pairedApp != null) {
+                        Box(
+                            modifier =
+                                Modifier.layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    layout(placeable.width, 0) {
+                                        placeable.placeRelative(0, 0)
+                                    }
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Spacer(modifier = Modifier.height(FTL_SUBTITLE_GAP))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                ) {
+                                    MaterialSymbol(
+                                        name = "splitscreen",
+                                        size = FTL_SPLITSCREEN_BADGE_SIZE,
+                                        tint = appColors.onSurfaceSecondary,
+                                    )
+                                    Spacer(modifier = Modifier.width(FTL_BADGE_TEXT_GAP))
+                                    Text(
+                                        text = pairedApp.label,
+                                        style =
+                                            MaterialTheme.typography.labelMedium.copy(
+                                                fontWeight = FontWeight.Medium,
+                                                color = appColors.onSurfaceSecondary,
+                                            ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(FTL_SQUARE_ASPECT_RATIO, fill = false),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GalleryBottomControls(
+    viewModel: FocusTopLauncherViewModel,
+    currentAppState: State<InstalledAppInfo?>,
+    favoritesSet: Set<String>,
+    hiddenSet: Set<String>,
+    pairedApps: Map<String, String>,
+    areButtonPromptsVisible: Boolean,
+    isMainOptionsMenuExpanded: Boolean,
+    isControlsEnabled: Boolean,
+    onAppClickTop: (InstalledAppInfo) -> Unit,
+    onAppClickBottom: (InstalledAppInfo) -> Unit,
+    onToggleFavorite: (InstalledAppInfo) -> Unit,
+    onToggleHidden: (InstalledAppInfo) -> Unit,
+    onOpenPairingDialog: (InstalledAppInfo) -> Unit,
+    onRemovePair: (InstalledAppInfo) -> Unit,
+) {
+    val context = LocalContext.current
+    val mainMenuSelectedIndex by viewModel.mainMenuSelectedIndex.collectAsState()
+    val currentApp = currentAppState.value
+    val isCurrentPaired = currentApp != null && pairedApps.containsKey(currentApp.packageName)
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Bottom-Left Main Actions Menu hovering over the gallery plane
+        AnimatedVisibility(
+            visible = areButtonPromptsVisible || isMainOptionsMenuExpanded,
+            enter =
+                fadeIn(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
+                    slideInVertically(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) { it / FTL_PROMPT_SLIDE_DIVISOR },
+            exit =
+                fadeOut(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
+                    slideOutVertically(
+                        animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS),
+                    ) { it / FTL_PROMPT_SLIDE_DIVISOR },
+            modifier =
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = FTL_BOTTOM_BAR_PADDING_START, bottom = FTL_BOTTOM_BAR_PADDING_BOTTOM),
+        ) {
+            val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
+            val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
+            val actions =
+                remember(currentApp, isCurrentFavorite, isCurrentHidden, isCurrentPaired) {
+                    buildGalleryMenuActions(
+                        context = context,
+                        currentApp = currentApp,
+                        isFavorite = isCurrentFavorite,
+                        isHidden = isCurrentHidden,
+                        isPaired = isCurrentPaired,
+                        onToggleFavorite = onToggleFavorite,
+                        onEditGame = viewModel::openEditGameOverlay,
+                        onToggleHidden = onToggleHidden,
+                        onOpenPairingDialog = onOpenPairingDialog,
+                        onRemovePair = onRemovePair,
+                        onOpenManageGalleries = { viewModel.setManageGalleriesOpen(true) },
+                        onDismissMenu = { viewModel.setMainOptionsMenuExpanded(false) },
+                    )
+                }
+            ExpandableActionsMenu(
+                isExpanded = isMainOptionsMenuExpanded,
+                onExpandedChange = viewModel::setMainOptionsMenuExpanded,
+                actions = actions,
+                selectedIndex = mainMenuSelectedIndex,
+                dividerAfterIndex = if (currentApp != null) actions.lastIndex - 1 else null,
+                enabled = isControlsEnabled,
+            )
+        }
+
+        // Bottom-Right subdued touch buttons hovering over the gallery plane
+        AnimatedVisibility(
+            visible = areButtonPromptsVisible,
+            enter =
+                fadeIn(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
+                    slideInVertically(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) { it / FTL_PROMPT_SLIDE_DIVISOR },
+            exit =
+                fadeOut(animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS)) +
+                    slideOutVertically(
+                        animationSpec = tween(FTL_PROMPT_ANIM_DURATION_MS),
+                    ) { it / FTL_PROMPT_SLIDE_DIVISOR },
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = FTL_BOTTOM_BAR_PADDING_END, bottom = FTL_BOTTOM_BAR_PADDING_BOTTOM),
+        ) {
+            DualScreenLaunchButtons(
+                appInfo = currentApp,
+                isPaired = isCurrentPaired,
+                enabled = isControlsEnabled && !isMainOptionsMenuExpanded,
+                onLaunchTop = onAppClickTop,
+                onLaunchBottom = onAppClickBottom,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FocusLibraryHost(
+    viewModel: FocusTopLauncherViewModel,
+    allApps: List<InstalledAppInfo>,
+    hiddenSet: Set<String>,
+    libraryTabs: List<LibraryTab>,
+    enabled: Boolean,
+    areButtonPromptsVisible: Boolean,
+    onToggleHidden: (InstalledAppInfo) -> Unit,
+    onOpenAppInfo: (InstalledAppInfo) -> Unit,
+    onUninstallApp: (InstalledAppInfo) -> Unit,
+    onChangeCore: (CustomRomFolder) -> Unit,
+    onAddRomFolder: () -> Unit,
+    onRemoveRomFolder: (CustomRomFolder) -> Unit,
+    onAppClickTop: (InstalledAppInfo) -> Unit,
+    onAppClickBottom: (InstalledAppInfo) -> Unit,
+) {
+    val librarySelectedTab by viewModel.librarySelectedTab.collectAsState()
+    val libraryFocusedIndexState = viewModel.libraryFocusedIndex.collectAsState()
+    val isLibraryOptionsMenuExpanded by viewModel.isLibraryOptionsMenuExpanded.collectAsState()
+    val libraryMenuSelectedIndex by viewModel.libraryMenuSelectedIndex.collectAsState()
+    val isRemoveRomFolderDialogOpen by viewModel.isRemoveRomFolderDialogOpen.collectAsState()
+    val removeRomFolderDialogSelectedIndex by viewModel.removeRomFolderDialogSelectedIndex.collectAsState()
+    val folderToRemove by viewModel.folderToRemove.collectAsState()
+
+    val openManageGalleries = remember(viewModel) { { viewModel.setManageGalleriesOpen(true) } }
+    val closeLibrary = remember(viewModel) { { viewModel.setLibraryOpen(false) } }
+
+    FocusLibraryScreen(
+        allApps = allApps,
+        selectedTab = librarySelectedTab,
+        onTabSelected = viewModel::setLibrarySelectedTab,
+        focusedIndexState = libraryFocusedIndexState,
+        onFocusedIndexChange = viewModel::setLibraryFocusedIndex,
+        hiddenSet = hiddenSet,
+        isOptionsMenuExpanded = isLibraryOptionsMenuExpanded,
+        onOptionsMenuExpandedChange = viewModel::setLibraryOptionsMenuExpanded,
+        selectedIndex = libraryMenuSelectedIndex,
+        onToggleHidden = onToggleHidden,
+        onEditArtwork = viewModel::openEditGameOverlay,
+        onOpenAppInfo = onOpenAppInfo,
+        onUninstallApp = onUninstallApp,
+        onChangeCore = onChangeCore,
+        onAddRomFolder = onAddRomFolder,
+        onRemoveRomFolder = onRemoveRomFolder,
+        onOpenManageGalleries = openManageGalleries,
+        onAppClickTop = onAppClickTop,
+        onAppClickBottom = onAppClickBottom,
+        onCloseRequested = closeLibrary,
+        enabled = enabled,
+        tabs = libraryTabs,
+        isRemoveRomFolderDialogOpen = isRemoveRomFolderDialogOpen,
+        onRemoveRomFolderDialogOpenChange = viewModel::setRemoveRomFolderDialogOpen,
+        removeRomFolderDialogSelectedIndex = removeRomFolderDialogSelectedIndex,
+        onRemoveRomFolderDialogSelectedIndexChange = viewModel::setRemoveRomFolderDialogSelectedIndex,
+        folderToRemove = folderToRemove,
+        onFolderToRemoveChange = viewModel::setFolderToRemove,
+        areButtonPromptsVisible = areButtonPromptsVisible,
+    )
+}
+
 internal object FocusImageCache {
     private const val MAX_ICON_DIMENSION_PX = 256
+    internal const val MAX_COVER_WIDTH_PX = 480
+    internal const val MAX_COVER_HEIGHT_PX = 720
+    private const val COVER_CACHE_MAX_KB = 64 * 1024
+    private const val ICON_CACHE_MAX_KB = 24 * 1024
+    private const val BYTES_PER_ARGB_PIXEL = 4
+    private const val BYTES_PER_KB = 1024
+    private const val DEFAULT_APP_ICON_DRAW_PX = 128
     private const val SUBDIR_ROM_LOGOS = "gamefocus_logos"
     private const val SUBDIR_APP_ICONS = "gamefocus_icons"
     private const val MS_PER_SECOND = 1_000L
     private const val ICON_PNG_COMPRESS_QUALITY = 90
-    private val coverCache = LruCache<String, ImageBitmap>(80)
-    private val iconCache = LruCache<String, ImageBitmap>(80)
+    private const val SAMPLE_HALF_DIVISOR = 2
+    private const val SAMPLE_MULTIPLIER = 2
+
+    private val coverCache =
+        object : LruCache<String, ImageBitmap>(COVER_CACHE_MAX_KB) {
+            override fun sizeOf(
+                key: String,
+                value: ImageBitmap,
+            ): Int = ((value.width * value.height * BYTES_PER_ARGB_PIXEL) / BYTES_PER_KB).coerceAtLeast(1)
+        }
+    private val iconCache =
+        object : LruCache<String, ImageBitmap>(ICON_CACHE_MAX_KB) {
+            override fun sizeOf(
+                key: String,
+                value: ImageBitmap,
+            ): Int = ((value.width * value.height * BYTES_PER_ARGB_PIXEL) / BYTES_PER_KB).coerceAtLeast(1)
+        }
     private val missingIconKeys = ConcurrentHashMap.newKeySet<String>()
     private val missingLibraryIconKeys = ConcurrentHashMap.newKeySet<String>()
 
@@ -1003,6 +1252,29 @@ internal object FocusImageCache {
         } else {
             appInfo.packageName
         }
+    }
+
+    /**
+     * Computes a power-of-two `BitmapFactory.Options.inSampleSize` so small covers (e.g. 300x450 or
+     * 600x900 SteamGridDB grids) retain full crispness while multi-megapixel custom covers are
+     * downsampled to poster display resolution.
+     */
+    internal fun calculateCoverSampleSize(
+        rawWidth: Int,
+        rawHeight: Int,
+        maxWidthPx: Int = MAX_COVER_WIDTH_PX,
+        maxHeightPx: Int = MAX_COVER_HEIGHT_PX,
+    ): Int {
+        if (rawWidth <= 0 || rawHeight <= 0) return 1
+        var sampleSize = 1
+        if (rawHeight > maxHeightPx || rawWidth > maxWidthPx) {
+            val halfH = rawHeight / SAMPLE_HALF_DIVISOR
+            val halfW = rawWidth / SAMPLE_HALF_DIVISOR
+            while ((halfH / sampleSize) >= maxHeightPx || (halfW / sampleSize) >= maxWidthPx) {
+                sampleSize *= SAMPLE_MULTIPLIER
+            }
+        }
+        return sampleSize
     }
 
     /** Removes icon entries keyed by an older version timestamp so stale versions do not accumulate. */
@@ -1076,11 +1348,19 @@ internal object FocusImageCache {
             val startTime = System.currentTimeMillis()
             val bitmap =
                 try {
-                    val options =
+                    val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeFile(path, boundsOptions)
+                    val sampleSize = calculateCoverSampleSize(boundsOptions.outWidth, boundsOptions.outHeight)
+                    val decodeOptions =
                         BitmapFactory.Options().apply {
-                            inSampleSize = 2 // Downsample 2x for poster display (saves 4x memory and decodes faster)
+                            inSampleSize = sampleSize
+                            inPreferredConfig = Bitmap.Config.ARGB_8888
                         }
-                    BitmapFactory.decodeFile(path, options)?.asImageBitmap()
+                    BitmapFactory
+                        .decodeFile(path, decodeOptions)
+                        ?.also { decoded ->
+                            decoded.prepareToDraw()
+                        }?.asImageBitmap()
                 } catch (e: Exception) {
                     AppLog.w(TAG, "Failed to decode cover file $path: ${e.message}")
                     null
@@ -1095,6 +1375,8 @@ internal object FocusImageCache {
             bitmap
         }
     }
+
+    fun isIconMissing(appInfo: InstalledAppInfo): Boolean = missingIconKeys.contains(iconCacheKey(appInfo))
 
     fun getCachedIconBitmap(appInfo: InstalledAppInfo): ImageBitmap? {
         val cacheKey = iconCacheKey(appInfo)
@@ -1144,6 +1426,7 @@ internal object FocusImageCache {
                 AppLog.w(TAG, "Failed to decode library icon bitmap from $path")
                 return@withContext null
             }
+            bitmap.prepareToDraw()
             val diskBitmap = bitmap.asImageBitmap()
             iconCache.put(cacheKey, diskBitmap)
             diskBitmap
@@ -1249,10 +1532,10 @@ internal object FocusImageCache {
 
             var inSampleSize = 1
             if (rawH > maxDimensionPx || rawW > maxDimensionPx) {
-                val halfH = rawH / 2
-                val halfW = rawW / 2
+                val halfH = rawH / SAMPLE_HALF_DIVISOR
+                val halfW = rawW / SAMPLE_HALF_DIVISOR
                 while ((halfH / inSampleSize) >= maxDimensionPx && (halfW / inSampleSize) >= maxDimensionPx) {
-                    inSampleSize *= 2
+                    inSampleSize *= SAMPLE_MULTIPLIER
                 }
             }
 
@@ -1358,6 +1641,7 @@ internal object FocusImageCache {
                 missingIconKeys.add(cacheKey)
                 return@withContext null
             }
+            androidBmp.prepareToDraw()
             val imageBitmap = androidBmp.asImageBitmap()
             iconCache.put(cacheKey, imageBitmap)
             imageBitmap
@@ -1366,8 +1650,8 @@ internal object FocusImageCache {
 
     private fun Drawable.toAndroidBitmap(): Bitmap? =
         try {
-            val w = if (intrinsicWidth > 0) intrinsicWidth.coerceAtMost(128) else 128
-            val h = if (intrinsicHeight > 0) intrinsicHeight.coerceAtMost(128) else 128
+            val w = if (intrinsicWidth > 0) intrinsicWidth.coerceAtMost(DEFAULT_APP_ICON_DRAW_PX) else DEFAULT_APP_ICON_DRAW_PX
+            val h = if (intrinsicHeight > 0) intrinsicHeight.coerceAtMost(DEFAULT_APP_ICON_DRAW_PX) else DEFAULT_APP_ICON_DRAW_PX
             val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             setBounds(0, 0, w, h)
@@ -1440,7 +1724,7 @@ internal fun DualScreenLaunchButtons(
             },
         )
 
-        Spacer(modifier = Modifier.width(2.dp))
+        Spacer(modifier = Modifier.width(FTL_BUTTON_GAP))
 
         GamePadButtonAction(
             button = GamePadButton.BUTTON_X,
@@ -1455,18 +1739,17 @@ internal fun DualScreenLaunchButtons(
 
 @Composable
 internal fun rememberCoverBitmap(appInfo: InstalledAppInfo): ImageBitmap? {
-    val state =
-        produceState<ImageBitmap?>(
-            initialValue = FocusImageCache.getCoverBitmap(appInfo),
-            key1 = appInfo.packageName,
-            key2 = appInfo.coverLastModified,
-        ) {
-            value = FocusImageCache.getCoverBitmap(appInfo)
-            if (appInfo.coverPath != null && value == null) {
-                value = FocusImageCache.getCoverBitmapAsync(appInfo)
-            }
-        }
-    return state.value
+    if (appInfo.coverPath == null) return null
+    val cached = FocusImageCache.getCoverBitmap(appInfo)
+    if (cached != null) return cached
+
+    var loadedBitmap by remember(appInfo.packageName, appInfo.coverPath, appInfo.coverLastModified) {
+        mutableStateOf<ImageBitmap?>(null)
+    }
+    LaunchedEffect(appInfo.packageName, appInfo.coverPath, appInfo.coverLastModified) {
+        loadedBitmap = FocusImageCache.getCoverBitmapAsync(appInfo)
+    }
+    return loadedBitmap
 }
 
 @Composable
@@ -1474,26 +1757,20 @@ internal fun rememberIconBitmap(
     appInfo: InstalledAppInfo,
     enabled: Boolean = true,
 ): ImageBitmap? {
+    if (!enabled) return null
+    val cached = FocusImageCache.getCachedIconBitmap(appInfo)
+    if (cached != null) return cached
+    if (FocusImageCache.isIconMissing(appInfo)) return null
+
     val context = LocalContext.current
     val iconVersion = if (appInfo.isRom) appInfo.logoLastModified else appInfo.lastUpdateTime
-    val state =
-        produceState<ImageBitmap?>(
-            initialValue = FocusImageCache.getCachedIconBitmap(appInfo),
-            appInfo.packageName,
-            appInfo.activityName,
-            iconVersion,
-            enabled,
-        ) {
-            if (!enabled) {
-                value = null
-                return@produceState
-            }
-            value = FocusImageCache.getCachedIconBitmap(appInfo)
-            if (value == null) {
-                value = FocusImageCache.getIconBitmapAsync(context, appInfo)
-            }
-        }
-    return state.value
+    var loadedBitmap by remember(appInfo.packageName, appInfo.activityName, iconVersion) {
+        mutableStateOf<ImageBitmap?>(null)
+    }
+    LaunchedEffect(appInfo.packageName, appInfo.activityName, iconVersion) {
+        loadedBitmap = FocusImageCache.getIconBitmapAsync(context, appInfo)
+    }
+    return loadedBitmap
 }
 
 private sealed interface LibraryIconLoadResult {
@@ -1511,49 +1788,25 @@ internal fun rememberLibraryIconBitmap(
     appInfo: InstalledAppInfo,
     enabled: Boolean = true,
 ): ImageBitmap? {
-    val cachedBitmap =
-        if (appInfo.libraryIconPath != null) {
-            FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
-        } else {
-            null
-        }
+    if (!enabled) return null
+    val customPath = appInfo.libraryIconPath
+    if (customPath == null || FocusImageCache.isLibraryIconMissing(appInfo.packageName, appInfo.libraryIconLastModified)) {
+        return rememberIconBitmap(appInfo, enabled = true)
+    }
+    val cachedCustom = FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
+    if (cachedCustom != null) return cachedCustom
 
-    val isMissing =
-        appInfo.libraryIconPath == null ||
-            FocusImageCache.isLibraryIconMissing(appInfo.packageName, appInfo.libraryIconLastModified)
-
-    val state =
-        produceState<LibraryIconLoadResult>(
-            initialValue =
-                when {
-                    isMissing -> LibraryIconLoadResult.Failed
-                    cachedBitmap != null -> LibraryIconLoadResult.Success(cachedBitmap)
-                    else -> LibraryIconLoadResult.Loading
-                },
-            key1 = appInfo.packageName,
-            key2 = appInfo.libraryIconLastModified,
-            key3 = enabled,
-        ) {
-            if (!enabled || isMissing || appInfo.libraryIconPath == null) {
-                value = LibraryIconLoadResult.Failed
-                return@produceState
-            }
-            val memoryCached = FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
-            if (memoryCached != null) {
-                value = LibraryIconLoadResult.Success(memoryCached)
-                return@produceState
-            }
-            val diskBitmap = FocusImageCache.getLibraryIconBitmapAsync(appInfo)
-            value = if (diskBitmap != null) LibraryIconLoadResult.Success(diskBitmap) else LibraryIconLoadResult.Failed
-        }
-
-    val needDefaultIcon = isMissing || state.value is LibraryIconLoadResult.Failed
-    val defaultIcon = rememberIconBitmap(appInfo, enabled = enabled && needDefaultIcon)
-
-    return when (val result = state.value) {
+    var customResult by remember(appInfo.packageName, customPath, appInfo.libraryIconLastModified) {
+        mutableStateOf<LibraryIconLoadResult>(LibraryIconLoadResult.Loading)
+    }
+    LaunchedEffect(appInfo.packageName, customPath, appInfo.libraryIconLastModified) {
+        val diskBitmap = FocusImageCache.getLibraryIconBitmapAsync(appInfo)
+        customResult = if (diskBitmap != null) LibraryIconLoadResult.Success(diskBitmap) else LibraryIconLoadResult.Failed
+    }
+    return when (val result = customResult) {
         is LibraryIconLoadResult.Success -> result.bitmap
         LibraryIconLoadResult.Loading -> null
-        LibraryIconLoadResult.Failed -> defaultIcon
+        LibraryIconLoadResult.Failed -> rememberIconBitmap(appInfo, enabled = true)
     }
 }
 
@@ -1562,29 +1815,19 @@ internal fun rememberAppPalette(
     appInfo: InstalledAppInfo,
     enabled: Boolean = true,
 ): ExtractedAppPalette? {
+    if (!enabled) return null
+    val cached = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
+    if (cached != null) return cached
+
     val appColors = LocalAppColors.current
     val iconVersion = if (appInfo.isRom) appInfo.logoLastModified else appInfo.lastUpdateTime
-    val state =
-        produceState<ExtractedAppPalette?>(
-            initialValue = if (enabled) AppPaletteExtractor.getCachedColorsOrNull(appInfo) else null,
-            appInfo.packageName,
-            appInfo.coverPath,
-            appInfo.coverLastModified,
-            iconVersion,
-            enabled,
-        ) {
-            if (!enabled) {
-                value = null
-                return@produceState
-            }
-            val cached = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
-            if (cached != null) {
-                value = cached
-            } else {
-                value = AppPaletteExtractor.extractColorsAsync(appInfo, appColors.accent, appColors.appBackground)
-            }
-        }
-    return state.value
+    var loadedPalette by remember(appInfo.packageName, appInfo.coverPath, appInfo.coverLastModified, iconVersion) {
+        mutableStateOf<ExtractedAppPalette?>(null)
+    }
+    LaunchedEffect(appInfo.packageName, appInfo.coverPath, appInfo.coverLastModified, iconVersion) {
+        loadedPalette = AppPaletteExtractor.extractColorsAsync(appInfo, appColors.accent, appColors.appBackground)
+    }
+    return loadedPalette
 }
 
 @Composable
@@ -1644,40 +1887,42 @@ private fun PosterCardContent(
     val coverBitmap = rememberCoverBitmap(appInfo)
     val iconBitmap = rememberIconBitmap(appInfo, enabled = coverBitmap == null)
 
-    val visibilityOffAlpha by animateFloatAsState(
-        targetValue = if (isHidden) FTL_HIDDEN_BADGE_ALPHA else FTL_VISIBLE_BADGE_ALPHA,
-        animationSpec = tween(durationMillis = FTL_HIDE_ANIMATION_DURATION_MS),
-        label = "LauncherVisibilityOffAlpha",
-    )
+    val visibilityOffAlphaState =
+        animateFloatAsState(
+            targetValue = if (isHidden) FTL_HIDDEN_BADGE_ALPHA else FTL_VISIBLE_BADGE_ALPHA,
+            animationSpec = tween(durationMillis = FTL_HIDE_ANIMATION_DURATION_MS),
+            label = "LauncherVisibilityOffAlpha",
+        )
+    val showVisibilityBadge by remember {
+        derivedStateOf { visibilityOffAlphaState.value > 0f }
+    }
 
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        val currentCover = coverBitmap
-        val currentIcon = iconBitmap
-        if (currentCover != null) {
+        if (coverBitmap != null) {
             Image(
-                bitmap = currentCover,
+                bitmap = coverBitmap,
                 contentDescription = appInfo.label,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-        } else if (currentIcon != null) {
+        } else if (iconBitmap != null) {
             Image(
-                bitmap = currentIcon,
+                bitmap = iconBitmap,
                 contentDescription = appInfo.label,
                 contentScale = ContentScale.Fit,
                 modifier =
                     if (appInfo.isRom) {
                         Modifier
-                            .fillMaxWidth(0.85f)
+                            .fillMaxWidth(FTL_ROM_LOGO_WIDTH_FRACTION)
                             .heightIn(max = FTL_ICON_SIZE)
-                            .padding(horizontal = 4.dp)
+                            .padding(horizontal = FTL_ROM_LOGO_HORIZONTAL_PADDING)
                     } else {
                         Modifier
                             .size(FTL_ICON_SIZE)
-                            .aspectRatio(1f)
+                            .aspectRatio(FTL_SQUARE_ASPECT_RATIO)
                     },
             )
         } else {
@@ -1712,13 +1957,13 @@ private fun PosterCardContent(
             }
         }
 
-        if (visibilityOffAlpha > 0f) {
+        if (showVisibilityBadge) {
             Box(
                 modifier =
                     Modifier
                         .fillMaxSize()
                         .padding(FTL_BADGE_PADDING)
-                        .graphicsLayer { alpha = visibilityOffAlpha },
+                        .graphicsLayer { alpha = visibilityOffAlphaState.value },
                 contentAlignment = Alignment.TopStart,
             ) {
                 MaterialSymbol(
@@ -1738,4 +1983,56 @@ class RomPagerState(
 ) : PagerState(initialPage, initialPageOffsetFraction) {
     override val pageCount: Int
         get() = pageCountProvider()
+}
+
+internal fun isScreenReaderFeedbackMask(feedbackType: Int): Boolean =
+    (feedbackType and (AccessibilityServiceInfo.FEEDBACK_SPOKEN or AccessibilityServiceInfo.FEEDBACK_BRAILLE)) != 0
+
+internal fun isScreenReaderService(
+    feedbackType: Int,
+    capabilities: Int,
+): Boolean =
+    isScreenReaderFeedbackMask(feedbackType) &&
+        (capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_RETRIEVE_WINDOW_CONTENT) != 0
+
+internal fun isScreenReaderAccessibilityActive(context: Context): Boolean {
+    val am = context.getSystemService(AccessibilityManager::class.java) ?: return false
+    if (!am.isEnabled) return false
+    if (am.isTouchExplorationEnabled) return true
+    return am
+        .getEnabledAccessibilityServiceList(
+            AccessibilityServiceInfo.FEEDBACK_SPOKEN or AccessibilityServiceInfo.FEEDBACK_BRAILLE,
+        ).any { isScreenReaderService(it.feedbackType, it.capabilities) }
+}
+
+@Composable
+private fun rememberScreenReaderActive(context: Context): Boolean {
+    var isActive by remember(context) { mutableStateOf(isScreenReaderAccessibilityActive(context)) }
+    DisposableEffect(context) {
+        val am = context.getSystemService(AccessibilityManager::class.java)
+        if (am == null) {
+            onDispose {}
+        } else {
+            val a11yListener =
+                AccessibilityManager.AccessibilityStateChangeListener {
+                    val updated = isScreenReaderAccessibilityActive(context)
+                    AppLog.d(TAG, "Accessibility state changed -> isScreenReaderActive=$updated")
+                    isActive = updated
+                }
+            val touchListener =
+                AccessibilityManager.TouchExplorationStateChangeListener {
+                    val updated = isScreenReaderAccessibilityActive(context)
+                    AppLog.d(TAG, "Touch exploration state changed -> isScreenReaderActive=$updated")
+                    isActive = updated
+                }
+            am.addAccessibilityStateChangeListener(a11yListener)
+            am.addTouchExplorationStateChangeListener(touchListener)
+            isActive = isScreenReaderAccessibilityActive(context)
+            onDispose {
+                am.removeAccessibilityStateChangeListener(a11yListener)
+                am.removeTouchExplorationStateChangeListener(touchListener)
+            }
+        }
+    }
+    return isActive
 }

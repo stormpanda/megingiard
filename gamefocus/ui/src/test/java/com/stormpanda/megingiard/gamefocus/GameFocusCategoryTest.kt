@@ -197,4 +197,52 @@ class GameFocusCategoryTest {
         assertEquals(before, after)
         assertEquals(before.hashCode(), after.hashCode())
     }
+
+    @Test
+    fun testBuildAppsByCategoryId_matchesFilterAppsAcrossAllCategoryTypes() {
+        val game1 = testApp("com.game.one", isGame = true)
+        val game2 = testApp("com.game.hidden", isGame = true)
+        val app1 = testApp("com.app.one", isGame = false)
+        val snesRom = testApp("rom.snes.chrono", isGame = true, isRom = true, systemId = "snes")
+        val allApps = listOf(game1, game2, app1, snesRom)
+        val favorites = setOf("com.game.hidden", "rom.snes.chrono")
+        val hidden = setOf("com.game.hidden")
+        val lastUsed = listOf("rom.snes.chrono", "com.game.hidden", "com.app.one", "com.missing.pkg")
+        val snesCategory = GameFocusCategory.RomSystem(id = "rom_snes_1", systemId = "snes", displayName = "SNES", folderUri = "u")
+        val nonEmptyCollection = GameFocusCategory.CustomCollection(id = "collection_c1", collectionId = "c1", displayName = "Picks")
+        val emptyCollection = GameFocusCategory.CustomCollection(id = "collection_c2", collectionId = "c2", displayName = "Empty")
+        val collectionMembers = mapOf("c1" to setOf("com.game.hidden", "com.app.one"))
+
+        val categoriesToBuild =
+            listOf(
+                GameFocusCategory.GAMES,
+                GameFocusCategory.APPS,
+                GameFocusCategory.FAVORITES,
+                GameFocusCategory.LAST_USED,
+                snesCategory,
+                nonEmptyCollection,
+                emptyCollection,
+                GameFocusCategory.GAMES,
+            )
+
+        val byId =
+            GameFocusCategory.buildAppsByCategoryId(
+                categories = categoriesToBuild,
+                allApps = allApps,
+                favorites = favorites,
+                hidden = hidden,
+                lastUsed = lastUsed,
+                collectionMembers = collectionMembers,
+            )
+
+        assertEquals(7, byId.size)
+        for (cat in categoriesToBuild.distinctBy { it.id }) {
+            assertEquals(
+                cat.filterApps(allApps, favorites, hidden, lastUsed, collectionMembers),
+                byId[cat.id],
+            )
+        }
+        assertEquals(listOf(snesRom, app1), byId[GameFocusCategory.LAST_USED.id])
+        assertTrue(byId[emptyCollection.id]!!.isEmpty())
+    }
 }

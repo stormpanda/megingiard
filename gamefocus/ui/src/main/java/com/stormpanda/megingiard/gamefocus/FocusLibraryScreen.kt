@@ -3,7 +3,7 @@ package com.stormpanda.megingiard.gamefocus
 import android.graphics.BlurMaskFilter
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -20,45 +20,40 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,7 +65,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
@@ -92,13 +86,16 @@ import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
+import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.GamePadButtonIcon
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
+import kotlinx.coroutines.flow.collectLatest
 import android.graphics.Paint as NativePaint
+import androidx.compose.animation.Animatable as ColorAnimatable
 
 private const val TAG = "FocusLibraryScreen"
 
@@ -124,7 +121,6 @@ private val FLS_SHADOW_SPREAD = 2.dp
 private const val FLS_SHADOW_ALPHA = 0.45f
 private val FLS_BOTTOM_BAR_PADDING_HORIZONTAL = 12.dp
 private val FLS_BOTTOM_BAR_PADDING_VERTICAL = 4.dp
-private val FLS_BUTTON_GAP_SMALL = 2.dp
 private val FLS_HEADER_PADDING_HORIZONTAL = 24.dp
 private val FLS_HEADER_PADDING_VERTICAL = 12.dp
 private val FLS_HEADER_BAR_HEIGHT = 40.dp
@@ -136,6 +132,14 @@ private val FLS_BADGE_PADDING = 8.dp
 private val FLS_BADGE_ICON_SIZE = 18.dp
 
 private const val FLS_FOCUS_BORDER_SPRING_STIFFNESS = 1800f
+private const val FLS_FOCUS_BORDER_ALPHA_DURATION_MS = 150
+private const val FLS_FOCUSED_SCALE = 1.05f
+private const val FLS_UNFOCUSED_SCALE = 1.0f
+private const val FLS_CARD_BG_ANIM_DURATION_MS = 300
+private const val FLS_CARD_SCALE_ANIM_DURATION_MS = 200
+private const val FLS_UNFOCUSED_CARD_BG_ALPHA = 0.5f
+private const val FLS_SPREAD_HALF_DIVISOR = 2f
+private const val FLS_MIN_RECT_DIMENSION_PX = 1f
 
 private const val FLS_HIDDEN_CARD_ALPHA = 0.4f
 private const val FLS_VISIBLE_CARD_ALPHA = 1.0f
@@ -145,7 +149,23 @@ private const val FLS_HIDE_ANIMATION_DURATION_MS = 300
 private const val FLS_MARQUEE_INITIAL_DELAY_MS = 500
 private const val FLS_PROMPT_ANIM_DURATION_MS = 200
 private const val FLS_PROMPT_SLIDE_DIVISOR = 2
-private const val FLS_BUTTON_SLIDE_OFFSET_DP = 10f
+private val FLS_BUTTON_SLIDE_OFFSET = 10.dp
+private const val FLS_HEADER_REEL_SLIDE_DIVISOR = 3
+private const val FLS_CAMERA_DISTANCE_MULTIPLIER = 16
+private const val FLS_NEIGHBOR_1_ALPHA = 0.45f
+private const val FLS_NEIGHBOR_1_ANGLE_FACTOR = 0.7f
+private const val FLS_NEIGHBOR_2_ALPHA = 0.25f
+private const val FLS_NEIGHBOR_2_ANGLE_FACTOR = 1.4f
+private const val FLS_GRADIENT_STOP_SOLID = 0.2f
+private const val FLS_GRADIENT_STOP_MID = 0.5f
+private const val FLS_GRADIENT_STOP_SOLID_BOTTOM = 0.8f
+private const val FLS_GRADIENT_MID_ALPHA = 0.8f
+
+private val FLS_NEIGHBOR_STYLES =
+    listOf(
+        FLS_NEIGHBOR_1_ALPHA to FLS_NEIGHBOR_1_ANGLE_FACTOR,
+        FLS_NEIGHBOR_2_ALPHA to FLS_NEIGHBOR_2_ANGLE_FACTOR,
+    )
 
 private val LibraryTab.stringResId: Int
     get() =
@@ -154,6 +174,51 @@ private val LibraryTab.stringResId: Int
             LibraryTab.APPS -> R.string.gamefocus_library_tab_apps
             is LibraryTab.RomSystem -> 0
         }
+
+@Stable
+private class LibraryFocusOverlayState {
+    var targetRect by mutableStateOf<Rect?>(null)
+    var isFirstPositioned by mutableStateOf(false)
+
+    fun reset() {
+        targetRect = null
+        isFirstPositioned = false
+    }
+
+    fun updateFrom(
+        coords: LayoutCoordinates,
+        parentCoords: LayoutCoordinates,
+    ) {
+        if (coords.isAttached && parentCoords.isAttached) {
+            val positionInParent = parentCoords.localPositionOf(coords, Offset.Zero)
+            val size = coords.size
+            val newRect =
+                Rect(
+                    left = positionInParent.x,
+                    top = positionInParent.y,
+                    right = positionInParent.x + size.width,
+                    bottom = positionInParent.y + size.height,
+                )
+            if (targetRect != newRect) {
+                targetRect = newRect
+                if (!isFirstPositioned) {
+                    isFirstPositioned = true
+                }
+            }
+        }
+    }
+}
+
+private class GridCoordinatesTracker {
+    var gridContainerCoordinates: LayoutCoordinates? = null
+    var focusedItemCoordinates: LayoutCoordinates? = null
+    val visibleItemCoords = HashMap<Int, LayoutCoordinates>()
+
+    fun clear() {
+        focusedItemCoordinates = null
+        visibleItemCoords.clear()
+    }
+}
 
 private suspend fun scrollToFocusedItem(
     gridState: LazyGridState,
@@ -172,7 +237,7 @@ fun FocusLibraryScreen(
     allApps: List<InstalledAppInfo>,
     selectedTab: LibraryTab,
     onTabSelected: (LibraryTab) -> Unit,
-    focusedIndex: Int,
+    focusedIndexState: State<Int>,
     onFocusedIndexChange: (Int) -> Unit,
     onAppClickTop: (InstalledAppInfo) -> Unit,
     onAppClickBottom: (InstalledAppInfo) -> Unit,
@@ -202,9 +267,41 @@ fun FocusLibraryScreen(
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
-    val context = LocalContext.current
     val romFolders by RomManager.romFolders.collectAsState()
-    val peekOffsetPx = with(density) { FLS_ROW_PEEK_OFFSET.roundToPx() }
+    val peekOffsetPx = remember(density) { with(density) { FLS_ROW_PEEK_OFFSET.roundToPx() } }
+
+    // Precompute filtered tab lists once per catalog change so L1/R1 tab transitions are O(1) lookups.
+    val appsByTabId =
+        remember(allApps, tabs, selectedTab) {
+            buildMap {
+                for (tab in tabs) {
+                    put(tab.id, tab.filterApps(allApps))
+                }
+                if (!containsKey(selectedTab.id)) {
+                    put(selectedTab.id, selectedTab.filterApps(allApps))
+                }
+            }
+        }
+    val activeApps = appsByTabId[selectedTab.id] ?: emptyList()
+
+    val topGradientBrush =
+        remember(appColors.appBackground) {
+            Brush.verticalGradient(
+                0.0f to appColors.appBackground,
+                FLS_GRADIENT_STOP_SOLID to appColors.appBackground,
+                FLS_GRADIENT_STOP_MID to appColors.appBackground.copy(alpha = FLS_GRADIENT_MID_ALPHA),
+                FLS_VISIBLE_CARD_ALPHA to Color.Transparent,
+            )
+        }
+    val bottomGradientBrush =
+        remember(appColors.appBackground) {
+            Brush.verticalGradient(
+                0.0f to Color.Transparent,
+                FLS_GRADIENT_STOP_MID to appColors.appBackground.copy(alpha = FLS_GRADIENT_MID_ALPHA),
+                FLS_GRADIENT_STOP_SOLID_BOTTOM to appColors.appBackground,
+                FLS_VISIBLE_CARD_ALPHA to appColors.appBackground,
+            )
+        }
 
     Box(
         modifier =
@@ -223,24 +320,11 @@ fun FocusLibraryScreen(
             label = "LibraryCategoryTransition",
             modifier = Modifier.fillMaxSize(),
         ) { activeTab ->
-            val displayedApps = remember(allApps, activeTab) { activeTab.filterApps(allApps) }
-            val gridState: LazyGridState = rememberLazyGridState()
-
-            var lastScrolledRow by remember(activeTab) { mutableStateOf(-1) }
-
-            LaunchedEffect(focusedIndex, displayedApps.size) {
-                if (displayedApps.isNotEmpty() && focusedIndex >= 0) {
-                    val safeIndex = focusedIndex.coerceIn(0, displayedApps.size - 1)
-                    val targetRow = safeIndex / FLS_GRID_COLUMNS
-                    if (targetRow != lastScrolledRow) {
-                        lastScrolledRow = targetRow
-                        AppLog.d(TAG, "Library focused index changed to $safeIndex (row $targetRow, total ${displayedApps.size})")
-                        scrollToFocusedItem(gridState, safeIndex, FLS_GRID_COLUMNS, peekOffsetPx)
-                    } else {
-                        AppLog.d(TAG, "Library focused index changed to $safeIndex in same row $targetRow (total ${displayedApps.size})")
-                    }
+            val displayedApps =
+                remember(allApps, activeTab, appsByTabId) {
+                    appsByTabId[activeTab.id] ?: activeTab.filterApps(allApps)
                 }
-            }
+            val gridState: LazyGridState = rememberLazyGridState()
 
             if (displayedApps.isEmpty()) {
                 Box(
@@ -254,50 +338,47 @@ fun FocusLibraryScreen(
                     )
                 }
             } else {
-                var gridContainerCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                var focusedItemCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                var targetRect by remember { mutableStateOf<Rect?>(null) }
-                var isFirstPositioned by remember { mutableStateOf(false) }
-                val visibleItemCoords = remember { mutableMapOf<Int, LayoutCoordinates>() }
+                val overlayState = remember(activeTab) { LibraryFocusOverlayState() }
+                val coordsTracker = remember(activeTab) { GridCoordinatesTracker() }
+                val currentOnFocusedIndexChange by rememberUpdatedState(onFocusedIndexChange)
+                val currentOnAppClickTop by rememberUpdatedState(onAppClickTop)
 
-                LaunchedEffect(activeTab) {
-                    targetRect = null
-                    isFirstPositioned = false
-                    visibleItemCoords.clear()
-                    lastScrolledRow = -1
-                    gridState.scrollToItem(0)
-                }
+                LibraryGridFocusScroller(
+                    activeTab = activeTab,
+                    focusedIndexState = focusedIndexState,
+                    itemCount = displayedApps.size,
+                    gridState = gridState,
+                    peekOffsetPx = peekOffsetPx,
+                    overlayState = overlayState,
+                    coordsTracker = coordsTracker,
+                )
 
-                fun updateFocusedRect(
-                    coords: LayoutCoordinates,
-                    parentCoords: LayoutCoordinates,
-                ) {
-                    if (coords.isAttached && parentCoords.isAttached) {
-                        val positionInParent = parentCoords.localPositionOf(coords, Offset.Zero)
-                        val size = coords.size
-                        val newRect =
-                            Rect(
-                                left = positionInParent.x,
-                                top = positionInParent.y,
-                                right = positionInParent.x + size.width,
-                                bottom = positionInParent.y + size.height,
-                            )
-                        if (targetRect != newRect) {
-                            targetRect = newRect
-                            if (!isFirstPositioned) {
-                                isFirstPositioned = true
+                val handleItemClick: (Int, InstalledAppInfo) -> Unit =
+                    remember(activeTab) {
+                        { index, app ->
+                            currentOnFocusedIndexChange(index)
+                            currentOnAppClickTop(app)
+                        }
+                    }
+
+                val handleItemPositioned: (Int, Boolean, LayoutCoordinates) -> Unit =
+                    remember(activeTab, focusedIndexState) {
+                        { index, itemIsFocused, itemCoords ->
+                            coordsTracker.visibleItemCoords[index] = itemCoords
+                            if (itemIsFocused || index == focusedIndexState.value) {
+                                coordsTracker.focusedItemCoordinates = itemCoords
+                                coordsTracker.gridContainerCoordinates?.let { parentCoords ->
+                                    overlayState.updateFrom(itemCoords, parentCoords)
+                                }
                             }
                         }
                     }
-                }
 
-                SideEffect {
-                    val currentFocusedCoords = visibleItemCoords[focusedIndex] ?: focusedItemCoordinates
-                    val parentCoords = gridContainerCoordinates
-                    if (currentFocusedCoords != null && parentCoords != null) {
-                        updateFocusedRect(currentFocusedCoords, parentCoords)
-                    }
-                }
+                LibraryFocusPositionSync(
+                    focusedIndexState = focusedIndexState,
+                    coordsTracker = coordsTracker,
+                    overlayState = overlayState,
+                )
 
                 Box(
                     modifier =
@@ -305,10 +386,11 @@ fun FocusLibraryScreen(
                             .fillMaxSize()
                             .clipToBounds()
                             .onGloballyPositioned { coords ->
-                                gridContainerCoordinates = coords
-                                val currentFocusedCoords = visibleItemCoords[focusedIndex] ?: focusedItemCoordinates
+                                coordsTracker.gridContainerCoordinates = coords
+                                val currentFocusedCoords =
+                                    coordsTracker.visibleItemCoords[focusedIndexState.value] ?: coordsTracker.focusedItemCoordinates
                                 currentFocusedCoords?.let { itemCoords ->
-                                    updateFocusedRect(itemCoords, coords)
+                                    overlayState.updateFrom(itemCoords, coords)
                                 }
                             },
                 ) {
@@ -330,128 +412,26 @@ fun FocusLibraryScreen(
                             items = displayedApps,
                             key = { _, app -> app.packageName },
                         ) { index, app ->
-                            val isFocused = (index == focusedIndex)
+                            val isFocused by remember(focusedIndexState, index) {
+                                derivedStateOf { focusedIndexState.value == index }
+                            }
                             val isHidden = hiddenSet.contains(app.packageName)
                             LibraryGridItem(
+                                index = index,
                                 appInfo = app,
                                 isFocused = isFocused,
                                 isHidden = isHidden,
-                                onClickTop = {
-                                    onFocusedIndexChange(index)
-                                    onAppClickTop(app)
-                                },
-                                onClickBottom = {
-                                    onFocusedIndexChange(index)
-                                    onAppClickBottom(app)
-                                },
-                                modifier =
-                                    Modifier.onGloballyPositioned { itemCoords ->
-                                        visibleItemCoords[index] = itemCoords
-                                        if (isFocused) {
-                                            focusedItemCoordinates = itemCoords
-                                            gridContainerCoordinates?.let { parentCoords ->
-                                                updateFocusedRect(itemCoords, parentCoords)
-                                            }
-                                        }
-                                    },
+                                onItemClick = handleItemClick,
+                                onItemPositioned = handleItemPositioned,
                             )
                         }
                     }
 
-                    // Smoothly Animated Moving Focus Indicator Overlay
-                    if (targetRect != null) {
-                        val currentRect = targetRect!!
-
-                        val borderAnimationSpec =
-                            spring<Float>(
-                                stiffness = FLS_FOCUS_BORDER_SPRING_STIFFNESS,
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                            )
-
-                        val animLeft by animateFloatAsState(
-                            targetValue = currentRect.left,
-                            animationSpec = borderAnimationSpec,
-                            label = "LibraryBorderAnimLeft",
-                        )
-                        val animTop by animateFloatAsState(
-                            targetValue = currentRect.top,
-                            animationSpec = borderAnimationSpec,
-                            label = "LibraryBorderAnimTop",
-                        )
-                        val borderAlpha by animateFloatAsState(
-                            targetValue = if (isFirstPositioned) 1f else 0f,
-                            animationSpec = tween(durationMillis = 150),
-                            label = "LibraryBorderAlpha",
-                        )
-
-                        Box(
-                            modifier =
-                                Modifier
-                                    .graphicsLayer {
-                                        translationX = animLeft
-                                        translationY = animTop
-                                        scaleX = 1.05f
-                                        scaleY = 1.05f
-                                        alpha = borderAlpha
-                                    }.size(
-                                        width = with(density) { currentRect.width.coerceAtLeast(1f).toDp() },
-                                        height = with(density) { currentRect.height.coerceAtLeast(1f).toDp() },
-                                    ).drawWithCache {
-                                        val cornerRadiusPx = FLS_CORNER_RADIUS.toPx()
-                                        val blurRadiusPx = FLS_SHADOW_BLUR_RADIUS.toPx()
-                                        val spreadPx = FLS_SHADOW_SPREAD.toPx()
-                                        val shadowColorArgb = appColors.accent.copy(alpha = FLS_SHADOW_ALPHA).toArgb()
-
-                                        // The overlay is drawn ABOVE the grid, so the glow must never paint
-                                        // inside the card bounds. OUTER blur renders only the halo outside the
-                                        // shape, and a solid stroke band covers the spread ring — no stencil clip.
-                                        val glowPaint =
-                                            NativePaint().apply {
-                                                isAntiAlias = true
-                                                color = shadowColorArgb
-                                                style = NativePaint.Style.FILL
-                                                maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.OUTER)
-                                            }
-                                        val spreadBandPaint =
-                                            NativePaint().apply {
-                                                isAntiAlias = true
-                                                color = shadowColorArgb
-                                                style = NativePaint.Style.STROKE
-                                                strokeWidth = spreadPx
-                                            }
-                                        val halfSpreadPx = spreadPx / 2f
-
-                                        onDrawBehind {
-                                            if (borderAlpha > 0f) {
-                                                drawIntoCanvas { canvas ->
-                                                    canvas.nativeCanvas.drawRoundRect(
-                                                        -spreadPx,
-                                                        -spreadPx,
-                                                        size.width + spreadPx,
-                                                        size.height + spreadPx,
-                                                        cornerRadiusPx + spreadPx,
-                                                        cornerRadiusPx + spreadPx,
-                                                        glowPaint,
-                                                    )
-                                                    canvas.nativeCanvas.drawRoundRect(
-                                                        -halfSpreadPx,
-                                                        -halfSpreadPx,
-                                                        size.width + halfSpreadPx,
-                                                        size.height + halfSpreadPx,
-                                                        cornerRadiusPx + halfSpreadPx,
-                                                        cornerRadiusPx + halfSpreadPx,
-                                                        spreadBandPaint,
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }.border(
-                                        width = FLS_FOCUS_BORDER_WIDTH,
-                                        color = appColors.accent,
-                                        shape = FLS_CARD_SHAPE,
-                                    ),
-                        )
-                    }
+                    // Isolated leaf overlay so per-pixel scroll position updates never recompose LazyVerticalGrid.
+                    LibraryFocusIndicatorOverlay(
+                        overlayState = overlayState,
+                        appColors = appColors,
+                    )
                 }
             }
         }
@@ -463,35 +443,27 @@ fun FocusLibraryScreen(
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .height(FLS_TOP_GRADIENT_HEIGHT)
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                0.0f to appColors.appBackground,
-                                0.2f to appColors.appBackground,
-                                0.5f to appColors.appBackground.copy(alpha = 0.8f),
-                                1.0f to Color.Transparent,
-                            ),
-                    ),
+                    .background(brush = topGradientBrush),
         )
 
         // Header Bar with Title, Subtitle, and Tabs hovering over the grid
+        val handleHeaderTabSelected: (LibraryTab) -> Unit =
+            remember(onTabSelected, onFocusedIndexChange) {
+                { tab ->
+                    AppLog.i(TAG, "Library tab clicked/selected: ${tab.id}")
+                    onTabSelected(tab)
+                    onFocusedIndexChange(0)
+                }
+            }
         LibraryHeaderBar(
             selectedTab = selectedTab,
-            onTabSelected = { tab ->
-                AppLog.i(TAG, "Library tab clicked/selected: ${tab.id}")
-                onTabSelected(tab)
-                onFocusedIndexChange(0)
-            },
+            onTabSelected = handleHeaderTabSelected,
             onCloseRequested = onCloseRequested,
             enabled = enabled,
             tabs = tabs,
             areButtonPromptsVisible = areButtonPromptsVisible,
             modifier = Modifier.align(Alignment.TopCenter),
         )
-
-        val activeApps = remember(allApps, selectedTab) { selectedTab.filterApps(allApps) }
-        val focusedApp = activeApps.getOrNull(focusedIndex.coerceAtLeast(0))
-        val isCurrentHidden = focusedApp != null && hiddenSet.contains(focusedApp.packageName)
 
         // Bottom edge shadow overlay to improve button readability
         Box(
@@ -500,15 +472,7 @@ fun FocusLibraryScreen(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .height(FLS_BOTTOM_GRADIENT_HEIGHT)
-                    .background(
-                        brush =
-                            Brush.verticalGradient(
-                                0.0f to Color.Transparent,
-                                0.5f to appColors.appBackground.copy(alpha = 0.8f),
-                                0.8f to appColors.appBackground,
-                                1.0f to appColors.appBackground,
-                            ),
-                    ),
+                    .background(brush = bottomGradientBrush),
         )
 
         if (isOptionsMenuExpanded) {
@@ -524,105 +488,30 @@ fun FocusLibraryScreen(
             )
         }
 
-        // Bottom Bar containing Action Menu (lower left) and Launch indicators (lower right) hovering over the grid
-        Box(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(
-                        start = FLS_BOTTOM_BAR_PADDING_HORIZONTAL,
-                        end = FLS_BOTTOM_BAR_PADDING_HORIZONTAL,
-                        bottom = FLS_BOTTOM_BAR_PADDING_VERTICAL,
-                        top = FLS_BOTTOM_BAR_PADDING_VERTICAL,
-                    ),
-        ) {
-            // Lower Left: Library Action Menu
-            AnimatedVisibility(
-                visible = areButtonPromptsVisible || isOptionsMenuExpanded,
-                enter =
-                    fadeIn(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
-                        slideInVertically(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) { it / FLS_PROMPT_SLIDE_DIVISOR },
-                exit =
-                    fadeOut(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
-                        slideOutVertically(
-                            animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS),
-                        ) { it / FLS_PROMPT_SLIDE_DIVISOR },
-                modifier = Modifier.align(Alignment.BottomStart),
-            ) {
-                Box {
-                    val currentOnEditArtwork by rememberUpdatedState(onEditArtwork)
-                    val actions =
-                        remember(
-                            focusedApp,
-                            isCurrentHidden,
-                            selectedTab,
-                            romFolders,
-                        ) {
-                            buildLibraryMenuActions(
-                                context = context,
-                                focusedApp = focusedApp,
-                                isHidden = isCurrentHidden,
-                                selectedTab = selectedTab,
-                                romFolders = romFolders,
-                                onEditArtwork = { currentOnEditArtwork(it) },
-                                onToggleHidden = onToggleHidden,
-                                onOpenAppInfo = onOpenAppInfo,
-                                onUninstallApp = onUninstallApp,
-                                onAddRomFolder = onAddRomFolder,
-                                onManageRomFolders = {
-                                    onRemoveRomFolderDialogSelectedIndexChange(0)
-                                    onRemoveRomFolderDialogOpenChange(true)
-                                },
-                                onChangeCore = onChangeCore,
-                                onOpenManageGalleries = onOpenManageGalleries,
-                                onDismissMenu = { onOptionsMenuExpandedChange(false) },
-                            )
-                        }
-                    val itemActionsCount =
-                        if (focusedApp != null) {
-                            if (!focusedApp.isRom) LIBRARY_APP_ACTIONS_COUNT else LIBRARY_ROM_ACTIONS_COUNT
-                        } else {
-                            0
-                        }
-                    val dividerAfterIndex =
-                        if (itemActionsCount > 0 && itemActionsCount < actions.size) {
-                            itemActionsCount - 1
-                        } else {
-                            null
-                        }
-                    ExpandableActionsMenu(
-                        isExpanded = isOptionsMenuExpanded,
-                        onExpandedChange = onOptionsMenuExpandedChange,
-                        actions = actions,
-                        selectedIndex = selectedIndex,
-                        dividerAfterIndex = dividerAfterIndex,
-                        enabled = enabled,
-                    )
-                }
-            }
-
-            // Lower Right: Subdued touch launch buttons
-            AnimatedVisibility(
-                visible = areButtonPromptsVisible,
-                enter =
-                    fadeIn(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
-                        slideInVertically(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) { it / FLS_PROMPT_SLIDE_DIVISOR },
-                exit =
-                    fadeOut(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
-                        slideOutVertically(
-                            animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS),
-                        ) { it / FLS_PROMPT_SLIDE_DIVISOR },
-                modifier = Modifier.align(Alignment.BottomEnd),
-            ) {
-                DualScreenLaunchButtons(
-                    appInfo = focusedApp,
-                    enabled = enabled && !isOptionsMenuExpanded,
-                    onLaunchTop = onAppClickTop,
-                    onLaunchBottom = onAppClickBottom,
-                )
-            }
-        }
+        LibraryBottomControls(
+            activeApps = activeApps,
+            focusedIndexState = focusedIndexState,
+            hiddenSet = hiddenSet,
+            selectedTab = selectedTab,
+            romFolders = romFolders,
+            areButtonPromptsVisible = areButtonPromptsVisible,
+            isOptionsMenuExpanded = isOptionsMenuExpanded,
+            onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
+            selectedIndex = selectedIndex,
+            enabled = enabled,
+            onEditArtwork = onEditArtwork,
+            onToggleHidden = onToggleHidden,
+            onOpenAppInfo = onOpenAppInfo,
+            onUninstallApp = onUninstallApp,
+            onAddRomFolder = onAddRomFolder,
+            onRemoveRomFolderDialogSelectedIndexChange = onRemoveRomFolderDialogSelectedIndexChange,
+            onRemoveRomFolderDialogOpenChange = onRemoveRomFolderDialogOpenChange,
+            onChangeCore = onChangeCore,
+            onOpenManageGalleries = onOpenManageGalleries,
+            onAppClickTop = onAppClickTop,
+            onAppClickBottom = onAppClickBottom,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
 
         if (isRemoveRomFolderDialogOpen) {
             RemoveRomFolderDialog(
@@ -665,6 +554,299 @@ fun FocusLibraryScreen(
 }
 
 @Composable
+private fun LibraryGridFocusScroller(
+    activeTab: LibraryTab,
+    focusedIndexState: State<Int>,
+    itemCount: Int,
+    gridState: LazyGridState,
+    peekOffsetPx: Int,
+    overlayState: LibraryFocusOverlayState,
+    coordsTracker: GridCoordinatesTracker,
+) {
+    var lastScrolledRow by remember(activeTab) { mutableIntStateOf(-1) }
+    val currentItemCount by rememberUpdatedState(itemCount)
+
+    LaunchedEffect(activeTab) {
+        overlayState.reset()
+        coordsTracker.clear()
+        lastScrolledRow = -1
+        gridState.scrollToItem(0)
+    }
+
+    LaunchedEffect(activeTab, gridState, peekOffsetPx) {
+        snapshotFlow { focusedIndexState.value to currentItemCount }
+            .collectLatest { (focusedIndex, totalCount) ->
+                if (totalCount > 0 && focusedIndex >= 0) {
+                    val safeIndex = focusedIndex.coerceIn(0, totalCount - 1)
+                    val targetRow = safeIndex / FLS_GRID_COLUMNS
+                    if (targetRow != lastScrolledRow) {
+                        lastScrolledRow = targetRow
+                        AppLog.d(TAG, "Library focused index changed to $safeIndex (row $targetRow, total $totalCount)")
+                        scrollToFocusedItem(gridState, safeIndex, FLS_GRID_COLUMNS, peekOffsetPx)
+                    } else {
+                        AppLog.d(TAG, "Library focused index changed to $safeIndex in same row $targetRow (total $totalCount)")
+                    }
+                }
+            }
+    }
+}
+
+@Composable
+private fun LibraryFocusPositionSync(
+    focusedIndexState: State<Int>,
+    coordsTracker: GridCoordinatesTracker,
+    overlayState: LibraryFocusOverlayState,
+) {
+    val focusedIndex = focusedIndexState.value
+    SideEffect {
+        val currentFocusedCoords =
+            coordsTracker.visibleItemCoords[focusedIndex] ?: coordsTracker.focusedItemCoordinates
+        val parentCoords = coordsTracker.gridContainerCoordinates
+        if (currentFocusedCoords != null && parentCoords != null) {
+            overlayState.updateFrom(currentFocusedCoords, parentCoords)
+        }
+    }
+}
+
+@Composable
+private fun LibraryBottomControls(
+    activeApps: List<InstalledAppInfo>,
+    focusedIndexState: State<Int>,
+    hiddenSet: Set<String>,
+    selectedTab: LibraryTab,
+    romFolders: List<CustomRomFolder>,
+    areButtonPromptsVisible: Boolean,
+    isOptionsMenuExpanded: Boolean,
+    onOptionsMenuExpandedChange: (Boolean) -> Unit,
+    selectedIndex: Int,
+    enabled: Boolean,
+    onEditArtwork: (InstalledAppInfo) -> Unit,
+    onToggleHidden: (InstalledAppInfo) -> Unit,
+    onOpenAppInfo: (InstalledAppInfo) -> Unit,
+    onUninstallApp: (InstalledAppInfo) -> Unit,
+    onAddRomFolder: () -> Unit,
+    onRemoveRomFolderDialogSelectedIndexChange: (Int) -> Unit,
+    onRemoveRomFolderDialogOpenChange: (Boolean) -> Unit,
+    onChangeCore: (CustomRomFolder) -> Unit,
+    onOpenManageGalleries: () -> Unit,
+    onAppClickTop: (InstalledAppInfo) -> Unit,
+    onAppClickBottom: (InstalledAppInfo) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val focusedApp by remember(activeApps, focusedIndexState) {
+        derivedStateOf { activeApps.getOrNull(focusedIndexState.value.coerceAtLeast(0)) }
+    }
+    val isCurrentHidden = focusedApp != null && hiddenSet.contains(focusedApp!!.packageName)
+
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(
+                    start = FLS_BOTTOM_BAR_PADDING_HORIZONTAL,
+                    end = FLS_BOTTOM_BAR_PADDING_HORIZONTAL,
+                    bottom = FLS_BOTTOM_BAR_PADDING_VERTICAL,
+                    top = FLS_BOTTOM_BAR_PADDING_VERTICAL,
+                ),
+    ) {
+        // Lower Left: Library Action Menu
+        AnimatedVisibility(
+            visible = areButtonPromptsVisible || isOptionsMenuExpanded,
+            enter =
+                fadeIn(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
+                    slideInVertically(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) { it / FLS_PROMPT_SLIDE_DIVISOR },
+            exit =
+                fadeOut(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
+                    slideOutVertically(
+                        animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS),
+                    ) { it / FLS_PROMPT_SLIDE_DIVISOR },
+            modifier = Modifier.align(Alignment.BottomStart),
+        ) {
+            Box {
+                val currentOnEditArtwork by rememberUpdatedState(onEditArtwork)
+                val actions =
+                    remember(
+                        focusedApp,
+                        isCurrentHidden,
+                        selectedTab,
+                        romFolders,
+                    ) {
+                        buildLibraryMenuActions(
+                            context = context,
+                            focusedApp = focusedApp,
+                            isHidden = isCurrentHidden,
+                            selectedTab = selectedTab,
+                            romFolders = romFolders,
+                            onEditArtwork = { currentOnEditArtwork(it) },
+                            onToggleHidden = onToggleHidden,
+                            onOpenAppInfo = onOpenAppInfo,
+                            onUninstallApp = onUninstallApp,
+                            onAddRomFolder = onAddRomFolder,
+                            onManageRomFolders = {
+                                onRemoveRomFolderDialogSelectedIndexChange(0)
+                                onRemoveRomFolderDialogOpenChange(true)
+                            },
+                            onChangeCore = onChangeCore,
+                            onOpenManageGalleries = onOpenManageGalleries,
+                            onDismissMenu = { onOptionsMenuExpandedChange(false) },
+                        )
+                    }
+                val currentFocusedApp = focusedApp
+                val itemActionsCount =
+                    if (currentFocusedApp != null) {
+                        if (!currentFocusedApp.isRom) LIBRARY_APP_ACTIONS_COUNT else LIBRARY_ROM_ACTIONS_COUNT
+                    } else {
+                        0
+                    }
+                val dividerAfterIndex =
+                    if (itemActionsCount > 0 && itemActionsCount < actions.size) {
+                        itemActionsCount - 1
+                    } else {
+                        null
+                    }
+                ExpandableActionsMenu(
+                    isExpanded = isOptionsMenuExpanded,
+                    onExpandedChange = onOptionsMenuExpandedChange,
+                    actions = actions,
+                    selectedIndex = selectedIndex,
+                    dividerAfterIndex = dividerAfterIndex,
+                    enabled = enabled,
+                )
+            }
+        }
+
+        // Lower Right: Subdued touch launch buttons
+        AnimatedVisibility(
+            visible = areButtonPromptsVisible,
+            enter =
+                fadeIn(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
+                    slideInVertically(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) { it / FLS_PROMPT_SLIDE_DIVISOR },
+            exit =
+                fadeOut(animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS)) +
+                    slideOutVertically(
+                        animationSpec = tween(FLS_PROMPT_ANIM_DURATION_MS),
+                    ) { it / FLS_PROMPT_SLIDE_DIVISOR },
+            modifier = Modifier.align(Alignment.BottomEnd),
+        ) {
+            DualScreenLaunchButtons(
+                appInfo = focusedApp,
+                enabled = enabled && !isOptionsMenuExpanded,
+                onLaunchTop = onAppClickTop,
+                onLaunchBottom = onAppClickBottom,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LibraryFocusIndicatorOverlay(
+    overlayState: LibraryFocusOverlayState,
+    appColors: AppColors,
+) {
+    val currentRect = overlayState.targetRect ?: return
+    val density = LocalDensity.current
+
+    val borderAnimationSpec =
+        remember {
+            spring<Float>(
+                stiffness = FLS_FOCUS_BORDER_SPRING_STIFFNESS,
+                dampingRatio = Spring.DampingRatioNoBouncy,
+            )
+        }
+
+    val animLeftState =
+        animateFloatAsState(
+            targetValue = currentRect.left,
+            animationSpec = borderAnimationSpec,
+            label = "LibraryBorderAnimLeft",
+        )
+    val animTopState =
+        animateFloatAsState(
+            targetValue = currentRect.top,
+            animationSpec = borderAnimationSpec,
+            label = "LibraryBorderAnimTop",
+        )
+    val borderAlphaState =
+        animateFloatAsState(
+            targetValue = if (overlayState.isFirstPositioned) FLS_VISIBLE_CARD_ALPHA else 0f,
+            animationSpec = tween(durationMillis = FLS_FOCUS_BORDER_ALPHA_DURATION_MS),
+            label = "LibraryBorderAlpha",
+        )
+
+    val cardWidthDp = with(density) { currentRect.width.coerceAtLeast(FLS_MIN_RECT_DIMENSION_PX).toDp() }
+    val cardHeightDp = with(density) { currentRect.height.coerceAtLeast(FLS_MIN_RECT_DIMENSION_PX).toDp() }
+
+    Box(
+        modifier =
+            Modifier
+                .graphicsLayer {
+                    translationX = animLeftState.value
+                    translationY = animTopState.value
+                    scaleX = FLS_FOCUSED_SCALE
+                    scaleY = FLS_FOCUSED_SCALE
+                    alpha = borderAlphaState.value
+                }.size(
+                    width = cardWidthDp,
+                    height = cardHeightDp,
+                ).drawWithCache {
+                    val cornerRadiusPx = FLS_CORNER_RADIUS.toPx()
+                    val blurRadiusPx = FLS_SHADOW_BLUR_RADIUS.toPx()
+                    val spreadPx = FLS_SHADOW_SPREAD.toPx()
+                    val shadowColorArgb = appColors.accent.copy(alpha = FLS_SHADOW_ALPHA).toArgb()
+
+                    // The overlay is drawn ABOVE the grid, so the glow must never paint
+                    // inside the card bounds. OUTER blur renders only the halo outside the
+                    // shape, and a solid stroke band covers the spread ring — no stencil clip.
+                    val glowPaint =
+                        NativePaint().apply {
+                            isAntiAlias = true
+                            color = shadowColorArgb
+                            style = NativePaint.Style.FILL
+                            maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.OUTER)
+                        }
+                    val spreadBandPaint =
+                        NativePaint().apply {
+                            isAntiAlias = true
+                            color = shadowColorArgb
+                            style = NativePaint.Style.STROKE
+                            strokeWidth = spreadPx
+                        }
+                    val halfSpreadPx = spreadPx / FLS_SPREAD_HALF_DIVISOR
+
+                    onDrawBehind {
+                        if (borderAlphaState.value > 0f) {
+                            drawIntoCanvas { canvas ->
+                                canvas.nativeCanvas.drawRoundRect(
+                                    -spreadPx,
+                                    -spreadPx,
+                                    size.width + spreadPx,
+                                    size.height + spreadPx,
+                                    cornerRadiusPx + spreadPx,
+                                    cornerRadiusPx + spreadPx,
+                                    glowPaint,
+                                )
+                                canvas.nativeCanvas.drawRoundRect(
+                                    -halfSpreadPx,
+                                    -halfSpreadPx,
+                                    size.width + halfSpreadPx,
+                                    size.height + halfSpreadPx,
+                                    cornerRadiusPx + halfSpreadPx,
+                                    cornerRadiusPx + halfSpreadPx,
+                                    spreadBandPaint,
+                                )
+                            }
+                        }
+                    }
+                }.border(
+                    width = FLS_FOCUS_BORDER_WIDTH,
+                    color = appColors.accent,
+                    shape = FLS_CARD_SHAPE,
+                ),
+    )
+}
+
+@Composable
 private fun LibraryHeaderBar(
     selectedTab: LibraryTab,
     onTabSelected: (LibraryTab) -> Unit,
@@ -674,8 +856,6 @@ private fun LibraryHeaderBar(
     enabled: Boolean = true,
     areButtonPromptsVisible: Boolean = true,
 ) {
-    val appColors = LocalAppColors.current
-
     Box(
         modifier =
             modifier
@@ -740,27 +920,32 @@ private fun InteractiveLibraryCategoryHeader(
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
+    val slideOffsetPx = remember(density) { with(density) { FLS_BUTTON_SLIDE_OFFSET.toPx() } }
 
-    val l1Alpha by animateFloatAsState(
-        targetValue = if (areButtonPromptsVisible) 1f else 0f,
-        animationSpec = tween(durationMillis = FLS_PROMPT_ANIM_DURATION_MS),
-        label = "LibraryL1Alpha",
-    )
-    val l1TranslationX by animateFloatAsState(
-        targetValue = if (areButtonPromptsVisible) 0f else -with(density) { FLS_BUTTON_SLIDE_OFFSET_DP.dp.toPx() },
-        animationSpec = tween(durationMillis = FLS_PROMPT_ANIM_DURATION_MS),
-        label = "LibraryL1TranslationX",
-    )
-    val r1Alpha by animateFloatAsState(
-        targetValue = if (areButtonPromptsVisible) 1f else 0f,
-        animationSpec = tween(durationMillis = FLS_PROMPT_ANIM_DURATION_MS),
-        label = "LibraryR1Alpha",
-    )
-    val r1TranslationX by animateFloatAsState(
-        targetValue = if (areButtonPromptsVisible) 0f else with(density) { FLS_BUTTON_SLIDE_OFFSET_DP.dp.toPx() },
-        animationSpec = tween(durationMillis = FLS_PROMPT_ANIM_DURATION_MS),
-        label = "LibraryR1TranslationX",
-    )
+    val l1AlphaState =
+        animateFloatAsState(
+            targetValue = if (areButtonPromptsVisible) FLS_VISIBLE_CARD_ALPHA else 0f,
+            animationSpec = tween(durationMillis = FLS_PROMPT_ANIM_DURATION_MS),
+            label = "LibraryL1Alpha",
+        )
+    val l1TranslationXState =
+        animateFloatAsState(
+            targetValue = if (areButtonPromptsVisible) 0f else -slideOffsetPx,
+            animationSpec = tween(durationMillis = FLS_PROMPT_ANIM_DURATION_MS),
+            label = "LibraryL1TranslationX",
+        )
+    val r1AlphaState =
+        animateFloatAsState(
+            targetValue = if (areButtonPromptsVisible) FLS_VISIBLE_CARD_ALPHA else 0f,
+            animationSpec = tween(durationMillis = FLS_PROMPT_ANIM_DURATION_MS),
+            label = "LibraryR1Alpha",
+        )
+    val r1TranslationXState =
+        animateFloatAsState(
+            targetValue = if (areButtonPromptsVisible) 0f else slideOffsetPx,
+            animationSpec = tween(durationMillis = FLS_PROMPT_ANIM_DURATION_MS),
+            label = "LibraryR1TranslationX",
+        )
 
     Row(
         modifier = modifier,
@@ -776,8 +961,8 @@ private fun InteractiveLibraryCategoryHeader(
             modifier =
                 Modifier
                     .graphicsLayer {
-                        alpha = l1Alpha
-                        translationX = l1TranslationX
+                        alpha = l1AlphaState.value
+                        translationX = l1TranslationXState.value
                     }.noFocusClickable(enabled = areButtonPromptsVisible) {
                         onTabSelected(selectedTab.previous(tabs))
                     },
@@ -788,13 +973,14 @@ private fun InteractiveLibraryCategoryHeader(
             targetState = selectedTab,
             transitionSpec = {
                 val direction = if (initialState.next(tabs) == targetState) 1 else -1
-                (slideInHorizontally { width -> (width / 3) * direction } + fadeIn())
-                    .togetherWith(slideOutHorizontally { width -> -(width / 3) * direction } + fadeOut())
+                (slideInHorizontally { width -> (width / FLS_HEADER_REEL_SLIDE_DIVISOR) * direction } + fadeIn())
+                    .togetherWith(slideOutHorizontally { width -> -(width / FLS_HEADER_REEL_SLIDE_DIVISOR) * direction } + fadeOut())
             },
             label = "LibraryHorizontalCategoryTransition",
         ) { currentTab ->
             val next1 = currentTab.next(tabs)
             val next2 = next1.next(tabs)
+            val neighborTabs = listOf(next1, next2)
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -812,14 +998,16 @@ private fun InteractiveLibraryCategoryHeader(
                     modifier = Modifier.noFocusClickable { onTabSelected(currentTab) },
                 )
 
-                listOf(next1 to (0.45f to 0.7f), next2 to (0.25f to 1.4f)).forEach { (tab, style) ->
-                    val (alpha, angleFactor) = style
+                neighborTabs.forEachIndexed { idx, tab ->
+                    val stylePair = FLS_NEIGHBOR_STYLES[idx]
+                    val neighborAlpha = stylePair.first
+                    val angleFactor = stylePair.second
                     Text(
                         text = getTabName(tab),
                         style =
                             MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = appColors.onSurfaceSecondary.copy(alpha = alpha),
+                                color = appColors.onSurfaceSecondary.copy(alpha = neighborAlpha),
                             ),
                         maxLines = 1,
                         modifier =
@@ -827,7 +1015,7 @@ private fun InteractiveLibraryCategoryHeader(
                                 .noFocusClickable { onTabSelected(tab) }
                                 .graphicsLayer {
                                     rotationY = FLS_CATEGORY_ROLL_Y_ANGLE_DEG * angleFactor
-                                    cameraDistance = 16 * density.density
+                                    cameraDistance = FLS_CAMERA_DISTANCE_MULTIPLIER * density.density
                                 },
                     )
                 }
@@ -843,8 +1031,8 @@ private fun InteractiveLibraryCategoryHeader(
             modifier =
                 Modifier
                     .graphicsLayer {
-                        alpha = r1Alpha
-                        translationX = r1TranslationX
+                        alpha = r1AlphaState.value
+                        translationX = r1TranslationXState.value
                     }.noFocusClickable(enabled = areButtonPromptsVisible) {
                         onTabSelected(selectedTab.next(tabs))
                     },
@@ -854,17 +1042,31 @@ private fun InteractiveLibraryCategoryHeader(
 
 @Composable
 private fun LibraryGridItem(
+    index: Int,
     appInfo: InstalledAppInfo,
     isFocused: Boolean,
     isHidden: Boolean = false,
-    onClickTop: () -> Unit,
-    onClickBottom: () -> Unit,
+    onItemClick: (Int, InstalledAppInfo) -> Unit,
+    onItemPositioned: (Int, Boolean, LayoutCoordinates) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
     val iconBitmap = rememberLibraryIconBitmap(appInfo)
+    val unfocusedCardBg = appColors.surface.copy(alpha = FLS_UNFOCUSED_CARD_BG_ALPHA)
 
-    val currentPalette = rememberAppPalette(appInfo, enabled = isFocused)
+    val initiallyFocused = remember { isFocused }
+    var wasEverFocused by remember { mutableStateOf(isFocused) }
+    if (isFocused && !wasEverFocused) {
+        wasEverFocused = true
+    }
+
+    val initiallyHidden = remember { isHidden }
+    var wasEverHidden by remember { mutableStateOf(isHidden) }
+    if (isHidden && !wasEverHidden) {
+        wasEverHidden = true
+    }
+
+    val currentPalette = if (isFocused) rememberAppPalette(appInfo, enabled = true) else null
     val targetCardBg =
         if (isFocused) {
             if (currentPalette != null && currentPalette.isExtracted) {
@@ -873,44 +1075,85 @@ private fun LibraryGridItem(
                 appColors.surfaceVariant
             }
         } else {
-            appColors.surface.copy(alpha = 0.5f)
+            unfocusedCardBg
         }
 
-    val animatedCardBg by animateColorAsState(
-        targetValue = targetCardBg,
-        animationSpec = tween(durationMillis = 300),
-        label = "LibraryCardBgAnim",
-    )
+    val cardBgAnim =
+        if (wasEverFocused) {
+            val anim = remember { ColorAnimatable(if (initiallyFocused) targetCardBg else unfocusedCardBg) }
+            LaunchedEffect(targetCardBg) {
+                anim.animateTo(targetCardBg, tween(durationMillis = FLS_CARD_BG_ANIM_DURATION_MS))
+            }
+            anim
+        } else {
+            null
+        }
 
-    val cardScale by animateFloatAsState(
-        targetValue = if (isFocused) 1.05f else 1.0f,
-        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
-        label = "LibraryCardScaleAnim",
-    )
+    val cardScaleAnim =
+        if (wasEverFocused) {
+            val anim = remember { Animatable(if (initiallyFocused) FLS_FOCUSED_SCALE else FLS_UNFOCUSED_SCALE) }
+            LaunchedEffect(isFocused) {
+                val targetScale = if (isFocused) FLS_FOCUSED_SCALE else FLS_UNFOCUSED_SCALE
+                anim.animateTo(
+                    targetValue = targetScale,
+                    animationSpec = tween(durationMillis = FLS_CARD_SCALE_ANIM_DURATION_MS, easing = FastOutSlowInEasing),
+                )
+            }
+            anim
+        } else {
+            null
+        }
 
-    val cardAlpha by animateFloatAsState(
-        targetValue = if (isHidden) FLS_HIDDEN_CARD_ALPHA else FLS_VISIBLE_CARD_ALPHA,
-        animationSpec = tween(durationMillis = FLS_HIDE_ANIMATION_DURATION_MS),
-        label = "LibraryCardHiddenAlpha",
-    )
+    val cardAlphaAnim =
+        if (wasEverHidden) {
+            val anim = remember { Animatable(if (initiallyHidden) FLS_HIDDEN_CARD_ALPHA else FLS_VISIBLE_CARD_ALPHA) }
+            LaunchedEffect(isHidden) {
+                val targetAlpha = if (isHidden) FLS_HIDDEN_CARD_ALPHA else FLS_VISIBLE_CARD_ALPHA
+                anim.animateTo(targetAlpha, tween(durationMillis = FLS_HIDE_ANIMATION_DURATION_MS))
+            }
+            anim
+        } else {
+            null
+        }
 
-    val visibilityOffAlpha by animateFloatAsState(
-        targetValue = if (isHidden) FLS_HIDDEN_BADGE_ALPHA else FLS_VISIBLE_BADGE_ALPHA,
-        animationSpec = tween(durationMillis = FLS_HIDE_ANIMATION_DURATION_MS),
-        label = "LibraryVisibilityOffAlpha",
-    )
+    val badgeAlphaAnim =
+        if (wasEverHidden) {
+            val anim = remember { Animatable(if (initiallyHidden) FLS_HIDDEN_BADGE_ALPHA else FLS_VISIBLE_BADGE_ALPHA) }
+            LaunchedEffect(isHidden) {
+                val targetBadgeAlpha = if (isHidden) FLS_HIDDEN_BADGE_ALPHA else FLS_VISIBLE_BADGE_ALPHA
+                anim.animateTo(targetBadgeAlpha, tween(durationMillis = FLS_HIDE_ANIMATION_DURATION_MS))
+            }
+            anim
+        } else {
+            null
+        }
+
+    val showVisibilityBadge by remember(badgeAlphaAnim) {
+        derivedStateOf { (badgeAlphaAnim?.value ?: FLS_VISIBLE_BADGE_ALPHA) > 0f }
+    }
+
+    val handleClick: () -> Unit =
+        remember(index, appInfo, onItemClick) {
+            { onItemClick(index, appInfo) }
+        }
+    val handlePositioned: (LayoutCoordinates) -> Unit =
+        remember(index, isFocused, onItemPositioned) {
+            { coords -> onItemPositioned(index, isFocused, coords) }
+        }
 
     Box(
         modifier =
             modifier
+                .onGloballyPositioned(handlePositioned)
                 .graphicsLayer {
-                    scaleX = cardScale
-                    scaleY = cardScale
-                    alpha = cardAlpha
+                    val scale = cardScaleAnim?.value ?: FLS_UNFOCUSED_SCALE
+                    scaleX = scale
+                    scaleY = scale
+                    alpha = cardAlphaAnim?.value ?: FLS_VISIBLE_CARD_ALPHA
                 }.clip(FLS_CARD_SHAPE)
                 .drawBehind {
-                    drawRect(animatedCardBg)
-                }.noFocusClickable(onClick = onClickTop),
+                    drawRect(cardBgAnim?.value ?: unfocusedCardBg)
+                }.noFocusClickable(onClick = handleClick),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -921,16 +1164,12 @@ private fun LibraryGridItem(
         ) {
             // Square Icon
             Box(
-                modifier =
-                    Modifier
-                        .size(FLS_ICON_SIZE)
-                        .aspectRatio(1f),
+                modifier = Modifier.size(FLS_ICON_SIZE),
                 contentAlignment = Alignment.Center,
             ) {
-                val currentBitmap = iconBitmap
-                if (currentBitmap != null) {
+                if (iconBitmap != null) {
                     Image(
-                        bitmap = currentBitmap,
+                        bitmap = iconBitmap,
                         contentDescription = appInfo.label,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize().clip(FLS_ROM_ICON_SHAPE),
@@ -972,13 +1211,13 @@ private fun LibraryGridItem(
             )
         }
 
-        if (visibilityOffAlpha > 0f) {
+        if (showVisibilityBadge) {
             Box(
                 modifier =
                     Modifier
                         .align(Alignment.TopEnd)
                         .padding(FLS_BADGE_PADDING)
-                        .graphicsLayer { alpha = visibilityOffAlpha },
+                        .graphicsLayer { alpha = badgeAlphaAnim?.value ?: FLS_VISIBLE_BADGE_ALPHA },
             ) {
                 MaterialSymbol(
                     name = "visibility_off",

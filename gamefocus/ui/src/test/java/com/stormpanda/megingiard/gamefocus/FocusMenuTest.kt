@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.gamefocus
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
@@ -209,5 +210,51 @@ class FocusMenuTest {
         assertTrue(shouldHandlePackageBroadcast(Intent.ACTION_PACKAGE_CHANGED, isReplacing = false))
         assertFalse(shouldHandlePackageBroadcast(Intent.ACTION_MAIN, isReplacing = false))
         assertFalse(shouldHandlePackageBroadcast(null, isReplacing = false))
+    }
+
+    @Test
+    fun testIsScreenReaderFeedbackMask_distinguishesScreenReadersFromGenericMonitors() {
+        assertFalse(isScreenReaderFeedbackMask(0))
+        assertFalse(isScreenReaderFeedbackMask(AccessibilityServiceInfo.FEEDBACK_GENERIC))
+        assertFalse(isScreenReaderFeedbackMask(AccessibilityServiceInfo.FEEDBACK_HAPTIC))
+        assertTrue(isScreenReaderFeedbackMask(AccessibilityServiceInfo.FEEDBACK_SPOKEN))
+        assertTrue(isScreenReaderFeedbackMask(AccessibilityServiceInfo.FEEDBACK_BRAILLE))
+        assertTrue(
+            isScreenReaderFeedbackMask(
+                AccessibilityServiceInfo.FEEDBACK_GENERIC or AccessibilityServiceInfo.FEEDBACK_SPOKEN,
+            ),
+        )
+    }
+
+    @Test
+    fun testIsScreenReaderService_requiresWindowContentCapability() {
+        // OEM foreground monitor declaring feedbackAllMask (-1) with capabilities = 0 (e.g. Retroid Game Assistant)
+        assertFalse(
+            isScreenReaderService(
+                feedbackType = AccessibilityServiceInfo.FEEDBACK_ALL_MASK,
+                capabilities = 0,
+            ),
+        )
+        // Generic window monitor WITH window content capability (e.g. MegingiardAccessibilityService)
+        assertFalse(
+            isScreenReaderService(
+                feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC,
+                capabilities = AccessibilityServiceInfo.CAPABILITY_CAN_RETRIEVE_WINDOW_CONTENT,
+            ),
+        )
+        // Spoken screen reader (e.g. TalkBack) with window content capability
+        assertTrue(
+            isScreenReaderService(
+                feedbackType = AccessibilityServiceInfo.FEEDBACK_SPOKEN,
+                capabilities = AccessibilityServiceInfo.CAPABILITY_CAN_RETRIEVE_WINDOW_CONTENT,
+            ),
+        )
+        // Braille screen reader with window content capability
+        assertTrue(
+            isScreenReaderService(
+                feedbackType = AccessibilityServiceInfo.FEEDBACK_BRAILLE,
+                capabilities = AccessibilityServiceInfo.CAPABILITY_CAN_RETRIEVE_WINDOW_CONTENT,
+            ),
+        )
     }
 }

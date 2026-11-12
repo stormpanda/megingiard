@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.gamefocus
 
 import androidx.annotation.StringRes
+import androidx.compose.runtime.Immutable
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
@@ -15,6 +16,7 @@ private const val TAG = "GameFocusCategory"
 /**
  * Categories (galleries) available in Megingiard Game Focus launcher.
  */
+@Immutable
 sealed class GameFocusCategory {
     abstract val id: String
 
@@ -121,6 +123,38 @@ sealed class GameFocusCategory {
             val visibleIds = GalleryOrdering.visibleIds(ordered.map { it.id }, hidden).toSet()
             return ordered.filter { it.id in visibleIds }
         }
+
+        /**
+         * Precomputes filtered catalog lists keyed by [GameFocusCategory.id] using a single
+         * package index so carousel `PagerState.pageCount` and gallery rendering are O(1) lookups.
+         */
+        internal fun buildAppsByCategoryId(
+            categories: Collection<GameFocusCategory>,
+            allApps: List<InstalledAppInfo>,
+            favorites: Set<String> = emptySet(),
+            hidden: Set<String> = emptySet(),
+            lastUsed: List<String> = emptyList(),
+            collectionMembers: Map<String, Set<String>> = emptyMap(),
+        ): Map<String, List<InstalledAppInfo>> {
+            val appsByPackage = if (lastUsed.isNotEmpty()) allApps.associateBy { it.packageName } else emptyMap()
+            return buildMap(categories.size) {
+                for (category in categories) {
+                    if (!containsKey(category.id)) {
+                        put(
+                            category.id,
+                            category.filterAppsIndexed(
+                                allApps = allApps,
+                                appsByPackage = appsByPackage,
+                                favorites = favorites,
+                                hidden = hidden,
+                                lastUsed = lastUsed,
+                                collectionMembers = collectionMembers,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
     }
 
     fun filterApps(
@@ -129,6 +163,25 @@ sealed class GameFocusCategory {
         hidden: Set<String> = emptySet(),
         lastUsed: List<String> = emptyList(),
         collectionMembers: Map<String, Set<String>> = emptyMap(),
+    ): List<InstalledAppInfo> {
+        val appsByPackage = if (this === LAST_USED && lastUsed.isNotEmpty()) allApps.associateBy { it.packageName } else emptyMap()
+        return filterAppsIndexed(
+            allApps = allApps,
+            appsByPackage = appsByPackage,
+            favorites = favorites,
+            hidden = hidden,
+            lastUsed = lastUsed,
+            collectionMembers = collectionMembers,
+        )
+    }
+
+    private fun filterAppsIndexed(
+        allApps: List<InstalledAppInfo>,
+        appsByPackage: Map<String, InstalledAppInfo>,
+        favorites: Set<String>,
+        hidden: Set<String>,
+        lastUsed: List<String>,
+        collectionMembers: Map<String, Set<String>>,
     ): List<InstalledAppInfo> =
         when (this) {
             GAMES -> {
@@ -144,7 +197,10 @@ sealed class GameFocusCategory {
             }
 
             LAST_USED -> {
-                lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }.filter { it.packageName !in hidden }
+                lastUsed.mapNotNull { pkg ->
+                    val app = appsByPackage[pkg]
+                    if (app != null && app.packageName !in hidden) app else null
+                }
             }
 
             is RomSystem -> {
@@ -154,7 +210,7 @@ sealed class GameFocusCategory {
             is CustomCollection -> {
                 // Like Favorites: explicit curation wins, hidden apps stay visible; catalog order is kept.
                 val members = collectionMembers[collectionId].orEmpty()
-                allApps.filter { it.packageName in members }
+                if (members.isEmpty()) emptyList() else allApps.filter { it.packageName in members }
             }
         }
 

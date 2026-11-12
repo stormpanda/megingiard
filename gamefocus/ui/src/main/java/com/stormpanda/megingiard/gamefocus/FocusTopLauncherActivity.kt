@@ -15,9 +15,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -25,7 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -43,6 +42,7 @@ import com.stormpanda.megingiard.catalog.InstalledEmulatorRegistry
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.gamefocus.domain.GalleryConfig
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusDefaultLauncherManager
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusGalleryManager
 import com.stormpanda.megingiard.gamefocus.domain.GameFocusPairManager
@@ -54,8 +54,8 @@ import com.stormpanda.megingiard.gamefocus.viewmodel.DEFAULT_PAIRING_GRID_COLUMN
 import com.stormpanda.megingiard.gamefocus.viewmodel.FocusTopLauncherViewModel
 import com.stormpanda.megingiard.gamefocus.viewmodel.LauncherScrollDirection
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
-import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.settings.ThemeMode
+import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -422,11 +422,23 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     private var frozenHiddenSetForInput: Set<String> = emptySet()
 
+    private var cachedGalleryAllApps: List<InstalledAppInfo>? = null
+    private var cachedGalleryFavorites: Set<String>? = null
+    private var cachedGalleryHidden: Set<String>? = null
+    private var cachedGalleryLastUsed: List<String>? = null
+    private var cachedGalleryCategory: GameFocusCategory? = null
+    private var cachedGalleryConfig: GalleryConfig? = null
+    private var cachedGalleryResult: List<InstalledAppInfo> = emptyList()
+
+    private var cachedLibraryAllApps: List<InstalledAppInfo>? = null
+    private var cachedLibraryTab: LibraryTab? = null
+    private var cachedLibraryResult: List<InstalledAppInfo> = emptyList()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Hide system status and navigation bars for immersive fullscreen gamepad browsing
+        // Hide system status and navigation bars
         applyImmersiveSystemBars()
 
         AppLog.i(TAG, "FocusTopLauncherActivity created on primary display (fullscreen)")
@@ -475,7 +487,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     this,
                 ).collectAsStateWithLifecycle(initialValue = Pair(ThemeMode.DARK, null))
             val (themeMode, userAccent) = remoteThemeState
-            val appColors = paletteFor(themeMode, userAccent)
+            val appColors = remember(themeMode, userAccent) { paletteFor(themeMode, userAccent) }
+            val colorScheme = remember(appColors) { colorSchemeFor(appColors) }
 
             val allApps by InstalledAppsManager.installedApps.collectAsStateWithLifecycle()
             val favorites by InstalledAppsManager.favorites.collectAsStateWithLifecycle()
@@ -495,10 +508,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
             val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
             val isLibraryOpen by viewModel.isLibraryOpen.collectAsStateWithLifecycle()
-            val librarySelectedTab by viewModel.librarySelectedTab.collectAsStateWithLifecycle()
-            val libraryFocusedIndex by viewModel.libraryFocusedIndex.collectAsStateWithLifecycle()
-            val focusedApp by viewModel.focusedApp.collectAsStateWithLifecycle()
-            val isStarted by viewModel.isStarted.collectAsStateWithLifecycle()
 
             val allGalleryCategories =
                 remember(customRomFolders, galleryConfig.collections, galleryConfig.order) {
@@ -525,7 +534,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     AppLog.i(TAG, "Selected gallery ${selectedCategory.id} is not visible -> falling back to ${fallbackCategory.id}")
                     viewModel.setSelectedCategory(fallbackCategory)
                 }
-                if (librarySelectedTab !in libraryTabs) {
+            }
+
+            LaunchedEffect(libraryTabs) {
+                if (viewModel.librarySelectedTab.value !in libraryTabs) {
                     viewModel.setLibrarySelectedTab(LibraryTab.GAMES)
                 }
             }
@@ -551,120 +563,140 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 frozenHiddenSetForInput = frozenHidden
             }
 
+            val handleAppClickTop: (InstalledAppInfo) -> Unit =
+                remember {
+                    { appInfo ->
+                        launchGalleryTopApp(appInfo)
+                    }
+                }
+            val handleAppClickBottom: (InstalledAppInfo) -> Unit =
+                remember {
+                    { appInfo ->
+                        AppLog.i(TAG, "Launching app from top launcher on bottom display: ${appInfo.label}")
+                        if (!isCompanionApp(appInfo.packageName)) {
+                            MegingiardSettingsClient.updateClientState(
+                                this@FocusTopLauncherActivity,
+                                isActive = true,
+                                focusedPackage = appInfo.packageName,
+                            )
+                        }
+                        GameFocusSessionTracker.recordBottomLaunch(appInfo)
+                        lifecycleScope.launch {
+                            InstalledAppsManager.launchAppOnSecondaryDisplay(this@FocusTopLauncherActivity, appInfo)
+                        }
+                    }
+                }
+            val handleToggleFavorite: (InstalledAppInfo) -> Unit =
+                remember {
+                    { appInfo ->
+                        InstalledAppsManager.toggleFavorite(this@FocusTopLauncherActivity, appInfo.packageName)
+                    }
+                }
+            val handleToggleHidden: (InstalledAppInfo) -> Unit =
+                remember {
+                    { appInfo ->
+                        InstalledAppsManager.toggleHidden(this@FocusTopLauncherActivity, appInfo.packageName)
+                    }
+                }
+            val handleOpenAppInfo: (InstalledAppInfo) -> Unit =
+                remember {
+                    { appInfo ->
+                        InstalledAppsManager.openAppInfo(this@FocusTopLauncherActivity, appInfo.packageName, display.displayId)
+                    }
+                }
+            val handleUninstallApp: (InstalledAppInfo) -> Unit =
+                remember {
+                    { appInfo ->
+                        InstalledAppsManager.uninstallApp(this@FocusTopLauncherActivity, appInfo.packageName, display.displayId)
+                    }
+                }
+            val handleChangeCore: (CustomRomFolder) -> Unit =
+                remember {
+                    { folder ->
+                        openCoreChooserForFolder(folder)
+                    }
+                }
+            val handleAddRomFolder: () -> Unit =
+                remember {
+                    { openDocumentTreeLauncher.launch(null) }
+                }
+            val handleRemoveRomFolder: (CustomRomFolder) -> Unit =
+                remember {
+                    { folder -> RomManager.removeRomFolder(this@FocusTopLauncherActivity, folder) }
+                }
+            val handleConfirmNewlyAddedFolderCore: (CustomRomFolder, String?) -> Unit =
+                remember {
+                    { folder, coreOrPackage ->
+                        if (InstalledEmulatorRegistry.isMultiEmulatorSystem(folder.systemId)) {
+                            RomManager.updateRomFolderEmulatorPackage(this@FocusTopLauncherActivity, folder.uriString, coreOrPackage)
+                        } else {
+                            RomManager.updateRomFolderCore(this@FocusTopLauncherActivity, folder.uriString, coreOrPackage)
+                        }
+                        viewModel.setNewlyAddedFolder(null)
+                    }
+                }
+            val handleOpenPairingDialog: (InstalledAppInfo) -> Unit =
+                remember {
+                    { appInfo -> openPairingDialogForApp(appInfo) }
+                }
+            val handleRemovePair: (InstalledAppInfo) -> Unit =
+                remember {
+                    { appInfo ->
+                        GameFocusPairManager.removePair(this@FocusTopLauncherActivity, appInfo.packageName)
+                    }
+                }
+            val handleConfirmPairApp: (InstalledAppInfo, InstalledAppInfo) -> Unit =
+                remember {
+                    { topApp, bottomApp ->
+                        AppLog.i(TAG, "Pairing app ${topApp.label} with ${bottomApp.label}")
+                        GameFocusPairManager.setPair(this@FocusTopLauncherActivity, topApp.packageName, bottomApp.packageName)
+                        viewModel.dismissPairingDialog()
+                    }
+                }
+
             MaterialTheme(
-                colorScheme = colorSchemeFor(appColors),
+                colorScheme = colorScheme,
                 typography = megingiardTypography,
             ) {
                 CompositionLocalProvider(
                     LocalAppColors provides appColors,
                 ) {
-                    val currentHoveredApp =
-                        remember(
-                            isLibraryOpen,
-                            focusedApp,
-                            libraryFocusedIndex,
-                            librarySelectedTab,
-                            allApps,
-                        ) {
-                            if (isLibraryOpen) {
-                                val activeApps = librarySelectedTab.filterApps(allApps)
-                                activeApps.getOrNull(libraryFocusedIndex.coerceAtLeast(0))
-                            } else {
-                                focusedApp
-                            }
-                        }
+                    CompanionHoverStateSync(
+                        context = this@FocusTopLauncherActivity,
+                        viewModel = viewModel,
+                        allApps = allApps,
+                        appColors = appColors,
+                        remoteThemeState = remoteThemeState,
+                        hasLaunchedTopPackage = { launchedTopScreenPackage != null },
+                    )
 
-                    LaunchedEffect(currentHoveredApp, isStarted, remoteThemeState) {
-                        if (isStarted && launchedTopScreenPackage == null) {
-                            val palette =
-                                currentHoveredApp?.let { app ->
-                                    AppPaletteExtractor.extractColorsAsync(app, appColors.accent, appColors.appBackground)
-                                }
-                            val primaryArgb = palette?.primaryColor?.toArgb()
-                            val secondaryArgb = palette?.secondaryColor?.toArgb()
-
-                            MegingiardSettingsClient.updateClientState(
-                                context = this@FocusTopLauncherActivity,
-                                isActive = true,
-                                focusedPackage = null,
-                                hoveredPackage = currentHoveredApp?.packageName,
-                                hoveredLabel = currentHoveredApp?.label,
-                                hoveredPrimaryColor = primaryArgb,
-                                hoveredSecondaryColor = secondaryArgb,
-                            )
-                        }
-                    }
-
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = appColors.appBackground,
-                    ) {
-                        FocusTopLauncherScreen(
-                            viewModel = viewModel,
-                            allApps = allApps,
-                            favoritesSet = favorites,
-                            hiddenSet = frozenHidden,
-                            lastUsed = lastUsed,
-                            collectionMembers = collectionMembers,
-                            categories = categories,
-                            allGalleryCategories = allGalleryCategories,
-                            libraryTabs = libraryTabs,
-                            galleryConfig = galleryConfig,
-                            pairedApps = pairedApps,
-                            availableAndroidApps = availableAndroidApps,
-                            onAppClickTop = { appInfo ->
-                                launchGalleryTopApp(appInfo)
-                            },
-                            onAppClickBottom = { appInfo ->
-                                AppLog.i(TAG, "Launching app from top launcher on bottom display: ${appInfo.label}")
-                                if (!isCompanionApp(appInfo.packageName)) {
-                                    MegingiardSettingsClient.updateClientState(
-                                        this@FocusTopLauncherActivity,
-                                        isActive = true,
-                                        focusedPackage = appInfo.packageName,
-                                    )
-                                }
-                                GameFocusSessionTracker.recordBottomLaunch(appInfo)
-                                lifecycleScope.launch {
-                                    InstalledAppsManager.launchAppOnSecondaryDisplay(this@FocusTopLauncherActivity, appInfo)
-                                }
-                            },
-                            onToggleFavorite = { appInfo ->
-                                InstalledAppsManager.toggleFavorite(this, appInfo.packageName)
-                            },
-                            onToggleHidden = { appInfo ->
-                                InstalledAppsManager.toggleHidden(this, appInfo.packageName)
-                            },
-                            onOpenAppInfo = { appInfo ->
-                                InstalledAppsManager.openAppInfo(this, appInfo.packageName, display.displayId)
-                            },
-                            onUninstallApp = { appInfo ->
-                                InstalledAppsManager.uninstallApp(this, appInfo.packageName, display.displayId)
-                            },
-                            onChangeCore = { folder ->
-                                openCoreChooserForFolder(folder)
-                            },
-                            onAddRomFolder = { openDocumentTreeLauncher.launch(null) },
-                            onRemoveRomFolder = { folder -> RomManager.removeRomFolder(this, folder) },
-                            onConfirmNewlyAddedFolderCore = { folder, coreOrPackage ->
-                                if (InstalledEmulatorRegistry.isMultiEmulatorSystem(folder.systemId)) {
-                                    RomManager.updateRomFolderEmulatorPackage(this, folder.uriString, coreOrPackage)
-                                } else {
-                                    RomManager.updateRomFolderCore(this, folder.uriString, coreOrPackage)
-                                }
-                                viewModel.setNewlyAddedFolder(null)
-                            },
-                            onOpenPairingDialog = { appInfo -> openPairingDialogForApp(appInfo) },
-                            onRemovePair = { appInfo ->
-                                GameFocusPairManager.removePair(this@FocusTopLauncherActivity, appInfo.packageName)
-                            },
-                            onConfirmPairApp = { topApp, bottomApp ->
-                                AppLog.i(TAG, "Pairing app ${topApp.label} with ${bottomApp.label}")
-                                GameFocusPairManager.setPair(this@FocusTopLauncherActivity, topApp.packageName, bottomApp.packageName)
-                                viewModel.dismissPairingDialog()
-                            },
-                        )
-                    }
+                    FocusTopLauncherScreen(
+                        viewModel = viewModel,
+                        allApps = allApps,
+                        favoritesSet = favorites,
+                        hiddenSet = frozenHidden,
+                        lastUsed = lastUsed,
+                        collectionMembers = collectionMembers,
+                        categories = categories,
+                        allGalleryCategories = allGalleryCategories,
+                        libraryTabs = libraryTabs,
+                        galleryConfig = galleryConfig,
+                        pairedApps = pairedApps,
+                        availableAndroidApps = availableAndroidApps,
+                        onAppClickTop = handleAppClickTop,
+                        onAppClickBottom = handleAppClickBottom,
+                        onToggleFavorite = handleToggleFavorite,
+                        onToggleHidden = handleToggleHidden,
+                        onOpenAppInfo = handleOpenAppInfo,
+                        onUninstallApp = handleUninstallApp,
+                        onChangeCore = handleChangeCore,
+                        onAddRomFolder = handleAddRomFolder,
+                        onRemoveRomFolder = handleRemoveRomFolder,
+                        onConfirmNewlyAddedFolderCore = handleConfirmNewlyAddedFolderCore,
+                        onOpenPairingDialog = handleOpenPairingDialog,
+                        onRemovePair = handleRemovePair,
+                        onConfirmPairApp = handleConfirmPairApp,
+                    )
                 }
             }
         }
@@ -807,10 +839,43 @@ class FocusTopLauncherActivity : ComponentActivity() {
         val hidden = frozenHiddenSetForInput
         val lastUsed = InstalledAppsManager.lastUsed.value
         val selectedCategory = viewModel.selectedCategory.value
+        val galleryConfig = GameFocusGalleryManager.config.value
+
+        if (allApps === cachedGalleryAllApps &&
+            favorites === cachedGalleryFavorites &&
+            hidden === cachedGalleryHidden &&
+            lastUsed === cachedGalleryLastUsed &&
+            selectedCategory == cachedGalleryCategory &&
+            galleryConfig === cachedGalleryConfig
+        ) {
+            return cachedGalleryResult
+        }
+
         val collectionMembers =
-            GameFocusGalleryManager.config.value.collections
+            galleryConfig.collections
                 .associate { collection -> collection.id to collection.members.toSet() }
-        return selectedCategory.filterApps(allApps, favorites, hidden, lastUsed, collectionMembers)
+        val filtered = selectedCategory.filterApps(allApps, favorites, hidden, lastUsed, collectionMembers)
+        cachedGalleryAllApps = allApps
+        cachedGalleryFavorites = favorites
+        cachedGalleryHidden = hidden
+        cachedGalleryLastUsed = lastUsed
+        cachedGalleryCategory = selectedCategory
+        cachedGalleryConfig = galleryConfig
+        cachedGalleryResult = filtered
+        return filtered
+    }
+
+    private fun currentLibraryApps(): List<InstalledAppInfo> {
+        val allApps = InstalledAppsManager.installedApps.value
+        val currentTab = viewModel.librarySelectedTab.value
+        if (allApps === cachedLibraryAllApps && currentTab == cachedLibraryTab) {
+            return cachedLibraryResult
+        }
+        val filtered = currentTab.filterApps(allApps)
+        cachedLibraryAllApps = allApps
+        cachedLibraryTab = currentTab
+        cachedLibraryResult = filtered
+        return filtered
     }
 
     private fun resetToGallery(): Boolean {
@@ -822,9 +887,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private fun isPrimaryOverlayOpen(): Boolean = viewModel.editingAppInfo.value != null || viewModel.isManageGalleriesOpen.value
 
     private fun stepLibraryFocus(direction: LauncherScrollDirection): Boolean {
-        val allApps = InstalledAppsManager.installedApps.value
-        val currentTab = viewModel.librarySelectedTab.value
-        val filteredApps = currentTab.filterApps(allApps)
+        val filteredApps = currentLibraryApps()
         return viewModel.stepLibraryFocus(direction, filteredApps.size, DEFAULT_LIBRARY_GRID_COLUMNS)
     }
 
@@ -932,9 +995,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     private fun stepDirectionalAction(direction: LauncherScrollDirection) {
         if (viewModel.isLibraryOptionsMenuExpanded.value) {
-            val allApps = InstalledAppsManager.installedApps.value
-            val currentTab = viewModel.librarySelectedTab.value
-            val filteredApps = currentTab.filterApps(allApps)
+            val filteredApps = currentLibraryApps()
             val focusedLibraryApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
             val count = currentLibraryMenuActions(focusedLibraryApp).size
             when (direction) {
@@ -1207,9 +1268,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
         // Library Navigation Mode
         if (viewModel.isLibraryOpen.value) {
-            val allApps = InstalledAppsManager.installedApps.value
-            val currentTab = viewModel.librarySelectedTab.value
-            val filteredApps = currentTab.filterApps(allApps)
+            val filteredApps = currentLibraryApps()
             val focusedLibraryApp = filteredApps.getOrNull(viewModel.libraryFocusedIndex.value.coerceAtLeast(0))
 
             if (viewModel.isLibraryOptionsMenuExpanded.value) {
@@ -1733,3 +1792,59 @@ private fun isDismissKey(keyCode: Int): Boolean =
         keyCode == GamePadButton.BUTTON_B.keyCode
 
 private fun isMenuKey(keyCode: Int): Boolean = keyCode == GamePadButton.BUTTON_Y.keyCode || keyCode == KeyEvent.KEYCODE_MENU
+
+@Composable
+private fun CompanionHoverStateSync(
+    context: Context,
+    viewModel: FocusTopLauncherViewModel,
+    allApps: List<InstalledAppInfo>,
+    appColors: AppColors,
+    remoteThemeState: Pair<ThemeMode, Color?>,
+    hasLaunchedTopPackage: () -> Boolean,
+) {
+    val isLibraryOpen by viewModel.isLibraryOpen.collectAsStateWithLifecycle()
+    val librarySelectedTab by viewModel.librarySelectedTab.collectAsStateWithLifecycle()
+    val libraryFocusedIndex by viewModel.libraryFocusedIndex.collectAsStateWithLifecycle()
+    val focusedApp by viewModel.focusedApp.collectAsStateWithLifecycle()
+    val isStarted by viewModel.isStarted.collectAsStateWithLifecycle()
+
+    val activeLibraryApps =
+        remember(isLibraryOpen, librarySelectedTab, allApps) {
+            if (isLibraryOpen) librarySelectedTab.filterApps(allApps) else emptyList()
+        }
+
+    val currentHoveredApp =
+        remember(
+            isLibraryOpen,
+            focusedApp,
+            libraryFocusedIndex,
+            activeLibraryApps,
+        ) {
+            if (isLibraryOpen) {
+                activeLibraryApps.getOrNull(libraryFocusedIndex.coerceAtLeast(0))
+            } else {
+                focusedApp
+            }
+        }
+
+    LaunchedEffect(currentHoveredApp, isStarted, remoteThemeState) {
+        if (isStarted && !hasLaunchedTopPackage()) {
+            val palette =
+                currentHoveredApp?.let { app ->
+                    AppPaletteExtractor.extractColorsAsync(app, appColors.accent, appColors.appBackground)
+                }
+            val primaryArgb = palette?.primaryColor?.toArgb()
+            val secondaryArgb = palette?.secondaryColor?.toArgb()
+
+            MegingiardSettingsClient.updateClientState(
+                context = context,
+                isActive = true,
+                focusedPackage = null,
+                hoveredPackage = currentHoveredApp?.packageName,
+                hoveredLabel = currentHoveredApp?.label,
+                hoveredPrimaryColor = primaryArgb,
+                hoveredSecondaryColor = secondaryArgb,
+            )
+        }
+    }
+}

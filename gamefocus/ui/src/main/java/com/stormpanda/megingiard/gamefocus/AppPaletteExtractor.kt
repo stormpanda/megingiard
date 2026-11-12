@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.palette.graphics.Palette
@@ -78,13 +79,13 @@ private fun createComplementaryVibrant(baseColorInt: Int): Int {
     return AndroidColor.HSVToColor(hsv)
 }
 
+@Immutable
 data class ExtractedAppPalette(
     val primaryColor: Color,
     val secondaryColor: Color,
     val isExtracted: Boolean = true,
 ) {
-    val darkenedPrimaryColor: Color
-        get() = primaryColor.darken(CARD_BG_DARKEN_FACTOR)
+    val darkenedPrimaryColor: Color = primaryColor.darken(CARD_BG_DARKEN_FACTOR)
 }
 
 fun Color.darken(factor: Float = CARD_BG_DARKEN_FACTOR): Color {
