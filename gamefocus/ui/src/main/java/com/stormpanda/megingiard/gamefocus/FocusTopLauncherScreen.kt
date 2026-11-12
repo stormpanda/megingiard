@@ -766,14 +766,14 @@ fun FocusTopLauncherScreen(
                         val handleCategoryUp =
                             remember(viewModel) {
                                 {
-                                    viewModel.cycleCategoryUp(currentCategories)
+                                    viewModel.requestCategoryUp(currentCategories)
                                     Unit
                                 }
                             }
                         val handleCategoryDown =
                             remember(viewModel) {
                                 {
-                                    viewModel.cycleCategoryDown(currentCategories)
+                                    viewModel.requestCategoryDown(currentCategories)
                                     Unit
                                 }
                             }
@@ -818,7 +818,7 @@ fun FocusTopLauncherScreen(
                                 button = GamePadButton.BUTTON_R2,
                                 text = stringResource(R.string.gamefocus_nav_library),
                                 enabled = isControlsEnabled,
-                                onClick = { viewModel.setLibraryOpen(true) },
+                                onClick = { viewModel.requestLibraryOpen(true) },
                             )
                         }
 
@@ -1880,12 +1880,24 @@ private fun FocusLibraryHost(
     val folderToRemove by viewModel.folderToRemove.collectAsState()
 
     val openManageGalleries = remember(viewModel) { { viewModel.setManageGalleriesOpen(true) } }
-    val closeLibrary = remember(viewModel) { { viewModel.setLibraryOpen(false) } }
+    val closeLibrary =
+        remember(viewModel) {
+            {
+                viewModel.requestLibraryOpen(false)
+                Unit
+            }
+        }
+    val selectLibraryTab: (LibraryTab) -> Unit =
+        remember(viewModel) {
+            { tab ->
+                viewModel.requestLibraryTabSelect(tab)
+            }
+        }
 
     FocusLibraryScreen(
         allApps = allApps,
         selectedTab = librarySelectedTab,
-        onTabSelected = viewModel::setLibrarySelectedTab,
+        onTabSelected = selectLibraryTab,
         focusedIndexState = libraryFocusedIndexState,
         onFocusedIndexChange = viewModel::setLibraryFocusedIndex,
         hiddenSet = hiddenSet,

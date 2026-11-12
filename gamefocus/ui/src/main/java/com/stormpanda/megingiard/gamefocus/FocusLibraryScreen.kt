@@ -448,11 +448,10 @@ fun FocusLibraryScreen(
 
         // Header Bar with Title, Subtitle, and Tabs hovering over the grid
         val handleHeaderTabSelected: (LibraryTab) -> Unit =
-            remember(onTabSelected, onFocusedIndexChange) {
+            remember(onTabSelected) {
                 { tab ->
                     AppLog.i(TAG, "Library tab clicked/selected: ${tab.id}")
                     onTabSelected(tab)
-                    onFocusedIndexChange(0)
                 }
             }
         LibraryHeaderBar(

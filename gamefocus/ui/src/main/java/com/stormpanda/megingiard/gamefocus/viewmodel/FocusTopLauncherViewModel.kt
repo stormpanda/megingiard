@@ -6,6 +6,8 @@ import com.stormpanda.megingiard.catalog.CustomRomFolder
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LibraryTab
 import com.stormpanda.megingiard.gamefocus.GameFocusCategory
+import com.stormpanda.megingiard.gamefocus.GameFocusInputChannel
+import com.stormpanda.megingiard.gamefocus.GameFocusInputPacer
 import com.stormpanda.megingiard.math.floorMod
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +22,11 @@ enum class LauncherScrollDirection { NONE, LEFT, RIGHT, UP, DOWN }
 /**
  * ViewModel managing UI state, navigation triggers, and dialog states for [com.stormpanda.megingiard.gamefocus.FocusTopLauncherActivity].
  */
-class FocusTopLauncherViewModel : ViewModel() {
+class FocusTopLauncherViewModel(
+    val inputPacer: GameFocusInputPacer,
+) : ViewModel() {
+    constructor() : this(GameFocusInputPacer())
+
     private val _prevLetterTrigger = MutableStateFlow(0)
     val prevLetterTrigger: StateFlow<Int> = _prevLetterTrigger.asStateFlow()
 
@@ -131,35 +137,41 @@ class FocusTopLauncherViewModel : ViewModel() {
         direction: LauncherScrollDirection,
         total: Int,
         columns: Int = DEFAULT_PAIRING_GRID_COLUMNS,
-    ) {
+    ): Boolean {
         val current = _pairingFocusedIndex.value.coerceAtLeast(0)
+        var target = current
         when (direction) {
             LauncherScrollDirection.LEFT -> {
                 if (current > 0) {
-                    _pairingFocusedIndex.value = current - 1
+                    target = current - 1
                 }
             }
 
             LauncherScrollDirection.RIGHT -> {
                 if (total > 0 && current < total - 1) {
-                    _pairingFocusedIndex.value = current + 1
+                    target = current + 1
                 }
             }
 
             LauncherScrollDirection.UP -> {
                 if (current >= columns) {
-                    _pairingFocusedIndex.value = current - columns
+                    target = current - columns
                 }
             }
 
             LauncherScrollDirection.DOWN -> {
                 if (total > 0) {
-                    _pairingFocusedIndex.value = minOf(current + columns, total - 1)
+                    target = minOf(current + columns, total - 1)
                 }
             }
 
             LauncherScrollDirection.NONE -> {}
         }
+        if (target != current) {
+            _pairingFocusedIndex.value = target
+            return true
+        }
+        return false
     }
 
     fun setSelectedCategory(category: GameFocusCategory) {
@@ -187,28 +199,40 @@ class FocusTopLauncherViewModel : ViewModel() {
         return false
     }
 
+    fun requestCategoryUp(categories: List<GameFocusCategory>): Boolean =
+        inputPacer.tryRun(GameFocusInputChannel.CATEGORY_OR_TAB) {
+            cycleCategoryUp(categories)
+        }
+
+    fun requestCategoryDown(categories: List<GameFocusCategory>): Boolean =
+        inputPacer.tryRun(GameFocusInputChannel.CATEGORY_OR_TAB) {
+            cycleCategoryDown(categories)
+        }
+
     fun setMainMenuSelectedIndex(index: Int) {
         _mainMenuSelectedIndex.value = index
     }
 
-    fun navigateMainMenuUp(itemCount: Int) {
-        if (itemCount <= 0) return
-        _mainMenuSelectedIndex.value =
-            if (_mainMenuSelectedIndex.value > 0) {
-                _mainMenuSelectedIndex.value - 1
-            } else {
-                itemCount - 1
-            }
+    fun navigateMainMenuUp(itemCount: Int): Boolean {
+        if (itemCount <= 0) return false
+        val current = _mainMenuSelectedIndex.value
+        val target = if (current > 0) current - 1 else itemCount - 1
+        if (target != current) {
+            _mainMenuSelectedIndex.value = target
+            return true
+        }
+        return false
     }
 
-    fun navigateMainMenuDown(itemCount: Int) {
-        if (itemCount <= 0) return
-        _mainMenuSelectedIndex.value =
-            if (_mainMenuSelectedIndex.value < itemCount - 1) {
-                _mainMenuSelectedIndex.value + 1
-            } else {
-                0
-            }
+    fun navigateMainMenuDown(itemCount: Int): Boolean {
+        if (itemCount <= 0) return false
+        val current = _mainMenuSelectedIndex.value
+        val target = if (current < itemCount - 1) current + 1 else 0
+        if (target != current) {
+            _mainMenuSelectedIndex.value = target
+            return true
+        }
+        return false
     }
 
     fun setMainOptionsMenuExpanded(expanded: Boolean) {
@@ -281,6 +305,19 @@ class FocusTopLauncherViewModel : ViewModel() {
         _isLibraryOpen.value = open
     }
 
+    fun requestLibraryOpen(open: Boolean): Boolean =
+        inputPacer.tryRun(GameFocusInputChannel.LIBRARY_TOGGLE) {
+            if (_isLibraryOpen.value != open) {
+                setLibraryOpen(open)
+                if (open) {
+                    setLibraryFocusedIndex(0)
+                }
+                true
+            } else {
+                false
+            }
+        }
+
     fun setLibrarySelectedTab(tab: LibraryTab) {
         _librarySelectedTab.value = tab
     }
@@ -305,6 +342,18 @@ class FocusTopLauncherViewModel : ViewModel() {
         return false
     }
 
+    fun requestLibraryTabSelect(tab: LibraryTab): Boolean =
+        inputPacer.tryRun(GameFocusInputChannel.CATEGORY_OR_TAB) {
+            if (_librarySelectedTab.value != tab) {
+                AppLog.i(TAG, "Library tab selected -> switching tab to ${tab.id}")
+                _librarySelectedTab.value = tab
+                _libraryFocusedIndex.value = 0
+                true
+            } else {
+                false
+            }
+        }
+
     fun setLibraryFocusedIndex(index: Int) {
         _libraryFocusedIndex.value = index
     }
@@ -313,24 +362,26 @@ class FocusTopLauncherViewModel : ViewModel() {
         _libraryMenuSelectedIndex.value = index
     }
 
-    fun navigateLibraryMenuUp(itemCount: Int) {
-        if (itemCount <= 0) return
-        _libraryMenuSelectedIndex.value =
-            if (_libraryMenuSelectedIndex.value > 0) {
-                _libraryMenuSelectedIndex.value - 1
-            } else {
-                itemCount - 1
-            }
+    fun navigateLibraryMenuUp(itemCount: Int): Boolean {
+        if (itemCount <= 0) return false
+        val current = _libraryMenuSelectedIndex.value
+        val target = if (current > 0) current - 1 else itemCount - 1
+        if (target != current) {
+            _libraryMenuSelectedIndex.value = target
+            return true
+        }
+        return false
     }
 
-    fun navigateLibraryMenuDown(itemCount: Int) {
-        if (itemCount <= 0) return
-        _libraryMenuSelectedIndex.value =
-            if (_libraryMenuSelectedIndex.value < itemCount - 1) {
-                _libraryMenuSelectedIndex.value + 1
-            } else {
-                0
-            }
+    fun navigateLibraryMenuDown(itemCount: Int): Boolean {
+        if (itemCount <= 0) return false
+        val current = _libraryMenuSelectedIndex.value
+        val target = if (current < itemCount - 1) current + 1 else 0
+        if (target != current) {
+            _libraryMenuSelectedIndex.value = target
+            return true
+        }
+        return false
     }
 
     fun setLibraryOptionsMenuExpanded(expanded: Boolean) {
@@ -400,41 +451,41 @@ class FocusTopLauncherViewModel : ViewModel() {
     fun stepCoreChooserFocus(
         direction: LauncherScrollDirection,
         coreCount: Int,
-    ) {
+    ): Boolean {
         if (coreCount > 0) {
             val current = _coreChooserDialogSelectedIndex.value
-            when (direction) {
-                LauncherScrollDirection.UP -> {
-                    _coreChooserDialogSelectedIndex.value = (current - 1).floorMod(coreCount)
+            val target =
+                when (direction) {
+                    LauncherScrollDirection.UP -> (current - 1).floorMod(coreCount)
+                    LauncherScrollDirection.DOWN -> (current + 1).floorMod(coreCount)
+                    else -> current
                 }
-
-                LauncherScrollDirection.DOWN -> {
-                    _coreChooserDialogSelectedIndex.value = (current + 1).floorMod(coreCount)
-                }
-
-                else -> {}
+            if (target != current) {
+                _coreChooserDialogSelectedIndex.value = target
+                return true
             }
         }
+        return false
     }
 
     fun stepRemoveRomFolderFocus(
         direction: LauncherScrollDirection,
         foldersCount: Int,
-    ) {
+    ): Boolean {
         if (foldersCount > 0) {
             val current = _removeRomFolderDialogSelectedIndex.value
-            when (direction) {
-                LauncherScrollDirection.UP -> {
-                    _removeRomFolderDialogSelectedIndex.value = (current - 1).floorMod(foldersCount)
+            val target =
+                when (direction) {
+                    LauncherScrollDirection.UP -> (current - 1).floorMod(foldersCount)
+                    LauncherScrollDirection.DOWN -> (current + 1).floorMod(foldersCount)
+                    else -> current
                 }
-
-                LauncherScrollDirection.DOWN -> {
-                    _removeRomFolderDialogSelectedIndex.value = (current + 1).floorMod(foldersCount)
-                }
-
-                else -> {}
+            if (target != current) {
+                _removeRomFolderDialogSelectedIndex.value = target
+                return true
             }
         }
+        return false
     }
 
     fun resetToGallery(): Boolean {
@@ -451,6 +502,7 @@ class FocusTopLauncherViewModel : ViewModel() {
 
         if (wasNotInGallery) {
             AppLog.i(TAG, "Resetting view state to main gallery")
+            inputPacer.reset()
             _isLibraryOpen.value = false
             _editingAppInfo.value = null
             _isManageGalleriesOpen.value = false

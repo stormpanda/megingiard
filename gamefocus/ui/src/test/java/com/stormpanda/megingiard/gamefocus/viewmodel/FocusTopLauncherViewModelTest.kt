@@ -4,7 +4,10 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.LibraryTab
+import com.stormpanda.megingiard.gamefocus.CATEGORY_REPEAT_INTERVAL_MS
 import com.stormpanda.megingiard.gamefocus.GameFocusCategory
+import com.stormpanda.megingiard.gamefocus.GameFocusInputPacer
+import com.stormpanda.megingiard.gamefocus.LIBRARY_TOGGLE_COOLDOWN_MS
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -13,6 +16,8 @@ import org.junit.Before
 import org.junit.Test
 
 private const val TAG = "FocusTopVMTest"
+private const val SHORT_ELAPSED_MS = 80L
+private const val NON_ZERO_FOCUS_INDEX = 4
 
 class FocusTopLauncherViewModelTest {
     private lateinit var viewModel: FocusTopLauncherViewModel
@@ -355,5 +360,100 @@ class FocusTopLauncherViewModelTest {
 
         viewModel.setButtonPromptsVisible(false)
         assertFalse(viewModel.areButtonPromptsVisible.value)
+    }
+
+    @Test
+    fun testPacedCategoryRequests() {
+        var nowMs = 0L
+        val pacedVm = FocusTopLauncherViewModel(GameFocusInputPacer { nowMs })
+        val categories = GameFocusCategory.builtIns
+
+        pacedVm.setSelectedCategory(GameFocusCategory.GAMES)
+
+        // Single-item list no-op does not consume cooldown
+        assertFalse(pacedVm.requestCategoryDown(listOf(GameFocusCategory.GAMES)))
+        assertTrue(pacedVm.requestCategoryDown(categories))
+        assertEquals(GameFocusCategory.APPS, pacedVm.selectedCategory.value)
+
+        // Rapid second request inside 210 ms window is throttled
+        nowMs += SHORT_ELAPSED_MS
+        assertFalse(pacedVm.requestCategoryDown(categories))
+        assertFalse(pacedVm.requestCategoryUp(categories))
+        assertEquals(GameFocusCategory.APPS, pacedVm.selectedCategory.value)
+
+        // After 210 ms, category request succeeds again
+        nowMs = CATEGORY_REPEAT_INTERVAL_MS
+        assertTrue(pacedVm.requestCategoryUp(categories))
+        assertEquals(GameFocusCategory.GAMES, pacedVm.selectedCategory.value)
+    }
+
+    @Test
+    fun testPacedLibraryTabRequests() {
+        var nowMs = 0L
+        val pacedVm = FocusTopLauncherViewModel(GameFocusInputPacer { nowMs })
+        val snesTab = LibraryTab.RomSystem(id = "rom_snes", systemId = "snes", displayName = "SNES")
+
+        pacedVm.setLibrarySelectedTab(LibraryTab.GAMES)
+        pacedVm.setLibraryFocusedIndex(NON_ZERO_FOCUS_INDEX)
+
+        // Selecting already-active tab is a no-op: neither resets focus nor consumes cooldown
+        assertFalse(pacedVm.requestLibraryTabSelect(LibraryTab.GAMES))
+        assertEquals(NON_ZERO_FOCUS_INDEX, pacedVm.libraryFocusedIndex.value)
+
+        // Selecting a different tab succeeds, resets focus to 0, and starts 210 ms cooldown
+        assertTrue(pacedVm.requestLibraryTabSelect(LibraryTab.APPS))
+        assertEquals(LibraryTab.APPS, pacedVm.librarySelectedTab.value)
+        assertEquals(0, pacedVm.libraryFocusedIndex.value)
+
+        // Rapid tab switch within 210 ms is throttled and preserves current focus index
+        pacedVm.setLibraryFocusedIndex(NON_ZERO_FOCUS_INDEX)
+        nowMs += SHORT_ELAPSED_MS
+        assertFalse(pacedVm.requestLibraryTabSelect(snesTab))
+        assertEquals(LibraryTab.APPS, pacedVm.librarySelectedTab.value)
+        assertEquals(NON_ZERO_FOCUS_INDEX, pacedVm.libraryFocusedIndex.value)
+
+        // Once 210 ms has elapsed, selecting another tab succeeds and resets focus to 0
+        nowMs = CATEGORY_REPEAT_INTERVAL_MS
+        assertTrue(pacedVm.requestLibraryTabSelect(snesTab))
+        assertEquals(snesTab, pacedVm.librarySelectedTab.value)
+        assertEquals(0, pacedVm.libraryFocusedIndex.value)
+    }
+
+    @Test
+    fun testPacedLibraryOpenAndResetBypass() {
+        var nowMs = 0L
+        val pacedVm = FocusTopLauncherViewModel(GameFocusInputPacer { nowMs })
+        pacedVm.setLibraryFocusedIndex(NON_ZERO_FOCUS_INDEX)
+
+        // Requesting close while already closed does not consume cooldown
+        assertFalse(pacedVm.requestLibraryOpen(false))
+
+        // Opening Library resets focus index to 0 and starts 400 ms cooldown
+        assertTrue(pacedVm.requestLibraryOpen(true))
+        assertTrue(pacedVm.isLibraryOpen.value)
+        assertEquals(0, pacedVm.libraryFocusedIndex.value)
+
+        // Rapid close within 400 ms is rejected
+        nowMs += SHORT_ELAPSED_MS
+        assertFalse(pacedVm.requestLibraryOpen(false))
+        assertTrue(pacedVm.isLibraryOpen.value)
+
+        // After 400 ms, close request closes Library
+        nowMs = LIBRARY_TOGGLE_COOLDOWN_MS
+        assertTrue(pacedVm.requestLibraryOpen(false))
+        assertFalse(pacedVm.isLibraryOpen.value)
+
+        // Re-open after another 400 ms, then verify programmatic resetToGallery() bypasses cooldown
+        nowMs += LIBRARY_TOGGLE_COOLDOWN_MS
+        assertTrue(pacedVm.requestLibraryOpen(true))
+        assertTrue(pacedVm.isLibraryOpen.value)
+
+        nowMs += SHORT_ELAPSED_MS
+        assertTrue(pacedVm.resetToGallery())
+        assertFalse(pacedVm.isLibraryOpen.value)
+
+        // resetToGallery() also cleared pacer cooldowns so immediate user open works
+        assertTrue(pacedVm.requestLibraryOpen(true))
+        assertTrue(pacedVm.isLibraryOpen.value)
     }
 }
