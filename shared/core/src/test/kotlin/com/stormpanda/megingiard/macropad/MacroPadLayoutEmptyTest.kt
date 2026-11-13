@@ -67,8 +67,85 @@ class MacroPadLayoutEmptyTest {
 
     @Test
     fun `normalizedOnLoad returns identical instance when no migrations apply`() {
-        val layout = PadLayout(id = "l1", name = "Clean Layout")
+        val layout = PadLayout(id = "l1", name = "Clean Layout", designCanvas = THOR_BOTTOM_CANVAS_SPEC)
         assertSame(layout, layout.normalizedOnLoad())
+    }
+
+    @Test
+    fun `normalizedOnLoad stamps THOR_BOTTOM_CANVAS_SPEC on legacy null designCanvas and preserves explicit RP Duo designCanvas`() {
+        val legacyLayout = PadLayout(id = "l-legacy", name = "Legacy")
+        assertNull(legacyLayout.designCanvas)
+        assertEquals(THOR_BOTTOM_CANVAS_SPEC, legacyLayout.effectiveDesignCanvas)
+
+        val normalizedLegacy = legacyLayout.normalizedOnLoad()
+        assertEquals(THOR_BOTTOM_CANVAS_SPEC, normalizedLegacy.designCanvas)
+
+        val duoSpec = LayoutCanvasSpec(1280, 960)
+        val duoMinBtn =
+            PadButton(
+                id = "b-duo-min",
+                label = "Min",
+                posX = 0.5f,
+                posY = 0.5f,
+                widthPx = 60f,
+                heightPx = 60f,
+                action = PadAction.KeyboardKey(30, "A"),
+            )
+        val duoLayout = PadLayout(id = "l-duo", name = "Duo", buttons = listOf(duoMinBtn), designCanvas = duoSpec)
+        val normalizedDuo = duoLayout.normalizedOnLoad()
+        assertSame(duoLayout, normalizedDuo)
+        assertEquals(duoSpec, normalizedDuo.designCanvas)
+        assertEquals(60f, normalizedDuo.buttons.single().widthPx, 0.001f)
+    }
+
+    @Test
+    fun `normalizedOnLoad clamps undersized buttons ScrollWheel and TrackpointMove against designCanvas`() {
+        val smallBtn =
+            PadButton(
+                id = "b-small",
+                label = "Small",
+                posX = 0.2f,
+                posY = 0.2f,
+                widthPx = 16f,
+                heightPx = 40f,
+                action = PadAction.KeyboardKey(30, "A"),
+            )
+        val scrollBtn =
+            PadButton(
+                id = "b-sw",
+                label = "Scroll",
+                posX = 0.5f,
+                posY = 0.5f,
+                widthPx = 68f,
+                heightPx = 100f,
+                action = PadAction.ScrollWheel,
+            )
+        val trackpointBtn =
+            PadButton(
+                id = "b-tp",
+                label = "TP",
+                posX = 0.8f,
+                posY = 0.5f,
+                widthPx = 150f,
+                heightPx = 208f,
+                buttonShape = ButtonShape.SQUARE,
+                action = PadAction.TrackpointMove(),
+            )
+        val layout =
+            PadLayout(
+                id = "l-clamp",
+                name = "Clamp Test",
+                buttons = listOf(smallBtn, scrollBtn, trackpointBtn),
+            ).normalizedOnLoad()
+
+        assertEquals(THOR_BOTTOM_CANVAS_SPEC, layout.designCanvas)
+        assertEquals(68f, layout.buttons[0].widthPx, 0.001f)
+        assertEquals(68f, layout.buttons[0].heightPx, 0.001f)
+        assertEquals(68f, layout.buttons[1].widthPx, 0.001f)
+        assertEquals(272f, layout.buttons[1].heightPx, 0.001f)
+        assertEquals(208f, layout.buttons[2].widthPx, 0.001f)
+        assertEquals(208f, layout.buttons[2].heightPx, 0.001f)
+        assertEquals(ButtonShape.CIRCLE, layout.buttons[2].buttonShape)
     }
 
     @Test

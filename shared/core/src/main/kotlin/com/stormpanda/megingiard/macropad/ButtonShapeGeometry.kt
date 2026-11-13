@@ -254,16 +254,16 @@ object ButtonShapeGeometry {
      * @param shape        configured [ButtonShape] of the button
      * @param nx           normalized X coordinate relative to the button's bounding box (`0f` = left, `1f` = right)
      * @param ny           normalized Y coordinate relative to the button's bounding box (`0f` = top, `1f` = bottom)
-     * @param widthDp      button width in dp
-     * @param heightDp     button height in dp
+     * @param widthPx      button width in pixels
+     * @param heightPx     button height in pixels
      * @param isTrackpoint true when the button action is [PadAction.TrackpointMove] (always circular)
      */
     fun isNormalizedPointInside(
         shape: ButtonShape,
         nx: Float,
         ny: Float,
-        widthDp: Float,
-        heightDp: Float,
+        widthPx: Float,
+        heightPx: Float,
         isTrackpoint: Boolean = false,
     ): Boolean {
         if (nx < 0f || nx > 1f || ny < 0f || ny > 1f) return false
@@ -279,8 +279,8 @@ object ButtonShapeGeometry {
                 isInsideRoundedRect(
                     nx = nx,
                     ny = ny,
-                    widthDp = widthDp,
-                    heightDp = heightDp,
+                    widthPx = widthPx,
+                    heightPx = heightPx,
                     cornerFraction = BSG_ROUNDED_SQUARE_CORNER_FRACTION,
                 )
             }
@@ -289,8 +289,8 @@ object ButtonShapeGeometry {
                 isInsideRoundedRect(
                     nx = nx,
                     ny = ny,
-                    widthDp = widthDp,
-                    heightDp = heightDp,
+                    widthPx = widthPx,
+                    heightPx = heightPx,
                     cornerFraction = BSG_CIRCLE_CORNER_FRACTION,
                 )
             }
@@ -315,12 +315,12 @@ object ButtonShapeGeometry {
     private fun isInsideRoundedRect(
         nx: Float,
         ny: Float,
-        widthDp: Float,
-        heightDp: Float,
+        widthPx: Float,
+        heightPx: Float,
         cornerFraction: Float,
     ): Boolean {
-        val w = max(1f, widthDp)
-        val h = max(1f, heightDp)
+        val w = max(1f, widthPx)
+        val h = max(1f, heightPx)
         val x = nx * w
         val y = ny * h
         val radius = cornerFraction * min(w, h)

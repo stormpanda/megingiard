@@ -177,7 +177,7 @@ class MacroPadActionDispatchTest {
         assertEquals("layout-a", MacroPadState.activeLayout.value?.id)
 
         // End-to-end hit-test engine hold-to-shift across layouts
-        val engine = MacroPadHitTestEngine(buttonUnitDpToPx = { it })
+        val engine = MacroPadHitTestEngine()
         val shiftBtn =
             PadButton(
                 id = "btn-shift",

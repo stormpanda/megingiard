@@ -9,13 +9,18 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.hardware.display.DisplayManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.view.Display
 import android.view.Surface
 import android.view.WindowManager
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.catalog.DisplayDetector
+import com.stormpanda.megingiard.macropad.LayoutCanvasSpec
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import kotlinx.coroutines.CoroutineScope
@@ -50,11 +55,36 @@ class ScreenCaptureService : Service() {
     private var capturedSrcWidth: Int = 0
     private var capturedSrcHeight: Int = 0
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val displayListener =
+        object : DisplayManager.DisplayListener {
+            override fun onDisplayAdded(displayId: Int) {
+                if (displayId == Display.DEFAULT_DISPLAY) return
+                getSystemService(DisplayManager::class.java)
+                    ?.getDisplay(displayId)
+                    ?.let { updateHostSecondaryCanvas(it) }
+            }
+
+            override fun onDisplayRemoved(displayId: Int) {
+                if (displayId != Display.DEFAULT_DISPLAY) {
+                    AppLog.d(TAG, "Secondary display removed: displayId=$displayId")
+                }
+            }
+
+            override fun onDisplayChanged(displayId: Int) {
+                if (displayId == Display.DEFAULT_DISPLAY) return
+                getSystemService(DisplayManager::class.java)
+                    ?.getDisplay(displayId)
+                    ?.let { updateHostSecondaryCanvas(it) }
+            }
+        }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
+        getSystemService(DisplayManager::class.java)
+            ?.registerDisplayListener(displayListener, Handler(Looper.getMainLooper()))
+        DisplayDetector.findSecondaryDisplay(this)?.let { updateHostSecondaryCanvas(it) }
 
         scope.launch {
             var wasCapturing = false
@@ -141,9 +171,20 @@ class ScreenCaptureService : Service() {
         }
     }
 
+    private fun updateHostSecondaryCanvas(display: Display) {
+        if (display.displayId == Display.DEFAULT_DISPLAY) return
+        val resolved = DisplayDetector.resolveDisplaySize(display) ?: return
+        if (resolved.widthPx > 0 && resolved.heightPx > 0) {
+            MacroPadState.setHostSecondaryCanvas(
+                LayoutCanvasSpec(widthPx = resolved.widthPx, heightPx = resolved.heightPx),
+            )
+        }
+    }
+
     private fun startPrivdPath(): Int {
         startForegroundNotificationSpecialUse()
         if (ScreenCaptureManager.isCapturing.value) {
+            DisplayDetector.findSecondaryDisplay(this)?.let { updateHostSecondaryCanvas(it) }
             AppLog.d(TAG, "Direct Privd capture already running, ignoring duplicate start")
             return START_NOT_STICKY
         }
@@ -160,6 +201,7 @@ class ScreenCaptureService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        updateHostSecondaryCanvas(secondaryDisplay)
 
         val primaryDisplay = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
         if (primaryDisplay == null) {
@@ -250,6 +292,7 @@ class ScreenCaptureService : Service() {
             }
         }
         scope.cancel()
+        getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(displayListener)
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
         AppStateManager.setPromptInFlight(false)
         directPrivdActiveSurface = null

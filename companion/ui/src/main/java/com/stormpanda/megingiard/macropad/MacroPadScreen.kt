@@ -47,7 +47,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
@@ -56,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
 import com.stormpanda.megingiard.mirror.InteractiveCutoutController
 import com.stormpanda.megingiard.mirror.MasterSurfaceRegistry
@@ -102,6 +102,9 @@ private val MP_EMPTY_ICON_SIZE_DP = 24.dp
 private const val MP_EMPTY_DASH_ON = 12f
 private const val MP_EMPTY_DASH_OFF = 8f
 private const val MP_EMPTY_MAX_TAP_DISPLACEMENT_PX = 24f
+private val MP_NO_PROFILE_PADDING = 32.dp
+private val MP_TOAST_TOP_PADDING = 12.dp
+private val MP_TOAST_HORIZONTAL_PADDING = 24.dp
 
 private const val TAG = "MacroPadScreen"
 
@@ -148,10 +151,28 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
 
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
     val showEmbeddedMirror = isCapturing
+    val screenCanvasSizeState = remember { mutableStateOf(IntSize.Zero) }
+    val screenCanvasSize = screenCanvasSizeState.value
+
+    LaunchedEffect(screenCanvasSize) {
+        if (screenCanvasSize.width > 0 && screenCanvasSize.height > 0) {
+            MacroPadState.setHostSecondaryCanvas(
+                LayoutCanvasSpec(
+                    widthPx = screenCanvasSize.width,
+                    heightPx = screenCanvasSize.height,
+                ),
+            )
+        }
+    }
 
     // Plain canvas background of MacroPad is strictly theme-invariant and always pitch black (Color.Black).
     Box(
-        modifier = modifier.fillMaxSize().background(Color.Black).padding(MP_SCREEN_PADDING),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .padding(MP_SCREEN_PADDING)
+                .onSizeChanged { screenCanvasSizeState.value = it },
         contentAlignment = Alignment.Center,
     ) {
         if (showEmbeddedMirror) {
@@ -171,25 +192,38 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(32.dp),
-            )
-        } else if (isEditorActive || isViewportEditActive) {
-            PadCanvas(
-                layout = l,
-                accentColor = colors.accent,
-                gridMode = gridMode,
-                isLocked = !isEditingPositions,
-                isCroppingBackground = isCroppingBackground,
-                isCroppingMask = isCroppingMask,
-                transparentBackground = showEmbeddedMirror,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.padding(MP_NO_PROFILE_PADDING),
             )
         } else {
-            PadSurface(
-                layout = l,
-                accentColor = colors.accent,
-                transparentBackground = showEmbeddedMirror,
-            )
+            val designCanvas = l.effectiveDesignCanvas
+            val screenDesignViewport =
+                remember(screenCanvasSize, designCanvas) {
+                    ViewportMath.calculateDesignViewport(
+                        hostWidthPx = screenCanvasSize.width.toFloat(),
+                        hostHeightPx = screenCanvasSize.height.toFloat(),
+                        designWidthPx = designCanvas.widthPx.toFloat(),
+                        designHeightPx = designCanvas.heightPx.toFloat(),
+                    )
+                }
+            if (isEditorActive || isViewportEditActive) {
+                PadCanvas(
+                    layout = l,
+                    accentColor = colors.accent,
+                    gridMode = gridMode,
+                    isLocked = !isEditingPositions,
+                    isCroppingBackground = isCroppingBackground,
+                    isCroppingMask = isCroppingMask,
+                    transparentBackground = showEmbeddedMirror,
+                    viewport = screenDesignViewport,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                PadSurface(
+                    layout = l,
+                    accentColor = colors.accent,
+                    transparentBackground = showEmbeddedMirror,
+                )
+            }
         }
 
         LayoutTransitionSnapshotOverlay()
@@ -201,7 +235,11 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 12.dp, start = 24.dp, end = 24.dp),
+                        .padding(
+                            top = MP_TOAST_TOP_PADDING,
+                            start = MP_TOAST_HORIZONTAL_PADDING,
+                            end = MP_TOAST_HORIZONTAL_PADDING,
+                        ),
             )
         }
     }
@@ -238,19 +276,40 @@ internal fun PadSurface(
     isPeekActive: Boolean = false,
     transparentBackground: Boolean = false,
 ) {
-    val density = LocalDensity.current
     val context = LocalContext.current
     val vibrator = remember { context.getSystemService(Vibrator::class.java) }
     val canvasSizeState = remember { mutableStateOf(IntSize.Zero) }
+    val canvasSize = canvasSizeState.value
     val hapticLastMsByButton = remember { mutableMapOf<String, Long>() }
+
+    LaunchedEffect(canvasSize) {
+        if (canvasSize.width > 0 && canvasSize.height > 0) {
+            MacroPadState.setHostSecondaryCanvas(
+                LayoutCanvasSpec(
+                    widthPx = canvasSize.width,
+                    heightPx = canvasSize.height,
+                ),
+            )
+        }
+    }
+
+    val designCanvas = layout.effectiveDesignCanvas
+    val designViewport =
+        remember(canvasSize, designCanvas) {
+            ViewportMath.calculateDesignViewport(
+                hostWidthPx = canvasSize.width.toFloat(),
+                hostHeightPx = canvasSize.height.toFloat(),
+                designWidthPx = designCanvas.widthPx.toFloat(),
+                designHeightPx = designCanvas.heightPx.toFloat(),
+            )
+        }
 
     val layerBitmaps = rememberLayoutLayerBitmaps(context, layout)
 
-    // Create hit-test engine with density-aware dp→px converter and haptic callback
+    // Create hit-test engine with haptic callback
     val engine =
-        remember(density, vibrator) {
+        remember(vibrator) {
             MacroPadHitTestEngine(
-                buttonUnitDpToPx = { dpValue -> with(density) { dpValue.dp.toPx() } },
                 onHapticFeedback = { buttonId, strength, customDurationMs, customAmplitude, magnitude ->
                     if (strength == HapticStrength.OFF) return@MacroPadHitTestEngine
                     val now = SystemClock.elapsedRealtime()
@@ -350,6 +409,7 @@ internal fun PadSurface(
         }
 
     val currentLayout by rememberUpdatedState(layout)
+    val currentDesignViewport by rememberUpdatedState(designViewport)
     val currentBgTouchpadActive by rememberUpdatedState(bgTouchpadActive)
     val currentBgTouchpadProcessor by rememberUpdatedState(bgTouchpadProcessor)
     val currentIsPeekActive by rememberUpdatedState(isPeekActive)
@@ -380,7 +440,7 @@ internal fun PadSurface(
                     .background(if (transparentBackground) Color.Transparent else Color.Black)
                     .onSizeChanged { canvasSizeState.value = it }
                     .pointerInput(
-                        canvasSizeState.value,
+                        canvasSize,
                         isTouchProjectionActive,
                         overlayAtBottom,
                         edgeZonePx,
@@ -390,10 +450,24 @@ internal fun PadSurface(
                                 var pointerStartPos: Offset? = null
                                 while (true) {
                                     val event = awaitPointerEvent(PointerEventPass.Main)
-                                    val canvasSize = canvasSizeState.value
-                                    val w = canvasSize.width.toFloat().coerceAtLeast(1f)
-                                    val h = canvasSize.height.toFloat().coerceAtLeast(1f)
+                                    val measuredSize = canvasSizeState.value
+                                    val w = measuredSize.width.toFloat().coerceAtLeast(1f)
+                                    val h = measuredSize.height.toFloat().coerceAtLeast(1f)
                                     val activeLayout = currentLayout
+                                    val activeViewport =
+                                        if (currentDesignViewport.hostWidthPx > 0f &&
+                                            currentDesignViewport.hostHeightPx > 0f
+                                        ) {
+                                            currentDesignViewport
+                                        } else {
+                                            val activeSpec = activeLayout.effectiveDesignCanvas
+                                            ViewportMath.calculateDesignViewport(
+                                                hostWidthPx = w,
+                                                hostHeightPx = h,
+                                                designWidthPx = activeSpec.widthPx.toFloat(),
+                                                designHeightPx = activeSpec.heightPx.toFloat(),
+                                            )
+                                        }
                                     val activeBgTouchpad = currentBgTouchpadActive
                                     val activeBgProcessor = currentBgTouchpadProcessor
 
@@ -422,6 +496,7 @@ internal fun PadSurface(
                                                     y = change.position.y,
                                                     boxW = w,
                                                     boxH = h,
+                                                    viewport = activeViewport,
                                                 )
                                             } else if (activeBgTouchpad) {
                                                 activeBgProcessor.onRelease(id, change.position.x, change.position.y, w, h)
@@ -460,13 +535,14 @@ internal fun PadSurface(
                                                     }
                                                     if (
                                                         engine.onPress(
-                                                            id,
-                                                            change.position.x,
-                                                            change.position.y,
-                                                            w,
-                                                            h,
-                                                            activeLayout.buttons,
-                                                            currentIsPeekActive,
+                                                            pointerId = id,
+                                                            px = change.position.x,
+                                                            py = change.position.y,
+                                                            canvasW = w,
+                                                            canvasH = h,
+                                                            buttons = activeLayout.buttons,
+                                                            isPeekActive = currentIsPeekActive,
+                                                            viewport = activeViewport,
                                                         )
                                                     ) {
                                                         change.consume()
@@ -486,6 +562,7 @@ internal fun PadSurface(
                                                                 boxH = h,
                                                                 isConsumed = change.isConsumed,
                                                                 pointerCount = event.changes.size,
+                                                                viewport = activeViewport,
                                                             )
                                                         }
                                                     } else if (InteractiveCutoutController.onPress(
@@ -495,6 +572,7 @@ internal fun PadSurface(
                                                             boxW = w,
                                                             boxH = h,
                                                             cutouts = activeLayout.mirrorCutouts,
+                                                            viewport = activeViewport,
                                                         )
                                                     ) {
                                                         change.consume()
@@ -531,6 +609,7 @@ internal fun PadSurface(
                                                         boxW = w,
                                                         boxH = h,
                                                         cutouts = activeLayout.mirrorCutouts,
+                                                        viewport = activeViewport,
                                                     )
                                                     change.consume()
                                                 } else if (isTouchProjectionActive) {
@@ -541,6 +620,7 @@ internal fun PadSurface(
                                                         boxW = w,
                                                         boxH = h,
                                                         isConsumed = change.isConsumed,
+                                                        viewport = activeViewport,
                                                     )
                                                 } else if (activeBgTouchpad) {
                                                     val delta = change.positionChange()
@@ -580,6 +660,7 @@ internal fun PadSurface(
                 LayoutImageLayer(
                     layout = layout,
                     bitmaps = layerBitmaps,
+                    viewport = designViewport,
                 )
             }
 
@@ -609,7 +690,7 @@ internal fun PadSurface(
                     btn = btn,
                     layout = layout,
                     isPressed = isPressed,
-                    canvasSize = canvasSizeState.value,
+                    viewport = designViewport,
                     accentColor = accentColor,
                     isRunning = isRunning,
                 )

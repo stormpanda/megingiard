@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -89,7 +88,6 @@ private val BSE_PREVIEW_IMAGE_ROUNDING = 8.dp
 private val BSE_PREVIEW_SHAPE = RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING)
 private val BSE_ICON_SIZE_48 = 48.dp
 
-private const val BSE_FALLBACK_BOTTOM_ASPECT_RATIO = 31f / 27f
 private const val BSE_PREVIEW_WIDTH_FRACTION = 0.5f
 
 @Composable
@@ -262,10 +260,10 @@ internal fun LayerImageSettingsEditor(
         BackgroundPickerManager.clearPickedUri()
     }
 
+    val designCanvas = layout.effectiveDesignCanvas
     val bottomScreenAspectRatio =
-        remember(context) {
-            DisplayDetector.resolveSecondaryAspectRatio(context, BSE_FALLBACK_BOTTOM_ASPECT_RATIO)
-        }
+        designCanvas.widthPx.toFloat().coerceAtLeast(1f) /
+            designCanvas.heightPx.toFloat().coerceAtLeast(1f)
 
     // 1. Preview Frame
     Box(

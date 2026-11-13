@@ -47,15 +47,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.math.DesignViewport
 import com.stormpanda.megingiard.ui.AppPalettes
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val TAG = "MacroPadButton"
@@ -68,13 +68,17 @@ private const val TAG = "MacroPadButton"
 private const val MP_PULSE_HALF_PERIOD_MS = 600
 
 private const val MP_BTN_BASE_ICON_SIZE_DP = 44f
-internal const val MP_BTN_ICON_RATIO = MP_BTN_BASE_ICON_SIZE_DP / MP_BUTTON_BASE_UNIT_DP
+private const val MP_BTN_BASE_ICON_SIZE_PX = MP_BTN_BASE_ICON_SIZE_DP * THOR_BOTTOM_DENSITY
+internal const val MP_BTN_ICON_RATIO = MP_BTN_BASE_ICON_SIZE_PX / MP_THOR_DEFAULT_BUTTON_SIZE_PX
 
-private const val MP_BTN_LABEL_BASE_FONT_SP = 11f
-private const val MP_BTN_LABEL_MIN_FONT_SP = 8f
-private const val MP_BTN_LABEL_MAX_FONT_SP = 32f
+private const val MP_BTN_LABEL_BASE_FONT_DP = 11f
+private const val MP_BTN_LABEL_MIN_FONT_DP = 8f
+private const val MP_BTN_LABEL_MAX_FONT_DP = 32f
+private const val MP_BTN_LABEL_BASE_FONT_PX = MP_BTN_LABEL_BASE_FONT_DP * THOR_BOTTOM_DENSITY
+private const val MP_BTN_LABEL_MIN_FONT_PX = MP_BTN_LABEL_MIN_FONT_DP * THOR_BOTTOM_DENSITY
+private const val MP_BTN_LABEL_MAX_FONT_PX = MP_BTN_LABEL_MAX_FONT_DP * THOR_BOTTOM_DENSITY
 
-/** Maximum label font size in sp per dp of button height (60 dp height → 24 sp cap). */
+/** Maximum label font size in pixels as a fraction of rendered button height. */
 private const val MP_BTN_LABEL_MAX_HEIGHT_RATIO = 0.4f
 
 private const val MP_PRESS_ANIM_MS = 80
@@ -86,9 +90,15 @@ private const val MP_BTN_RIPPLE_MAX_RADIUS_RATIO = 0.75f
 private const val MP_BTN_RIPPLE_MIN_RADIUS_FACTOR = 0.2f
 private const val MP_BTN_RIPPLE_RANGE_FACTOR = 0.8f
 private const val MP_BTN_RIPPLE_MAX_ALPHA = 0.6f
-private val MP_SCROLL_CHEVRON_SIZE = 18.dp
-private val MP_SCROLL_CHEVRON_GAP = 4.dp
+private const val MP_TRACKPOINT_DOT_ALPHA = 0.7f
+private const val MP_MIN_RESOLVED_ALPHA = 0.1f
+private const val MP_SCROLL_CHEVRON_BASE_DP = 18f
+private const val MP_SCROLL_CHEVRON_GAP_BASE_DP = 4f
+private const val MP_SCROLL_CHEVRON_BASE_PX = MP_SCROLL_CHEVRON_BASE_DP * THOR_BOTTOM_DENSITY
+private const val MP_SCROLL_CHEVRON_GAP_BASE_PX = MP_SCROLL_CHEVRON_GAP_BASE_DP * THOR_BOTTOM_DENSITY
 private const val MP_SCROLL_CHEVRON_DIM_ALPHA = 0.5f
+private const val MP_PEEK_ICON_BASE_DP = 24f
+private const val MP_PEEK_ICON_BASE_PX = MP_PEEK_ICON_BASE_DP * THOR_BOTTOM_DENSITY
 private val MP_PEEK_ICON_SIZE = 24.dp
 
 // Outer gradient edge alpha at resting state; intermediate stops follow r² quadratic curve.
@@ -110,11 +120,17 @@ internal fun PadButton(
     btn: PadButton,
     layout: PadLayout,
     isPressed: Boolean,
-    canvasSize: IntSize,
+    viewport: DesignViewport,
     accentColor: Color,
     isRunning: Boolean = false,
 ) {
     if (btn.invisible) {
+        return
+    }
+
+    val renderedWidthPx = btn.widthPx * viewport.scale
+    val renderedHeightPx = btn.heightPx * viewport.scale
+    if (renderedWidthPx <= 0f || renderedHeightPx <= 0f) {
         return
     }
 
@@ -176,20 +192,16 @@ internal fun PadButton(
     val chipShape =
         resolvePadButtonShape(
             buttonShape = btn.buttonShape,
-            widthDp = btn.widthDp,
-            heightDp = btn.heightDp,
+            widthPx = btn.widthPx,
+            heightPx = btn.heightPx,
             isTrackpoint = isTrackpoint,
         )
 
-    val btnWidthDp = btn.widthDp.dp
-    val btnHeightDp = btn.heightDp.dp
-
-    val chipWidthPx = with(density) { btnWidthDp.toPx() }
-    val chipHeightPx = with(density) { btnHeightDp.toPx() }
-    val w = canvasSize.width.toFloat().coerceAtLeast(1f)
-    val h = canvasSize.height.toFloat().coerceAtLeast(1f)
-    val left = btn.posX * w - chipWidthPx / 2f
-    val top = btn.posY * h - chipHeightPx / 2f
+    val btnWidthDp = with(density) { renderedWidthPx.toDp() }
+    val btnHeightDp = with(density) { renderedHeightPx.toDp() }
+    val iconSizeDp = with(density) { (min(renderedWidthPx, renderedHeightPx) * MP_BTN_ICON_RATIO).toDp() }
+    val left = viewport.normToScreenX(btn.posX) - renderedWidthPx / 2f
+    val top = viewport.normToScreenY(btn.posY) - renderedHeightPx / 2f
 
     val rippleStroke =
         remember(density) {
@@ -206,7 +218,7 @@ internal fun PadButton(
                 .drawBehind {
                     if (isRunning && isIconOnly) {
                         val rippleProgress = rippleProgressState?.value ?: 0f
-                        val maxRadius = minOf(size.width, size.height) * MP_BTN_RIPPLE_MAX_RADIUS_RATIO
+                        val maxRadius = min(size.width, size.height) * MP_BTN_RIPPLE_MAX_RADIUS_RATIO
                         val currentRadius =
                             maxRadius * (MP_BTN_RIPPLE_MIN_RADIUS_FACTOR + rippleProgress * MP_BTN_RIPPLE_RANGE_FACTOR)
                         val rippleAlpha = (1f - rippleProgress) * MP_BTN_RIPPLE_MAX_ALPHA
@@ -247,7 +259,9 @@ internal fun PadButton(
                 PadButtonContent(
                     btn = btn,
                     effectiveTextTint = effectiveTextTint,
-                    iconSize = minOf(btnWidthDp, btnHeightDp) * MP_BTN_ICON_RATIO,
+                    iconSize = iconSizeDp,
+                    renderedWidthPx = renderedWidthPx,
+                    renderedHeightPx = renderedHeightPx,
                     isTrackpoint = isTrackpoint,
                     effectiveContentAccent = effectiveContentAccent,
                 )
@@ -261,24 +275,34 @@ internal fun PadButtonContent(
     btn: PadButton,
     effectiveTextTint: Color,
     iconSize: Dp,
+    renderedWidthPx: Float = btn.widthPx,
+    renderedHeightPx: Float = btn.heightPx,
     isTrackpoint: Boolean = btn.action is PadAction.TrackpointMove,
     effectiveContentAccent: Color = effectiveTextTint,
 ) {
+    val density = LocalDensity.current
     val contentScale = ButtonShapeGeometry.contentScaleFor(btn.buttonShape, isTrackpoint)
     val scaledIconSize = iconSize * contentScale
 
     if (isTrackpoint) {
         Text(
             "●",
-            color = effectiveContentAccent.copy(alpha = 0.7f * effectiveContentAccent.alpha),
+            color = effectiveContentAccent.copy(alpha = MP_TRACKPOINT_DOT_ALPHA * effectiveContentAccent.alpha),
             style = MaterialTheme.typography.titleLarge,
         )
     } else if (btn.action is PadAction.ScrollWheel) {
-        ScrollWheelFace(accentColor = effectiveContentAccent)
+        ScrollWheelFace(
+            accentColor = effectiveContentAccent,
+            renderedWidthPx = renderedWidthPx,
+        )
     } else if (btn.action is PadAction.BackgroundPeek) {
+        val peekIconPx =
+            MP_PEEK_ICON_BASE_PX *
+                (min(renderedWidthPx, renderedHeightPx) / MP_THOR_DEFAULT_BUTTON_SIZE_PX) *
+                contentScale
         BackgroundPeekFace(
             accentColor = effectiveContentAccent,
-            iconSize = MP_PEEK_ICON_SIZE * contentScale,
+            iconSize = with(density) { peekIconPx.toDp() },
         )
     } else if (btn.action is PadAction.AppLauncher) {
         AppLauncherFace(
@@ -297,16 +321,22 @@ internal fun PadButtonContent(
                 filled = btn.iconFilled,
             )
         } else {
-            val widthScaledSp = MP_BTN_LABEL_BASE_FONT_SP * (btn.widthDp / MP_BUTTON_BASE_UNIT_DP) * contentScale
-            val heightCapSp = btn.heightDp * MP_BTN_LABEL_MAX_HEIGHT_RATIO * contentScale
-            val fontSp =
-                minOf(widthScaledSp, heightCapSp)
-                    .coerceIn(MP_BTN_LABEL_MIN_FONT_SP, MP_BTN_LABEL_MAX_FONT_SP)
-                    .sp
+            // CODING_GUIDE §16.1 computed fontSize exception: MacroPad button labels scale
+            // proportionally with the button's rendered pixel footprint inside DesignViewport and
+            // convert via Density.toSp() so OS Display Size / Font Scale never distort pad layouts.
+            val baseFontPx =
+                MP_BTN_LABEL_BASE_FONT_PX *
+                    (renderedWidthPx / MP_THOR_DEFAULT_BUTTON_SIZE_PX) *
+                    contentScale
+            val heightCapPx = renderedHeightPx * MP_BTN_LABEL_MAX_HEIGHT_RATIO * contentScale
+            val fontPx =
+                min(baseFontPx, heightCapPx)
+                    .coerceIn(MP_BTN_LABEL_MIN_FONT_PX, MP_BTN_LABEL_MAX_FONT_PX)
+            val labelFontSize = with(density) { fontPx.toSp() }
             Text(
                 text = btn.label,
                 color = effectiveTextTint,
-                fontSize = fontSp,
+                fontSize = labelFontSize,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -322,6 +352,7 @@ internal fun AppLauncherFace(
     iconSize: Dp? = null,
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
     var appIconBitmap by remember(action.packageName) { mutableStateOf<ImageBitmap?>(null) }
     var resolvedName by remember(action.packageName) { mutableStateOf("") }
 
@@ -348,11 +379,13 @@ internal fun AppLauncherFace(
 
     val targetSize =
         iconSize
-            ?: (
-                minOf(btn.widthDp, btn.heightDp).dp *
-                    MP_BTN_ICON_RATIO *
-                    ButtonShapeGeometry.contentScaleFor(btn.buttonShape)
-            )
+            ?: with(density) {
+                (
+                    min(btn.widthPx, btn.heightPx) *
+                        MP_BTN_ICON_RATIO *
+                        ButtonShapeGeometry.contentScaleFor(btn.buttonShape)
+                ).toDp()
+            }
     val bitmap = appIconBitmap
     if (bitmap != null) {
         val colorFilter =
@@ -412,7 +445,14 @@ private fun tintedGrayscaleFilter(tint: Color): ColorFilter {
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-internal fun ScrollWheelFace(accentColor: Color) {
+internal fun ScrollWheelFace(
+    accentColor: Color,
+    renderedWidthPx: Float = MP_THOR_DEFAULT_BUTTON_SIZE_PX,
+) {
+    val density = LocalDensity.current
+    val sizeScale = (renderedWidthPx / MP_THOR_DEFAULT_BUTTON_SIZE_PX).coerceAtMost(1f)
+    val chevronSize = with(density) { (MP_SCROLL_CHEVRON_BASE_PX * sizeScale).toDp() }
+    val chevronGap = with(density) { (MP_SCROLL_CHEVRON_GAP_BASE_PX * sizeScale).toDp() }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -423,27 +463,27 @@ internal fun ScrollWheelFace(accentColor: Color) {
             Icons.Rounded.KeyboardArrowUp,
             contentDescription = null,
             tint = accentColor,
-            modifier = Modifier.size(MP_SCROLL_CHEVRON_SIZE),
+            modifier = Modifier.size(chevronSize),
         )
         Icon(
             Icons.Rounded.KeyboardArrowUp,
             contentDescription = null,
             tint = accentColor.copy(alpha = MP_SCROLL_CHEVRON_DIM_ALPHA * accentColor.alpha),
-            modifier = Modifier.size(MP_SCROLL_CHEVRON_SIZE),
+            modifier = Modifier.size(chevronSize),
         )
-        Spacer(Modifier.height(MP_SCROLL_CHEVRON_GAP))
+        Spacer(Modifier.height(chevronGap))
         // Down chevrons
         Icon(
             Icons.Rounded.KeyboardArrowDown,
             contentDescription = null,
             tint = accentColor.copy(alpha = MP_SCROLL_CHEVRON_DIM_ALPHA * accentColor.alpha),
-            modifier = Modifier.size(MP_SCROLL_CHEVRON_SIZE),
+            modifier = Modifier.size(chevronSize),
         )
         Icon(
             Icons.Rounded.KeyboardArrowDown,
             contentDescription = null,
             tint = accentColor,
-            modifier = Modifier.size(MP_SCROLL_CHEVRON_SIZE),
+            modifier = Modifier.size(chevronSize),
         )
     }
 }
@@ -477,7 +517,7 @@ internal fun resolveColorOption(
             ColorOption.Accent -> accentColor
             is ColorOption.Custom -> Color(option.argb)
         }
-    val clampedAlpha = resolved.alpha.coerceIn(0.1f, 1f)
+    val clampedAlpha = resolved.alpha.coerceIn(MP_MIN_RESOLVED_ALPHA, 1f)
     return resolved.copy(alpha = clampedAlpha)
 }
 
@@ -487,6 +527,6 @@ internal fun resolveBgColorOption(
 ): Color =
     resolveColorOption(
         option = option,
-        accentColor = accentColor.copy(alpha = 0.7f),
+        accentColor = accentColor.copy(alpha = MP_BTN_GRADIENT_OUTER),
         defaultNeutral = MP_AMBIENT_NEUTRAL_BG,
     )

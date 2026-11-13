@@ -2,6 +2,8 @@ package com.stormpanda.megingiard.mirror
 
 import android.os.SystemClock
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.math.DesignViewport
+import com.stormpanda.megingiard.math.ViewportMath
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -74,8 +76,9 @@ object InteractiveCutoutController {
         boxW: Float,
         boxH: Float,
         cutouts: List<ScreenCutout>,
+        viewport: DesignViewport = ViewportMath.calculateDesignViewport(boxW, boxH, boxW, boxH),
     ): Boolean {
-        val target = findInteractiveCutoutAt(xPx, yPx, boxW, boxH, cutouts) ?: return false
+        val target = findInteractiveCutoutAt(xPx, yPx, viewport, cutouts) ?: return false
         val cutoutId = target.id
 
         // Cancel any active animation on this cutout
@@ -123,6 +126,7 @@ object InteractiveCutoutController {
         boxW: Float,
         boxH: Float,
         cutouts: List<ScreenCutout>,
+        viewport: DesignViewport = ViewportMath.calculateDesignViewport(boxW, boxH, boxW, boxH),
     ): Boolean {
         val cutoutId = findCutoutIdForPointer(pointerId) ?: return false
         val cutout = cutouts.find { it.id == cutoutId } ?: return false
@@ -132,10 +136,10 @@ object InteractiveCutoutController {
         val prevX = currentPointer.x
         val prevY = currentPointer.y
 
-        val destW = (cutout.destWidth * boxW).coerceAtLeast(1f)
-        val destH = (cutout.destHeight * boxH).coerceAtLeast(1f)
-        val destLeft = cutout.destX * boxW
-        val destTop = cutout.destY * boxH
+        val destW = (cutout.destWidth * viewport.viewportWidthPx).coerceAtLeast(1f)
+        val destH = (cutout.destHeight * viewport.viewportHeightPx).coerceAtLeast(1f)
+        val destLeft = viewport.normToScreenX(cutout.destX)
+        val destTop = viewport.normToScreenY(cutout.destY)
 
         val defaultCrop = NormalizedCrop.fromCutout(cutout)
         val currentCrop = getEffectiveCrop(cutout)
@@ -356,19 +360,17 @@ object InteractiveCutoutController {
     private fun findInteractiveCutoutAt(
         x: Float,
         y: Float,
-        boxW: Float,
-        boxH: Float,
+        viewport: DesignViewport,
         cutouts: List<ScreenCutout>,
-    ): ScreenCutout? {
-        return cutouts.lastOrNull { cutout ->
+    ): ScreenCutout? =
+        cutouts.lastOrNull { cutout ->
             if (!cutout.interactivePanZoom || cutout.touchProjectionEnabled) return@lastOrNull false
-            val left = cutout.destX * boxW
-            val top = cutout.destY * boxH
-            val right = (cutout.destX + cutout.destWidth) * boxW
-            val bottom = (cutout.destY + cutout.destHeight) * boxH
-            x in left..right && y in top..bottom
+            val left = viewport.normToScreenX(cutout.destX)
+            val top = viewport.normToScreenY(cutout.destY)
+            val width = cutout.destWidth * viewport.viewportWidthPx
+            val height = cutout.destHeight * viewport.viewportHeightPx
+            x in left..(left + width) && y in top..(top + height)
         }
-    }
 
     private fun findCutoutIdForPointer(pointerId: Long): String? =
         trackedPointers.entries

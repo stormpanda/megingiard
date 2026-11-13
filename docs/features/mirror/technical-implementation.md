@@ -20,7 +20,7 @@ Primary Display (SurfaceControl)
                                                                                    └── TextureView (fed via GpuMotionSmoother)
 ```
 
-- **`ScreenCaptureService`** (foreground service) operates in direct privileged mode (`ACTION_START_PRIVD`), coordinating with `PrivdClient` (`startDirectMirror` / `stopMirror`), `GpuMotionSmoother`, `DirectMirrorSurfaceBridge`, and the background `mirrorserver` DEX. It configures a hidden `SurfaceControl` virtual display streaming the primary display's graphics buffer through `GpuMotionSmoother.inputSurface` to the target `Surface` registered in `MasterSurfaceRegistry` by `EmbeddedMirrorView`.
+- **`ScreenCaptureService`** (foreground service) operates in direct privileged mode (`ACTION_START_PRIVD`), coordinating with `PrivdClient` (`startDirectMirror` / `stopMirror`), `GpuMotionSmoother`, `DirectMirrorSurfaceBridge`, and the background `mirrorserver` DEX. It configures a hidden `SurfaceControl` virtual display streaming the primary display's graphics buffer through `GpuMotionSmoother.inputSurface` to the target `Surface` registered in `MasterSurfaceRegistry` by `EmbeddedMirrorView`, and refreshes `MacroPadState.setHostSecondaryCanvas(LayoutCanvasSpec(w, h))` whenever the secondary display is resolved or updated so newly created layouts stamp live secondary-display pixels.
 - **Embedded View Architecture & Prioritized Surface Registry:** Screen mirroring renders seamlessly inside `MainActivity` / `MainAppScreen` using `EmbeddedMirrorView` (`MultiCutoutContainer` wrapping `TextureView`). `MasterSurfaceRegistry` manages active display surfaces using an owner-based priority hierarchy (`PRIORITY_TOUCHPAD = 20`, `PRIORITY_MACROPAD = 10`). When the Touchpad overlay opens with mirroring active, `MasterSurfaceRegistry` directs the video capture stream to the Touchpad's 16:9 view. When Touchpad is closed or in mouse mode, `MasterSurfaceRegistry` automatically reverts active streaming to MacroPad's surface without recreating or tearing down MacroPad's background mirror view. This avoids window type mismatch issues, removes secondary-display `Presentation` window Z-order conflicts, and allows modals, editors, and Quick Menu overlays to composite directly in the standard Jetpack Compose hierarchy.
 
 ### Architecture: Privileged Capture Pipeline (FR-M9)
@@ -78,28 +78,21 @@ Jetpack Compose requires a `LifecycleOwner`, `SavedStateRegistryOwner`, and `Vie
 3. Implements `HasDefaultViewModelProviderFactory` so that `AndroidViewModel` subclasses can be created via `viewModel()` inside the overlay Compose tree.
 4. Is destroyed (`ON_PAUSE → ON_STOP → ON_DESTROY`) via `destroy()` when the overlay is removed.
 
-### Aspect Ratio Preservation (Letterboxing / Pillarboxing)
+### Aspect Ratio Preservation & `DesignViewport` Destination Mapping
 
-The secondary display's window metrics are read and the destination cutout dimensions are computed to preserve the source aspect ratio without distortion:
+The master texture surface buffer allocation matches the source resolution, while destination cutout geometry in `MultiCutoutContainer` is governed by `DesignViewport` (`ViewportMath.calculateDesignViewport` in `:shared:core`):
 
-```kotlin
-if (srcRatio > targetRatio) {
-    finalHeight = (targetWidth / srcRatio).toInt()   // letterbox
-} else {
-    finalWidth  = (targetHeight * srcRatio).toInt()  // pillarbox
-}
-```
-
-The master texture surface buffer allocation matches the source resolution. The rendered display size is constrained via layout geometry in `MultiCutoutContainer`.
+- **MacroPad Layout Mode (`overrideCutouts == null`)**: `EmbeddedMirrorView` passes `designCanvas = layout?.effectiveDesignCanvas` (e.g. `1240 × 1080` AYN Thor or `1280 × 960` Retroid Pocket Duo) into `MultiCutoutContainer.setDesignCanvas(...)`. `MultiCutoutContainer` computes `viewport = ViewportMath.calculateDesignViewport(w, h, designCanvas.widthPx, designCanvas.heightPx)` (`scale = min(w / designW, h / designH)`, centered at `(leftPx, topPx)` with size `viewportWidthPx × viewportHeightPx`) and maps every cutout (including `< 0.0` / `> 1.0` cutouts placed in active black bars) to screen coordinates `dx = viewport.normToScreenX(cutout.destX)`, `dy = viewport.normToScreenY(cutout.destY)`, `dw = cutout.destWidth * viewport.viewportWidthPx`, `dh = cutout.destHeight * viewport.viewportHeightPx`.
+- **Override Mode (`overrideCutouts != null`, e.g. `FullscreenMouseOverlay`)**: `EmbeddedMirrorView` passes `designCanvas = null`, so `MultiCutoutContainer` computes an identity `1:1` viewport spanning the full container (`w × h`), allowing `ScreenCutout.FULLSCREEN` to fill 100% of its `16:9` aspect-locked Touchpad container without `PadLayout.designCanvas` scaling.
 
 ### Custom Background Image & Masking Support
 
-- `EmbeddedMirrorView` collects updates from `MacroPadState.activeLayout` to dynamically react to layout changes.
+- `EmbeddedMirrorView` collects updates from `MacroPadState.activeLayout` to dynamically react to layout and `effectiveDesignCanvas` changes.
 - When a layout custom background image (`backgroundImagePath`) and/or mask overlay image (`maskImagePath`) is selected, they are decoded asynchronously (`Dispatchers.IO`) as `Bitmap`s.
 - `MultiCutoutContainer.dispatchDraw` executes a multi-pass drawing architecture:
-  - **Pass 0 (Background Bitmap)**: If `bgBitmap` is present, it is rendered on the canvas behind all cutouts using its layout scaling (`bgScaleMode`), cropping scale (`bgImageScale`), and offsets (`bgImageOffsetX/Y`). If absent, the canvas base remains theme-invariant pitch black (`Color.Black`).
-  - **Pass 1 (Below-Mask Cutouts)**: Mirrored cutouts configured with `renderAboveMask = false` (the default) are drawn above the background bitmap.
-  - **Pass 1.5 (Mask Overlay Bitmap)**: If `maskBitmap` is present, it is rendered directly above the Pass 1 cutouts using its layout scaling (`maskScaleMode`), cropping scale (`maskImageScale`), and offsets (`maskImageOffsetX/Y`). This allows live video streams to shine through transparent mask cutouts.
+  - **Pass 0 (Background Bitmap)**: If `bgBitmap` is present, the canvas is saved, clipped strictly to `[viewport.leftPx, viewport.topPx, viewport.leftPx + viewport.viewportWidthPx, viewport.topPx + viewport.viewportHeightPx]`, translated to `(viewport.leftPx, viewport.topPx)`, and rendered against `viewportWidthPx × viewportHeightPx` using its layout scaling (`bgScaleMode`), cropping scale (`bgImageScale`), and offsets (`bgImageOffsetX/Y`) before restoring. Outer pillarbox/letterbox bars remain theme-invariant pitch black (`Color.Black`), and if `bgBitmap` is absent, the entire canvas base remains `Color.Black`.
+  - **Pass 1 (Below-Mask Cutouts)**: Mirrored cutouts configured with `renderAboveMask = false` (the default) are drawn above the background bitmap at their `DesignViewport`-mapped coordinates (unclipped by the `designCanvas` background clip, so `< 0.0` / `> 1.0` black-bar cutouts render cleanly across the full `MultiCutoutContainer`).
+  - **Pass 1.5 (Mask Overlay Bitmap)**: If `maskBitmap` is present, it is clipped and translated strictly to the `DesignViewport` `[0..1] × [0..1]` rectangle directly above Pass 1 cutouts using its layout scaling (`maskScaleMode`), cropping scale (`maskImageScale`), and offsets (`maskImageOffsetX/Y`), keeping custom bezel/slot masks aligned `1:1` with `designCanvas` without bleeding into black bars.
   - **Pass 2 (Above-Mask Cutouts)**: Mirrored cutouts configured with `renderAboveMask = true` are drawn above the mask overlay bitmap.
   - **Pass 3 (Compose UI Buttons)**: Compose MacroPad buttons and HUD elements are rendered on the top-most layer above all cutouts and masks.
 
@@ -114,7 +107,7 @@ The layout editor (`CutoutLayoutEditor`) and top-screen crop selector (`CropSele
 - **Anti-Occlusion Borders & Clean Interior:** To prevent borders from obscuring or bleeding into the mirrored video stream (especially on small or flat cutouts where bilinear texture filtering magnifies boundary pixels):
   - On the primary display (`CropSelectorOverlay`), the crop boundary is defined purely by the surrounding dark scrim (`CS_SCRIM_ALPHA = 0.35f`) and the 4 edge/corner pill handles. No border stroke is rendered on Display 0. This guarantees that **0 border pixels** exist on the primary display, completely eliminating border capture and bilinear interpolation bleed into the mirror video stream.
   - On the secondary display (`CutoutLayoutEditor`), cutouts render a 1px (`1.dp`) outset border (`RectangleShape` for rectangular cutouts, `CircleShape` for circular cutouts) outside the destination bounds with a 100% transparent interior, ensuring clear spatial editing feedback with zero occlusion of the mirrored video content.
-- **Runtime Secondary Display Geometry:** `CropSelectorOverlay` and `MirrorEditorTopOverlay` query live secondary display pixel bounds via `DisplayDetector.resolveSecondaryDisplaySize(context)` (e.g. `1240 × 1080` on AYN Thor, `1280 × 960` on Retroid Pocket Duo) so proportional aspect-ratio locks (`AspectRatioMode.TOP` / `BOTTOM`) and 90°/270° rotated cutout math match the attached bottom screen without device-specific hardcoded resolutions.
+- **Authoring `designCanvas` & `DesignViewport` Editor Geometry:** `CropSelectorOverlay`, `MirrorEditorTopOverlay`, and `CutoutLayoutEditor` evaluate cutout `AspectRatioMode.TOP` / `BOTTOM` locks, 90°/270° rotated cutout bounds, and resize math against `activeLayout.effectiveDesignCanvas` (`widthPx × heightPx`, e.g. `1240 × 1080` on AYN Thor layouts and `1280 × 960` on Retroid Pocket Duo layouts — never hardcoded secondary fallbacks). On the bottom screen, `CutoutLayoutEditor` maps cutout bounding boxes (`viewport.normToScreenX/Y`, `viewportWidthPx/HeightPx`), touch drag/resize deltas (`/ viewportWidthPx`, `/ viewportHeightPx`), and alignment guide lines through `DesignViewport`, passing host normalized bounds (`viewport.minNormX..viewport.maxNormX`, `viewport.minNormY..viewport.maxNormY`) into `calculateCutoutAlignmentSnap`, `clampCutoutDrag`, and `clampCutoutResize`. Likewise, `MirrorEditorTopOverlay` derives host bar bounds from `MacroPadState.hostSecondaryCanvas` (when present) and passes them to `calculateGamepadCutoutMove` and `clampCutoutResize` so top-screen D-pad cutout adjustment matches bottom-screen touch bounds.
 - **Edge Drag Handles**: Resizing cutouts on the secondary display and crops on the primary display is performed via 4 pill-shaped drag handles positioned in parallel to the 4 edges (top, bottom, left, right), centered at the midpoint of each edge, and located outside the rectangle. Dragging an edge handle exclusively adjusts the position of that single edge while keeping opposite and perpendicular dimensions fixed, respecting boundary limits and cutout non-overlap constraints.
 
 
@@ -162,12 +155,12 @@ Follow Touch Mode centers the designated cutout's source crop viewport in real-t
 | `isLocked` | `StateFlow<Boolean>` | `false` | Legacy background lock state (auto-enabled when touch projection is active) |
 | `isTouchProjectionActive` | `StateFlow<Boolean>` | `false` | Derived from `MacroPadState.activeLayout` (`mirrorCutouts.any { it.touchProjection }`) |
 
-**Touch Projection implementation (`MultiCutoutContainer` & `TouchProjectionController`):**
+**Interactive Cutout & Touch Projection implementation (`InteractiveCutoutController` & `TouchProjectionController`):**
 
-`MultiCutoutContainer.onTouchEvent` delegates touch events to `TouchProjectionController.handleTouchEvent(...)` when `isTouchProjectionActive` is `true` and Screen Mirroring edit mode is inactive:
+Both `InteractiveCutoutController` (hit-testing, 1-finger pan delta normalization, and 2-finger pinch focal mapping) and `TouchProjectionController` accept `viewport: DesignViewport` (defaulting to full `boxW × boxH` when unspecified) so cutout screen rectangles resolve via `destLeft = viewport.normToScreenX(cutout.destX)`, `destTop = viewport.normToScreenY(cutout.destY)`, `destWidth = cutout.destWidth * viewport.viewportWidthPx`, and `destHeight = cutout.destHeight * viewport.viewportHeightPx`:
 
-1. **Edge-zone exclusion**: gestures beginning within 40 dp (`EDGE_SWIPE_EXCLUSION_DP`) of the configured Quick Menu bar edge are ignored by `TouchProjectionController` (`return false`) so they fall through to the Quick Menu swipe handler.
-2. **Coordinate inversion**: `TouchProjectionController` iterates through the active cutouts (accounting for transient interactive/follow crop overrides) via `MirrorCoordinateTransform.projectCutoutCoordinates` to find the cutout containing the touch and invert rotation/flip transforms:
+1. **Edge-zone exclusion**: gestures beginning within 40 dp (`EDGE_SWIPE_EXCLUSION_DP`) of the configured Quick Menu bar edge of the full physical host height (`boxH`) are ignored by `TouchProjectionController` (`return false`) so they fall through to the Quick Menu swipe handler even when letterbox black bars are present, while uncovered background touchpad tracking stays continuous across pillarbox/letterbox bars.
+2. **Coordinate inversion**: `TouchProjectionController` iterates through the active cutouts (accounting for transient interactive/follow crop overrides and `DesignViewport` destination rectangles) via `MirrorCoordinateTransform.projectCutoutCoordinates` to find the cutout containing the touch and invert rotation/flip transforms:
    ```
    contentX = (touchX − destLeft) / destWidth
    normalizedX = srcX + contentX * srcWidth

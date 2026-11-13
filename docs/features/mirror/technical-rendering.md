@@ -52,8 +52,9 @@ To stabilize mirrored UI elements against fast-moving backgrounds and provide le
 
 HUD / UI isolation is implemented via hardware-accelerated transparency mask blending and optional static asset pre-rendering:
 
-1. **Hardware-Accelerated Mask Blending (`MultiCutoutContainer.kt`, `CutoutMaskManager.kt`)**:
-   - `CutoutMaskManager` loads the base mask PNG from `context.filesDir/cutout_masks/mask_<cutoutId>.png`, the raw variance map from `mask_<cutoutId>_var.bin`, and the reference freeze frame from `mask_<cutoutId>_freeze.png`.
+1. **Hardware-Accelerated Mask Blending & `CutoutMaskFileStore` (`MultiCutoutContainer.kt`, `CutoutMaskManager.kt`, `CutoutMaskFileStore.kt`)**:
+   - `CutoutMaskFileStore` (`:companion:domain`) centralizes all disk file naming and safe I/O under `context.filesDir/cutout_masks/`: `baseMaskFile` (`mask_<id>.png`), `varianceFile` (`mask_<id>_var.bin`), `freezeFrameFile` (`mask_<id>_freeze.png` for both cutout reference frames and per-layout visual anchor freeze frames), `duplicateAssetsForId` / `duplicateLayoutCutoutAssets` (invoked during profile duplication, layout duplication, and cross-profile layout copy), `deleteAssetsForId` / `deleteLayoutCutoutAssets`, and `collectExportFiles` (canonical-path-validated export map for `.mgrd` archives).
+   - `CutoutMaskManager` (`:companion:ui`) delegates disk lookups and deletions to `CutoutMaskFileStore` while managing in-memory `Bitmap`/variance caches and cache invalidation on overwrite or deletion.
    - In `MultiCutoutContainer`, when `cutout.hasTransparencyMask` is true and static asset mode is disabled, the cutout is drawn into a hardware compositing layer (`canvas.saveLayer(...)`).
    - The transparency mask bitmap is composited directly over the rendered cutout using `Paint` with `PorterDuff.Mode.DST_IN` and bilinear filtering (`isFilterBitmap = true`).
    - **Dynamic Translucency & Fine-Tuning**: `CutoutMaskManager.getMask(context, cutout.id, cutout.maskTranslucency, cutout.maskSensitivity, cutout.maskCavityHealing)` caches tuned mask variants in memory keyed by `"$cutoutId:$sensitivity:$translucency:$cavityHealing"`. When parameters are customized, `CutoutAutoTuner.buildMask()` generates the tuned mask dynamically from the raw variance map in ~3-5ms on CPU:
@@ -90,11 +91,11 @@ Mirrored cutouts support discrete 90° orientation changes (`rotation`: 0°, 90�
    - Content feeds (video stream, frozen frames, static UI assets), frosted blur backgrounds, and `DST_IN` hardware transparency masks render in unrotated content bounds `(contentW, contentH)`. This ensures that transparency masks and blur layers rotate and flip synchronously with the source video.
    - Screen-space boundary effects (ambient dimming veils and hybrid edge blending gradients) are rendered in unrotated screen bounds `(dw, dh)` outside the transformed canvas scope.
 
-2. **Bounding Box Geometry & Collision Prevention (`MirrorCoordinateTransform.calculateRotatedCutoutBounds`)**:
-   - Swapping between landscape and portrait orientations (0°/180° $\leftrightarrow$ 90°/270°) swaps destination physical pixel dimensions using `newW = (cutout.destHeight * screenH) / screenW` and `newH = (cutout.destWidth * screenW) / screenH`.
+2. **Bounding Box Geometry, Black-Bar Clamping & Collision Prevention (`MirrorCoordinateTransform`)**:
+   - Swapping between landscape and portrait orientations (0°/180° $\leftrightarrow$ 90°/270°) in `calculateRotatedCutoutBounds` swaps destination pixel dimensions in `activeLayout.effectiveDesignCanvas` space (`screenW = designCanvas.widthPx`, `screenH = designCanvas.heightPx`) using `newW = (cutout.destHeight * screenH) / screenW` and `newH = (cutout.destWidth * screenW) / screenH`.
    - The cutout's destination origin `(destX, destY)` is adjusted so that the bounding box expands or contracts symmetrically around its center point: `newX = centerX - newW / 2f`, `newY = centerY - newH / 2f`.
-   - The new bounds are clamped to screen dimensions `[0, screenWidth - newW]`, `[0, screenHeight - newH]`.
-   - If the newly calculated bounds overlap any sibling cutouts (`rectsOverlap`) or if minimum screen dimensions cannot accommodate the rotated footprint, rotation is rejected and the editor notifies the user via toast (`R.string.mirror_editor_rotate_blocked`).
+   - In `clampCutoutDrag` and `clampCutoutResize`, optional host normalized bounds (`minNormX`, `maxNormX`, `minNormY`, `maxNormY`, defaulting to `0f..1f`) allow cutouts to be dragged and resized into active pillarbox/letterbox black bars (`< 0.0` / `> 1.0`) without overlapping sibling cutouts or exceeding physical screen edges, while preserving existing partially-offscreen coordinates if a wider-screen layout is opened on a narrower display.
+   - If rotated bounds overlap any sibling cutouts (`rectsOverlap`) or if minimum dimensions cannot accommodate the rotated footprint, rotation is rejected and the editor notifies the user via toast (`R.string.mirror_editor_rotate_blocked`).
 
 3. **Touch Projection Inversion (`MirrorCoordinateTransform.projectCutoutCoordinates`)**:
    - Secondary screen touch coordinates `(touchX, touchY)` within `[destX, destX + destWidth]` and `[destY, destY + destHeight]` are normalized into `[0.0, 1.0]` relative to the rotated bounding box.
@@ -123,26 +124,27 @@ For future iterations of the privileged mirroring backend (`:mirrorserver` / `Di
 
 | File | Responsibility |
 | --- | --- |
-| `ScreenCaptureService.kt` | Foreground service; privileged `DirectMirrorServer` lifecycle and reactive surface/freeze reconciliation |
-| `EmbeddedMirrorView.kt` | Main Compose embedded mirror view hosting `MultiCutoutContainer` and `TextureView` |
+| `ScreenCaptureService.kt` | Foreground service; privileged `DirectMirrorServer` lifecycle, reactive surface/freeze reconciliation, and `MacroPadState.setHostSecondaryCanvas(...)` display size sync |
+| `EmbeddedMirrorView.kt` | Main Compose embedded mirror view hosting `MultiCutoutContainer` and `TextureView`, passing `layout.effectiveDesignCanvas` when `overrideCutouts == null` |
 | `MasterSurfaceRegistry.kt` | Process-wide master surface holder bridging `TextureView` to `ScreenCaptureService` |
 | `DirectMirrorSurfaceBridge.kt` | Binder client passing the target `Surface` (`TRANSACTION_SET_SURFACE` / `TRANSACTION_CLEAR_SURFACE`) to `DirectMirrorServer` |
 | `GpuMotionSmoother.kt` | OpenGL ES 2.0 temporal motion smoother, VRAM FBO delay ring buffer, and GL-thread anchor evaluator |
-| `MultiCutoutContainer.kt` | Multi-cutout canvas rendering, clipping, edge blending, rotation/flip transforms, and PorterDuff DST_IN transparency masking |
-| `MirrorCoordinateTransform.kt` | Pure coordinate transformations: touch projection inversion, rotated bounds calculation, aspect ratio adjustment |
+| `MultiCutoutContainer.kt` | Multi-cutout canvas rendering via `DesignViewport` destination mapping, `DesignViewport`-clipped layout background/mask passes, clipping, edge blending, rotation/flip transforms, and PorterDuff DST_IN transparency masking |
+| `MirrorCoordinateTransform.kt` | Pure coordinate transformations in `:companion:domain`: touch projection inversion, rotated bounds calculation, aspect ratio adjustment, and black-bar-aware `clampCutoutDrag` / `clampCutoutResize` |
 | `MirrorRuntimePolicy.kt` | Pure policy evaluating whether the runtime mirror session should auto-start or stop |
-| `TouchProjectionController.kt` | Multi-touch coordinate projection and `TouchInjector` dispatch for mirrored cutouts |
-| `CutoutMaskManager.kt` | Manages disk persistence and in-memory bitmap cache for cutout transparency masks |
+| `TouchProjectionController.kt` | `DesignViewport`-aware multi-touch coordinate projection and `TouchInjector` dispatch for mirrored cutouts with full-host Quick Menu edge exclusion |
+| `CutoutMaskFileStore.kt` | Domain file store (`:companion:domain`) managing `filesDir/cutout_masks/` naming, duplication across profile/layout copies, deletion, and `.mgrd` export file collection |
+| `CutoutMaskManager.kt` | UI mask cache manager (`:companion:ui`) delegating disk I/O to `CutoutMaskFileStore` and caching tuned transparency masks, static assets, variance maps, and freeze frames |
 | `CutoutAutoTuner.kt` | Computer vision engine for pixel-level color change detection, despeckling, and Gaussian anti-aliasing |
 | `VisualAutoTuneCoordinator.kt` | Orchestrates interactive calibration lifecycle, live preview streaming, overlay suspension, and mask/anchor generation |
 | `AutoTuneCalibrationSheet.kt` | Secondary screen interactive calibration sheet with live dynamic transparency preview and user Finish/Cancel actions |
 | `ScreenCaptureManager.kt` | Singleton state: layout-derived cutouts/edgeBlend/maxFps/touchProjection, freeze, lock, frozen bitmap, follow-touch tracking |
-| `InteractiveCutoutController.kt` | Transient interactive cutout viewport controller: pan, pinch-zoom, follow-touch overrides, elastic bounce-back, and snap-back animations |
+| `InteractiveCutoutController.kt` | `DesignViewport`-aware transient interactive cutout viewport controller: pan, pinch-zoom, follow-touch overrides, elastic bounce-back, and snap-back animations |
 | `CutoutGestureMath.kt` | Shared pure Kotlin math helper in `:shared:core`: pan delta, pinch zoom, bounds clamping, and lerp math |
 | `TouchScreenObserver.kt` | Subscribes to `PrivdClient.subscribeTouch()` (`SUB TOUCH`) in background coroutine and forwards normalized touch coordinates |
-| `CropSelectorOverlay.kt` | Primary display crop selector overlay Composable UI |
-| `CutoutLayoutEditor.kt` | Secondary display cutout placement arrange editor and visual alignment guides overlay (`CutoutAlignmentGuidesOverlay`) |
-| `MirrorEditorTopOverlay.kt` | Top-screen vertical controller toolbox and live crop bounds overlay |
+| `CropSelectorOverlay.kt` | Primary display crop selector overlay Composable UI evaluating `AspectRatioMode.TOP`/`BOTTOM` against `activeLayout.effectiveDesignCanvas` |
+| `CutoutLayoutEditor.kt` | Secondary display `DesignViewport`-mapped cutout placement editor (supporting `< 0.0` / `> 1.0` active black-bar bounds) and visual alignment guides overlay (`CutoutAlignmentGuidesOverlay`) |
+| `MirrorEditorTopOverlay.kt` | Top-screen vertical controller toolbox and live crop bounds overlay using `activeLayout.effectiveDesignCanvas` and host black-bar D-pad bounds |
 | `EditorToolbox.kt` | Shared top-screen controller toolbox primitives, resize handle views (`ResizeHandleView`), and `RememberTopOverlayFocusEffect` |
 | `AnchorSelectorOverlay.kt` | Top-screen interactive overlay for positioning and resizing a layout's visual reference anchor |
 | `AnchorPositioningSheet.kt` | Secondary display companion sheet showing magnified live anchor crop during positioning |
@@ -154,5 +156,6 @@ For future iterations of the privileged mirroring backend (`:mirrorserver` / `Di
 | `VisualAnchorSignature.kt` | Serializable data model representing visual anchor reference points and color signatures |
 | `AnchorPresenceEvaluator.kt` | Mathematical evaluation of sample frame points against reference signature |
 | `CutoutLostAnchorEffect.kt` | Serializable enum modeling extensible cutout behavior on visual anchor loss (Freeze, Blur) |
-| `../math/AlignmentMath.kt` | Shared pure Kotlin math helper in `:shared:core`: generalized center snapping, button adapters, cutout adapters (`calculateCutoutAlignmentSnap`, `calculateGamepadCutoutMove`, `findAlignedCutoutCenterGuides`), and grid algorithms |
+| `../math/ViewportMath.kt` | Shared pure Kotlin viewport helper in `:shared:core`: `DesignViewport` and `calculateDesignViewport` aspect-fitting and coordinate transforms |
+| `../math/AlignmentMath.kt` | Shared pure Kotlin math helper in `:shared:core`: generalized center snapping, button adapters, cutout adapters (`calculateCutoutAlignmentSnap`, `calculateGamepadCutoutMove`, `findAlignedCutoutCenterGuides` with host black-bar bounds), and grid algorithms |
 | `../input/TouchInjector.kt` | Shared injection facade (also used by Touchpad) |

@@ -113,6 +113,7 @@ PadProfile
         PadLayout
         ├── id: String          (UUID)
         ├── name: String
+        ├── designCanvas: LayoutCanvasSpec? (authoring canvas pixel dimensions, e.g. 1240×1080 Thor or 1280×960 RP Duo; null resolves to THOR_BOTTOM_CANVAS_SPEC 1240×1080 via effectiveDesignCanvas)
         ├── buttons: List<PadButton>
         ├── buttonTextColor: ColorOption
         ├── buttonBorderColor: ColorOption
@@ -129,9 +130,9 @@ PadProfile
         ├── id: String          (UUID)
         ├── label: String       (empty for TrackpointMove / ScrollWheel)
         ├── iconName: String?   (optional Material Symbols snake_case ligature name, e.g. "arrow_back"; shown instead of label in use mode + editor canvas; null = label)
-        ├── posX / posY: Float  (normalised 0.0–1.0)
-        ├── widthDp: Float      (stepless width, default 60.0 dp, min 30.0 dp)
-        ├── heightDp: Float     (stepless height, default 60.0 dp, min 30.0 dp)
+        ├── posX / posY: Float  (normalised to designCanvas: 0.0–1.0 inside designCanvas; < 0.0 / > 1.0 permitted inside host pillarbox/letterbox black bars)
+        ├── widthPx: Float      (stepless width in designCanvas pixels; default 136.0 Thor / baseButtonSizePx, min designCanvas.minButtonSizePx: 68 px Thor / 60 px RP Duo)
+        ├── heightPx: Float     (stepless height in designCanvas pixels; default 136.0 Thor / baseButtonSizePx, min designCanvas.minButtonSizePx, or largeControlMinSizePx 272 px Thor / 240 px RP Duo for ScrollWheel / TrackpointMove)
         ├── buttonShape: ButtonShape (SQUARE | ROUNDED_SQUARE | CIRCLE | HEXAGON_1 | HEXAGON_2 | PENTAGON_1 | PENTAGON_2 | OCTAGON | DIAMOND | TRIANGLE_UP | TRIANGLE_DOWN | TRIANGLE_LEFT | TRIANGLE_RIGHT | ICON_ONLY)
         ├── buttonTextColor: ColorOption?  (override, null = layout default)
         ├── buttonBorderColor: ColorOption? (override, null = layout default)
@@ -142,7 +143,7 @@ PadProfile
         │     GamepadButton(btnCode, label)
         │     MouseButton(button: MouseButton enum)
         │     ScrollWheel
-        │     TrackpointMove(size: TrackpointSize = MEDIUM, mode: TrackpointMode) — legacy size deprecated; sized via PadButton.widthDp/heightDp
+        │     TrackpointMove(size: TrackpointSize = MEDIUM, mode: TrackpointMode) — legacy size deprecated; sized via PadButton.widthPx/heightPx
         │     Screenshot(target: ScreenshotTarget = TOP)
         │     SwitchToLayout(layoutId: String = "", holdToShift: Boolean = false)
         │     SwitchToProfile(profileId: String = "")
@@ -154,7 +155,7 @@ PadProfile
         └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG | CUSTOM, default OFF)
 ```
 
-> **Schema Migration:** `PadButton` uses `PadButtonSerializer` to automatically translate legacy serialized configurations containing `buttonSize` (`SIZE_1X1`, `SIZE_2X1`, `SIZE_1X2`, `SIZE_2X2`) or `TrackpointMove.size` into exact `widthDp` and `heightDp` values upon decode, and `PadLayout.normalizedOnLoad()` normalises legacy background/mask and cutout fields on load. When serialized or exported, only modern stepless `widthDp` and `heightDp` fields are written.
+> **Schema Migration & `LayoutCanvasSpec`:** `@Serializable data class LayoutCanvasSpec(val widthPx: Int, val heightPx: Int)` derives `shortEdgePx = min(widthPx, heightPx)`, `minButtonSizePx = round(shortEdgePx / 16f)` (`68f` on `1240×1080`, `60f` on `1280×960`), `baseButtonSizePx = minButtonSizePx * 2f` (`136f` Thor, `120f` RP Duo), and `largeControlMinSizePx = minButtonSizePx * 4f` (`272f` Thor, `240f` RP Duo). `PadButtonSerializer` encodes only `widthPx` and `heightPx` (never `widthDp`/`heightDp`), while `PadButtonDecodeSurrogate` accepts `widthPx`/`heightPx` alongside legacy `widthDp`/`heightDp`, `buttonSize` (`cols * 60f`, `rows * 60f`), and `TrackpointMove.size` (`size * 60f`). When `widthPx` or `heightPx` is absent, legacy `dp` values are multiplied by `THOR_BOTTOM_DENSITY = 369f / 160f = 2.30625f` and rounded via `round(...)` (`30 dp → 69 px`, `60 dp → 138 px`, `90 dp → 208 px`, `120 dp → 277 px`, `180 dp → 415 px`), clamping raw decoded values only to `MP_BUTTON_SERIALIZER_FLOOR_PX = 16f` so `60 px` RP Duo buttons are never clamped up during JSON decode. `PadLayout.normalizedOnLoad()` then resolves `canvas = effectiveDesignCanvas` (stamping `THOR_BOTTOM_CANVAS_SPEC` `1240 × 1080` when `designCanvas == null`), clamps button sizes against `canvas.minButtonSizePx` / `canvas.largeControlMinSizePx`, and normalises legacy background/mask and cutout fields.
 
 ### MacroPadNavState (`:companion:ui`)
 
@@ -244,8 +245,9 @@ All input events from MacroPad actions (keyboard, mouse, gamepad, and touch) are
 
 `MacroPadState` is an `object` singleton following the project-wide pattern:
 
-- Private `MutableStateFlow` backing fields: `_profiles`, `_activeProfileId`, `_activeProfile`, `_activeLayout`, plus a transient in-memory `activeShiftLayoutStack` / `shiftReturnLayoutId` supporting concurrent stacked `Hold-to-Shift` (`PadAction.SwitchToLayout(holdToShift = true)`) layout overrides without mutating persisted `PadProfile.activeLayoutId`
-- Public read-only `StateFlow` / `SharedFlow`: `profiles`, `activeProfile`, `activeLayout`, `missingProfileToastEvent` (emitted by `switchToProfile(profileId): Boolean` when a `PadAction.SwitchToProfile` target no longer exists), and `missingLayoutToastEvent` (emitted by `switchToLayout(layoutId): Boolean` / `beginHoldToShiftLayout(targetLayoutId): Boolean` when a `PadAction.SwitchToLayout` target no longer exists)
+- Private `MutableStateFlow` backing fields: `_profiles`, `_activeProfileId`, `_activeProfile`, `_activeLayout`, `_hostSecondaryCanvas` (`LayoutCanvasSpec?` populated synchronously in `SettingsManager.init` via `DisplayDetector.resolveSecondaryDisplaySize` and refreshed by `ScreenCaptureService` and `MacroPadScreen`, reset in `resetForTesting()`), plus a transient in-memory `activeShiftLayoutStack` / `shiftReturnLayoutId` supporting concurrent stacked `Hold-to-Shift` (`PadAction.SwitchToLayout(holdToShift = true)`) layout overrides without mutating persisted `PadProfile.activeLayoutId`
+- Public read-only `StateFlow` / `SharedFlow`: `profiles`, `activeProfile`, `activeLayout`, `hostSecondaryCanvas`, `missingProfileToastEvent` (emitted by `switchToProfile(profileId): Boolean` when a `PadAction.SwitchToProfile` target no longer exists), and `missingLayoutToastEvent` (emitted by `switchToLayout(layoutId): Boolean` / `beginHoldToShiftLayout(targetLayoutId): Boolean` when a `PadAction.SwitchToLayout` target no longer exists)
+- `newLayoutDesignCanvas()` returns `_hostSecondaryCanvas.value ?: THOR_BOTTOM_CANVAS_SPEC` and stamps brand-new profiles/layouts (`loadFrom` empty fallback, `restoreDefaults()`, `NewProfile`, `NewLayout`), whereas existing persisted profiles normalize via `layout.normalizedOnLoad()` (preserving explicit `designCanvas` and defaulting `null` to `THOR_BOTTOM_CANVAS_SPEC`). `copyButtonToLayout` rescales `widthPx`/`heightPx` by `targetCanvas.shortEdgePx / sourceCanvas.shortEdgePx` across mismatched canvases, and profile/layout duplication remaps `mirrorCutouts` to fresh UUIDs so `CutoutMaskFileStore` can clone independent mask assets.
 - All state mutations run inside a centralized `updateState(persist = true) { ... }` helper guarded by `stateLock` that atomically recomputes `_activeProfile` and `_activeLayout` (resolving the top valid `activeShiftLayoutStack` entry over `PadProfile.activeLayoutId`) before optionally scheduling a debounced asynchronous save (`MACROPAD_SAVE_DEBOUNCE_MS = 250L`) via `MacroPadSettings.saveMacroPadData()` (with `flushMacroPadDataNow()` for immediate flushes in config export and unit tests).
 
 ### Injector Lifecycle
@@ -270,17 +272,18 @@ Individual screens and overlays (`MacroPadScreen`, `MacroPadEditor`, `QuickMenu`
 
 ### Hit Testing
 
-In use mode, button hit testing (`MacroPadHitTestEngine.isPointInsideButton`) is performed once per pointer-down inside `MacroPadHitTestEngine.onPress()`, which returns `true` when a button consumes the press. First, the pointer is checked against the button's axis-aligned bounding box centred at `(btn.posX * w, btn.posY * h)` with dimensions derived from `btn.widthDp` and `btn.heightDp` scaled by display density. When inside the bounding box, the pointer is normalized to `[0f, 1f] × [0f, 1f]` and tested against the button's actual shape geometry via `ButtonShapeGeometry.isNormalizedPointInside` (`:shared:core`):
+In use mode, button hit testing (`MacroPadHitTestEngine.isPointInsideButton`) is performed once per pointer-down inside `MacroPadHitTestEngine.onPress(..., viewport: DesignViewport)`, which returns `true` when a button consumes the press (and `false` for uncovered touches anywhere on the physical secondary screen, including pillarbox/letterbox black bars, so they fall through to `BackgroundTouchpad` and `QuickMenu` edge-swipe handling). First, the pointer is checked against the button's screen-space axis-aligned bounding box of size `(btn.widthPx * viewport.scale) × (btn.heightPx * viewport.scale)` centred at `(viewport.normToScreenX(btn.posX), viewport.normToScreenY(btn.posY))` (supporting `< 0.0` / `> 1.0` buttons placed inside active black bars). When inside the bounding box, the pointer is normalized to `[0f, 1f] × [0f, 1f]` and tested against the button's actual shape geometry via `ButtonShapeGeometry.isNormalizedPointInside(shape, nx, ny, btn.widthPx, btn.heightPx, isTrackpoint)` (`:shared:core`):
 - `SQUARE` and `ICON_ONLY` accept the full bounding box.
 - `ROUNDED_SQUARE` (25% corner radius) and `CIRCLE` (50% corner radius — circle when 1:1, stadium/pill when rectangular, and always circular for `TrackpointMove`) test exact rounded-corner / circle containment.
 - Polygonal shapes (`HEXAGON_1`, `HEXAGON_2`, `PENTAGON_1`, `PENTAGON_2`, `OCTAGON`, `DIAMOND`, `TRIANGLE_UP`, `TRIANGLE_DOWN`, `TRIANGLE_LEFT`, `TRIANGLE_RIGHT`) are defined as centered regular polygons (equal edge lengths and equal interior angles in `[0f, 1f] × [0f, 1f]`) and test exact convex-polygon containment against the same normalized vertices used by `PadButtonFace` in `:companion:ui`, preventing empty bounding-box corners from stealing taps in honeycomb or D-pad cluster layouts. For shapes whose halves are not congruent across both axes (`PENTAGON_1`, `PENTAGON_2`, `TRIANGLE_UP`, `TRIANGLE_DOWN`, `TRIANGLE_LEFT`, `TRIANGLE_RIGHT`), `ButtonShapeGeometry.contentCenterOffsetFor` shifts the button's inner content and radial background gradient center from `(0.5f, 0.5f)` to the polygon's exact incenter/centroid so the icon has equal perpendicular clearance to every edge, while `ButtonShapeGeometry.contentScaleFor` scales the icon and label size by the shape's normalized inscribed-circle diameter (`2r`) so icons fit with uniform margin across all shapes.
 
-### Pad Canvas Sizing & Plain Background
+### Pad Canvas Sizing, `DesignViewport` & Plain Background
 
-The pad surface occupies the full screen with **no padding** (`MP_SCREEN_PADDING = 0.dp` in `MacroPadScreen.kt`) — the pad extends to all four screen edges with no corner radius.
-The plain canvas background (when no custom background image is configured) is strictly theme-invariant and always pitch black (`Color.Black`), ensuring that MacroPad buttons and layout previews rest on pure black regardless of which global theme (`appBackground`) is active. No aspect-ratio constraint is applied; the pad grows or shrinks with the available display area.
+The outer pad surface (`PadSurface` in use mode and `PadCanvas` in editor mode) occupies the full physical secondary screen with **no padding** (`MP_SCREEN_PADDING = 0.dp` in `MacroPadScreen.kt`) — extending to all four physical edges with a theme-invariant pitch black (`Color.Black`) base background regardless of which global theme (`appBackground`) is active.
 
-The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfiguration.current` and sets an explicit `width`/`height` of `screenWidth × screenHeight` — **pixel-identical** to the use-mode pad. Both `PadSurface` and `PadCanvas` share `rememberLayoutLayerBitmaps(context, layout)` and `LayoutImageLayer(layout, bitmaps, modifier)` in `PadCanvas.kt` for background and mask bitmap decoding and rendering. Because button positions are stored as normalised coordinates [0.0, 1.0], any button placed in the editor maps to the exact same physical pixel in use mode, enabling true 1:1 WYSIWYG layout design.
+To render layouts distortion-free across secondary displays with different resolutions and aspect ratios (e.g. AYN Thor `1240 × 1080` `31:27` vs. Retroid Pocket Duo `1280 × 960` `4:3`), `MacroPadScreen` computes a centered `DesignViewport` via `ViewportMath.calculateDesignViewport(hostW, hostH, designCanvas.widthPx, designCanvas.heightPx)` (`scale = min(hostW / designW, hostH / designH)`, `viewportWidthPx = designW * scale`, `viewportHeightPx = designH * scale`, `leftPx = (hostW - viewportWidthPx) / 2f`, `topPx = (hostH - viewportHeightPx) / 2f`, and host normalized bounds `minNormX = -leftPx / viewportWidthPx`, `maxNormX = (hostW - leftPx) / viewportWidthPx`, `minNormY = -topPx / viewportHeightPx`, `maxNormY = (hostH - topPx) / viewportHeightPx`).
+
+Both `PadSurface` and `PadCanvas` share `rememberLayoutLayerBitmaps(context, layout)` and `LayoutImageLayer` in `PadCanvas.kt`, positioning and clipping `backgroundImage` and `maskImage` strictly to the `DesignViewport` `[0..1] × [0..1]` sub-rectangle so outer pillarbox or letterbox bars remain pure `Color.Black` without artwork bleed. Buttons render at `(btn.widthPx * viewport.scale) × (btn.heightPx * viewport.scale)` centered at `(viewport.normToScreenX(btn.posX), viewport.normToScreenY(btn.posY))`, converting pixel sizes to Compose `Dp`/`Sp` via `with(density) { px.toDp() / px.toSp() }` so button footprints and typography are immune to DPI differences and Android Display Size accessibility zoom while maintaining 1:1 WYSIWYG parity between editor and use mode. Uncovered touches inside pillarbox/letterbox bars remain active as pad canvas (`BackgroundTouchpad` + `QuickMenu` edge swipe), and elements placed at `< 0.0` / `> 1.0` inside wider-screen bars clip cleanly at the physical edges when opened on a narrower display while keeping `designCanvas` at `1:1`.
 
 ### Layout Editor
 
@@ -311,10 +314,10 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
 
 The editor canvas supports an optional snap grid rendered behind the draggable buttons. Grid state (`GridMode` enum: `OFF`, `RECTANGULAR`, `RADIAL`) is local to `MacroPadEditor` and not persisted.
 
-**Rendering** — A `Canvas` composable in `PadCanvas` draws the grid when mode ≠ `OFF`:
+**Rendering** — A `Canvas` composable in `PadCanvas` draws the grid centered on `DesignViewport` when mode ≠ `OFF`, using step `gridStepScreenPx = designCanvas.minButtonSizePx * viewport.scale` (`68 px` on AYN Thor, `60 px` on Retroid Pocket Duo in `designCanvas` space):
 
-- **Rectangular:** vertical and horizontal lines at every `PC_GRID_STEP_DP` (30 dp) increment. Accent colour at 35 % alpha, 1 px stroke.
-- **Radial:** concentric circles centred at `(0.5, 0.5)` with radii stepping by 30 dp. Each circle has evenly-distributed snap-point dots; the count is the nearest multiple of 4 to `round(circumference / buttonUnit)`, minimum 4, via `radialPointCount()`. Circles alternate phase: odd circles (1st, 3rd, …) have a 45° phase offset so their 4 anchor points sit at the diagonals; even circles have a 0° offset so anchors sit at the cardinal directions. A larger dot (5 dp radius) marks the canvas centre; snap-point dots are 3 dp radius. All circles and dots share the same colour: accent at 35 % alpha. No horizontal/vertical lines.
+- **Rectangular:** vertical and horizontal lines at every `designCanvas.minButtonSizePx * viewport.scale` increment across `DesignViewport`. Accent colour at 35 % alpha, 1 px stroke.
+- **Radial:** concentric circles centred at `(viewport.normToScreenX(0.5f), viewport.normToScreenY(0.5f))` with radii stepping by `designCanvas.minButtonSizePx * viewport.scale`. Each circle has evenly-distributed snap-point dots; the count is the nearest multiple of 4 to `round(circumference / (designCanvas.baseButtonSizePx * viewport.scale))`, minimum 4, via `radialPointCount()`. Circles alternate phase: odd circles (1st, 3rd, …) have a 45° phase offset so their 4 anchor points sit at the diagonals; even circles have a 0° offset so anchors sit at the cardinal directions. A larger dot (5 dp radius) marks the `DesignViewport` centre; snap-point dots are 3 dp radius. All circles and dots share the same colour: accent at 35 % alpha. No horizontal/vertical lines.
 
 **Snapping** — During drag, the raw normalised position is passed through `snapPosition()` which delegates to `snapRectangular()` or `snapRadial()`:
 

@@ -9,7 +9,9 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.BackgroundScaleMode
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.normalizedOnLoad
 import com.stormpanda.megingiard.macropad.remapTargetIds
+import com.stormpanda.megingiard.mirror.CutoutMaskFileStore
 import com.stormpanda.megingiard.security.HmacUtil
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
@@ -413,8 +415,13 @@ object ConfigManager {
         context: Context,
         profiles: List<PadProfile>,
     ): Map<String, String> =
-        collectLayoutBackgroundFiles(context, profiles).mapValues { (_, file) ->
-            HmacUtil.sha256Hex(file.readBytes()).lowercase()
+        buildMap {
+            for ((key, file) in collectLayoutBackgroundFiles(context, profiles)) {
+                put(key, HmacUtil.sha256Hex(file.readBytes()).lowercase())
+            }
+            for ((key, file) in CutoutMaskFileStore.collectExportFiles(context.filesDir, profiles)) {
+                put(key, HmacUtil.sha256Hex(file.readBytes()).lowercase())
+            }
         }
 
     /** Creates pre-filled [ExportMetadata] with the app version and device info. */
@@ -449,23 +456,39 @@ object ConfigManager {
             } else {
                 emptyMap()
             }
+        val cutoutMaskFilesToBundle =
+            if (includeBackgrounds) {
+                CutoutMaskFileStore.collectExportFiles(context.filesDir, export.profiles)
+            } else {
+                emptyMap()
+            }
 
         context.contentResolver.openOutputStream(uri)?.use { out ->
-            if (imageFilesToBundle.isNotEmpty()) {
+            if (imageFilesToBundle.isNotEmpty() || cutoutMaskFilesToBundle.isNotEmpty()) {
                 ZipOutputStream(out).use { zip ->
                     // 1. Write config.json
                     zip.putNextEntry(ZipEntry("config.json"))
                     zip.write(json.toByteArray(Charsets.UTF_8))
                     zip.closeEntry()
 
-                    // 2. Write background image entries
+                    // 2. Write background and layout mask image entries
                     for ((entryName, file) in imageFilesToBundle) {
                         zip.putNextEntry(ZipEntry("backgrounds/$entryName"))
                         zip.write(file.readBytes())
                         zip.closeEntry()
                     }
+
+                    // 3. Write cutout mask, variance, and freeze frame entries
+                    for ((entryPath, file) in cutoutMaskFilesToBundle) {
+                        zip.putNextEntry(ZipEntry(entryPath))
+                        zip.write(file.readBytes())
+                        zip.closeEntry()
+                    }
                 }
-                AppLog.i(TAG, "Wrote ZIP package with config.json and ${imageFilesToBundle.size} image(s)")
+                AppLog.i(
+                    TAG,
+                    "Wrote ZIP package with config.json, ${imageFilesToBundle.size} image(s), and ${cutoutMaskFilesToBundle.size} cutout asset(s)",
+                )
             } else {
                 out.write(json.toByteArray(Charsets.UTF_8))
                 AppLog.i(TAG, "Wrote plain JSON config export")
@@ -548,6 +571,15 @@ object ConfigManager {
                             }
                             if (entryName == "config.json" || entryName.endsWith(".json")) {
                                 jsonText = entryBytes.toString(Charsets.UTF_8)
+                            } else if (entryName.startsWith("${CutoutMaskFileStore.MASKS_DIR}/")) {
+                                val fileName = entryName.removePrefix("${CutoutMaskFileStore.MASKS_DIR}/")
+                                if (fileName.isNotEmpty() &&
+                                    !fileName.contains('/') &&
+                                    !fileName.contains('\\') &&
+                                    !fileName.contains("..")
+                                ) {
+                                    imagesMap["${CutoutMaskFileStore.MASKS_DIR}/$fileName"] = entryBytes
+                                }
                             } else if (entryName.startsWith("backgrounds/") ||
                                 entryName.startsWith("masks/") ||
                                 entryName.startsWith("bg_") ||
@@ -679,6 +711,59 @@ object ConfigManager {
         return null
     }
 
+    private fun extractOrCopyCutoutMaskAssets(
+        filesDir: File,
+        images: Map<String, ByteArray>,
+        oldId: String,
+        newId: String,
+    ) {
+        if (!CutoutMaskFileStore.isSafeAssetId(newId)) return
+        val masksDir = File(filesDir, CutoutMaskFileStore.MASKS_DIR)
+        val oldIdSafe = CutoutMaskFileStore.isSafeAssetId(oldId)
+
+        val assetSpecs =
+            listOf(
+                CutoutMaskFileStore.PNG_EXTENSION to CutoutMaskFileStore::baseMaskFile,
+                CutoutMaskFileStore.VARIANCE_EXTENSION to CutoutMaskFileStore::varianceFile,
+                CutoutMaskFileStore.FREEZE_EXTENSION to CutoutMaskFileStore::freezeFrameFile,
+            )
+
+        for ((extension, fileResolver) in assetSpecs) {
+            val archiveKey =
+                if (oldIdSafe) {
+                    "${CutoutMaskFileStore.MASKS_DIR}/${CutoutMaskFileStore.MASK_FILE_PREFIX}$oldId$extension"
+                } else {
+                    null
+                }
+            val extractedBytes = archiveKey?.let { images[it] }
+            val destFile = fileResolver(filesDir, newId)
+            if (!CutoutMaskFileStore.isSafeFileInMasksDir(masksDir, destFile)) continue
+
+            if (extractedBytes != null) {
+                runCatching {
+                    if (!masksDir.exists()) {
+                        masksDir.mkdirs()
+                    }
+                    destFile.writeBytes(extractedBytes)
+                }.onFailure { e ->
+                    AppLog.e(TAG, "Failed to write extracted cutout asset ${destFile.name}", e)
+                }
+            } else if (oldIdSafe && oldId != newId) {
+                val localSrc = fileResolver(filesDir, oldId)
+                if (CutoutMaskFileStore.isSafeFileInMasksDir(masksDir, localSrc) && localSrc.exists() && localSrc.isFile) {
+                    runCatching {
+                        if (!masksDir.exists()) {
+                            masksDir.mkdirs()
+                        }
+                        localSrc.copyTo(destFile, overwrite = true)
+                    }.onFailure { e ->
+                        AppLog.e(TAG, "Failed to copy local cutout asset ${localSrc.name} -> ${destFile.name}", e)
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Imports profiles with new UUIDs so they don't collide with existing ones.
      */
@@ -716,7 +801,7 @@ object ConfigManager {
             val layoutIdMap = layoutIdPairs.associate { (oldLayout, newId) -> oldLayout.id to newId }
             val fallbackLayoutId = layoutIdPairs.firstOrNull()?.second
 
-            // Remap macro, layout, and profile references in button actions and handle background/mask image copying/extraction
+            // Remap macro, layout, cutout, and profile references and handle background/mask/cutout asset extraction
             val remappedLayouts =
                 layoutIdPairs.map { (layout, newLayoutId) ->
                     val oldLayoutId = layout.id
@@ -734,78 +819,93 @@ object ConfigManager {
                             )
                         }
 
-                    @Suppress("DEPRECATION")
-                    if (layout.useBackgroundImageAsMask) {
-                        val newMaskPath =
-                            extractOrCopyMedia(
-                                context,
-                                images,
-                                masksDir,
-                                "masks",
-                                "bg",
-                                oldLayoutId,
-                                newLayoutId,
-                                layout.backgroundImagePath,
-                                destPrefix = "mask",
-                            ) ?: extractOrCopyMedia(
-                                context,
-                                images,
-                                masksDir,
-                                "masks",
-                                "mask",
-                                oldLayoutId,
-                                newLayoutId,
-                                layout.maskImagePath,
-                                destPrefix = "mask",
-                            )
-                        layout.copy(
-                            id = newLayoutId,
-                            backgroundImagePath = null,
-                            useBackgroundImageAsMask = false,
-                            bgImageScale = 1f,
-                            bgImageOffsetX = 0f,
-                            bgImageOffsetY = 0f,
-                            backgroundImageDim = 0f,
-                            bgScaleMode = BackgroundScaleMode.FILL,
-                            maskImagePath = newMaskPath,
-                            maskImageScale = layout.bgImageScale,
-                            maskImageOffsetX = layout.bgImageOffsetX,
-                            maskImageOffsetY = layout.bgImageOffsetY,
-                            maskImageDim = layout.backgroundImageDim,
-                            maskScaleMode = layout.bgScaleMode,
-                            buttons = remappedButtons,
-                        )
-                    } else {
-                        val newBgPath =
-                            extractOrCopyMedia(
-                                context,
-                                images,
-                                backgroundsDir,
-                                "backgrounds",
-                                "bg",
-                                oldLayoutId,
-                                newLayoutId,
-                                layout.backgroundImagePath,
-                            )
-                        val newMaskPath =
-                            extractOrCopyMedia(
-                                context,
-                                images,
-                                masksDir,
-                                "masks",
-                                "mask",
-                                oldLayoutId,
-                                newLayoutId,
-                                layout.maskImagePath,
-                            )
-                        layout.copy(
-                            id = newLayoutId,
-                            backgroundImagePath = newBgPath,
-                            useBackgroundImageAsMask = false,
-                            maskImagePath = newMaskPath,
-                            buttons = remappedButtons,
-                        )
+                    val cutoutIdPairs = layout.mirrorCutouts.map { cutout -> cutout to UUID.randomUUID().toString() }
+                    val remappedCutouts =
+                        cutoutIdPairs.map { (cutout, newCutoutId) ->
+                            cutout.copy(id = newCutoutId)
+                        }
+
+                    extractOrCopyCutoutMaskAssets(context.filesDir, images, oldLayoutId, newLayoutId)
+                    for ((oldCutout, newCutoutId) in cutoutIdPairs) {
+                        extractOrCopyCutoutMaskAssets(context.filesDir, images, oldCutout.id, newCutoutId)
                     }
+
+                    @Suppress("DEPRECATION")
+                    val remappedLayout =
+                        if (layout.useBackgroundImageAsMask) {
+                            val newMaskPath =
+                                extractOrCopyMedia(
+                                    context,
+                                    images,
+                                    masksDir,
+                                    "masks",
+                                    "bg",
+                                    oldLayoutId,
+                                    newLayoutId,
+                                    layout.backgroundImagePath,
+                                    destPrefix = "mask",
+                                ) ?: extractOrCopyMedia(
+                                    context,
+                                    images,
+                                    masksDir,
+                                    "masks",
+                                    "mask",
+                                    oldLayoutId,
+                                    newLayoutId,
+                                    layout.maskImagePath,
+                                    destPrefix = "mask",
+                                )
+                            layout.copy(
+                                id = newLayoutId,
+                                backgroundImagePath = null,
+                                useBackgroundImageAsMask = false,
+                                bgImageScale = 1f,
+                                bgImageOffsetX = 0f,
+                                bgImageOffsetY = 0f,
+                                backgroundImageDim = 0f,
+                                bgScaleMode = BackgroundScaleMode.FILL,
+                                maskImagePath = newMaskPath,
+                                maskImageScale = layout.bgImageScale,
+                                maskImageOffsetX = layout.bgImageOffsetX,
+                                maskImageOffsetY = layout.bgImageOffsetY,
+                                maskImageDim = layout.backgroundImageDim,
+                                maskScaleMode = layout.bgScaleMode,
+                                buttons = remappedButtons,
+                                mirrorCutouts = remappedCutouts,
+                            )
+                        } else {
+                            val newBgPath =
+                                extractOrCopyMedia(
+                                    context,
+                                    images,
+                                    backgroundsDir,
+                                    "backgrounds",
+                                    "bg",
+                                    oldLayoutId,
+                                    newLayoutId,
+                                    layout.backgroundImagePath,
+                                )
+                            val newMaskPath =
+                                extractOrCopyMedia(
+                                    context,
+                                    images,
+                                    masksDir,
+                                    "masks",
+                                    "mask",
+                                    oldLayoutId,
+                                    newLayoutId,
+                                    layout.maskImagePath,
+                                )
+                            layout.copy(
+                                id = newLayoutId,
+                                backgroundImagePath = newBgPath,
+                                useBackgroundImageAsMask = false,
+                                maskImagePath = newMaskPath,
+                                buttons = remappedButtons,
+                                mirrorCutouts = remappedCutouts,
+                            )
+                        }
+                    remappedLayout.normalizedOnLoad()
                 }
 
             // Preserve the source profile's active layout selection when possible.
@@ -850,11 +950,16 @@ object ConfigManager {
         val imageHashes =
             extractedImages
                 .mapKeys { (k, _) ->
-                    val cleanKey = k.substringAfterLast("/")
-                    if (cleanKey.startsWith("bg_") || cleanKey.startsWith("mask_")) {
-                        cleanKey
+                    if (k.startsWith("${CutoutMaskFileStore.MASKS_DIR}/")) {
+                        val cleanFileName = k.substringAfterLast("/")
+                        "${CutoutMaskFileStore.MASKS_DIR}/$cleanFileName"
                     } else {
-                        "bg_$cleanKey"
+                        val cleanKey = k.substringAfterLast("/")
+                        if (cleanKey.startsWith("bg_") || cleanKey.startsWith("mask_")) {
+                            cleanKey
+                        } else {
+                            "bg_$cleanKey"
+                        }
                     }
                 }.mapValues { (_, bytes) ->
                     HmacUtil

@@ -3,6 +3,8 @@ package com.stormpanda.megingiard.mirror
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.math.DesignViewport
+import com.stormpanda.megingiard.math.ViewportMath
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,6 +36,7 @@ class TouchProjectionController(
         val cutoutId: String,
         var lastNx: Float,
         var lastNy: Float,
+        var lastViewport: DesignViewport,
     )
 
     private val activeTouches = HashMap<Long, TouchState>()
@@ -55,6 +58,7 @@ class TouchProjectionController(
         boxH: Float,
         isConsumed: Boolean,
         pointerCount: Int,
+        viewport: DesignViewport = ViewportMath.calculateDesignViewport(boxW, boxH, boxW, boxH),
     ): Boolean {
         val nearEdge =
             if (overlayAtBottom) {
@@ -71,10 +75,10 @@ class TouchProjectionController(
         val cutouts = ScreenCaptureManager.cutouts.value
         for (cutout in cutouts.asReversed()) {
             if (!cutout.touchProjectionEnabled) continue
-            val destLeft = cutout.destX * boxW
-            val destTop = cutout.destY * boxH
-            val destWidth = cutout.destWidth * boxW
-            val destHeight = cutout.destHeight * boxH
+            val destLeft = viewport.normToScreenX(cutout.destX)
+            val destTop = viewport.normToScreenY(cutout.destY)
+            val destWidth = cutout.destWidth * viewport.viewportWidthPx
+            val destHeight = cutout.destHeight * viewport.viewportHeightPx
 
             if (cutout.shape == CutoutShape.CIRCLE) {
                 val cx = destLeft + destWidth / 2f
@@ -129,6 +133,7 @@ class TouchProjectionController(
                 cutoutId = matchedCutoutId!!,
                 lastNx = matchedProjected.first,
                 lastNy = matchedProjected.second,
+                lastViewport = viewport,
             )
 
         if (activeTouches.size == 1) {
@@ -150,8 +155,10 @@ class TouchProjectionController(
         boxW: Float,
         boxH: Float,
         isConsumed: Boolean,
+        viewport: DesignViewport = ViewportMath.calculateDesignViewport(boxW, boxH, boxW, boxH),
     ): Boolean {
         val touch = activeTouches[pointerId] ?: return false
+        touch.lastViewport = viewport
 
         if (isConsumed) {
             activeTouches.remove(pointerId)
@@ -174,10 +181,10 @@ class TouchProjectionController(
             return false
         }
 
-        val destLeft = cutout.destX * boxW
-        val destTop = cutout.destY * boxH
-        val destWidth = cutout.destWidth * boxW
-        val destHeight = cutout.destHeight * boxH
+        val destLeft = viewport.normToScreenX(cutout.destX)
+        val destTop = viewport.normToScreenY(cutout.destY)
+        val destWidth = cutout.destWidth * viewport.viewportWidthPx
+        val destHeight = cutout.destHeight * viewport.viewportHeightPx
         val crop = InteractiveCutoutController.getEffectiveCrop(cutout)
 
         val coords =
@@ -245,6 +252,7 @@ class TouchProjectionController(
         y: Float?,
         boxW: Float,
         boxH: Float,
+        viewport: DesignViewport? = null,
     ): Boolean {
         val touch = activeTouches.remove(pointerId) ?: return false
         activeSlots[touch.slot] = false
@@ -254,10 +262,18 @@ class TouchProjectionController(
 
         val cutout = ScreenCaptureManager.cutouts.value.firstOrNull { it.id == touch.cutoutId }
         if (cutout != null && x != null && y != null) {
-            val destLeft = cutout.destX * boxW
-            val destTop = cutout.destY * boxH
-            val destWidth = cutout.destWidth * boxW
-            val destHeight = cutout.destHeight * boxH
+            val effectiveViewport =
+                viewport
+                    ?: ViewportMath.calculateDesignViewport(
+                        boxW,
+                        boxH,
+                        touch.lastViewport.designWidthPx,
+                        touch.lastViewport.designHeightPx,
+                    )
+            val destLeft = effectiveViewport.normToScreenX(cutout.destX)
+            val destTop = effectiveViewport.normToScreenY(cutout.destY)
+            val destWidth = cutout.destWidth * effectiveViewport.viewportWidthPx
+            val destHeight = cutout.destHeight * effectiveViewport.viewportHeightPx
             val crop = InteractiveCutoutController.getEffectiveCrop(cutout)
 
             val coords =

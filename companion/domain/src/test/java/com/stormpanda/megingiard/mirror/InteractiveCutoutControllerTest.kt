@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.mirror
 
+import com.stormpanda.megingiard.math.ViewportMath
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -300,5 +301,55 @@ class InteractiveCutoutControllerTest {
         val flipBoth = transformFocalPoint(rawX, rawY, rotation = 0, flipHorizontal = true, flipVertical = true)
         assertEquals(0.8f, flipBoth.first, 0.0001f)
         assertEquals(0.7f, flipBoth.second, 0.0001f)
+    }
+
+    @Test
+    fun `onPress and onMove map interactive cutout rect and pan deltas through pillarboxed DesignViewport`() {
+        // Thor 1240x1080 layout on RP Duo 1280x960 host:
+        // scale = 8/9, viewportW = 1102.2222, viewportH = 960, leftPx = 88.8889
+        val viewport = ViewportMath.calculateDesignViewport(1280f, 960f, 1240f, 1080f)
+        val cutout =
+            sampleInteractiveCutout().copy(
+                destX = 0f,
+                destY = 0f,
+                destWidth = 0.5f,
+                destHeight = 0.5f,
+            )
+        val cutouts = listOf(cutout)
+
+        // Touch in left black bar (x = 40 < leftPx = 88.89) misses cutout at destX = 0f
+        assertFalse(InteractiveCutoutController.onPress(1L, 40f, 200f, 1280f, 960f, cutouts, viewport))
+
+        // Touch inside viewport-shifted cutout rect (x = 200) hits and pans proportional to viewportW * 0.5
+        assertTrue(InteractiveCutoutController.onPress(2L, 200f, 200f, 1280f, 960f, cutouts, viewport))
+        val destWidthPx = 0.5f * viewport.viewportWidthPx
+        assertTrue(
+            InteractiveCutoutController.onMove(
+                pointerId = 2L,
+                xPx = 200f + destWidthPx * 0.1f,
+                yPx = 200f,
+                boxW = 1280f,
+                boxH = 960f,
+                cutouts = cutouts,
+                viewport = viewport,
+            ),
+        )
+        val effective = InteractiveCutoutController.getEffectiveCrop(cutout)
+        assertEquals(0.16f, effective.srcX, 0.001f)
+    }
+
+    @Test
+    fun `onPress hits interactive cutout placed at negative destX inside pillarbox bar`() {
+        val viewport = ViewportMath.calculateDesignViewport(1280f, 960f, 1240f, 1080f)
+        val barCutout =
+            sampleInteractiveCutout(id = "bar-interactive").copy(
+                destX = -0.07f,
+                destY = 0.2f,
+                destWidth = 0.06f,
+                destHeight = 0.3f,
+            )
+        val hitX = viewport.normToScreenX(-0.04f)
+        assertTrue(hitX < viewport.leftPx)
+        assertTrue(InteractiveCutoutController.onPress(1L, hitX, 300f, 1280f, 960f, listOf(barCutout), viewport))
     }
 }

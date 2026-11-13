@@ -12,10 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -44,7 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
@@ -52,6 +48,8 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -61,37 +59,34 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.BUTTON_ALIGNMENT_VISUAL_TOLERANCE_PX
-import com.stormpanda.megingiard.math.BUTTON_CANVAS_EDGE_MARGIN
+import com.stormpanda.megingiard.math.BUTTON_ASPECT_SNAP_THRESHOLD_PX
 import com.stormpanda.megingiard.math.ButtonResizeHandle
+import com.stormpanda.megingiard.math.DesignViewport
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.math.calculateButtonAlignmentSnap
 import com.stormpanda.megingiard.math.calculateButtonEdgeResize
 import com.stormpanda.megingiard.math.findAlignedCenterGuides
-import com.stormpanda.megingiard.math.formatButtonDimensionDp
+import com.stormpanda.megingiard.math.formatButtonDimensionPx
 import com.stormpanda.megingiard.math.radialPointCount
-import com.stormpanda.megingiard.math.snapPosition
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.dimColorFilter
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -115,22 +110,26 @@ private const val PC_CROP_MAX_SCALE = 5.0f
 private const val PC_LOCK_TOAST_DURATION_MS = 650L
 private const val PC_LOCK_ANIM_IN_MS = 150
 private const val PC_LOCK_ANIM_OUT_MS = 250
+private const val PC_LOCK_SCALE_IN = 0.8f
+private const val PC_LOCK_SCALE_OUT = 1.1f
+private const val PC_LOCK_BG_ALPHA = 0.75f
+private const val PC_LOCK_BORDER_ALPHA = 0.2f
+private val PC_LOCK_BORDER_WIDTH = 1.dp
 private val PC_LOCK_BADGE_SIZE = 72.dp
 private val PC_LOCK_BADGE_CORNER = 16.dp
 private val PC_LOCK_BADGE_SHAPE = RoundedCornerShape(PC_LOCK_BADGE_CORNER)
 private val PC_LOCK_ICON_SIZE = 40.dp
 
 // Grid: half a button unit — two steps apart = buttons touch exactly
-private val PC_GRID_STEP_DP = 30.dp
 private const val PC_GRID_LINE_ALPHA = 0.35f
 private const val PC_GRID_STROKE_PX = 1f
 private const val PC_RADIAL_CENTER_X = 0.5f
 private const val PC_RADIAL_CENTER_Y = 0.5f
+private const val PC_MIN_SCALE_EPSILON = 0.0001f
 
 // Radial grid: snap points evenly distributed along each circle
 private val PC_RADIAL_DOT_RADIUS = 3.dp
 private val PC_RADIAL_CENTER_DOT = 5.dp
-private const val PC_RADIAL_MIN_POINTS = 4
 private const val PC_RADIAL_EXTRA_RINGS = 3
 
 // Drag handles & highlight pointers
@@ -140,6 +139,9 @@ private const val PC_POINTER_ROTATION_TOP = 0f
 private const val PC_POINTER_ROTATION_BOTTOM = 180f
 private const val PC_POINTER_ROTATION_LEFT = 270f
 private const val PC_POINTER_ROTATION_RIGHT = 90f
+private const val PC_INVISIBLE_BTN_ALPHA = 0.4f
+private val PC_INVISIBLE_BADGE_PADDING = 4.dp
+private val PC_INVISIBLE_ICON_SIZE = 14.dp
 
 // Edge resize handles
 private val PC_EDGE_HANDLE_LENGTH = 32.dp
@@ -164,7 +166,6 @@ private val PC_HUD_FALLBACK_WIDTH = 60.dp
 private val PC_HUD_BORDER_WIDTH = 1.dp
 private const val PC_HUD_BORDER_ALPHA = 0.7f
 private const val PC_HUD_BG_ALPHA = 0.85f
-private val PC_HUD_FONT_SIZE = 12.sp
 
 // Smart alignment guide line styling (PowerPoint-style)
 private const val PC_ALIGNMENT_GUIDE_LINE_ALPHA = 0.85f
@@ -231,6 +232,7 @@ internal fun rememberLayoutLayerBitmaps(
 internal fun LayoutImageLayer(
     layout: PadLayout?,
     bitmaps: LayoutLayerBitmaps,
+    viewport: DesignViewport? = null,
     modifier: Modifier = Modifier,
 ) {
     val bgBitmap = bitmaps.bgBitmap
@@ -248,25 +250,52 @@ internal fun LayoutImageLayer(
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val currentLayout = MacroPadState.previewLayout.value ?: layout
-        if (bgBitmap != null) {
-            drawAdjustedBitmap(
-                bitmap = bgBitmap,
-                scaleMode = currentLayout?.bgScaleMode ?: layout?.bgScaleMode ?: BackgroundScaleMode.FILL,
-                userScale = currentLayout?.bgImageScale ?: layout?.bgImageScale ?: 1f,
-                offsetX = currentLayout?.bgImageOffsetX ?: layout?.bgImageOffsetX ?: 0f,
-                offsetY = currentLayout?.bgImageOffsetY ?: layout?.bgImageOffsetY ?: 0f,
-                colorFilter = bgImageDimFilter,
-            )
-        }
-        if (maskBitmap != null) {
-            drawAdjustedBitmap(
-                bitmap = maskBitmap,
-                scaleMode = currentLayout?.maskScaleMode ?: layout?.maskScaleMode ?: BackgroundScaleMode.FILL,
-                userScale = currentLayout?.maskImageScale ?: layout?.maskImageScale ?: 1f,
-                offsetX = currentLayout?.maskImageOffsetX ?: layout?.maskImageOffsetX ?: 0f,
-                offsetY = currentLayout?.maskImageOffsetY ?: layout?.maskImageOffsetY ?: 0f,
-                colorFilter = maskImageDimFilter,
-            )
+        val designCanvas = currentLayout?.effectiveDesignCanvas ?: THOR_BOTTOM_CANVAS_SPEC
+        val vp =
+            if (viewport != null && viewport.hostWidthPx > 0f && viewport.hostHeightPx > 0f) {
+                viewport
+            } else {
+                ViewportMath.calculateDesignViewport(
+                    hostWidthPx = size.width,
+                    hostHeightPx = size.height,
+                    designWidthPx = designCanvas.widthPx.toFloat(),
+                    designHeightPx = designCanvas.heightPx.toFloat(),
+                )
+            }
+        if (vp.viewportWidthPx <= 0f || vp.viewportHeightPx <= 0f) return@Canvas
+
+        clipRect(
+            left = vp.leftPx,
+            top = vp.topPx,
+            right = vp.leftPx + vp.viewportWidthPx,
+            bottom = vp.topPx + vp.viewportHeightPx,
+        ) {
+            translate(left = vp.leftPx, top = vp.topPx) {
+                if (bgBitmap != null) {
+                    drawAdjustedBitmap(
+                        bitmap = bgBitmap,
+                        scaleMode = currentLayout?.bgScaleMode ?: layout?.bgScaleMode ?: BackgroundScaleMode.FILL,
+                        userScale = currentLayout?.bgImageScale ?: layout?.bgImageScale ?: 1f,
+                        offsetX = currentLayout?.bgImageOffsetX ?: layout?.bgImageOffsetX ?: 0f,
+                        offsetY = currentLayout?.bgImageOffsetY ?: layout?.bgImageOffsetY ?: 0f,
+                        colorFilter = bgImageDimFilter,
+                        canvasWidth = vp.viewportWidthPx,
+                        canvasHeight = vp.viewportHeightPx,
+                    )
+                }
+                if (maskBitmap != null) {
+                    drawAdjustedBitmap(
+                        bitmap = maskBitmap,
+                        scaleMode = currentLayout?.maskScaleMode ?: layout?.maskScaleMode ?: BackgroundScaleMode.FILL,
+                        userScale = currentLayout?.maskImageScale ?: layout?.maskImageScale ?: 1f,
+                        offsetX = currentLayout?.maskImageOffsetX ?: layout?.maskImageOffsetX ?: 0f,
+                        offsetY = currentLayout?.maskImageOffsetY ?: layout?.maskImageOffsetY ?: 0f,
+                        colorFilter = maskImageDimFilter,
+                        canvasWidth = vp.viewportWidthPx,
+                        canvasHeight = vp.viewportHeightPx,
+                    )
+                }
+            }
         }
     }
 }
@@ -284,6 +313,7 @@ internal fun PadCanvas(
     isCroppingBackground: Boolean = false,
     isCroppingMask: Boolean = false,
     transparentBackground: Boolean = false,
+    viewport: DesignViewport? = null,
     modifier: Modifier = Modifier,
 ) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
@@ -294,7 +324,23 @@ internal fun PadCanvas(
     val shouldHideBackground = isViewportEditActive && isMirrorEditorBackgroundHidden
     val density = LocalDensity.current
     val context = LocalContext.current
-    val gridStepPx = with(density) { PC_GRID_STEP_DP.toPx() }
+
+    val designCanvas = layout?.effectiveDesignCanvas ?: THOR_BOTTOM_CANVAS_SPEC
+    val designViewport =
+        remember(viewport, canvasSize, designCanvas) {
+            if (viewport != null && viewport.hostWidthPx > 0f && viewport.hostHeightPx > 0f) {
+                viewport
+            } else {
+                ViewportMath.calculateDesignViewport(
+                    hostWidthPx = canvasSize.width.toFloat(),
+                    hostHeightPx = canvasSize.height.toFloat(),
+                    designWidthPx = designCanvas.widthPx.toFloat(),
+                    designHeightPx = designCanvas.heightPx.toFloat(),
+                )
+            }
+        }
+    val screenGridStepPx = designCanvas.minButtonSizePx * designViewport.scale
+    val screenButtonUnitPx = designCanvas.baseButtonSizePx * designViewport.scale
 
     DisposableEffect(Unit) {
         onDispose { MacroPadState.setCanvasMetrics(null) }
@@ -307,6 +353,12 @@ internal fun PadCanvas(
                     widthPx = canvasSize.width.toFloat(),
                     heightPx = canvasSize.height.toFloat(),
                     density = density.density,
+                ),
+            )
+            MacroPadState.setHostSecondaryCanvas(
+                LayoutCanvasSpec(
+                    widthPx = canvasSize.width,
+                    heightPx = canvasSize.height,
                 ),
             )
         }
@@ -359,11 +411,13 @@ internal fun PadCanvas(
             ).onSizeChanged { canvasSize = it }
 
     val cropModifier =
-        if (isCropping && activeCropBitmap != null && canvasSize.width > 0 && canvasSize.height > 0) {
-            Modifier.pointerInput(canvasSize, isCroppingBackground, isCroppingMask, activeCropBitmap) {
+        if (isCropping && activeCropBitmap != null && designViewport.viewportWidthPx > 0f &&
+            designViewport.viewportHeightPx > 0f
+        ) {
+            Modifier.pointerInput(designViewport, isCroppingBackground, isCroppingMask, activeCropBitmap) {
                 detectTransformGestures { _, pan, zoom, _ ->
-                    val cw = canvasSize.width.toFloat()
-                    val ch = canvasSize.height.toFloat()
+                    val cw = designViewport.viewportWidthPx
+                    val ch = designViewport.viewportHeightPx
                     val bitmap = activeCropBitmap
                     val iw = bitmap.width.toFloat()
                     val ih = bitmap.height.toFloat()
@@ -422,304 +476,43 @@ internal fun PadCanvas(
             LayoutImageLayer(
                 layout = layout,
                 bitmaps = layerBitmaps,
+                viewport = designViewport,
             )
         }
-        // Grid overlay — drawn behind buttons
-        if (gridMode != GridMode.OFF && canvasSize.width > 0 && canvasSize.height > 0) {
-            GridOverlay(
+        // Grid overlay — drawn behind buttons, centered on DesignViewport
+        if (gridMode != GridMode.OFF && designViewport.viewportWidthPx > 0f && designViewport.viewportHeightPx > 0f) {
+            GridOverlayCanvas(
                 gridMode = gridMode,
-                gridStepPx = gridStepPx,
+                viewport = designViewport,
+                gridStepPx = screenGridStepPx,
+                buttonUnitPx = screenButtonUnitPx,
                 gridColor = accentColor.copy(alpha = PC_GRID_LINE_ALPHA),
             )
         }
 
-        // Render each button as a draggable chip
-        val isAdjustingViaGamepad by MacroPadState.isAdjustingButtonViaGamepad.collectAsStateWithLifecycle()
-        var draggingBodyButtonId by remember { mutableStateOf<String?>(null) }
-
-        (layout?.buttons ?: emptyList()).forEach { btn ->
-            val targetLayoutId = layout?.id
-            DraggableButton(
-                btn = btn,
-                layout = layout!!,
+        if (layout != null) {
+            EditableButtonsCanvas(
+                layout = layout,
+                designCanvas = designCanvas,
+                viewport = designViewport,
                 canvasSize = canvasSize,
+                selectedButtonId = selectedButtonId,
                 accentColor = accentColor,
                 gridMode = gridMode,
-                gridStepPx = gridStepPx,
                 alignmentSnapping = buttonAlignmentSnapping,
-                isLocked = isLocked || isCropping,
-                onTouch = {
-                    MacroPadState.setSelectedButtonId(btn.id)
-                },
-                onDragActiveChanged = { active ->
-                    draggingBodyButtonId = if (active) btn.id else null
-                },
-                onPositionChanged = { nx, ny ->
-                    val layoutId = targetLayoutId
-                    val activeProfile = MacroPadState.activeProfile.value
-                    if (layoutId != null && activeProfile != null) {
-                        val currentLayout = activeProfile.layouts.firstOrNull { it.id == layoutId }
-                        if (currentLayout != null) {
-                            MacroPadState.updateLayout(
-                                currentLayout.copy(
-                                    buttons =
-                                        currentLayout.buttons.map { b ->
-                                            if (b.id == btn.id) b.copy(posX = nx, posY = ny) else b
-                                        },
-                                ),
-                            )
-                        }
-                    }
-                },
+                isLocked = isLocked,
+                isCropping = isCropping,
             )
-        }
-
-        // Discover active alignment guides
-        val (alignedXs, alignedYs) =
-            remember(selectedButtonId, layout?.buttons, canvasSize) {
-                if (!isLocked && !isCropping && selectedButtonId != null && layout != null && canvasSize.width > 0 &&
-                    canvasSize.height > 0
-                ) {
-                    findAlignedCenterGuides(
-                        activeButtonId = selectedButtonId,
-                        buttons = layout.buttons,
-                        canvasW = canvasSize.width.toFloat(),
-                        canvasH = canvasSize.height.toFloat(),
-                    )
-                } else {
-                    emptyList<Float>() to emptyList<Float>()
-                }
-            }
-
-        // PowerPoint-style Smart Alignment Guides overlay
-        if (!isLocked && !isCropping && (alignedXs.isNotEmpty() || alignedYs.isNotEmpty())) {
-            AlignmentGuidesOverlay(
-                alignedXs = alignedXs,
-                alignedYs = alignedYs,
-                buttons = layout?.buttons ?: emptyList(),
-                accentColor = accentColor,
-            )
-        }
-
-        // Render handles or highlight pointers for the active button
-        val activeBtn = (layout?.buttons ?: emptyList()).firstOrNull { it.id == selectedButtonId }
-        if (activeBtn != null) {
-            val chipWidthPx = with(density) { activeBtn.widthDp.dp.toPx() }
-            val chipHeightPx = with(density) { activeBtn.heightDp.dp.toPx() }
-
-            val w = canvasSize.width.toFloat().coerceAtLeast(1f)
-            val h = canvasSize.height.toFloat().coerceAtLeast(1f)
-
-            val destLeft = activeBtn.posX * w - chipWidthPx / 2f
-            val destTop = activeBtn.posY * h - chipHeightPx / 2f
-
-            if (!isLocked && !isCropping) {
-                val marginPx = with(density) { PC_EDGE_HANDLE_MARGIN.toPx() }
-                val handleThicknessPx = with(density) { PC_EDGE_HANDLE_THICKNESS.toPx() }
-                val touchLengthPx = with(density) { PC_EDGE_TOUCH_LENGTH.toPx() }
-                val touchThicknessPx = with(density) { PC_EDGE_TOUCH_THICKNESS.toPx() }
-
-                val topCenterY = destTop - marginPx - handleThicknessPx / 2f
-                val bottomCenterY = destTop + chipHeightPx + marginPx + handleThicknessPx / 2f
-                val leftCenterX = destLeft - marginPx - handleThicknessPx / 2f
-                val rightCenterX = destLeft + chipWidthPx + marginPx + handleThicknessPx / 2f
-
-                val horizTouchX = (destLeft + chipWidthPx / 2f) - touchLengthPx / 2f
-                val vertTouchY = (destTop + chipHeightPx / 2f) - touchLengthPx / 2f
-
-                val edgeDefs =
-                    listOf(
-                        ButtonEdgeHandleDef(
-                            touchLeftPx = horizTouchX,
-                            touchTopPx = topCenterY - touchThicknessPx / 2f,
-                            touchWidth = PC_EDGE_TOUCH_LENGTH,
-                            touchHeight = PC_EDGE_TOUCH_THICKNESS,
-                            handleWidth = PC_EDGE_HANDLE_LENGTH,
-                            handleHeight = PC_EDGE_HANDLE_THICKNESS,
-                            handle = ButtonResizeHandle.TOP,
-                        ),
-                        ButtonEdgeHandleDef(
-                            touchLeftPx = horizTouchX,
-                            touchTopPx = bottomCenterY - touchThicknessPx / 2f,
-                            touchWidth = PC_EDGE_TOUCH_LENGTH,
-                            touchHeight = PC_EDGE_TOUCH_THICKNESS,
-                            handleWidth = PC_EDGE_HANDLE_LENGTH,
-                            handleHeight = PC_EDGE_HANDLE_THICKNESS,
-                            handle = ButtonResizeHandle.BOTTOM,
-                        ),
-                        ButtonEdgeHandleDef(
-                            touchLeftPx = leftCenterX - touchThicknessPx / 2f,
-                            touchTopPx = vertTouchY,
-                            touchWidth = PC_EDGE_TOUCH_THICKNESS,
-                            touchHeight = PC_EDGE_TOUCH_LENGTH,
-                            handleWidth = PC_EDGE_HANDLE_THICKNESS,
-                            handleHeight = PC_EDGE_HANDLE_LENGTH,
-                            handle = ButtonResizeHandle.LEFT,
-                        ),
-                        ButtonEdgeHandleDef(
-                            touchLeftPx = rightCenterX - touchThicknessPx / 2f,
-                            touchTopPx = vertTouchY,
-                            touchWidth = PC_EDGE_TOUCH_THICKNESS,
-                            touchHeight = PC_EDGE_TOUCH_LENGTH,
-                            handleWidth = PC_EDGE_HANDLE_THICKNESS,
-                            handleHeight = PC_EDGE_HANDLE_LENGTH,
-                            handle = ButtonResizeHandle.RIGHT,
-                        ),
-                    )
-
-                val haptic = LocalHapticFeedback.current
-                var isEdgeDragging by remember(activeBtn.id) { mutableStateOf(false) }
-                var wasAspectSnapped by remember(activeBtn.id) { mutableStateOf(false) }
-
-                var dragStartNormX by remember(activeBtn.id) { mutableFloatStateOf(activeBtn.posX) }
-                var dragStartNormY by remember(activeBtn.id) { mutableFloatStateOf(activeBtn.posY) }
-                var dragStartWidthDp by remember(activeBtn.id) { mutableFloatStateOf(activeBtn.widthDp) }
-                var dragStartHeightDp by remember(activeBtn.id) { mutableFloatStateOf(activeBtn.heightDp) }
-
-                fun captureDragStart() {
-                    dragStartNormX = activeBtn.posX
-                    dragStartNormY = activeBtn.posY
-                    dragStartWidthDp = activeBtn.widthDp
-                    dragStartHeightDp = activeBtn.heightDp
-                }
-
-                fun handleEdgeDrag(
-                    handle: ButtonResizeHandle,
-                    totalDx: Float,
-                    totalDy: Float,
-                ) {
-                    val targetLayoutId = layout?.id ?: return
-                    val activeProfile = MacroPadState.activeProfile.value ?: return
-                    val curLayout = activeProfile.layouts.firstOrNull { it.id == targetLayoutId } ?: return
-                    val dragDeltaPx =
-                        when (handle) {
-                            ButtonResizeHandle.LEFT, ButtonResizeHandle.RIGHT -> totalDx
-                            ButtonResizeHandle.TOP, ButtonResizeHandle.BOTTOM -> totalDy
-                        }
-                    val isTrackpoint = activeBtn.action is PadAction.TrackpointMove
-                    val res =
-                        calculateButtonEdgeResize(
-                            handle = handle,
-                            originalNormX = dragStartNormX,
-                            originalNormY = dragStartNormY,
-                            originalWidthDp = dragStartWidthDp,
-                            originalHeightDp = dragStartHeightDp,
-                            dragDeltaPx = dragDeltaPx,
-                            canvasW = w,
-                            canvasH = h,
-                            density = density.density,
-                            lockAspect = isTrackpoint,
-                        )
-                    if (res.isAspectSnapped && !wasAspectSnapped) {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    }
-                    wasAspectSnapped = res.isAspectSnapped
-
-                    val updated =
-                        curLayout.buttons.map { b ->
-                            if (b.id == activeBtn.id) {
-                                b.copy(
-                                    posX = res.newNormX,
-                                    posY = res.newNormY,
-                                    widthDp = res.newWidthDp,
-                                    heightDp = res.newHeightDp,
-                                )
-                            } else {
-                                b
-                            }
-                        }
-                    MacroPadState.updateLayout(curLayout.copy(buttons = updated))
-                }
-
-                edgeDefs.forEach { def ->
-                    key(def.handle) {
-                        ButtonResizeHandleView(
-                            offset = IntOffset(def.touchLeftPx.roundToInt(), def.touchTopPx.roundToInt()),
-                            touchWidth = def.touchWidth,
-                            touchHeight = def.touchHeight,
-                            handleWidth = def.handleWidth,
-                            handleHeight = def.handleHeight,
-                            color = accentColor,
-                            onDragStart = {
-                                AppLog.d(TAG, "onEdgeDragStart: btnId=${activeBtn.id} handle=${def.handle}")
-                                isEdgeDragging = true
-                                wasAspectSnapped = false
-                                captureDragStart()
-                            },
-                            onDragEnd = {
-                                AppLog.d(TAG, "onEdgeDragEnd: btnId=${activeBtn.id} handle=${def.handle}")
-                                isEdgeDragging = false
-                                wasAspectSnapped = false
-                            },
-                            onDragCancel = {
-                                AppLog.d(TAG, "onEdgeDragCancel: btnId=${activeBtn.id} handle=${def.handle}")
-                                isEdgeDragging = false
-                                wasAspectSnapped = false
-                            },
-                            onDrag = { totalDx, totalDy -> handleEdgeDrag(def.handle, totalDx, totalDy) },
-                        )
-                    }
-                }
-
-                val isHudVisible = isEdgeDragging || (draggingBodyButtonId == activeBtn.id) || isAdjustingViaGamepad
-                ButtonDimensionHud(
-                    widthDp = activeBtn.widthDp,
-                    heightDp = activeBtn.heightDp,
-                    centerX = activeBtn.posX * w,
-                    buttonTopPx = destTop,
-                    buttonBottomPx = destTop + chipHeightPx,
-                    canvasW = w,
-                    accentColor = accentColor,
-                    visible = isHudVisible,
-                )
-            } else {
-                val handleSizePx = with(density) { PC_HANDLE_SIZE.toPx() }
-                val paddingPx = with(density) { PC_HANDLE_PADDING.toPx() }
-                val centerX = activeBtn.posX * w
-                val centerY = activeBtn.posY * h
-                val halfW = chipWidthPx / 2f
-                val halfH = chipHeightPx / 2f
-                val handles =
-                    listOf(
-                        HandlePosition(centerX - handleSizePx / 2f, centerY - halfH - paddingPx - handleSizePx, PC_POINTER_ROTATION_TOP),
-                        HandlePosition(centerX - handleSizePx / 2f, centerY + halfH + paddingPx, PC_POINTER_ROTATION_BOTTOM),
-                        HandlePosition(centerX - halfW - paddingPx - handleSizePx, centerY - handleSizePx / 2f, PC_POINTER_ROTATION_LEFT),
-                        HandlePosition(centerX + halfW + paddingPx, centerY - handleSizePx / 2f, PC_POINTER_ROTATION_RIGHT),
-                    )
-                handles.forEach { pos ->
-                    HighlightPointer(
-                        leftPx = pos.leftPx,
-                        topPx = pos.topPx,
-                        handleSize = PC_HANDLE_SIZE,
-                        rotation = pos.rotation,
-                        accentColor = accentColor,
-                    )
-                }
-
-                // Locked canvas (e.g. PadButtonEditDialog): show the HUD only during gamepad adjustment,
-                // pushed past the highlight pointers so it never overlaps them.
-                ButtonDimensionHud(
-                    widthDp = activeBtn.widthDp,
-                    heightDp = activeBtn.heightDp,
-                    centerX = centerX,
-                    buttonTopPx = destTop,
-                    buttonBottomPx = destTop + chipHeightPx,
-                    canvasW = w,
-                    accentColor = accentColor,
-                    visible = isAdjustingViaGamepad && !isCropping,
-                    extraClearancePx = handleSizePx + paddingPx,
-                )
-            }
         }
 
         AnimatedVisibility(
             visible = lockSymbolVisible,
             enter =
                 fadeIn(animationSpec = tween(PC_LOCK_ANIM_IN_MS)) +
-                    scaleIn(initialScale = 0.8f, animationSpec = tween(PC_LOCK_ANIM_IN_MS)),
+                    scaleIn(initialScale = PC_LOCK_SCALE_IN, animationSpec = tween(PC_LOCK_ANIM_IN_MS)),
             exit =
                 fadeOut(animationSpec = tween(PC_LOCK_ANIM_OUT_MS)) +
-                    scaleOut(targetScale = 1.1f, animationSpec = tween(PC_LOCK_ANIM_OUT_MS)),
+                    scaleOut(targetScale = PC_LOCK_SCALE_OUT, animationSpec = tween(PC_LOCK_ANIM_OUT_MS)),
             modifier = Modifier.align(Alignment.Center),
         ) {
             Box(
@@ -727,11 +520,11 @@ internal fun PadCanvas(
                     Modifier
                         .size(PC_LOCK_BADGE_SIZE)
                         .background(
-                            color = Color.Black.copy(alpha = 0.75f),
+                            color = Color.Black.copy(alpha = PC_LOCK_BG_ALPHA),
                             shape = PC_LOCK_BADGE_SHAPE,
                         ).border(
-                            width = 1.dp,
-                            color = if (!lockSymbolLocked) accentColor else Color.White.copy(alpha = 0.2f),
+                            width = PC_LOCK_BORDER_WIDTH,
+                            color = if (!lockSymbolLocked) accentColor else Color.White.copy(alpha = PC_LOCK_BORDER_ALPHA),
                             shape = PC_LOCK_BADGE_SHAPE,
                         ),
                 contentAlignment = Alignment.Center,
@@ -748,20 +541,328 @@ internal fun PadCanvas(
 }
 
 @Composable
+private fun EditableButtonsCanvas(
+    layout: PadLayout,
+    designCanvas: LayoutCanvasSpec,
+    viewport: DesignViewport,
+    canvasSize: IntSize,
+    selectedButtonId: String?,
+    accentColor: Color,
+    gridMode: GridMode,
+    alignmentSnapping: Boolean,
+    isLocked: Boolean,
+    isCropping: Boolean,
+) {
+    val density = LocalDensity.current
+    val isAdjustingViaGamepad by MacroPadState.isAdjustingButtonViaGamepad.collectAsStateWithLifecycle()
+    var draggingBodyButtonId by remember { mutableStateOf<String?>(null) }
+
+    layout.buttons.forEach { btn ->
+        val targetLayoutId = layout.id
+        DraggableButton(
+            btn = btn,
+            layout = layout,
+            designCanvas = designCanvas,
+            viewport = viewport,
+            accentColor = accentColor,
+            gridMode = gridMode,
+            alignmentSnapping = alignmentSnapping,
+            isLocked = isLocked || isCropping,
+            onTouch = {
+                MacroPadState.setSelectedButtonId(btn.id)
+            },
+            onDragActiveChanged = { active ->
+                draggingBodyButtonId = if (active) btn.id else null
+            },
+            onPositionChanged = { nx, ny ->
+                val activeProfile = MacroPadState.activeProfile.value
+                if (activeProfile != null) {
+                    val currentLayout = activeProfile.layouts.firstOrNull { it.id == targetLayoutId }
+                    if (currentLayout != null) {
+                        MacroPadState.updateLayout(
+                            currentLayout.copy(
+                                buttons =
+                                    currentLayout.buttons.map { b ->
+                                        if (b.id == btn.id) b.copy(posX = nx, posY = ny) else b
+                                    },
+                            ),
+                        )
+                    }
+                }
+            },
+        )
+    }
+
+    // Discover active alignment guides in designCanvas pixel space
+    val (alignedXs, alignedYs) =
+        remember(selectedButtonId, layout.buttons, designCanvas, isLocked, isCropping) {
+            if (!isLocked && !isCropping && selectedButtonId != null) {
+                findAlignedCenterGuides(
+                    activeButtonId = selectedButtonId,
+                    buttons = layout.buttons,
+                    canvasW = designCanvas.widthPx.toFloat(),
+                    canvasH = designCanvas.heightPx.toFloat(),
+                )
+            } else {
+                emptyList<Float>() to emptyList<Float>()
+            }
+        }
+
+    // PowerPoint-style Smart Alignment Guides overlay
+    if (!isLocked && !isCropping && (alignedXs.isNotEmpty() || alignedYs.isNotEmpty())) {
+        AlignmentGuidesOverlay(
+            alignedXs = alignedXs,
+            alignedYs = alignedYs,
+            buttons = layout.buttons,
+            designCanvas = designCanvas,
+            viewport = viewport,
+            accentColor = accentColor,
+        )
+    }
+
+    // Render handles or highlight pointers for the active button
+    val activeBtn = layout.buttons.firstOrNull { it.id == selectedButtonId }
+    if (activeBtn != null && viewport.scale > 0f) {
+        val chipWidthPx = activeBtn.widthPx * viewport.scale
+        val chipHeightPx = activeBtn.heightPx * viewport.scale
+        val hostW = canvasSize.width.toFloat().coerceAtLeast(1f)
+        val centerX = viewport.normToScreenX(activeBtn.posX)
+        val centerY = viewport.normToScreenY(activeBtn.posY)
+        val destLeft = centerX - chipWidthPx / 2f
+        val destTop = centerY - chipHeightPx / 2f
+
+        if (!isLocked && !isCropping) {
+            val marginPx = with(density) { PC_EDGE_HANDLE_MARGIN.toPx() }
+            val handleThicknessPx = with(density) { PC_EDGE_HANDLE_THICKNESS.toPx() }
+            val touchLengthPx = with(density) { PC_EDGE_TOUCH_LENGTH.toPx() }
+            val touchThicknessPx = with(density) { PC_EDGE_TOUCH_THICKNESS.toPx() }
+
+            val topCenterY = destTop - marginPx - handleThicknessPx / 2f
+            val bottomCenterY = destTop + chipHeightPx + marginPx + handleThicknessPx / 2f
+            val leftCenterX = destLeft - marginPx - handleThicknessPx / 2f
+            val rightCenterX = destLeft + chipWidthPx + marginPx + handleThicknessPx / 2f
+
+            val horizTouchX = centerX - touchLengthPx / 2f
+            val vertTouchY = centerY - touchLengthPx / 2f
+
+            val edgeDefs =
+                listOf(
+                    ButtonEdgeHandleDef(
+                        touchLeftPx = horizTouchX,
+                        touchTopPx = topCenterY - touchThicknessPx / 2f,
+                        touchWidth = PC_EDGE_TOUCH_LENGTH,
+                        touchHeight = PC_EDGE_TOUCH_THICKNESS,
+                        handleWidth = PC_EDGE_HANDLE_LENGTH,
+                        handleHeight = PC_EDGE_HANDLE_THICKNESS,
+                        handle = ButtonResizeHandle.TOP,
+                    ),
+                    ButtonEdgeHandleDef(
+                        touchLeftPx = horizTouchX,
+                        touchTopPx = bottomCenterY - touchThicknessPx / 2f,
+                        touchWidth = PC_EDGE_TOUCH_LENGTH,
+                        touchHeight = PC_EDGE_TOUCH_THICKNESS,
+                        handleWidth = PC_EDGE_HANDLE_LENGTH,
+                        handleHeight = PC_EDGE_HANDLE_THICKNESS,
+                        handle = ButtonResizeHandle.BOTTOM,
+                    ),
+                    ButtonEdgeHandleDef(
+                        touchLeftPx = leftCenterX - touchThicknessPx / 2f,
+                        touchTopPx = vertTouchY,
+                        touchWidth = PC_EDGE_TOUCH_THICKNESS,
+                        touchHeight = PC_EDGE_TOUCH_LENGTH,
+                        handleWidth = PC_EDGE_HANDLE_THICKNESS,
+                        handleHeight = PC_EDGE_HANDLE_LENGTH,
+                        handle = ButtonResizeHandle.LEFT,
+                    ),
+                    ButtonEdgeHandleDef(
+                        touchLeftPx = rightCenterX - touchThicknessPx / 2f,
+                        touchTopPx = vertTouchY,
+                        touchWidth = PC_EDGE_TOUCH_THICKNESS,
+                        touchHeight = PC_EDGE_TOUCH_LENGTH,
+                        handleWidth = PC_EDGE_HANDLE_THICKNESS,
+                        handleHeight = PC_EDGE_HANDLE_LENGTH,
+                        handle = ButtonResizeHandle.RIGHT,
+                    ),
+                )
+
+            val haptic = LocalHapticFeedback.current
+            var isEdgeDragging by remember(activeBtn.id) { mutableStateOf(false) }
+            var wasAspectSnapped by remember(activeBtn.id) { mutableStateOf(false) }
+
+            var dragStartNormX by remember(activeBtn.id) { mutableFloatStateOf(activeBtn.posX) }
+            var dragStartNormY by remember(activeBtn.id) { mutableFloatStateOf(activeBtn.posY) }
+            var dragStartWidthPx by remember(activeBtn.id) { mutableFloatStateOf(activeBtn.widthPx) }
+            var dragStartHeightPx by remember(activeBtn.id) { mutableFloatStateOf(activeBtn.heightPx) }
+
+            fun captureDragStart() {
+                dragStartNormX = activeBtn.posX
+                dragStartNormY = activeBtn.posY
+                dragStartWidthPx = activeBtn.widthPx
+                dragStartHeightPx = activeBtn.heightPx
+            }
+
+            fun handleEdgeDrag(
+                handle: ButtonResizeHandle,
+                totalDx: Float,
+                totalDy: Float,
+            ) {
+                val targetLayoutId = layout.id
+                val activeProfile = MacroPadState.activeProfile.value ?: return
+                val curLayout = activeProfile.layouts.firstOrNull { it.id == targetLayoutId } ?: return
+                val dragDeltaPx =
+                    when (handle) {
+                        ButtonResizeHandle.LEFT, ButtonResizeHandle.RIGHT -> totalDx
+                        ButtonResizeHandle.TOP, ButtonResizeHandle.BOTTOM -> totalDy
+                    }
+                val safeScale = viewport.scale.coerceAtLeast(PC_MIN_SCALE_EPSILON)
+                val dragDeltaDesignPx = dragDeltaPx / safeScale
+                val isTrackpoint = activeBtn.action is PadAction.TrackpointMove
+                val minWidthPx = designCanvas.minButtonSizePx
+                val minHeightPx =
+                    if (activeBtn.action is PadAction.ScrollWheel) {
+                        designCanvas.largeControlMinSizePx
+                    } else {
+                        designCanvas.minButtonSizePx
+                    }
+                val res =
+                    calculateButtonEdgeResize(
+                        handle = handle,
+                        originalNormX = dragStartNormX,
+                        originalNormY = dragStartNormY,
+                        originalWidthPx = dragStartWidthPx,
+                        originalHeightPx = dragStartHeightPx,
+                        dragDeltaDesignPx = dragDeltaDesignPx,
+                        designCanvasW = designCanvas.widthPx.toFloat(),
+                        designCanvasH = designCanvas.heightPx.toFloat(),
+                        minWidthPx = minWidthPx,
+                        minHeightPx = minHeightPx,
+                        aspectSnapThresholdPx = BUTTON_ASPECT_SNAP_THRESHOLD_PX,
+                        lockAspect = isTrackpoint,
+                        minNormX = viewport.minNormX,
+                        maxNormX = viewport.maxNormX,
+                        minNormY = viewport.minNormY,
+                        maxNormY = viewport.maxNormY,
+                    )
+                if (res.isAspectSnapped && !wasAspectSnapped) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+                wasAspectSnapped = res.isAspectSnapped
+
+                val updated =
+                    curLayout.buttons.map { b ->
+                        if (b.id == activeBtn.id) {
+                            b.copy(
+                                posX = res.newNormX,
+                                posY = res.newNormY,
+                                widthPx = res.newWidthPx,
+                                heightPx = res.newHeightPx,
+                            )
+                        } else {
+                            b
+                        }
+                    }
+                MacroPadState.updateLayout(curLayout.copy(buttons = updated))
+            }
+
+            edgeDefs.forEach { def ->
+                key(def.handle) {
+                    ButtonResizeHandleView(
+                        offset = IntOffset(def.touchLeftPx.roundToInt(), def.touchTopPx.roundToInt()),
+                        touchWidth = def.touchWidth,
+                        touchHeight = def.touchHeight,
+                        handleWidth = def.handleWidth,
+                        handleHeight = def.handleHeight,
+                        color = accentColor,
+                        onDragStart = {
+                            AppLog.d(TAG, "onEdgeDragStart: btnId=${activeBtn.id} handle=${def.handle}")
+                            isEdgeDragging = true
+                            wasAspectSnapped = false
+                            captureDragStart()
+                        },
+                        onDragEnd = {
+                            AppLog.d(TAG, "onEdgeDragEnd: btnId=${activeBtn.id} handle=${def.handle}")
+                            isEdgeDragging = false
+                            wasAspectSnapped = false
+                        },
+                        onDragCancel = {
+                            AppLog.d(TAG, "onEdgeDragCancel: btnId=${activeBtn.id} handle=${def.handle}")
+                            isEdgeDragging = false
+                            wasAspectSnapped = false
+                        },
+                        onDrag = { totalDx, totalDy -> handleEdgeDrag(def.handle, totalDx, totalDy) },
+                    )
+                }
+            }
+
+            val isHudVisible = isEdgeDragging || (draggingBodyButtonId == activeBtn.id) || isAdjustingViaGamepad
+            ButtonDimensionHud(
+                widthPx = activeBtn.widthPx,
+                heightPx = activeBtn.heightPx,
+                centerX = centerX,
+                buttonTopPx = destTop,
+                buttonBottomPx = destTop + chipHeightPx,
+                canvasW = hostW,
+                accentColor = accentColor,
+                visible = isHudVisible,
+            )
+        } else {
+            val handleSizePx = with(density) { PC_HANDLE_SIZE.toPx() }
+            val paddingPx = with(density) { PC_HANDLE_PADDING.toPx() }
+            val halfW = chipWidthPx / 2f
+            val halfH = chipHeightPx / 2f
+            val handles =
+                listOf(
+                    HandlePosition(centerX - handleSizePx / 2f, centerY - halfH - paddingPx - handleSizePx, PC_POINTER_ROTATION_TOP),
+                    HandlePosition(centerX - handleSizePx / 2f, centerY + halfH + paddingPx, PC_POINTER_ROTATION_BOTTOM),
+                    HandlePosition(centerX - halfW - paddingPx - handleSizePx, centerY - handleSizePx / 2f, PC_POINTER_ROTATION_LEFT),
+                    HandlePosition(centerX + halfW + paddingPx, centerY - handleSizePx / 2f, PC_POINTER_ROTATION_RIGHT),
+                )
+            handles.forEach { pos ->
+                HighlightPointer(
+                    leftPx = pos.leftPx,
+                    topPx = pos.topPx,
+                    handleSize = PC_HANDLE_SIZE,
+                    rotation = pos.rotation,
+                    accentColor = accentColor,
+                )
+            }
+
+            // Locked canvas (e.g. PadButtonEditDialog): show the HUD only during gamepad adjustment,
+            // pushed past the highlight pointers so it never overlaps them.
+            ButtonDimensionHud(
+                widthPx = activeBtn.widthPx,
+                heightPx = activeBtn.heightPx,
+                centerX = centerX,
+                buttonTopPx = destTop,
+                buttonBottomPx = destTop + chipHeightPx,
+                canvasW = hostW,
+                accentColor = accentColor,
+                visible = isAdjustingViaGamepad && !isCropping,
+                extraClearancePx = handleSizePx + paddingPx,
+            )
+        }
+    }
+}
+
+@Composable
 private fun DraggableButton(
     btn: PadButton,
     layout: PadLayout,
-    canvasSize: IntSize,
+    designCanvas: LayoutCanvasSpec,
+    viewport: DesignViewport,
     accentColor: Color,
     gridMode: GridMode,
-    gridStepPx: Float,
     alignmentSnapping: Boolean,
     isLocked: Boolean,
     onTouch: () -> Unit,
     onDragActiveChanged: (Boolean) -> Unit = {},
     onPositionChanged: (Float, Float) -> Unit,
 ) {
-    val colors = LocalAppColors.current
+    val chipWidthPx = btn.widthPx * viewport.scale
+    val chipHeightPx = btn.heightPx * viewport.scale
+    if (chipWidthPx <= 0f || chipHeightPx <= 0f) {
+        return
+    }
 
     val resolvedBgColorOption = btn.buttonBgColor ?: layout.buttonBgColor
     val resolvedBorderColorOption = btn.buttonBorderColor ?: layout.buttonBorderColor
@@ -771,17 +872,15 @@ private fun DraggableButton(
     val effectiveBorder = resolveColorOption(resolvedBorderColorOption, accentColor, MP_AMBIENT_NEUTRAL_BORDER)
     val effectiveTextTint = resolveColorOption(resolvedTextColorOption, accentColor, MP_AMBIENT_NEUTRAL_TEXT)
 
-    // rememberUpdatedState lets the pointerInput closure (keyed only on btn.id +
-    // canvasSize) see the live btn even though its lambda is NOT restarted when
-    // btn.posX/posY change between drags.
     val currentBtn = rememberUpdatedState(btn)
-    // Always call the latest onPositionChanged so PadCanvas's stale-profile
-    // closure (captured by pointerInput) doesn't revert sibling button positions.
+    val currentButtons = rememberUpdatedState(layout.buttons)
+    val currentDesignCanvas = rememberUpdatedState(designCanvas)
+    val currentViewport = rememberUpdatedState(viewport)
     val currentOnPositionChanged = rememberUpdatedState(onPositionChanged)
     val currentOnDragActiveChanged = rememberUpdatedState(onDragActiveChanged)
     val currentGridMode = rememberUpdatedState(gridMode)
-    val currentGridStepPx = rememberUpdatedState(gridStepPx)
     val currentAlignmentSnapping = rememberUpdatedState(alignmentSnapping)
+
     // Anchor position captured at the moment the finger goes down.
     var startPosX by remember(btn.id) { mutableFloatStateOf(btn.posX) }
     var startPosY by remember(btn.id) { mutableFloatStateOf(btn.posY) }
@@ -791,25 +890,21 @@ private fun DraggableButton(
     val density = LocalDensity.current
     val isTrackpoint = btn.action is PadAction.TrackpointMove
 
-    val btnWidthDp = btn.widthDp.dp
-    val btnHeightDp = btn.heightDp.dp
-    val chipWidthPx = with(density) { btnWidthDp.toPx() }
-    val chipHeightPx = with(density) { btnHeightDp.toPx() }
+    val btnWidthDp = with(density) { chipWidthPx.toDp() }
+    val btnHeightDp = with(density) { chipHeightPx.toDp() }
+    val iconSizeDp = with(density) { (min(chipWidthPx, chipHeightPx) * MP_BTN_ICON_RATIO).toDp() }
 
-    val w = canvasSize.width.toFloat().coerceAtLeast(1f)
-    val h = canvasSize.height.toFloat().coerceAtLeast(1f)
-
-    // Top-left position in canvas pixels (centre adjusted by half-chip)
-    val left = btn.posX * w - chipWidthPx / 2f
-    val top = btn.posY * h - chipHeightPx / 2f
+    // Top-left position in host screen pixels (centre mapped via DesignViewport)
+    val left = viewport.normToScreenX(btn.posX) - chipWidthPx / 2f
+    val top = viewport.normToScreenY(btn.posY) - chipHeightPx / 2f
 
     val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
 
     val chipShape =
         resolvePadButtonShape(
             buttonShape = btn.buttonShape,
-            widthDp = btn.widthDp,
-            heightDp = btn.heightDp,
+            widthPx = btn.widthPx,
+            heightPx = btn.heightPx,
             isTrackpoint = isTrackpoint,
         )
 
@@ -824,11 +919,9 @@ private fun DraggableButton(
                     if (isLocked) {
                         Modifier
                     } else {
-                        Modifier.pointerInput(btn.id, canvasSize) {
+                        Modifier.pointerInput(btn.id, viewport) {
                             detectDragGestures(
                                 onDragStart = {
-                                    // Capture the current (live) position as anchor so the
-                                    // accumulated delta is always relative to this drag's start.
                                     startPosX = currentBtn.value.posX
                                     startPosY = currentBtn.value.posY
                                     dragOffsetX = 0f
@@ -846,27 +939,27 @@ private fun DraggableButton(
                                     change.consume()
                                     dragOffsetX += drag.x
                                     dragOffsetY += drag.y
-                                    val rawX =
-                                        (startPosX + dragOffsetX / w).coerceIn(
-                                            BUTTON_CANVAS_EDGE_MARGIN,
-                                            1f - BUTTON_CANVAS_EDGE_MARGIN,
-                                        )
-                                    val rawY =
-                                        (startPosY + dragOffsetY / h).coerceIn(
-                                            BUTTON_CANVAS_EDGE_MARGIN,
-                                            1f - BUTTON_CANVAS_EDGE_MARGIN,
-                                        )
+                                    val vp = currentViewport.value
+                                    val spec = currentDesignCanvas.value
+                                    val safeVpW = vp.viewportWidthPx.coerceAtLeast(1f)
+                                    val safeVpH = vp.viewportHeightPx.coerceAtLeast(1f)
+                                    val rawX = startPosX + dragOffsetX / safeVpW
+                                    val rawY = startPosY + dragOffsetY / safeVpH
                                     val result =
                                         calculateButtonAlignmentSnap(
                                             rawNormX = rawX,
                                             rawNormY = rawY,
                                             movingButtonId = btn.id,
-                                            otherButtons = layout.buttons,
-                                            canvasW = w,
-                                            canvasH = h,
+                                            otherButtons = currentButtons.value,
+                                            canvasW = spec.widthPx.toFloat(),
+                                            canvasH = spec.heightPx.toFloat(),
                                             alignmentSnappingEnabled = currentAlignmentSnapping.value,
                                             gridMode = currentGridMode.value,
-                                            gridStepPx = currentGridStepPx.value,
+                                            gridStepPx = spec.minButtonSizePx,
+                                            minNormX = vp.minNormX,
+                                            maxNormX = vp.maxNormX,
+                                            minNormY = vp.minNormY,
+                                            maxNormY = vp.maxNormY,
                                         )
                                     currentOnPositionChanged.value(
                                         result.snappedNormX,
@@ -906,7 +999,7 @@ private fun DraggableButton(
                     .fillMaxSize()
                     .then(
                         if (btn.invisible) {
-                            Modifier.graphicsLayer { alpha = 0.4f }
+                            Modifier.graphicsLayer { alpha = PC_INVISIBLE_BTN_ALPHA }
                         } else {
                             Modifier
                         },
@@ -915,7 +1008,9 @@ private fun DraggableButton(
             PadButtonContent(
                 btn = btn,
                 effectiveTextTint = effectiveTextTint,
-                iconSize = minOf(btnWidthDp, btnHeightDp) * MP_BTN_ICON_RATIO,
+                iconSize = iconSizeDp,
+                renderedWidthPx = chipWidthPx,
+                renderedHeightPx = chipHeightPx,
                 isTrackpoint = isTrackpoint,
             )
         }
@@ -924,12 +1019,12 @@ private fun DraggableButton(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(4.dp),
+                        .padding(PC_INVISIBLE_BADGE_PADDING),
                 contentAlignment = Alignment.TopEnd,
             ) {
                 MaterialSymbol(
                     name = "visibility_off",
-                    size = 14.dp,
+                    size = PC_INVISIBLE_ICON_SIZE,
                     tint = effectiveTextTint,
                 )
             }
@@ -942,28 +1037,29 @@ private fun DraggableButton(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun GridOverlay(
+private fun GridOverlayCanvas(
     gridMode: GridMode,
+    viewport: DesignViewport,
     gridStepPx: Float,
+    buttonUnitPx: Float,
     gridColor: Color,
 ) {
     val density = LocalDensity.current
     val dotRadiusPx = with(density) { PC_RADIAL_DOT_RADIUS.toPx() }
     val centerDotPx = with(density) { PC_RADIAL_CENTER_DOT.toPx() }
-    val buttonUnitPx = with(density) { MP_BUTTON_BASE_UNIT_DP.dp.toPx() }
     Canvas(modifier = Modifier.fillMaxSize()) {
+        if (gridStepPx <= PC_MIN_SCALE_EPSILON) return@Canvas
         val w = size.width
         val h = size.height
+        val cx = viewport.normToScreenX(PC_RADIAL_CENTER_X)
+        val cy = viewport.normToScreenY(PC_RADIAL_CENTER_Y)
 
         when (gridMode) {
             GridMode.OFF -> { /* no-op */ }
 
             GridMode.RECTANGULAR -> {
-                // Lines are centred on the canvas midpoint so the rectangular
-                // grid shares its origin with the radial grid's circle centre.
-                val cx = w * PC_RADIAL_CENTER_X
-                val cy = h * PC_RADIAL_CENTER_Y
-                // Vertical lines outward from centre
+                // Lines are centred on the DesignViewport midpoint so the rectangular
+                // grid shares its origin with snapRectangular and the radial grid centre.
                 var dx = 0f
                 while (cx - dx >= 0f || cx + dx <= w) {
                     if (cx + dx <= w) {
@@ -974,7 +1070,6 @@ private fun GridOverlay(
                     }
                     dx += gridStepPx
                 }
-                // Horizontal lines outward from centre
                 var dy = 0f
                 while (cy - dy >= 0f || cy + dy <= h) {
                     if (cy + dy <= h) {
@@ -988,12 +1083,8 @@ private fun GridOverlay(
             }
 
             GridMode.RADIAL -> {
-                val cx = w * PC_RADIAL_CENTER_X
-                val cy = h * PC_RADIAL_CENTER_Y
-                val maxRadius = maxOf(w, h) / 2f
-                val dotRadius = dotRadiusPx
-                val centerDotRadius = centerDotPx
-                val dotColor = gridColor
+                val maxRadius = max(w, h) / 2f
+                val safeButtonUnitPx = buttonUnitPx.coerceAtLeast(PC_MIN_SCALE_EPSILON)
 
                 // Concentric circles with evenly-distributed snap dots.
                 // Odd circles (1, 3, 5 …): phase 45° → diagonals as anchors.
@@ -1002,21 +1093,21 @@ private fun GridOverlay(
                 var circleIndex = 1
                 while (r <= maxRadius + PC_RADIAL_EXTRA_RINGS * gridStepPx) {
                     drawCircle(gridColor, radius = r, center = Offset(cx, cy), style = Stroke(PC_GRID_STROKE_PX))
-                    val n = radialPointCount(r, buttonUnitPx)
+                    val n = radialPointCount(r, safeButtonUnitPx)
                     val phaseOffset = if (circleIndex % 2 == 1) PI / 4.0 else 0.0
                     val angleStep = 2.0 * PI / n
                     for (i in 0 until n) {
                         val angle = (phaseOffset + i * angleStep).toFloat()
                         val px = cx + r * cos(angle)
                         val py = cy + r * sin(angle)
-                        drawCircle(dotColor, radius = dotRadius, center = Offset(px, py))
+                        drawCircle(gridColor, radius = dotRadiusPx, center = Offset(px, py))
                     }
                     r += gridStepPx
                     circleIndex++
                 }
 
                 // Center snap point
-                drawCircle(dotColor, radius = centerDotRadius, center = Offset(cx, cy))
+                drawCircle(gridColor, radius = centerDotPx, center = Offset(cx, cy))
             }
         }
     }
@@ -1031,6 +1122,8 @@ private fun AlignmentGuidesOverlay(
     alignedXs: List<Float>,
     alignedYs: List<Float>,
     buttons: List<PadButton>,
+    designCanvas: LayoutCanvasSpec,
+    viewport: DesignViewport,
     accentColor: Color,
 ) {
     val density = LocalDensity.current
@@ -1044,6 +1137,8 @@ private fun AlignmentGuidesOverlay(
         }
     val guideColor = accentColor.copy(alpha = PC_ALIGNMENT_GUIDE_LINE_ALPHA)
     val ringColor = accentColor.copy(alpha = PC_ALIGNMENT_GUIDE_RING_ALPHA)
+    val designW = designCanvas.widthPx.toFloat().coerceAtLeast(1f)
+    val designH = designCanvas.heightPx.toFloat().coerceAtLeast(1f)
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
@@ -1051,7 +1146,7 @@ private fun AlignmentGuidesOverlay(
 
         // Draw vertical alignment guide lines
         alignedXs.forEach { normX ->
-            val xPx = normX * w
+            val xPx = viewport.normToScreenX(normX)
             drawLine(
                 color = guideColor,
                 start = Offset(xPx, 0f),
@@ -1063,7 +1158,7 @@ private fun AlignmentGuidesOverlay(
 
         // Draw horizontal alignment guide lines
         alignedYs.forEach { normY ->
-            val yPx = normY * h
+            val yPx = viewport.normToScreenY(normY)
             drawLine(
                 color = guideColor,
                 start = Offset(0f, yPx),
@@ -1075,10 +1170,10 @@ private fun AlignmentGuidesOverlay(
 
         // Draw indicator dots/rings at matching button centers
         buttons.forEach { btn ->
-            val matchesX = alignedXs.any { abs(btn.posX - it) * w <= BUTTON_ALIGNMENT_VISUAL_TOLERANCE_PX }
-            val matchesY = alignedYs.any { abs(btn.posY - it) * h <= BUTTON_ALIGNMENT_VISUAL_TOLERANCE_PX }
+            val matchesX = alignedXs.any { abs(btn.posX - it) * designW <= BUTTON_ALIGNMENT_VISUAL_TOLERANCE_PX }
+            val matchesY = alignedYs.any { abs(btn.posY - it) * designH <= BUTTON_ALIGNMENT_VISUAL_TOLERANCE_PX }
             if (matchesX || matchesY) {
-                val center = Offset(btn.posX * w, btn.posY * h)
+                val center = Offset(viewport.normToScreenX(btn.posX), viewport.normToScreenY(btn.posY))
                 drawCircle(
                     color = ringColor,
                     radius = ringRadiusPx,
@@ -1164,8 +1259,8 @@ private fun ButtonResizeHandleView(
 
 @Composable
 private fun ButtonDimensionHud(
-    widthDp: Float,
-    heightDp: Float,
+    widthPx: Float,
+    heightPx: Float,
     centerX: Float,
     buttonTopPx: Float,
     buttonBottomPx: Float,
@@ -1189,8 +1284,8 @@ private fun ButtonDimensionHud(
     val hudText =
         stringResource(
             R.string.macropad_button_dimension_format,
-            formatButtonDimensionDp(widthDp),
-            formatButtonDimensionDp(heightDp),
+            formatButtonDimensionPx(widthPx),
+            formatButtonDimensionPx(heightPx),
         )
     var hudWidthPx by remember { mutableFloatStateOf(0f) }
 
@@ -1218,7 +1313,7 @@ private fun ButtonDimensionHud(
             Text(
                 text = hudText,
                 color = colors.onSurface,
-                fontSize = PC_HUD_FONT_SIZE,
+                style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold,
             )
         }
@@ -1256,9 +1351,11 @@ internal fun DrawScope.drawAdjustedBitmap(
     offsetX: Float,
     offsetY: Float,
     colorFilter: ColorFilter?,
+    canvasWidth: Float = size.width,
+    canvasHeight: Float = size.height,
 ) {
-    val cw = size.width
-    val ch = size.height
+    val cw = canvasWidth
+    val ch = canvasHeight
     val iw = bitmap.width.toFloat()
     val ih = bitmap.height.toFloat()
     if (cw <= 0f || ch <= 0f || iw <= 0f || ih <= 0f) return

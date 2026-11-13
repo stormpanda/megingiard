@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
 import java.util.UUID
+import kotlin.math.round
 
 private const val TAG = "MacroPadState"
 private const val MP_DEFAULT_PROFILE_NAME = "Profile"
@@ -249,6 +250,41 @@ object MacroPadState {
         }
     }
 
+    private val _hostSecondaryCanvas = MutableStateFlow<LayoutCanvasSpec?>(null)
+    val hostSecondaryCanvas: StateFlow<LayoutCanvasSpec?> = _hostSecondaryCanvas.asStateFlow()
+
+    fun setHostSecondaryCanvas(canvas: LayoutCanvasSpec?) {
+        if (canvas != null && (canvas.widthPx <= 0 || canvas.heightPx <= 0)) {
+            AppLog.w(TAG, "setHostSecondaryCanvas ignored non-positive dimensions: $canvas")
+            return
+        }
+        if (_hostSecondaryCanvas.value != canvas) {
+            AppLog.d(TAG, "setHostSecondaryCanvas($canvas)")
+            _hostSecondaryCanvas.value = canvas
+        }
+    }
+
+    fun newLayoutDesignCanvas(): LayoutCanvasSpec = _hostSecondaryCanvas.value ?: THOR_BOTTOM_CANVAS_SPEC
+
+    fun resetForTesting() {
+        AppLog.d(TAG, "resetForTesting()")
+        updateState(persist = false) {
+            _hostSecondaryCanvas.value = null
+            _profiles.value = emptyList()
+            _activeProfileId.value = null
+            _previewLayout.value = null
+            _selectedButtonId.value = null
+            _isEditingButtonPositions.value = false
+            _isAdjustingButtonViaGamepad.value = false
+            _canvasMetrics.value = null
+            _isCroppingBackground.value = false
+            _isCroppingMask.value = false
+            _gridMode.value = GridMode.OFF
+            _isPeekActive.value = false
+            clearShiftState()
+        }
+    }
+
     private val _isCroppingBackground = MutableStateFlow(false)
     val isCroppingBackground: StateFlow<Boolean> = _isCroppingBackground.asStateFlow()
 
@@ -337,7 +373,11 @@ object MacroPadState {
                             name = initialName,
                             layouts =
                                 listOf(
-                                    PadLayout(id = defaultLayoutId, name = initialName),
+                                    PadLayout(
+                                        id = defaultLayoutId,
+                                        name = initialName,
+                                        designCanvas = newLayoutDesignCanvas(),
+                                    ),
                                 ),
                             activeLayoutId = defaultLayoutId,
                         ),
@@ -362,6 +402,7 @@ object MacroPadState {
                                         PadLayout(
                                             id = layoutId,
                                             name = p.name,
+                                            designCanvas = newLayoutDesignCanvas(),
                                         ),
                                     ),
                                 activeLayoutId = layoutId,
@@ -562,7 +603,14 @@ object MacroPadState {
             PadProfile(
                 id = defaultId,
                 name = initialName,
-                layouts = listOf(PadLayout(id = defaultLayoutId, name = initialName)),
+                layouts =
+                    listOf(
+                        PadLayout(
+                            id = defaultLayoutId,
+                            name = initialName,
+                            designCanvas = newLayoutDesignCanvas(),
+                        ),
+                    ),
                 activeLayoutId = defaultLayoutId,
             )
         updateState {
@@ -1095,11 +1143,18 @@ object MacroPadState {
         sourceProfileId: String,
         targetProfileId: String,
         targetLayoutId: String,
+        sourceLayoutId: String? = null,
     ) {
         updateState {
             val sourceProfile = _profiles.value.firstOrNull { it.id == sourceProfileId } ?: return
             val targetProfile = _profiles.value.firstOrNull { it.id == targetProfileId } ?: return
             val targetLayout = targetProfile.layouts.firstOrNull { it.id == targetLayoutId } ?: return
+            val sourceLayout =
+                if (sourceLayoutId != null) {
+                    sourceProfile.layouts.firstOrNull { it.id == sourceLayoutId }
+                } else {
+                    sourceProfile.layouts.firstOrNull { lay -> lay.buttons.any { it.id == button.id } }
+                }
 
             var updatedTargetProfile = targetProfile
             var updatedAction = button.action
@@ -1131,11 +1186,33 @@ object MacroPadState {
                 updatedAction = switchAction.copy(layoutId = remappedLayoutId)
             }
 
+            val sourceCanvas = sourceLayout?.effectiveDesignCanvas
+            val targetCanvas = targetLayout.effectiveDesignCanvas
             val clonedButton =
-                button.copy(
-                    id = UUID.randomUUID().toString(),
-                    action = updatedAction,
-                )
+                if (sourceCanvas != null && sourceCanvas.shortEdgePx != targetCanvas.shortEdgePx) {
+                    val scaleRatio =
+                        targetCanvas.shortEdgePx.coerceAtLeast(1).toFloat() /
+                            sourceCanvas.shortEdgePx.coerceAtLeast(1).toFloat()
+                    val scaledWidthPx = round(button.widthPx * scaleRatio).coerceAtLeast(targetCanvas.minButtonSizePx)
+                    val scaledHeightPx = round(button.heightPx * scaleRatio).coerceAtLeast(targetCanvas.minButtonSizePx)
+                    val baseClone =
+                        button.copy(
+                            id = UUID.randomUUID().toString(),
+                            action = updatedAction,
+                            widthPx = scaledWidthPx,
+                            heightPx = scaledHeightPx,
+                        )
+                    if (updatedAction is PadAction.ScrollWheel || updatedAction is PadAction.TrackpointMove) {
+                        baseClone.withActionSizing(updatedAction, targetCanvas)
+                    } else {
+                        baseClone
+                    }
+                } else {
+                    button.copy(
+                        id = UUID.randomUUID().toString(),
+                        action = updatedAction,
+                    )
+                }
 
             val updatedLayouts =
                 updatedTargetProfile.layouts.map { layout ->

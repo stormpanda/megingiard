@@ -1979,4 +1979,176 @@ class MirrorCoordinateTransformTest {
         val blocked = calculateRotatedCutoutBounds(cutout1, targetRotation = 90, allCutouts = listOf(cutout1, neighbor))
         assertNull(blocked)
     }
+
+    @Test
+    fun `clampCutoutDrag allows dragging into active black bar bounds and avoids collisions`() {
+        val barCutout =
+            ScreenCutout(
+                id = "c1",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 0.2f,
+                srcHeight = 0.2f,
+                destX = 0.05f,
+                destY = 0.2f,
+                destWidth = 0.2f,
+                destHeight = 0.2f,
+            )
+        val obstacleInBar =
+            ScreenCutout(
+                id = "c2",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 0.2f,
+                srcHeight = 0.2f,
+                destX = -0.08f,
+                destY = 0.2f,
+                destWidth = 0.05f,
+                destHeight = 0.2f,
+            )
+
+        // Drag into left pillarbox bar [-0.08..1.08] without obstacle
+        val (dragLeftX, dragLeftY) =
+            clampCutoutDrag(
+                cutoutId = "c1",
+                originalX = 0.05f,
+                originalY = 0.2f,
+                targetX = -0.15f,
+                targetY = 0.2f,
+                width = 0.2f,
+                height = 0.2f,
+                allCutouts = listOf(barCutout),
+                minNormX = -0.08f,
+                maxNormX = 1.08f,
+                minNormY = 0f,
+                maxNormY = 1f,
+            )
+        assertEquals(-0.08f, dragLeftX, EPS)
+        assertEquals(0.2f, dragLeftY, EPS)
+
+        // Drag into left pillarbox bar blocked by obstacle [-0.08..-0.03]
+        val (blockedX, _) =
+            clampCutoutDrag(
+                cutoutId = "c1",
+                originalX = 0.05f,
+                originalY = 0.2f,
+                targetX = -0.07f,
+                targetY = 0.2f,
+                width = 0.2f,
+                height = 0.2f,
+                allCutouts = listOf(barCutout, obstacleInBar),
+                minNormX = -0.08f,
+                maxNormX = 1.08f,
+                minNormY = 0f,
+                maxNormY = 1f,
+            )
+        assertEquals(-0.03f, blockedX, EPS)
+    }
+
+    @Test
+    fun `clampCutoutDrag preserves partially offscreen X on narrower host without snap jumping`() {
+        val offscreenCutout =
+            ScreenCutout(
+                id = "c-offscreen",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 0.2f,
+                srcHeight = 0.2f,
+                destX = -0.05f,
+                destY = 0.2f,
+                destWidth = 0.2f,
+                destHeight = 0.2f,
+            )
+        // Pure vertical drag on narrower host [0..1] preserves destX = -0.05f
+        val (orthX, orthY) =
+            clampCutoutDrag(
+                cutoutId = "c-offscreen",
+                originalX = -0.05f,
+                originalY = 0.2f,
+                targetX = -0.05f,
+                targetY = 0.45f,
+                width = 0.2f,
+                height = 0.2f,
+                allCutouts = listOf(offscreenCutout),
+                minNormX = 0f,
+                maxNormX = 1f,
+                minNormY = 0f,
+                maxNormY = 1f,
+            )
+        assertEquals(-0.05f, orthX, EPS)
+        assertEquals(0.45f, orthY, EPS)
+
+        // Dragging further left beyond originalX (-0.05f) is blocked, while dragging inward (-0.02f) is allowed
+        val (furtherOutX, _) =
+            clampCutoutDrag("c-offscreen", -0.05f, 0.2f, -0.09f, 0.2f, 0.2f, 0.2f, listOf(offscreenCutout))
+        assertEquals(-0.05f, furtherOutX, EPS)
+
+        val (inwardX, _) =
+            clampCutoutDrag("c-offscreen", -0.05f, 0.2f, -0.02f, 0.2f, 0.2f, 0.2f, listOf(offscreenCutout))
+        assertEquals(-0.02f, inwardX, EPS)
+    }
+
+    @Test
+    fun `clampCutoutResize supports active black bar bounds and preserves partially offscreen edges`() {
+        val cutout =
+            ScreenCutout(
+                id = "c-resize",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 0.2f,
+                srcHeight = 0.2f,
+                destX = 0.05f,
+                destY = 0.2f,
+                destWidth = 0.2f,
+                destHeight = 0.2f,
+            )
+        // Expand LEFT handle into active pillarbox bar [-0.08..1.08]
+        val expandedLeft =
+            clampCutoutResize(
+                cutoutId = "c-resize",
+                handle = ResizeHandle.LEFT,
+                originalX = 0.05f,
+                originalY = 0.2f,
+                originalWidth = 0.2f,
+                originalHeight = 0.2f,
+                targetX = -0.10f,
+                targetY = 0.2f,
+                targetWidth = 0.35f,
+                targetHeight = 0.2f,
+                allCutouts = listOf(cutout),
+                minNormX = -0.08f,
+                maxNormX = 1.08f,
+                minNormY = 0f,
+                maxNormY = 1f,
+            )
+        assertEquals(-0.08f, expandedLeft.x, EPS)
+        assertEquals(0.33f, expandedLeft.w, EPS)
+
+        // On narrower host [0..1], resizing BOTTOM_RIGHT with keepAspectRatio when originalX = -0.05f still succeeds
+        val offscreenCutout = cutout.copy(destX = -0.05f)
+        val proportionalGeom =
+            clampCutoutResize(
+                cutoutId = "c-resize",
+                handle = ResizeHandle.BOTTOM_RIGHT,
+                originalX = -0.05f,
+                originalY = 0.2f,
+                originalWidth = 0.2f,
+                originalHeight = 0.2f,
+                targetX = -0.05f,
+                targetY = 0.2f,
+                targetWidth = 0.3f,
+                targetHeight = 0.3f,
+                allCutouts = listOf(offscreenCutout),
+                keepAspectRatio = true,
+                cropRatio = 1f,
+                screenW = 1000f,
+                screenH = 1000f,
+                minNormX = 0f,
+                maxNormX = 1f,
+                minNormY = 0f,
+                maxNormY = 1f,
+            )
+        assertEquals(-0.05f, proportionalGeom.x, EPS)
+        assertTrue(proportionalGeom.w > 0.25f)
+    }
 }

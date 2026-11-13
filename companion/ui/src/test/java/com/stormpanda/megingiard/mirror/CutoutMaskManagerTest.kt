@@ -221,4 +221,109 @@ class CutoutMaskManagerTest {
         CutoutMaskManager.deleteMask(context, cutoutId)
         assertNull(CutoutMaskManager.getStaticAsset(context, cutoutId))
     }
+
+    @Test
+    fun `saveMask writes to CutoutMaskFileStore canonical paths and deleteMask removes all disk files`() {
+        val context = RuntimeEnvironment.getApplication()
+        val cutoutId = "test_filestore_paths"
+        val maskBitmap = Bitmap.createBitmap(12, 12, Bitmap.Config.ARGB_8888)
+        val varianceMap = ByteArray(144) { 7 }
+        val freezeBitmap = Bitmap.createBitmap(12, 12, Bitmap.Config.ARGB_8888)
+
+        CutoutMaskManager.saveMask(
+            context = context,
+            cutoutId = cutoutId,
+            bitmap = maskBitmap,
+            varianceMap = varianceMap,
+            freezeFrame = freezeBitmap,
+        )
+
+        val baseFile = CutoutMaskFileStore.baseMaskFile(context.filesDir, cutoutId)
+        val varFile = CutoutMaskFileStore.varianceFile(context.filesDir, cutoutId)
+        val freezeFile = CutoutMaskFileStore.freezeFrameFile(context.filesDir, cutoutId)
+        assertTrue(baseFile.exists())
+        assertTrue(varFile.exists())
+        assertTrue(freezeFile.exists())
+
+        CutoutMaskManager.deleteMask(context, cutoutId)
+        assertFalse(baseFile.exists())
+        assertFalse(varFile.exists())
+        assertFalse(freezeFile.exists())
+        assertFalse(CutoutMaskManager.hasMask(context, cutoutId))
+    }
+
+    @Test
+    fun `duplicated CutoutMaskFileStore assets are loaded independently and survive source deletion`() {
+        val context = RuntimeEnvironment.getApplication()
+        val sourceId = "test_dup_source"
+        val targetId = "test_dup_target"
+        val maskBitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
+        maskBitmap.setPixel(4, 4, 0xFFFFFFFF.toInt())
+        val varianceMap = ByteArray(256) { (it % 32).toByte() }
+        val freezeBitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
+        freezeBitmap.setPixel(4, 4, 0xFF00AAFF.toInt())
+
+        try {
+            CutoutMaskManager.saveMask(
+                context = context,
+                cutoutId = sourceId,
+                bitmap = maskBitmap,
+                varianceMap = varianceMap,
+                freezeFrame = freezeBitmap,
+            )
+            CutoutMaskManager.invalidateCache(targetId)
+            CutoutMaskFileStore.duplicateAssetsForId(context.filesDir, sourceId, targetId)
+
+            assertTrue(CutoutMaskManager.hasMask(context, targetId))
+            val dupMask = CutoutMaskManager.getMask(context, targetId)
+            assertNotNull(dupMask)
+            assertEquals(16, dupMask!!.width)
+
+            val dupVar = CutoutMaskManager.getVarianceMap(context, targetId)
+            assertNotNull(dupVar)
+            assertEquals(256, dupVar!!.size)
+            assertEquals(varianceMap[19], dupVar[19])
+
+            val dupFreeze = CutoutMaskManager.getFreezeFrame(context, targetId)
+            assertNotNull(dupFreeze)
+            assertEquals(0xFF00AAFF.toInt(), dupFreeze!!.getPixel(4, 4))
+
+            CutoutMaskManager.deleteMask(context, sourceId)
+            assertFalse(CutoutMaskManager.hasMask(context, sourceId))
+            assertTrue(CutoutMaskManager.hasMask(context, targetId))
+            assertNotNull(CutoutMaskManager.getMask(context, targetId))
+        } finally {
+            CutoutMaskManager.deleteMask(context, sourceId)
+            CutoutMaskManager.deleteMask(context, targetId)
+        }
+    }
+
+    @Test
+    fun `invalidateCache evicts memory entries while preserving disk files for reload`() {
+        val context = RuntimeEnvironment.getApplication()
+        val cutoutId = "test_invalidate_cache"
+        val maskBitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
+        val varianceMap = ByteArray(64) { 12 }
+        val freezeBitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
+        freezeBitmap.setPixel(2, 2, 0xFFFFAA00.toInt())
+
+        try {
+            CutoutMaskManager.saveMask(
+                context = context,
+                cutoutId = cutoutId,
+                bitmap = maskBitmap,
+                varianceMap = varianceMap,
+                freezeFrame = freezeBitmap,
+            )
+
+            CutoutMaskManager.invalidateCache(cutoutId)
+            assertTrue(CutoutMaskFileStore.baseMaskFile(context.filesDir, cutoutId).exists())
+            assertTrue(CutoutMaskManager.hasMask(context, cutoutId))
+            assertNotNull(CutoutMaskManager.getMask(context, cutoutId))
+            assertNotNull(CutoutMaskManager.getVarianceMap(context, cutoutId))
+            assertEquals(0xFFFFAA00.toInt(), CutoutMaskManager.getFreezeFrame(context, cutoutId)!!.getPixel(2, 2))
+        } finally {
+            CutoutMaskManager.deleteMask(context, cutoutId)
+        }
+    }
 }

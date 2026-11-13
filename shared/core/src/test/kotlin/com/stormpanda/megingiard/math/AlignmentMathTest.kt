@@ -1,14 +1,16 @@
 package com.stormpanda.megingiard.math
 
 import com.stormpanda.megingiard.macropad.GridMode
+import com.stormpanda.megingiard.macropad.LayoutCanvasSpec
+import com.stormpanda.megingiard.macropad.MP_THOR_MIN_BUTTON_SIZE_PX
 import com.stormpanda.megingiard.macropad.PadAction
 import com.stormpanda.megingiard.macropad.PadButton
+import com.stormpanda.megingiard.macropad.THOR_BOTTOM_CANVAS_SPEC
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.abs
 
 class AlignmentMathTest {
     private val canvasW = 1000f
@@ -397,28 +399,214 @@ class AlignmentMathTest {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Stepless Button Resize Tests
+    // Design-Canvas Constants, Grid Snapping & Active Black-Bar Bounds Tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Test
+    fun `canvas and resize pixel constants match landscape Thor authoring contract`() {
+        assertEquals(1240f, ALIGNMENT_CANVAS_WIDTH_PX, 0.001f)
+        assertEquals(1080f, ALIGNMENT_CANVAS_HEIGHT_PX, 0.001f)
+        assertEquals(1240f, MPE_CANVAS_WIDTH_PX, 0.001f)
+        assertEquals(1080f, MPE_CANVAS_HEIGHT_PX, 0.001f)
+        assertEquals(10f, MPE_RESIZE_NORMAL_STEP_PX, 0.001f)
+        assertEquals(1f, MPE_RESIZE_FINE_STEP_PX, 0.001f)
+        assertEquals(9f, BUTTON_ASPECT_SNAP_THRESHOLD_PX, 0.001f)
+    }
+
+    @Test
+    fun `snapPosition snaps to 68 px grid on Thor and 60 px grid on RP Duo`() {
+        val thorSpec = THOR_BOTTOM_CANVAS_SPEC
+        val thorW = thorSpec.widthPx.toFloat()
+        val thorH = thorSpec.heightPx.toFloat()
+        // Center is (620, 540). Offset (+65, -70) snaps to (+68, -68) = (688, 472)
+        val (thorSnapX, thorSnapY) =
+            snapPosition(
+                rawNormX = (620f + 65f) / thorW,
+                rawNormY = (540f - 70f) / thorH,
+                canvasW = thorW,
+                canvasH = thorH,
+                gridMode = GridMode.RECTANGULAR,
+                gridStepPx = thorSpec.minButtonSizePx,
+            )
+        assertEquals(688f / thorW, thorSnapX, 0.0001f)
+        assertEquals(472f / thorH, thorSnapY, 0.0001f)
+
+        val duoSpec = LayoutCanvasSpec(1280, 960)
+        val duoW = duoSpec.widthPx.toFloat()
+        val duoH = duoSpec.heightPx.toFloat()
+        // Center is (640, 480). Offset (+58, +122) snaps to (+60, +120) = (700, 600)
+        val (duoSnapX, duoSnapY) =
+            snapPosition(
+                rawNormX = (640f + 58f) / duoW,
+                rawNormY = (480f + 122f) / duoH,
+                canvasW = duoW,
+                canvasH = duoH,
+                gridMode = GridMode.RECTANGULAR,
+                gridStepPx = duoSpec.minButtonSizePx,
+            )
+        assertEquals(700f / duoW, duoSnapX, 0.0001f)
+        assertEquals(600f / duoH, duoSnapY, 0.0001f)
+
+        // Radial snap on RP Duo: point near 2nd ring (radius = 120 px, even ring -> cardinal 0 deg)
+        val (duoRadialX, duoRadialY) =
+            snapPosition(
+                rawNormX = (640f + 118f) / duoW,
+                rawNormY = 480f / duoH,
+                canvasW = duoW,
+                canvasH = duoH,
+                gridMode = GridMode.RADIAL,
+                gridStepPx = duoSpec.minButtonSizePx,
+            )
+        assertEquals((640f + 120f) / duoW, duoRadialX, 0.0001f)
+        assertEquals(480f / duoH, duoRadialY, 0.0001f)
+    }
+
+    @Test
+    fun `button move and alignment snap allow active black-bar bounds and preserve bar positions on narrower screen`() {
+        // Thor 1240x1080 layout rendered on RP Duo 1280x960 -> X bounds ~ [-0.080645..1.080645]
+        val viewport = ViewportMath.calculateDesignViewport(1280f, 960f, 1240f, 1080f)
+
+        val snapIntoLeftBar =
+            calculateButtonAlignmentSnap(
+                rawNormX = -0.05f,
+                rawNormY = 0.5f,
+                movingButtonId = "btn-bar",
+                otherButtons = emptyList(),
+                canvasW = 1240f,
+                canvasH = 1080f,
+                alignmentSnappingEnabled = false,
+                minNormX = viewport.minNormX,
+                maxNormX = viewport.maxNormX,
+                minNormY = viewport.minNormY,
+                maxNormY = viewport.maxNormY,
+            )
+        assertEquals(-0.05f, snapIntoLeftBar.snappedNormX, 0.0001f)
+
+        val snapClampPastBar =
+            calculateButtonAlignmentSnap(
+                rawNormX = -0.20f,
+                rawNormY = 0.5f,
+                movingButtonId = "btn-bar",
+                otherButtons = emptyList(),
+                canvasW = 1240f,
+                canvasH = 1080f,
+                alignmentSnappingEnabled = false,
+                minNormX = viewport.minNormX,
+                maxNormX = viewport.maxNormX,
+                minNormY = viewport.minNormY,
+                maxNormY = viewport.maxNormY,
+            )
+        assertEquals(viewport.minNormX, snapClampPastBar.snappedNormX, 0.0001f)
+
+        // When opened back on native Thor (0..1), moving an existing bar button vertically preserves its -0.05f X
+        val barBtn = PadButton(id = "btn-bar", posX = -0.05f, posY = 0.5f, label = "Bar", action = PadAction.KeyboardKey(30, "A"))
+        val snapVerticalOnThor =
+            calculateButtonAlignmentSnap(
+                rawNormX = -0.05f,
+                rawNormY = 0.6f,
+                movingButtonId = "btn-bar",
+                otherButtons = listOf(barBtn),
+                canvasW = 1240f,
+                canvasH = 1080f,
+                alignmentSnappingEnabled = false,
+            )
+        assertEquals(-0.05f, snapVerticalOnThor.snappedNormX, 0.0001f)
+        assertEquals(0.6f, snapVerticalOnThor.snappedNormY, 0.0001f)
+
+        val (gpX, gpY) =
+            calculateGamepadButtonMove(
+                currentNormX = -0.05f,
+                currentNormY = 0.5f,
+                dirX = 0,
+                dirY = 1,
+                stepMultiplierPx = 10f,
+                movingButtonId = "btn-bar",
+                otherButtons = listOf(barBtn),
+                canvasW = 1240f,
+                canvasH = 1080f,
+                alignmentSnappingEnabled = false,
+            )
+        assertEquals(-0.05f, gpX, 0.0001f)
+        assertEquals(0.5f + 10f / 1080f, gpY, 0.0001f)
+    }
+
+    @Test
+    fun `cutout move and alignment snap allow active black-bar bounds and preserve bar positions on narrower screen`() {
+        val viewport = ViewportMath.calculateDesignViewport(1280f, 960f, 1240f, 1080f)
+
+        val snapIntoRightBar =
+            calculateCutoutAlignmentSnap(
+                rawDestX = 0.85f,
+                rawDestY = 0.2f,
+                destWidth = 0.2f,
+                destHeight = 0.2f,
+                movingCutoutId = "cut-bar",
+                otherCutouts = emptyList(),
+                canvasW = 1240f,
+                canvasH = 1080f,
+                alignmentSnappingEnabled = false,
+                minNormX = viewport.minNormX,
+                maxNormX = viewport.maxNormX,
+                minNormY = viewport.minNormY,
+                maxNormY = viewport.maxNormY,
+            )
+        // Right edge is 0.85 + 0.20 = 1.05 <= maxNormX (1.080645), so it stays at 0.85f
+        assertEquals(0.85f, snapIntoRightBar.snappedNormX, 0.0001f)
+
+        val barCutout =
+            ScreenCutout(
+                id = "cut-bar",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 0.5f,
+                srcHeight = 0.5f,
+                destX = -0.06f,
+                destY = 0.2f,
+                destWidth = 0.2f,
+                destHeight = 0.2f,
+            )
+        // Opened on narrower Thor (0..1): moving vertically preserves destX = -0.06f without jumping to 0f
+        val (movedDestX, movedDestY) =
+            calculateGamepadCutoutMove(
+                currentDestX = -0.06f,
+                currentDestY = 0.2f,
+                destWidth = 0.2f,
+                destHeight = 0.2f,
+                dirX = 0,
+                dirY = 1,
+                stepMultiplierPx = 10f,
+                movingCutoutId = "cut-bar",
+                otherCutouts = listOf(barCutout),
+                canvasW = 1240f,
+                canvasH = 1080f,
+                alignmentSnappingEnabled = false,
+            )
+        assertEquals(-0.06f, movedDestX, 0.0001f)
+        assertEquals(0.2f + 10f / 1080f, movedDestY, 0.0001f)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Stepless Button Resize Tests (Design-Canvas Pixels)
     // ─────────────────────────────────────────────────────────────────────────
 
     @Test
     fun `calculateButtonEdgeResize RIGHT expands width rightward keeping left edge fixed`() {
-        // Center: 500px, Width: 60dp * 2f = 120px -> Left: 440px, Right: 560px
+        // Center: 500px, Width: 120px -> Left: 440px, Right: 560px
         val result =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = 40f,
                 originalNormX = 0.5f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 2f,
+                originalWidthPx = 120f,
+                originalHeightPx = 120f,
+                dragDeltaDesignPx = 40f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
 
-        // New right: 560 + 40 = 600px. Width: 160px = 80dp. Center: 440 + 80 = 520px = 0.52f
-        assertEquals(80f, result.newWidthDp, 0.01f)
-        assertEquals(60f, result.newHeightDp, 0.01f)
+        // New right: 560 + 40 = 600px. Width: 160px. Center: 440 + 80 = 520px = 0.52f
+        assertEquals(160f, result.newWidthPx, 0.01f)
+        assertEquals(120f, result.newHeightPx, 0.01f)
         assertEquals(0.52f, result.newNormX, 0.0001f)
         assertEquals(0.5f, result.newNormY, 0.0001f)
     }
@@ -428,19 +616,18 @@ class AlignmentMathTest {
         val result =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.LEFT,
-                dragDeltaPx = -40f,
                 originalNormX = 0.5f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 2f,
+                originalWidthPx = 120f,
+                originalHeightPx = 120f,
+                dragDeltaDesignPx = -40f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
 
-        // New left: 440 - 40 = 400px. Width: 560 - 400 = 160px = 80dp. Center: 560 - 80 = 480px = 0.48f
-        assertEquals(80f, result.newWidthDp, 0.01f)
-        assertEquals(60f, result.newHeightDp, 0.01f)
+        // New left: 440 - 40 = 400px. Width: 560 - 400 = 160px. Center: 560 - 80 = 480px = 0.48f
+        assertEquals(160f, result.newWidthPx, 0.01f)
+        assertEquals(120f, result.newHeightPx, 0.01f)
         assertEquals(0.48f, result.newNormX, 0.0001f)
         assertEquals(0.5f, result.newNormY, 0.0001f)
     }
@@ -450,18 +637,17 @@ class AlignmentMathTest {
         val result =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.BOTTOM,
-                dragDeltaPx = 40f,
                 originalNormX = 0.5f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 2f,
+                originalWidthPx = 120f,
+                originalHeightPx = 120f,
+                dragDeltaDesignPx = 40f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
 
-        assertEquals(60f, result.newWidthDp, 0.01f)
-        assertEquals(80f, result.newHeightDp, 0.01f)
+        assertEquals(120f, result.newWidthPx, 0.01f)
+        assertEquals(160f, result.newHeightPx, 0.01f)
         assertEquals(0.5f, result.newNormX, 0.0001f)
         assertEquals(0.52f, result.newNormY, 0.0001f)
     }
@@ -471,157 +657,209 @@ class AlignmentMathTest {
         val result =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.TOP,
-                dragDeltaPx = -40f,
                 originalNormX = 0.5f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 2f,
+                originalWidthPx = 120f,
+                originalHeightPx = 120f,
+                dragDeltaDesignPx = -40f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
 
-        assertEquals(60f, result.newWidthDp, 0.01f)
-        assertEquals(80f, result.newHeightDp, 0.01f)
+        assertEquals(120f, result.newWidthPx, 0.01f)
+        assertEquals(160f, result.newHeightPx, 0.01f)
         assertEquals(0.5f, result.newNormX, 0.0001f)
         assertEquals(0.48f, result.newNormY, 0.0001f)
     }
 
     @Test
-    fun `calculateButtonEdgeResize clamps shrinking to minimum 30 dp`() {
-        val result =
+    fun `calculateButtonEdgeResize clamps shrinking to designCanvas minimum on Thor and RP Duo`() {
+        val thorShrink =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = -200f,
                 originalNormX = 0.5f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 2f,
+                originalWidthPx = 136f,
+                originalHeightPx = 136f,
+                dragDeltaDesignPx = -200f,
+                designCanvasW = 1240f,
+                designCanvasH = 1080f,
             )
+        assertEquals(MP_THOR_MIN_BUTTON_SIZE_PX, thorShrink.newWidthPx, 0.01f)
 
-        assertEquals(30f, result.newWidthDp, 0.01f)
+        val duoShrink =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthPx = 120f,
+                originalHeightPx = 120f,
+                dragDeltaDesignPx = -200f,
+                designCanvasW = 1280f,
+                designCanvasH = 960f,
+                minWidthPx = 60f,
+            )
+        assertEquals(60f, duoShrink.newWidthPx, 0.01f)
+
+        val scrollWheelShrink =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.BOTTOM,
+                originalNormX = 0.5f,
+                originalNormY = 0.5f,
+                originalWidthPx = 136f,
+                originalHeightPx = 300f,
+                dragDeltaDesignPx = -200f,
+                designCanvasW = 1240f,
+                designCanvasH = 1080f,
+                minWidthPx = 68f,
+                minHeightPx = 272f,
+            )
+        assertEquals(272f, scrollWheelShrink.newHeightPx, 0.01f)
     }
 
     @Test
-    fun `calculateButtonEdgeResize clamps expanding past canvas boundaries`() {
-        // Left is at 440px on 1000px canvas -> max width is 1000 - 440 = 560px = 280dp
+    fun `calculateButtonEdgeResize clamps expanding past canvas boundaries and permits active black bars`() {
+        // Left is at 440px on 1000px canvas -> max width is 1000 - 440 = 560px
         val rightResult =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = 2000f,
                 originalNormX = 0.5f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 2f,
+                originalWidthPx = 120f,
+                originalHeightPx = 120f,
+                dragDeltaDesignPx = 2000f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
-        assertEquals(280f, rightResult.newWidthDp, 0.01f)
+        assertEquals(560f, rightResult.newWidthPx, 0.01f)
 
-        // Right is at 560px on 1000px canvas -> max width expanding left is 560px = 280dp
+        // Right is at 560px on 1000px canvas -> max width expanding left is 560px
         val leftResult =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.LEFT,
-                dragDeltaPx = -2000f,
                 originalNormX = 0.5f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 2f,
+                originalWidthPx = 120f,
+                originalHeightPx = 120f,
+                dragDeltaDesignPx = -2000f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
-        assertEquals(280f, leftResult.newWidthDp, 0.01f)
+        assertEquals(560f, leftResult.newWidthPx, 0.01f)
 
-        // Top is at 440px on 1000px canvas -> max height expanding down is 1000 - 440 = 560px = 280dp
+        // Top is at 440px on 1000px canvas -> max height expanding down is 560px
         val bottomResult =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.BOTTOM,
-                dragDeltaPx = 2000f,
                 originalNormX = 0.5f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 2f,
+                originalWidthPx = 120f,
+                originalHeightPx = 120f,
+                dragDeltaDesignPx = 2000f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
-        assertEquals(280f, bottomResult.newHeightDp, 0.01f)
+        assertEquals(560f, bottomResult.newHeightPx, 0.01f)
 
-        // Bottom is at 560px on 1000px canvas -> max height expanding up is 560px = 280dp
+        // Bottom is at 560px on 1000px canvas -> max height expanding up is 560px
         val topResult =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.TOP,
-                dragDeltaPx = -2000f,
                 originalNormX = 0.5f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 2f,
+                originalWidthPx = 120f,
+                originalHeightPx = 120f,
+                dragDeltaDesignPx = -2000f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
-        assertEquals(280f, topResult.newHeightDp, 0.01f)
+        assertEquals(560f, topResult.newHeightPx, 0.01f)
+
+        // When host bounds extend into side bars [-100 px .. 1340 px] on a 1240 px design canvas,
+        // left edge at 1104 px can expand rightward up to 1340 - 1104 = 236 px
+        val barExpandResult =
+            calculateButtonEdgeResize(
+                handle = ButtonResizeHandle.RIGHT,
+                originalNormX = (1104f + 68f) / 1240f,
+                originalNormY = 0.5f,
+                originalWidthPx = 136f,
+                originalHeightPx = 136f,
+                dragDeltaDesignPx = 500f,
+                designCanvasW = 1240f,
+                designCanvasH = 1080f,
+                minNormX = -100f / 1240f,
+                maxNormX = 1340f / 1240f,
+            )
+        assertEquals(236f, barExpandResult.newWidthPx, 0.01f)
     }
 
     @Test
-    fun `calculateGamepadButtonResize updates dimensions correctly and clamps to limits`() {
-        // Expand width with dirX = 1, normal step 5dp
+    fun `calculateGamepadButtonResize updates dimensions in pixel steps and clamps to limits`() {
+        // Expand width with dirX = 1, normal step 10 px
         val res1 =
             calculateGamepadButtonResize(
                 currentNormX = 0.5f,
                 currentNormY = 0.5f,
-                currentWidthDp = 60f,
-                currentHeightDp = 60f,
+                currentWidthPx = 136f,
+                currentHeightPx = 136f,
                 dirX = 1,
                 dirY = 0,
-                stepDp = 5f,
-                canvasW = 500f,
-                canvasH = 500f,
-                density = 1f,
+                stepPx = MPE_RESIZE_NORMAL_STEP_PX,
+                designCanvasW = 500f,
+                designCanvasH = 500f,
             )
-        assertEquals(65f, res1.newWidthDp, 0.01f)
-        assertEquals(60f, res1.newHeightDp, 0.01f)
+        assertEquals(146f, res1.newWidthPx, 0.01f)
+        assertEquals(136f, res1.newHeightPx, 0.01f)
         assertEquals(0.5f, res1.newNormX, 0.01f)
         assertEquals(0.5f, res1.newNormY, 0.01f)
 
-        // Expand height with D-pad UP (dirY = -1), fine step 1dp
+        // Expand height with D-pad UP (dirY = -1), fine step 1 px
         val res2 =
             calculateGamepadButtonResize(
                 currentNormX = 0.5f,
                 currentNormY = 0.5f,
-                currentWidthDp = 60f,
-                currentHeightDp = 60f,
+                currentWidthPx = 136f,
+                currentHeightPx = 136f,
                 dirX = 0,
                 dirY = -1,
-                stepDp = 1f,
-                canvasW = 500f,
-                canvasH = 500f,
-                density = 1f,
+                stepPx = MPE_RESIZE_FINE_STEP_PX,
+                designCanvasW = 500f,
+                designCanvasH = 500f,
             )
-        assertEquals(60f, res2.newWidthDp, 0.01f)
-        assertEquals(61f, res2.newHeightDp, 0.01f)
+        assertEquals(136f, res2.newWidthPx, 0.01f)
+        assertEquals(137f, res2.newHeightPx, 0.01f)
 
-        // Shrink beyond minimum: clamped to 30dp
+        // Shrink beyond minimum: clamped to 68 px (Thor default) or 60 px (RP Duo)
         val res3 =
             calculateGamepadButtonResize(
                 currentNormX = 0.5f,
                 currentNormY = 0.5f,
-                currentWidthDp = 60f,
-                currentHeightDp = 60f,
-                dirX = -10,
-                dirY = 10,
-                stepDp = 5f,
-                canvasW = 500f,
-                canvasH = 500f,
-                density = 1f,
+                currentWidthPx = 136f,
+                currentHeightPx = 136f,
+                dirX = -20,
+                dirY = 20,
+                stepPx = MPE_RESIZE_NORMAL_STEP_PX,
+                designCanvasW = 500f,
+                designCanvasH = 500f,
             )
-        assertEquals(30f, res3.newWidthDp, 0.01f)
-        assertEquals(30f, res3.newHeightDp, 0.01f)
+        assertEquals(68f, res3.newWidthPx, 0.01f)
+        assertEquals(68f, res3.newHeightPx, 0.01f)
+
+        val resDuo =
+            calculateGamepadButtonResize(
+                currentNormX = 0.5f,
+                currentNormY = 0.5f,
+                currentWidthPx = 120f,
+                currentHeightPx = 120f,
+                dirX = -20,
+                dirY = 20,
+                stepPx = MPE_RESIZE_NORMAL_STEP_PX,
+                designCanvasW = 1280f,
+                designCanvasH = 960f,
+                minWidthPx = 60f,
+            )
+        assertEquals(60f, resDuo.newWidthPx, 0.01f)
+        assertEquals(60f, resDuo.newHeightPx, 0.01f)
     }
 
     @Test
@@ -630,39 +868,52 @@ class AlignmentMathTest {
             calculateGamepadButtonResize(
                 currentNormX = 0.5f,
                 currentNormY = 0.5f,
-                currentWidthDp = 120f,
-                currentHeightDp = 120f,
+                currentWidthPx = 272f,
+                currentHeightPx = 272f,
                 dirX = 1,
                 dirY = 0,
-                stepDp = 5f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 1f,
+                stepPx = MPE_RESIZE_NORMAL_STEP_PX,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
                 lockAspect = true,
             )
-        assertEquals(125f, result.newWidthDp, 0.01f)
-        assertEquals(125f, result.newHeightDp, 0.01f)
+        assertEquals(282f, result.newWidthPx, 0.01f)
+        assertEquals(282f, result.newHeightPx, 0.01f)
     }
 
     @Test
-    fun `calculateGamepadButtonResize preserves center coordinate when button is partially offscreen`() {
+    fun `calculateGamepadButtonResize preserves center coordinate when button is partially offscreen or in bars`() {
         // Button at normX = 0.03f on 1000px canvas -> centerX = 30px
-        // Expand width to 100dp (halfW = 50px). Center remains at 0.03f (partially off-screen).
         val result =
             calculateGamepadButtonResize(
                 currentNormX = 0.03f,
                 currentNormY = 0.5f,
-                currentWidthDp = 60f,
-                currentHeightDp = 60f,
+                currentWidthPx = 120f,
+                currentHeightPx = 120f,
                 dirX = 1,
                 dirY = 0,
-                stepDp = 40f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 1f,
+                stepPx = 40f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
-        assertEquals(100f, result.newWidthDp, 0.01f)
+        assertEquals(160f, result.newWidthPx, 0.01f)
         assertEquals(0.03f, result.newNormX, 0.001f)
+
+        // Button placed in wider-screen left bar (-0.06f) opened on narrower screen (0..1): center stays -0.06f
+        val barResult =
+            calculateGamepadButtonResize(
+                currentNormX = -0.06f,
+                currentNormY = 0.5f,
+                currentWidthPx = 120f,
+                currentHeightPx = 120f,
+                dirX = 1,
+                dirY = 0,
+                stepPx = 10f,
+                designCanvasW = 1240f,
+                designCanvasH = 1080f,
+            )
+        assertEquals(130f, barResult.newWidthPx, 0.01f)
+        assertEquals(-0.06f, barResult.newNormX, 0.001f)
     }
 
     @Test
@@ -672,16 +923,15 @@ class AlignmentMathTest {
             calculateGamepadButtonResize(
                 currentNormX = 0.0f,
                 currentNormY = 0.5f,
-                currentWidthDp = 60f,
-                currentHeightDp = 60f,
+                currentWidthPx = 120f,
+                currentHeightPx = 120f,
                 dirX = 1,
                 dirY = 0,
-                stepDp = 20f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 1f,
+                stepPx = 20f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
-        assertEquals(80f, resLeft.newWidthDp, 0.01f)
+        assertEquals(140f, resLeft.newWidthPx, 0.01f)
         assertEquals(0.0f, resLeft.newNormX, 0.001f)
 
         // Button at normX = 1.0f (50% offscreen right)
@@ -689,86 +939,79 @@ class AlignmentMathTest {
             calculateGamepadButtonResize(
                 currentNormX = 1.0f,
                 currentNormY = 0.5f,
-                currentWidthDp = 60f,
-                currentHeightDp = 60f,
+                currentWidthPx = 120f,
+                currentHeightPx = 120f,
                 dirX = 1,
                 dirY = 0,
-                stepDp = 20f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 1f,
+                stepPx = 20f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
-        assertEquals(80f, resRight.newWidthDp, 0.01f)
+        assertEquals(140f, resRight.newWidthPx, 0.01f)
         assertEquals(1.0f, resRight.newNormX, 0.001f)
     }
 
     @Test
-    fun `calculateButtonEdgeResize snaps to 1 to 1 aspect ratio when within threshold`() {
-        // Start: width 75dp, height 60dp. density = 1f. Left = 500 - 37.5 = 462.5px. Right = 537.5px.
-        // Drag RIGHT by -13px -> candidate right = 524.5px -> candidate width = 62dp.
-        // Within 4dp of height (60dp) -> snaps to exactly 60dp!
+    fun `calculateButtonEdgeResize snaps to 1 to 1 aspect ratio when within 9 px threshold`() {
+        // Start: width 160px, height 136px. Drag RIGHT by -18px -> candidate width = 142px.
+        // abs(142 - 136) = 6px <= 9px threshold -> snaps to exactly 136px!
         val result =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = -13f,
                 originalNormX = 0.5f,
                 originalNormY = 0.5f,
-                originalWidthDp = 75f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 1f,
+                originalWidthPx = 160f,
+                originalHeightPx = 136f,
+                dragDeltaDesignPx = -18f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
 
-        assertEquals(60f, result.newWidthDp, 0.01f)
-        assertEquals(60f, result.newHeightDp, 0.01f)
+        assertEquals(136f, result.newWidthPx, 0.01f)
+        assertEquals(136f, result.newHeightPx, 0.01f)
         assertTrue(result.isAspectSnapped)
     }
 
     @Test
-    fun `calculateButtonEdgeResize does not snap when outside threshold`() {
-        // Start: width 75dp, height 60dp. Drag RIGHT by -8px -> candidate width = 67dp.
-        // 67dp - 60dp = 7dp > 4dp threshold -> does not snap.
+    fun `calculateButtonEdgeResize does not snap when outside 9 px threshold`() {
+        // Start: width 160px, height 136px. Drag RIGHT by -12px -> candidate width = 148px.
+        // 148px - 136px = 12px > 9px threshold -> does not snap.
         val result =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = -8f,
                 originalNormX = 0.5f,
                 originalNormY = 0.5f,
-                originalWidthDp = 75f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 1f,
+                originalWidthPx = 160f,
+                originalHeightPx = 136f,
+                dragDeltaDesignPx = -12f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
             )
 
-        assertEquals(67f, result.newWidthDp, 0.01f)
-        assertEquals(60f, result.newHeightDp, 0.01f)
+        assertEquals(148f, result.newWidthPx, 0.01f)
+        assertEquals(136f, result.newHeightPx, 0.01f)
         assertFalse(result.isAspectSnapped)
     }
 
     @Test
     fun `calculateButtonEdgeResize does not snap to 1 to 1 if snapped dimension exceeds available canvas boundary`() {
-        // Canvas width 500, density 1f.
-        // Button: originalWidthDp = 95f, originalHeightDp = 100f.
-        // Anchor (left edge) = 402px. Max allowed width = 500 - 402 = 98px.
-        // Drag RIGHT by +2px -> candidate width = 97dp.
-        // abs(97 - 100) = 3dp <= 4dp threshold, BUT target 100dp exceeds maxAllowed (98dp).
-        // Must NOT snap to 100dp!
+        // Canvas width 500. Button: originalWidthPx = 190f, originalHeightPx = 200f.
+        // Anchor (left edge) = 304px. Max allowed width = 500 - 304 = 196px.
+        // Drag RIGHT by +4px -> candidate width = 194px.
+        // abs(194 - 200) = 6px <= 9px threshold, BUT target 200px exceeds maxAllowed (196px).
         val result =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = 2f,
-                originalNormX = (402f + 95f / 2f) / 500f,
+                originalNormX = (304f + 190f / 2f) / 500f,
                 originalNormY = 0.5f,
-                originalWidthDp = 95f,
-                originalHeightDp = 100f,
-                canvasW = 500f,
-                canvasH = 500f,
-                density = 1f,
+                originalWidthPx = 190f,
+                originalHeightPx = 200f,
+                dragDeltaDesignPx = 4f,
+                designCanvasW = 500f,
+                designCanvasH = 500f,
             )
 
-        assertEquals(97f, result.newWidthDp, 0.01f)
+        assertEquals(194f, result.newWidthPx, 0.01f)
         assertFalse(result.isAspectSnapped)
     }
 
@@ -777,82 +1020,74 @@ class AlignmentMathTest {
         val result =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = 20f,
                 originalNormX = 0.5f,
                 originalNormY = 0.5f,
-                originalWidthDp = 120f,
-                originalHeightDp = 120f,
-                canvasW = 1000f,
-                canvasH = 1000f,
-                density = 1f,
+                originalWidthPx = 272f,
+                originalHeightPx = 272f,
+                dragDeltaDesignPx = 28f,
+                designCanvasW = 1000f,
+                designCanvasH = 1000f,
                 lockAspect = true,
             )
 
-        assertEquals(140f, result.newWidthDp, 0.01f)
-        assertEquals(140f, result.newHeightDp, 0.01f)
-        assertEquals(0.51f, result.newNormX, 0.001f)
+        assertEquals(300f, result.newWidthPx, 0.01f)
+        assertEquals(300f, result.newHeightPx, 0.01f)
+        assertEquals(0.514f, result.newNormX, 0.001f)
         assertEquals(0.5f, result.newNormY, 0.001f)
     }
 
     @Test
-    fun `formatButtonDimensionDp formats as integer string`() {
-        assertEquals("60", formatButtonDimensionDp(60.0f))
-        assertEquals("61", formatButtonDimensionDp(60.6f))
-        assertEquals("60", formatButtonDimensionDp(60.4f))
-        assertEquals("61", formatButtonDimensionDp(61.0f))
-        assertEquals("30", formatButtonDimensionDp(30.0f))
-        assertEquals("120", formatButtonDimensionDp(120.0f))
+    fun `formatButtonDimensionPx formats as integer string`() {
+        assertEquals("60", formatButtonDimensionPx(60.0f))
+        assertEquals("61", formatButtonDimensionPx(60.6f))
+        assertEquals("60", formatButtonDimensionPx(60.4f))
+        assertEquals("68", formatButtonDimensionPx(68.0f))
+        assertEquals("136", formatButtonDimensionPx(136.0f))
+        assertEquals("272", formatButtonDimensionPx(272.0f))
     }
 
     @Test
-    fun `calculateButtonEdgeResize with lockAspect does not throw when other axis clamp has fractional dp`() {
-        // Canvas 1000x500, density 3 -> other axis max = 166.67 dp. Rounding up to 167 dp (501 px)
-        // previously produced an empty coerceIn range and threw IllegalArgumentException.
+    fun `calculateButtonEdgeResize with lockAspect floors cleanly when other axis has fractional pixels`() {
         val result =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = 2000f,
-                originalNormX = 0.18f,
+                originalNormX = 0.25f,
                 originalNormY = 0.5f,
-                originalWidthDp = 120f,
-                originalHeightDp = 120f,
-                canvasW = 1000f,
-                canvasH = 500f,
-                density = 3f,
+                originalWidthPx = 272f,
+                originalHeightPx = 272f,
+                dragDeltaDesignPx = 2000f,
+                designCanvasW = 1000f,
+                designCanvasH = 500.7f,
                 lockAspect = true,
             )
 
-        assertEquals(166f, result.newWidthDp, 0.01f)
-        assertEquals(166f, result.newHeightDp, 0.01f)
-        assertTrue(result.newHeightDp * 3f <= 500f)
+        assertEquals(500f, result.newWidthPx, 0.01f)
+        assertEquals(500f, result.newHeightPx, 0.01f)
+        assertTrue(result.newHeightPx <= 500.7f)
         assertTrue(result.newNormY in 0f..1f)
     }
 
     @Test
-    fun `calculateButtonEdgeResize keeps anchored edge fixed when clamped at canvas boundary with fractional dp`() {
-        // density 3, left edge anchored at 100 px, canvas 902.5 px -> max width = 802.5 px = 267.5 dp.
-        // Rounding yields 268 dp (exceeds bounds) -> floored to 267 dp; the left edge must remain at 100 px.
-        val originalWidthDp = 60f
-        val density = 3f
+    fun `calculateButtonEdgeResize keeps anchored edge fixed when clamped at fractional canvas boundary`() {
+        val originalWidthPx = 136f
         val canvasW = 902.5f
         val leftEdgePx = 100f
-        val originalNormX = (leftEdgePx + originalWidthDp * density / 2f) / canvasW
+        val originalNormX = (leftEdgePx + originalWidthPx / 2f) / canvasW
 
         val result =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = 5000f,
                 originalNormX = originalNormX,
                 originalNormY = 0.5f,
-                originalWidthDp = originalWidthDp,
-                originalHeightDp = 60f,
-                canvasW = canvasW,
-                canvasH = 1000f,
-                density = density,
+                originalWidthPx = originalWidthPx,
+                originalHeightPx = 136f,
+                dragDeltaDesignPx = 5000f,
+                designCanvasW = canvasW,
+                designCanvasH = 1000f,
             )
 
-        assertEquals(267f, result.newWidthDp, 0.01f)
-        val newLeftPx = result.newNormX * canvasW - result.newWidthDp * density / 2f
+        assertEquals(802f, result.newWidthPx, 0.01f)
+        val newLeftPx = result.newNormX * canvasW - result.newWidthPx / 2f
         assertEquals(leftEdgePx, newLeftPx, 0.01f)
     }
 
@@ -862,137 +1097,124 @@ class AlignmentMathTest {
             calculateGamepadButtonResize(
                 currentNormX = 0.5f,
                 currentNormY = 0.5f,
-                currentWidthDp = 30f,
-                currentHeightDp = 30f,
+                currentWidthPx = 68f,
+                currentHeightPx = 68f,
                 dirX = 1,
                 dirY = -1,
-                stepDp = 5f,
-                canvasW = 20f,
-                canvasH = 20f,
-                density = 1f,
+                stepPx = MPE_RESIZE_NORMAL_STEP_PX,
+                designCanvasW = 20f,
+                designCanvasH = 20f,
             )
 
-        assertEquals(30f, result.newWidthDp, 0.01f)
+        assertEquals(68f, result.newWidthPx, 0.01f)
         assertEquals(0.5f, result.newNormX, 0.001f)
         assertEquals(0.5f, result.newNormY, 0.001f)
     }
 
     @Test
-    fun `calculateButtonEdgeResize does not throw with non-dyadic density and undersized anchor span`() {
-        // When anchorPx is very close to canvas boundary such that maxAllowedDimPx is coerced to minPx,
-        // floating-point division (e.g. minPx / safeDensity) with non-dyadic densities (e.g. 2.1f) must not
-        // produce a value strictly less than minSizeDp that would cause coerceIn to throw IllegalArgumentException.
-        val density = 2.1f
+    fun `calculateButtonEdgeResize does not throw with undersized anchor span near boundary`() {
         val canvasW = 500f
-        // Anchor left edge at 490 px on a 500 px canvas (only 10 px remaining, which is < minPx = 63 px)
-        val originalWidthDp = 30f
+        // Anchor left edge at 490 px on a 500 px canvas (only 10 px remaining, < minWidthPx = 68 px)
+        val originalWidthPx = 68f
         val leftEdgePx = 490f
-        val originalNormX = (leftEdgePx + originalWidthDp * density / 2f) / canvasW
+        val originalNormX = (leftEdgePx + originalWidthPx / 2f) / canvasW
 
         val result =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = 100f,
                 originalNormX = originalNormX,
                 originalNormY = 0.5f,
-                originalWidthDp = originalWidthDp,
-                originalHeightDp = 60f,
-                canvasW = canvasW,
-                canvasH = 500f,
-                density = density,
+                originalWidthPx = originalWidthPx,
+                originalHeightPx = 136f,
+                dragDeltaDesignPx = 100f,
+                designCanvasW = canvasW,
+                designCanvasH = 500f,
             )
 
-        assertEquals(30f, result.newWidthDp, 0.01f)
+        assertEquals(68f, result.newWidthPx, 0.01f)
     }
 
     @Test
-    fun `calculateButtonEdgeResize preserves partially offscreen button width without jumping on screen`() {
-        // Button at normX = 1.0f (50% offscreen right), width = 60dp on 1000px canvas
+    fun `calculateButtonEdgeResize preserves partially offscreen and bar-placed button width without jumping`() {
+        // Button at normX = 1.0f (50% offscreen right), width = 120px on 1000px canvas
         val resultRightZeroDrag =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = 0f,
                 originalNormX = 1.0f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 500f,
-                density = 1f,
+                originalWidthPx = 120f,
+                originalHeightPx = 120f,
+                dragDeltaDesignPx = 0f,
+                designCanvasW = 1000f,
+                designCanvasH = 500f,
             )
-        // Must stay 60dp and normX = 1.0f, not jump or shrink to 30dp
-        assertEquals(60f, resultRightZeroDrag.newWidthDp, 0.01f)
+        assertEquals(120f, resultRightZeroDrag.newWidthPx, 0.01f)
         assertEquals(1.0f, resultRightZeroDrag.newNormX, 0.001f)
 
         // Dragging left handle expands leftward into the canvas
         val resultLeftExpand =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.LEFT,
-                dragDeltaPx = -40f,
                 originalNormX = 1.0f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 500f,
-                density = 1f,
+                originalWidthPx = 120f,
+                originalHeightPx = 120f,
+                dragDeltaDesignPx = -40f,
+                designCanvasW = 1000f,
+                designCanvasH = 500f,
             )
-        assertEquals(100f, resultLeftExpand.newWidthDp, 0.01f)
-        // Original right edge anchored at 1000 + 30 = 1030. New left edge at 930. New center = 980 -> normX = 0.98f
+        assertEquals(160f, resultLeftExpand.newWidthPx, 0.01f)
+        // Original right edge anchored at 1000 + 60 = 1060. New left edge at 900. New center = 980 -> normX = 0.98f
         assertEquals(0.98f, resultLeftExpand.newNormX, 0.001f)
 
-        // Button at normX = 0.0f (50% offscreen left), width = 60dp on 1000px canvas
-        val resultLeftZeroDrag =
+        // Button placed in left bar (-0.05f, center = -50px, width = 100px -> [-100..0]) viewed on narrower screen (0..1)
+        val resultBarZeroDrag =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.LEFT,
-                dragDeltaPx = 0f,
-                originalNormX = 0.0f,
+                originalNormX = -0.05f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 500f,
-                density = 1f,
+                originalWidthPx = 100f,
+                originalHeightPx = 100f,
+                dragDeltaDesignPx = 0f,
+                designCanvasW = 1000f,
+                designCanvasH = 500f,
             )
-        assertEquals(60f, resultLeftZeroDrag.newWidthDp, 0.01f)
-        assertEquals(0.0f, resultLeftZeroDrag.newNormX, 0.001f)
+        assertEquals(100f, resultBarZeroDrag.newWidthPx, 0.01f)
+        assertEquals(-0.05f, resultBarZeroDrag.newNormX, 0.001f)
 
-        // Dragging right handle expands rightward into the canvas
-        val resultRightExpand =
+        // Dragging right handle inward (+40px) keeps left edge at -100px -> new width 140px, new center -30px = -0.03f
+        val resultBarRightExpand =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = 40f,
-                originalNormX = 0.0f,
+                originalNormX = -0.05f,
                 originalNormY = 0.5f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 500f,
-                density = 1f,
+                originalWidthPx = 100f,
+                originalHeightPx = 100f,
+                dragDeltaDesignPx = 40f,
+                designCanvasW = 1000f,
+                designCanvasH = 500f,
             )
-        assertEquals(100f, resultRightExpand.newWidthDp, 0.01f)
-        // Original left edge anchored at 0 - 30 = -30. New right edge at 70. New center = 20 -> normX = 0.02f
-        assertEquals(0.02f, resultRightExpand.newNormX, 0.001f)
+        assertEquals(140f, resultBarRightExpand.newWidthPx, 0.01f)
+        assertEquals(-0.03f, resultBarRightExpand.newNormX, 0.001f)
     }
 
     @Test
     fun `calculateButtonEdgeResize with lockAspect preserves partially offscreen other axis`() {
-        // Button at normY = 1.0f (50% offscreen bottom), width = 60dp, height = 60dp
+        // Button at normY = 1.0f (50% offscreen bottom), width = 120px, height = 120px
         val result =
             calculateButtonEdgeResize(
                 handle = ButtonResizeHandle.RIGHT,
-                dragDeltaPx = 20f,
                 originalNormX = 0.5f,
                 originalNormY = 1.0f,
-                originalWidthDp = 60f,
-                originalHeightDp = 60f,
-                canvasW = 1000f,
-                canvasH = 500f,
-                density = 1f,
+                originalWidthPx = 120f,
+                originalHeightPx = 120f,
+                dragDeltaDesignPx = 20f,
+                designCanvasW = 1000f,
+                designCanvasH = 500f,
                 lockAspect = true,
             )
-        assertEquals(80f, result.newWidthDp, 0.01f)
-        assertEquals(80f, result.newHeightDp, 0.01f)
+        assertEquals(140f, result.newWidthPx, 0.01f)
+        assertEquals(140f, result.newHeightPx, 0.01f)
         // Other axis (Y) must stay at 1.0f rather than jumping inward
         assertEquals(1.0f, result.newNormY, 0.001f)
     }

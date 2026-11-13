@@ -2,17 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import android.view.KeyEvent
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Delete
@@ -26,7 +16,6 @@ import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.VisibilityOff
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,13 +30,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,22 +43,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.math.MPE_CANVAS_HEIGHT_PX
-import com.stormpanda.megingiard.math.MPE_CANVAS_WIDTH_PX
+import com.stormpanda.megingiard.math.DesignViewport
 import com.stormpanda.megingiard.math.MPE_FINE_STEP_PX
 import com.stormpanda.megingiard.math.MPE_NORMAL_STEP_PX
-import com.stormpanda.megingiard.math.MPE_RESIZE_FINE_STEP_DP
-import com.stormpanda.megingiard.math.MPE_RESIZE_NORMAL_STEP_DP
+import com.stormpanda.megingiard.math.MPE_RESIZE_FINE_STEP_PX
+import com.stormpanda.megingiard.math.MPE_RESIZE_NORMAL_STEP_PX
+import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.math.calculateGamepadButtonMove
 import com.stormpanda.megingiard.math.calculateGamepadButtonResize
-import com.stormpanda.megingiard.math.formatButtonDimensionDp
+import com.stormpanda.megingiard.math.formatButtonDimensionPx
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCardRow
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
-import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadFocusCard
 import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
@@ -80,7 +67,6 @@ import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
-import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
@@ -98,8 +84,23 @@ import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 private const val TAG = "PadButtonEditDialog"
 
 private const val PBD_DEFAULT_CENTER_POS = 0.5f
+private const val PBD_PERCENT_MULTIPLIER = 100f
+private const val PBD_DURATION_STEP_MS = 10
+private const val PBD_DURATION_MIN_MS = 10
+private const val PBD_DURATION_MAX_MS = 200
+private const val PBD_AMPLITUDE_STEP = 5
+private const val PBD_AMPLITUDE_MIN = 5
+private const val PBD_AMPLITUDE_MAX = 100
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_ICON_SIZE_DP = 20.dp
+private val PBD_PICKER_ICON_SIZE = 24.dp
+
+private data class ButtonColorCardEntry(
+    val target: EditorColorTarget,
+    val icon: ImageVector,
+    val preview: @Composable () -> Unit,
+    val description: String,
+)
 
 private data class ButtonTouchRecordingObservation(
     val recordedTap: Pair<Float, Float>?,
@@ -114,9 +115,8 @@ internal class Button2DAdjusterState(
     private val coroutineScope: CoroutineScope,
     private val resolveButton: (String) -> PadButton?,
     private val onButtonChange: (PadButton) -> Unit,
-    private val resolveCanvasW: () -> Float,
-    private val resolveCanvasH: () -> Float,
-    private val resolveDensity: () -> Float,
+    private val resolveDesignCanvas: () -> LayoutCanvasSpec,
+    private val resolveHostViewport: () -> DesignViewport?,
     private val resolveSnapEnabled: () -> Boolean,
 ) {
     var isR2Held by mutableStateOf(false)
@@ -140,6 +140,12 @@ internal class Button2DAdjusterState(
     ) {
         val targetBtn = resolveButton(btnId) ?: return
         val otherButtons = MacroPadState.activeLayout.value?.buttons ?: emptyList()
+        val designCanvas = resolveDesignCanvas()
+        val hostViewport = resolveHostViewport()
+        val minNormX = hostViewport?.minNormX ?: 0f
+        val maxNormX = hostViewport?.maxNormX ?: 1f
+        val minNormY = hostViewport?.minNormY ?: 0f
+        val maxNormY = hostViewport?.maxNormY ?: 1f
         val stepMultiplier = if (isL2Held) MPE_FINE_STEP_PX else MPE_NORMAL_STEP_PX
         val (newX, newY) =
             calculateGamepadButtonMove(
@@ -150,9 +156,13 @@ internal class Button2DAdjusterState(
                 stepMultiplierPx = stepMultiplier,
                 movingButtonId = btnId,
                 otherButtons = otherButtons,
-                canvasW = resolveCanvasW(),
-                canvasH = resolveCanvasH(),
+                canvasW = designCanvas.widthPx.toFloat(),
+                canvasH = designCanvas.heightPx.toFloat(),
                 alignmentSnappingEnabled = resolveSnapEnabled(),
+                minNormX = minNormX,
+                maxNormX = maxNormX,
+                minNormY = minNormY,
+                maxNormY = maxNormY,
             )
         if (newX != targetBtn.posX || newY != targetBtn.posY) {
             onButtonChange(targetBtn.copy(posX = newX, posY = newY))
@@ -165,31 +175,49 @@ internal class Button2DAdjusterState(
         dy: Int,
     ) {
         val targetBtn = resolveButton(btnId) ?: return
-        val stepDp = if (isL2Held) MPE_RESIZE_FINE_STEP_DP else MPE_RESIZE_NORMAL_STEP_DP
+        val designCanvas = resolveDesignCanvas()
+        val hostViewport = resolveHostViewport()
+        val minNormX = hostViewport?.minNormX ?: 0f
+        val maxNormX = hostViewport?.maxNormX ?: 1f
+        val minNormY = hostViewport?.minNormY ?: 0f
+        val maxNormY = hostViewport?.maxNormY ?: 1f
+        val stepPx = if (isL2Held) MPE_RESIZE_FINE_STEP_PX else MPE_RESIZE_NORMAL_STEP_PX
         val isTrackpoint = targetBtn.action is PadAction.TrackpointMove
+        val minWidthPx = designCanvas.minButtonSizePx
+        val minHeightPx =
+            if (targetBtn.action is PadAction.ScrollWheel) {
+                designCanvas.largeControlMinSizePx
+            } else {
+                designCanvas.minButtonSizePx
+            }
         val res =
             calculateGamepadButtonResize(
                 currentNormX = targetBtn.posX,
                 currentNormY = targetBtn.posY,
-                currentWidthDp = targetBtn.widthDp,
-                currentHeightDp = targetBtn.heightDp,
+                currentWidthPx = targetBtn.widthPx,
+                currentHeightPx = targetBtn.heightPx,
                 dirX = dx,
                 dirY = dy,
-                stepDp = stepDp,
-                canvasW = resolveCanvasW(),
-                canvasH = resolveCanvasH(),
-                density = resolveDensity(),
+                stepPx = stepPx,
+                designCanvasW = designCanvas.widthPx.toFloat(),
+                designCanvasH = designCanvas.heightPx.toFloat(),
+                minWidthPx = minWidthPx,
+                minHeightPx = minHeightPx,
                 lockAspect = isTrackpoint,
+                minNormX = minNormX,
+                maxNormX = maxNormX,
+                minNormY = minNormY,
+                maxNormY = maxNormY,
             )
-        if (res.newWidthDp != targetBtn.widthDp || res.newHeightDp != targetBtn.heightDp ||
+        if (res.newWidthPx != targetBtn.widthPx || res.newHeightPx != targetBtn.heightPx ||
             res.newNormX != targetBtn.posX || res.newNormY != targetBtn.posY
         ) {
             onButtonChange(
                 targetBtn.copy(
                     posX = res.newNormX,
                     posY = res.newNormY,
-                    widthDp = res.newWidthDp,
-                    heightDp = res.newHeightDp,
+                    widthPx = res.newWidthPx,
+                    heightPx = res.newHeightPx,
                 ),
             )
         }
@@ -295,17 +323,27 @@ internal fun rememberButton2DAdjusterState(
 ): Button2DAdjusterState {
     val coroutineScope = rememberCoroutineScope()
     val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
-    val density = LocalDensity.current.density
-    val canvasMetrics by MacroPadState.canvasMetrics.collectAsStateWithLifecycle()
-    val effectiveCanvasW = canvasMetrics?.widthPx ?: MPE_CANVAS_WIDTH_PX
-    val effectiveCanvasH = canvasMetrics?.heightPx ?: MPE_CANVAS_HEIGHT_PX
-    val effectiveDensity = canvasMetrics?.density ?: density
+    val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
+    val hostSecondaryCanvas by MacroPadState.hostSecondaryCanvas.collectAsStateWithLifecycle()
+    val designCanvas = activeLayout?.effectiveDesignCanvas ?: THOR_BOTTOM_CANVAS_SPEC
+    val hostViewport =
+        remember(hostSecondaryCanvas, designCanvas) {
+            hostSecondaryCanvas
+                ?.takeIf { it.widthPx > 0 && it.heightPx > 0 }
+                ?.let { host ->
+                    ViewportMath.calculateDesignViewport(
+                        hostWidthPx = host.widthPx.toFloat(),
+                        hostHeightPx = host.heightPx.toFloat(),
+                        designWidthPx = designCanvas.widthPx.toFloat(),
+                        designHeightPx = designCanvas.heightPx.toFloat(),
+                    )
+                }
+        }
 
     val resolveButtonState = rememberUpdatedState(resolveButton)
     val onButtonChangeState = rememberUpdatedState(onButtonChange)
-    val canvasWState = rememberUpdatedState(effectiveCanvasW)
-    val canvasHState = rememberUpdatedState(effectiveCanvasH)
-    val densityState = rememberUpdatedState(effectiveDensity)
+    val designCanvasState = rememberUpdatedState(designCanvas)
+    val hostViewportState = rememberUpdatedState(hostViewport)
     val snapState = rememberUpdatedState(buttonAlignmentSnapping)
 
     val state =
@@ -314,9 +352,8 @@ internal fun rememberButton2DAdjusterState(
                 coroutineScope = coroutineScope,
                 resolveButton = { id -> resolveButtonState.value(id) },
                 onButtonChange = { btn -> onButtonChangeState.value(btn) },
-                resolveCanvasW = { canvasWState.value },
-                resolveCanvasH = { canvasHState.value },
-                resolveDensity = { densityState.value },
+                resolveDesignCanvas = { designCanvasState.value },
+                resolveHostViewport = { hostViewportState.value },
                 resolveSnapEnabled = { snapState.value },
             )
         }
@@ -423,8 +460,8 @@ internal fun EditButtonSubPageContent(
     onSave: (PadButton) -> Unit,
 ) {
     val context = LocalContext.current
-    val colors = LocalAppColors.current
     val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
+    val designCanvas = activeLayout?.effectiveDesignCanvas ?: THOR_BOTTOM_CANVAS_SPEC
     val stableButtonId = remember(button?.id) { button?.id ?: UUID.randomUUID().toString() }
 
     LaunchedEffect(stableButtonId) {
@@ -461,21 +498,23 @@ internal fun EditButtonSubPageContent(
     var label by remember(button) { mutableStateOf(initLabel) }
     var iconName by remember(button, selectedIcon) { mutableStateOf(selectedIcon ?: initIconName) }
     val initialSized =
-        remember(button, initAction) {
+        remember(button, initAction, designCanvas) {
             val base =
                 button ?: PadButton(
                     id = stableButtonId,
                     posX = PBD_DEFAULT_CENTER_POS,
                     posY = PBD_DEFAULT_CENTER_POS,
+                    widthPx = designCanvas.baseButtonSizePx,
+                    heightPx = designCanvas.baseButtonSizePx,
                     label = initLabel,
                     iconName = initIconName,
                     action = initAction,
                 )
-            base.withActionSizing(initAction)
+            base.withActionSizing(initAction, designCanvas)
         }
     var buttonShape by remember(button) { mutableStateOf(initialSized.buttonShape) }
-    var widthDp by remember(button) { mutableFloatStateOf(initialSized.widthDp) }
-    var heightDp by remember(button) { mutableFloatStateOf(initialSized.heightDp) }
+    var widthPx by remember(button) { mutableFloatStateOf(initialSized.widthPx) }
+    var heightPx by remember(button) { mutableFloatStateOf(initialSized.heightPx) }
     var action by remember(button) { mutableStateOf(initAction) }
     var iconFilled by remember(button) { mutableStateOf(button?.iconFilled ?: true) }
     var hapticStrength by remember(button) { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
@@ -566,8 +605,8 @@ internal fun EditButtonSubPageContent(
             iconName,
             iconFilled,
             buttonShape,
-            widthDp,
-            heightDp,
+            widthPx,
+            heightPx,
             action,
             hapticStrength,
             hapticCustomDurationMs,
@@ -584,8 +623,8 @@ internal fun EditButtonSubPageContent(
                 iconFilled = iconFilled,
                 posX = posX,
                 posY = posY,
-                widthDp = widthDp,
-                heightDp = heightDp,
+                widthPx = widthPx,
+                heightPx = heightPx,
                 buttonShape = buttonShape,
                 action = action,
                 hapticStrength = hapticStrength,
@@ -604,8 +643,8 @@ internal fun EditButtonSubPageContent(
             onButtonChange = { updated ->
                 posX = updated.posX
                 posY = updated.posY
-                widthDp = updated.widthDp
-                heightDp = updated.heightDp
+                widthPx = updated.widthPx
+                heightPx = updated.heightPx
             },
         )
 
@@ -631,12 +670,13 @@ internal fun EditButtonSubPageContent(
                 allProfiles = allProfiles,
                 activeProfile = profile,
                 swapFaceButtons = swapFaceButtons,
+                canvas = designCanvas,
             )
         action = updated.action
         label = updated.label
         iconName = updated.iconName
-        widthDp = updated.widthDp
-        heightDp = updated.heightDp
+        widthPx = updated.widthPx
+        heightPx = updated.heightPx
         buttonShape = updated.buttonShape
     }
 
@@ -735,7 +775,7 @@ internal fun EditButtonSubPageContent(
                 if (iconName != null) {
                     MaterialSymbol(
                         name = iconName!!,
-                        size = 24.dp,
+                        size = PBD_PICKER_ICON_SIZE,
                         tint = accentColor,
                         filled = iconFilled,
                     )
@@ -852,10 +892,10 @@ internal fun EditButtonSubPageContent(
             description =
                 stringResource(
                     R.string.macropad_editor_adjust_position_size_value,
-                    formatButtonDimensionDp(widthDp),
-                    formatButtonDimensionDp(heightDp),
-                    (posX * 100).roundToInt(),
-                    (posY * 100).roundToInt(),
+                    formatButtonDimensionPx(widthPx),
+                    formatButtonDimensionPx(heightPx),
+                    (posX * PBD_PERCENT_MULTIPLIER).roundToInt(),
+                    (posY * PBD_PERCENT_MULTIPLIER).roundToInt(),
                 ),
             icon = Icons.Rounded.OpenWith,
             trailingContent = {
@@ -900,10 +940,14 @@ internal fun EditButtonSubPageContent(
                 valueText = "$hapticCustomDurationMs ms",
                 icon = Icons.Rounded.Vibration,
                 onDecrement = {
-                    hapticCustomDurationMs = (hapticCustomDurationMs - 10).coerceIn(10, 200)
+                    hapticCustomDurationMs =
+                        (hapticCustomDurationMs - PBD_DURATION_STEP_MS)
+                            .coerceIn(PBD_DURATION_MIN_MS, PBD_DURATION_MAX_MS)
                 },
                 onIncrement = {
-                    hapticCustomDurationMs = (hapticCustomDurationMs + 10).coerceIn(10, 200)
+                    hapticCustomDurationMs =
+                        (hapticCustomDurationMs + PBD_DURATION_STEP_MS)
+                            .coerceIn(PBD_DURATION_MIN_MS, PBD_DURATION_MAX_MS)
                 },
             )
 
@@ -913,10 +957,14 @@ internal fun EditButtonSubPageContent(
                 valueText = "$hapticCustomAmplitude%",
                 icon = Icons.Rounded.Vibration,
                 onDecrement = {
-                    hapticCustomAmplitude = (hapticCustomAmplitude - 5).coerceIn(5, 100)
+                    hapticCustomAmplitude =
+                        (hapticCustomAmplitude - PBD_AMPLITUDE_STEP)
+                            .coerceIn(PBD_AMPLITUDE_MIN, PBD_AMPLITUDE_MAX)
                 },
                 onIncrement = {
-                    hapticCustomAmplitude = (hapticCustomAmplitude + 5).coerceIn(5, 100)
+                    hapticCustomAmplitude =
+                        (hapticCustomAmplitude + PBD_AMPLITUDE_STEP)
+                            .coerceIn(PBD_AMPLITUDE_MIN, PBD_AMPLITUDE_MAX)
                 },
             )
         }
@@ -970,32 +1018,31 @@ internal fun EditButtonSubPageContent(
         }
 
     listOf(
-        Triple(
-            EditorColorTarget.TEXT,
-            Icons.Rounded.FormatColorText,
-            buttonPreviewLeading(currentText, Color.Transparent, Color.Transparent, true) to
-                describeButtonColorOption(buttonTextColor, currentText),
+        ButtonColorCardEntry(
+            target = EditorColorTarget.TEXT,
+            icon = Icons.Rounded.FormatColorText,
+            preview = buttonPreviewLeading(currentText, Color.Transparent, Color.Transparent, true),
+            description = describeButtonColorOption(buttonTextColor, currentText),
         ),
-        Triple(
-            EditorColorTarget.BORDER,
-            Icons.Rounded.Palette,
-            buttonPreviewLeading(Color.Transparent, currentBorder, Color.Transparent, false) to
-                describeButtonColorOption(buttonBorderColor, currentBorder),
+        ButtonColorCardEntry(
+            target = EditorColorTarget.BORDER,
+            icon = Icons.Rounded.Palette,
+            preview = buttonPreviewLeading(Color.Transparent, currentBorder, Color.Transparent, false),
+            description = describeButtonColorOption(buttonBorderColor, currentBorder),
         ),
-        Triple(
-            EditorColorTarget.BG,
-            Icons.Rounded.FormatColorFill,
-            buttonPreviewLeading(Color.Transparent, Color.Transparent, currentBg, false) to
-                describeButtonColorOption(buttonBgColor, currentBg),
+        ButtonColorCardEntry(
+            target = EditorColorTarget.BG,
+            icon = Icons.Rounded.FormatColorFill,
+            preview = buttonPreviewLeading(Color.Transparent, Color.Transparent, currentBg, false),
+            description = describeButtonColorOption(buttonBgColor, currentBg),
         ),
-    ).forEach { (colorTarget, colorIcon, previewAndDesc) ->
-        val (preview, desc) = previewAndDesc
+    ).forEach { entry ->
         GamepadActionCard(
-            title = stringResource(colorTarget.titleResId),
-            description = desc,
-            icon = colorIcon,
-            actionLeadingContent = preview,
-            onClick = { onOpenColorSubMenu(currentButton, colorTarget) },
+            title = stringResource(entry.target.titleResId),
+            description = entry.description,
+            icon = entry.icon,
+            actionLeadingContent = entry.preview,
+            onClick = { onOpenColorSubMenu(currentButton, entry.target) },
         )
     }
 

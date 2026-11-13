@@ -37,10 +37,12 @@ class MacroPadStateTest {
         originalLocale = Locale.getDefault()
         Locale.setDefault(Locale.US)
         Dispatchers.setMain(testDispatcher)
+        MacroPadState.setHostSecondaryCanvas(null)
     }
 
     @After
     fun tearDown() {
+        MacroPadState.setHostSecondaryCanvas(null)
         Locale.setDefault(originalLocale)
         Dispatchers.resetMain()
     }
@@ -66,6 +68,7 @@ class MacroPadStateTest {
     private fun testLayout(
         id: String = UUID.randomUUID().toString(),
         name: String = "L1",
+        designCanvas: LayoutCanvasSpec? = THOR_BOTTOM_CANVAS_SPEC,
         buttons: List<PadButton> = emptyList(),
         backgroundTouchpad: BackgroundTouchpadConfig = BackgroundTouchpadConfig(),
         mirrorCutouts: List<ScreenCutout> = emptyList(),
@@ -90,6 +93,7 @@ class MacroPadStateTest {
     ) = PadLayout(
         id = id,
         name = name,
+        designCanvas = designCanvas,
         buttons = buttons,
         backgroundTouchpad = backgroundTouchpad,
         mirrorCutouts = mirrorCutouts,
@@ -1471,4 +1475,184 @@ class MacroPadStateTest {
                 expectNoEvents()
             }
         }
+
+    @Test
+    fun `setHostSecondaryCanvas ignores non-positive dimensions and updates newLayoutDesignCanvas`() {
+        val duoSpec = LayoutCanvasSpec(1280, 960)
+        assertNull(MacroPadState.hostSecondaryCanvas.value)
+        assertEquals(THOR_BOTTOM_CANVAS_SPEC, MacroPadState.newLayoutDesignCanvas())
+
+        MacroPadState.setHostSecondaryCanvas(LayoutCanvasSpec(0, 960))
+        MacroPadState.setHostSecondaryCanvas(LayoutCanvasSpec(1280, -1))
+        assertNull(MacroPadState.hostSecondaryCanvas.value)
+
+        MacroPadState.setHostSecondaryCanvas(duoSpec)
+        assertEquals(duoSpec, MacroPadState.hostSecondaryCanvas.value)
+        assertEquals(duoSpec, MacroPadState.newLayoutDesignCanvas())
+
+        MacroPadState.resetForTesting()
+        assertNull(MacroPadState.hostSecondaryCanvas.value)
+        assertEquals(THOR_BOTTOM_CANVAS_SPEC, MacroPadState.newLayoutDesignCanvas())
+    }
+
+    @Test
+    fun `loadFrom and restoreDefaults stamp hostSecondaryCanvas on brand-new layouts while preserving Thor fallback on legacy layouts`() {
+        val duoSpec = LayoutCanvasSpec(1280, 960)
+        MacroPadState.setHostSecondaryCanvas(duoSpec)
+
+        // 1. Empty profiles list -> newly created default layout uses hostSecondaryCanvas (1280x960)
+        MacroPadState.loadFrom(emptyList(), null)
+        assertEquals(duoSpec, MacroPadState.activeLayout.value?.designCanvas)
+
+        // 2. Persisted legacy layout (designCanvas == null) + malformed empty-layouts profile
+        val legacyProfile =
+            PadProfile(
+                id = "p-legacy",
+                name = "Legacy Thor",
+                layouts = listOf(PadLayout(id = "l-legacy", name = "Main", designCanvas = null)),
+                activeLayoutId = "l-legacy",
+            )
+        val emptyLayoutsProfile =
+            PadProfile(
+                id = "p-empty",
+                name = "Empty",
+                layouts = emptyList(),
+            )
+        MacroPadState.loadFrom(listOf(legacyProfile, emptyLayoutsProfile), "p-legacy")
+
+        val loadedLegacy = MacroPadState.profiles.value.first { it.id == "p-legacy" }
+        val loadedEmpty = MacroPadState.profiles.value.first { it.id == "p-empty" }
+        assertEquals(THOR_BOTTOM_CANVAS_SPEC, loadedLegacy.layouts.single().designCanvas)
+        assertEquals(duoSpec, loadedEmpty.layouts.single().designCanvas)
+
+        // 3. restoreDefaults stamps hostSecondaryCanvas
+        MacroPadState.restoreDefaults()
+        assertEquals(duoSpec, MacroPadState.activeLayout.value?.designCanvas)
+    }
+
+    @Test
+    fun `copyButtonToLayout scales dimensions across mismatched designCanvas and enforces large control minimums`() {
+        val thorSpec = THOR_BOTTOM_CANVAS_SPEC // 1240x1080 (shortEdge = 1080, min = 68, large = 272)
+        val duoSpec = LayoutCanvasSpec(1280, 960) // 1280x960 (shortEdge = 960, min = 60, large = 240)
+
+        val thorMinBtn =
+            testButton(id = "btn-thor-min").copy(
+                widthPx = 68f,
+                heightPx = 68f,
+            )
+        val duoScrollBtn =
+            testButton(id = "btn-duo-scroll", action = PadAction.ScrollWheel).copy(
+                widthPx = 60f,
+                heightPx = 240f,
+            )
+        val duoTrackpointBtn =
+            testButton(
+                id = "btn-duo-tp",
+                action = PadAction.TrackpointMove(mode = TrackpointMode.PHYSICAL_MOUSE),
+            ).copy(
+                widthPx = 240f,
+                heightPx = 240f,
+                buttonShape = ButtonShape.CIRCLE,
+            )
+
+        val thorLayout =
+            PadLayout(
+                id = "l-thor",
+                name = "Thor Layout",
+                designCanvas = thorSpec,
+                buttons = listOf(thorMinBtn),
+            )
+        val thorLayout2 =
+            PadLayout(
+                id = "l-thor-2",
+                name = "Thor Layout 2",
+                designCanvas = thorSpec,
+            )
+        val duoLayout =
+            PadLayout(
+                id = "l-duo",
+                name = "Duo Layout",
+                designCanvas = duoSpec,
+                buttons = listOf(duoScrollBtn, duoTrackpointBtn),
+            )
+        val profile =
+            PadProfile(
+                id = "p-cross",
+                name = "Cross Profile",
+                layouts = listOf(thorLayout, thorLayout2, duoLayout),
+                activeLayoutId = "l-thor",
+            )
+        MacroPadState.loadFrom(listOf(profile), "p-cross")
+
+        // Copy 68x68 Thor min button -> Duo (68 * 960 / 1080 = 60.44 -> 60 px)
+        MacroPadState.copyButtonToLayout(
+            button = thorMinBtn,
+            sourceProfileId = "p-cross",
+            targetProfileId = "p-cross",
+            targetLayoutId = "l-duo",
+            sourceLayoutId = "l-thor",
+        )
+        val copiedOnDuo =
+            MacroPadState.profiles.value
+                .single()
+                .layouts
+                .first { it.id == "l-duo" }
+                .buttons
+                .last()
+        assertEquals(60f, copiedOnDuo.widthPx, 0.001f)
+        assertEquals(60f, copiedOnDuo.heightPx, 0.001f)
+
+        // Copy 60x60 Duo button back -> Thor (60 * 1080 / 960 = 67.5 -> 68 px) via implicit sourceLayout lookup
+        MacroPadState.copyButtonToLayout(
+            button = copiedOnDuo,
+            sourceProfileId = "p-cross",
+            targetProfileId = "p-cross",
+            targetLayoutId = "l-thor-2",
+        )
+        val copiedBackToThor =
+            MacroPadState.profiles.value
+                .single()
+                .layouts
+                .first { it.id == "l-thor-2" }
+                .buttons
+                .last()
+        assertEquals(68f, copiedBackToThor.widthPx, 0.001f)
+        assertEquals(68f, copiedBackToThor.heightPx, 0.001f)
+
+        // Copy Duo ScrollWheel (60x240) -> Thor: 240 * 1080/960 = 270 -> enforced up to Thor largeControlMinSizePx (272)
+        MacroPadState.copyButtonToLayout(
+            button = duoScrollBtn,
+            sourceProfileId = "p-cross",
+            targetProfileId = "p-cross",
+            targetLayoutId = "l-thor-2",
+            sourceLayoutId = "l-duo",
+        )
+        val copiedScrollOnThor =
+            MacroPadState.profiles.value
+                .single()
+                .layouts
+                .first { it.id == "l-thor-2" }
+                .buttons
+                .last()
+        assertEquals(68f, copiedScrollOnThor.widthPx, 0.001f)
+        assertEquals(272f, copiedScrollOnThor.heightPx, 0.001f)
+
+        // Copy Duo TrackpointMove (240x240) -> Thor: enforced up to 272x272
+        MacroPadState.copyButtonToLayout(
+            button = duoTrackpointBtn,
+            sourceProfileId = "p-cross",
+            targetProfileId = "p-cross",
+            targetLayoutId = "l-thor-2",
+            sourceLayoutId = "l-duo",
+        )
+        val copiedTpOnThor =
+            MacroPadState.profiles.value
+                .single()
+                .layouts
+                .first { it.id == "l-thor-2" }
+                .buttons
+                .last()
+        assertEquals(272f, copiedTpOnThor.widthPx, 0.001f)
+        assertEquals(272f, copiedTpOnThor.heightPx, 0.001f)
+    }
 }

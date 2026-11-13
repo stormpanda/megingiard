@@ -111,9 +111,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.math.DesignViewport
+import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.math.calculateGamepadCutoutMove
 import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.ui.BumperDirection
@@ -157,13 +158,12 @@ private val METO_CAROUSEL_ICON_SIZE = 14.dp
 
 private const val METO_FALLBACK_SRC_WIDTH = 1920f
 private const val METO_FALLBACK_SRC_HEIGHT = 1080f
-private const val METO_FALLBACK_SEC_WIDTH = 1240f
-private const val METO_FALLBACK_SEC_HEIGHT = 1080f
 
 private const val METO_ROTATION_STEP_DEGREES = 90
 private const val METO_ROTATION_FULL_DEGREES = 360
 private const val METO_ROTATION_90 = 90
 private const val METO_ROTATION_270 = 270
+private const val METO_RESIZE_EPSILON = 0.00001f
 
 /**
  * Top-Screen (Display 0) Overlay for the Screen Mirroring Editor.
@@ -262,9 +262,11 @@ fun MirrorEditorTopOverlay(
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else METO_FALLBACK_SRC_WIDTH
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else METO_FALLBACK_SRC_HEIGHT
 
-    val secDisplaySize = remember(context) { DisplayDetector.resolveSecondaryDisplaySize(context) }
-    val secScreenW = secDisplaySize?.widthPx?.toFloat() ?: METO_FALLBACK_SEC_WIDTH
-    val secScreenH = secDisplaySize?.heightPx?.toFloat() ?: METO_FALLBACK_SEC_HEIGHT
+    val hostSecondaryCanvas by MacroPadState.hostSecondaryCanvas.collectAsStateWithLifecycle()
+    val currentHostCanvasState = rememberUpdatedState(hostSecondaryCanvas)
+    val designCanvas = layout.effectiveDesignCanvas
+    val secScreenW = designCanvas.widthPx.toFloat()
+    val secScreenH = designCanvas.heightPx.toFloat()
 
     var topHToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
     var topVToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
@@ -273,15 +275,43 @@ fun MirrorEditorTopOverlay(
 
     fun updateCutout(
         cutoutId: String,
-        transform: (ScreenCutout, List<ScreenCutout>) -> ScreenCutout?,
+        transform: (
+            cur: ScreenCutout,
+            others: List<ScreenCutout>,
+            allCutouts: List<ScreenCutout>,
+            designW: Float,
+            designH: Float,
+            hostViewport: DesignViewport,
+        ) -> ScreenCutout?,
     ) {
         val currentProfile = MacroPadState.activeProfile.value ?: return
         val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
         val cur = currentLayout.mirrorCutouts.firstOrNull { it.id == cutoutId } ?: return
-        val others = currentLayout.mirrorCutouts.filter { it.id != cutoutId }
-        val updated = transform(cur, others) ?: return
+        val allCutouts = currentLayout.mirrorCutouts
+        val others = allCutouts.filter { it.id != cutoutId }
+        val curDesignCanvas = currentLayout.effectiveDesignCanvas
+        val designW = curDesignCanvas.widthPx.toFloat()
+        val designH = curDesignCanvas.heightPx.toFloat()
+        val hostSpec = currentHostCanvasState.value ?: MacroPadState.hostSecondaryCanvas.value
+        val hostViewport =
+            if (hostSpec != null && hostSpec.widthPx > 0 && hostSpec.heightPx > 0) {
+                ViewportMath.calculateDesignViewport(
+                    hostWidthPx = hostSpec.widthPx.toFloat(),
+                    hostHeightPx = hostSpec.heightPx.toFloat(),
+                    designWidthPx = designW,
+                    designHeightPx = designH,
+                )
+            } else {
+                ViewportMath.calculateDesignViewport(
+                    hostWidthPx = designW,
+                    hostHeightPx = designH,
+                    designWidthPx = designW,
+                    designHeightPx = designH,
+                )
+            }
+        val updated = transform(cur, others, allCutouts, designW, designH, hostViewport) ?: return
         if (updated == cur) return
-        val updatedList = currentLayout.mirrorCutouts.map { if (it.id == cur.id) updated else it }
+        val updatedList = allCutouts.map { if (it.id == cur.id) updated else it }
         MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
     }
 
@@ -289,7 +319,7 @@ fun MirrorEditorTopOverlay(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) = updateCutout(cutoutId) { cur, _ ->
+    ) = updateCutout(cutoutId) { cur, _, _, _, _, _ ->
         val stepX = 1f / srcWidth
         val stepY = 1f / srcHeight
         cur.copy(
@@ -302,7 +332,7 @@ fun MirrorEditorTopOverlay(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) = updateCutout(cutoutId) { cur, others ->
+    ) = updateCutout(cutoutId) { cur, _, allCutouts, designW, designH, hostViewport ->
         if (cur.aspectRatioMode == AspectRatioMode.BOTTOM) {
             val stepDelta =
                 if (dx != 0) {
@@ -314,7 +344,7 @@ fun MirrorEditorTopOverlay(
                 }
             if (stepDelta == 0) return@updateCutout null
             val isQuarter = (cur.rotation == METO_ROTATION_90 || cur.rotation == METO_ROTATION_270)
-            val rawCutoutRatio = (cur.destWidth * secScreenW) / (cur.destHeight * secScreenH)
+            val rawCutoutRatio = (cur.destWidth * designW) / (cur.destHeight * designH)
             val cutoutRatio = if (isQuarter && rawCutoutRatio > 0f) (1f / rawCutoutRatio) else rawCutoutRatio
             val normCropRatio = cutoutRatio * (srcHeight / srcWidth)
             val geom =
@@ -363,14 +393,50 @@ fun MirrorEditorTopOverlay(
                     destWidth = updated.destWidth,
                     destHeight = updated.destHeight,
                     cropRatio = cropRatio,
-                    screenW = secScreenW,
-                    screenH = secScreenH,
+                    screenW = designW,
+                    screenH = designH,
                     rotation = updated.rotation,
                 )
-            if (!isCutoutGeometryValid(updated.destX, updated.destY, newDestW, newDestH, others)) {
+            val destGeom =
+                clampCutoutResize(
+                    cutoutId = updated.id,
+                    handle = ResizeHandle.BOTTOM_RIGHT,
+                    originalX = updated.destX,
+                    originalY = updated.destY,
+                    originalWidth = updated.destWidth,
+                    originalHeight = updated.destHeight,
+                    targetX = updated.destX,
+                    targetY = updated.destY,
+                    targetWidth = newDestW,
+                    targetHeight = newDestH,
+                    allCutouts = allCutouts,
+                    keepAspectRatio = true,
+                    cropRatio = cropRatio,
+                    screenW = designW,
+                    screenH = designH,
+                    minCutoutSize = MIN_GAMEPAD_CUTOUT_SIZE,
+                    rotation = updated.rotation,
+                    minNormX = hostViewport.minNormX,
+                    maxNormX = hostViewport.maxNormX,
+                    minNormY = hostViewport.minNormY,
+                    maxNormY = hostViewport.maxNormY,
+                )
+            val requestedSizeChange =
+                abs(newDestW - updated.destWidth) > METO_RESIZE_EPSILON ||
+                    abs(newDestH - updated.destHeight) > METO_RESIZE_EPSILON
+            val appliedSizeChange =
+                abs(destGeom.w - updated.destWidth) > METO_RESIZE_EPSILON ||
+                    abs(destGeom.h - updated.destHeight) > METO_RESIZE_EPSILON
+            if (requestedSizeChange && !appliedSizeChange) {
                 return@updateCutout null
             }
-            updated = updated.copy(destWidth = newDestW, destHeight = newDestH)
+            updated =
+                updated.copy(
+                    destX = destGeom.x,
+                    destY = destGeom.y,
+                    destWidth = destGeom.w,
+                    destHeight = destGeom.h,
+                )
         }
         updated
     }
@@ -379,7 +445,7 @@ fun MirrorEditorTopOverlay(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) = updateCutout(cutoutId) { cur, _ ->
+    ) = updateCutout(cutoutId) { cur, others, allCutouts, designW, designH, hostViewport ->
         val dirX =
             if (dx > 0) {
                 1
@@ -407,10 +473,14 @@ fun MirrorEditorTopOverlay(
                 dirY = dirY,
                 stepMultiplierPx = stepMultiplierPx,
                 movingCutoutId = cur.id,
-                otherCutouts = cutouts,
-                canvasW = secScreenW,
-                canvasH = secScreenH,
+                otherCutouts = others,
+                canvasW = designW,
+                canvasH = designH,
                 alignmentSnappingEnabled = cutoutAlignmentSnapping,
+                minNormX = hostViewport.minNormX,
+                maxNormX = hostViewport.maxNormX,
+                minNormY = hostViewport.minNormY,
+                maxNormY = hostViewport.maxNormY,
             )
         val (clampedX, clampedY) =
             clampCutoutDrag(
@@ -421,7 +491,11 @@ fun MirrorEditorTopOverlay(
                 targetY = candY,
                 width = cur.destWidth,
                 height = cur.destHeight,
-                allCutouts = cutouts,
+                allCutouts = allCutouts,
+                minNormX = hostViewport.minNormX,
+                maxNormX = hostViewport.maxNormX,
+                minNormY = hostViewport.minNormY,
+                maxNormY = hostViewport.maxNormY,
             )
         cur.copy(destX = clampedX, destY = clampedY)
     }
@@ -430,7 +504,8 @@ fun MirrorEditorTopOverlay(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) = updateCutout(cutoutId) { cur, others ->
+    ) = updateCutout(cutoutId) { cur, _, allCutouts, designW, designH, hostViewport ->
+        if (designW <= 0f || designH <= 0f) return@updateCutout null
         if (cur.aspectRatioMode == AspectRatioMode.TOP) {
             val stepDelta =
                 if (dx != 0) {
@@ -443,53 +518,288 @@ fun MirrorEditorTopOverlay(
             if (stepDelta == 0) return@updateCutout null
             val isQuarter = (cur.rotation == METO_ROTATION_90 || cur.rotation == METO_ROTATION_270)
             val rawCropRatio = (cur.srcWidth * srcWidth) / (cur.srcHeight * srcHeight)
-            val cropRatio = if (isQuarter && rawCropRatio > 0f) (1f / rawCropRatio) else rawCropRatio
-            val normRatio = cropRatio * (secScreenH / secScreenW)
-            val geom =
-                calculateProportionalResizedBounds(
-                    normX = cur.destX,
-                    normY = cur.destY,
-                    normW = cur.destWidth,
-                    normH = cur.destHeight,
-                    screenWidth = secScreenW,
-                    screenHeight = secScreenH,
-                    stepDelta = stepDelta,
-                    targetNormRatio = normRatio,
-                    others = others,
-                )
-            return@updateCutout cur.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+            val effectiveCropRatio = if (isQuarter && rawCropRatio > 0f) (1f / rawCropRatio) else rawCropRatio
+            val normRatio = effectiveCropRatio * (designH / designW)
+            if (normRatio <= 0f) return@updateCutout null
+
+            val unitStepW = if (normRatio >= 1f) (1f / designW) * normRatio else (1f / designW)
+            val signedStepW = if (stepDelta > 0) unitStepW else -unitStepW
+            val signedStepH = signedStepW / normRatio
+
+            var curX = cur.destX
+            var curY = cur.destY
+            var curW = cur.destWidth
+            var curH = cur.destHeight
+            var nextCornerToggle = bottomHToggle
+
+            fun tryProportionalCorner(handle: ResizeHandle): ScreenCutoutGeometry? {
+                val targetW = curW + signedStepW
+                val targetH = curH + signedStepH
+                val targetX =
+                    when (handle) {
+                        ResizeHandle.TOP_LEFT, ResizeHandle.BOTTOM_LEFT -> (curX + curW) - targetW
+                        else -> curX
+                    }
+                val targetY =
+                    when (handle) {
+                        ResizeHandle.TOP_LEFT, ResizeHandle.TOP_RIGHT -> (curY + curH) - targetH
+                        else -> curY
+                    }
+                val geom =
+                    clampCutoutResize(
+                        cutoutId = cur.id,
+                        handle = handle,
+                        originalX = curX,
+                        originalY = curY,
+                        originalWidth = curW,
+                        originalHeight = curH,
+                        targetX = targetX,
+                        targetY = targetY,
+                        targetWidth = targetW,
+                        targetHeight = targetH,
+                        allCutouts = allCutouts,
+                        keepAspectRatio = true,
+                        cropRatio = rawCropRatio,
+                        screenW = designW,
+                        screenH = designH,
+                        minCutoutSize = MIN_GAMEPAD_CUTOUT_SIZE,
+                        rotation = cur.rotation,
+                        minNormX = hostViewport.minNormX,
+                        maxNormX = hostViewport.maxNormX,
+                        minNormY = hostViewport.minNormY,
+                        maxNormY = hostViewport.maxNormY,
+                    )
+                return if (abs(geom.w - curW) > METO_RESIZE_EPSILON || abs(geom.h - curH) > METO_RESIZE_EPSILON) {
+                    geom
+                } else {
+                    null
+                }
+            }
+
+            repeat(abs(stepDelta)) {
+                val candidateHandles =
+                    if (nextCornerToggle == 0) {
+                        listOf(
+                            ResizeHandle.BOTTOM_RIGHT to 1,
+                            ResizeHandle.TOP_LEFT to 0,
+                            ResizeHandle.BOTTOM_LEFT to 1,
+                            ResizeHandle.TOP_RIGHT to 0,
+                        )
+                    } else {
+                        listOf(
+                            ResizeHandle.TOP_LEFT to 0,
+                            ResizeHandle.BOTTOM_RIGHT to 1,
+                            ResizeHandle.TOP_RIGHT to 0,
+                            ResizeHandle.BOTTOM_LEFT to 1,
+                        )
+                    }
+                var applied = false
+                for ((handle, nextToggle) in candidateHandles) {
+                    val geom = tryProportionalCorner(handle)
+                    if (geom != null) {
+                        curX = geom.x
+                        curY = geom.y
+                        curW = geom.w
+                        curH = geom.h
+                        nextCornerToggle = nextToggle
+                        applied = true
+                        break
+                    }
+                }
+                if (!applied) return@repeat
+            }
+
+            bottomHToggle = nextCornerToggle
+            return@updateCutout cur.copy(destX = curX, destY = curY, destWidth = curW, destHeight = curH)
         }
 
-        val resized =
-            calculateResizedBounds(
-                normX = cur.destX,
-                normY = cur.destY,
-                normW = cur.destWidth,
-                normH = cur.destHeight,
-                screenWidth = secScreenW,
-                screenHeight = secScreenH,
-                dx = dx,
-                dy = dy,
-                hToggle = bottomHToggle,
-                vToggle = bottomVToggle,
-                others = others,
-            )
-        bottomHToggle = resized.hToggle
-        bottomVToggle = resized.vToggle
+        var curX = cur.destX
+        var curY = cur.destY
+        var curW = cur.destWidth
+        var curH = cur.destHeight
+        var nextHToggle = bottomHToggle
+        var nextVToggle = bottomVToggle
+        val stepW = 1f / designW
+        val stepH = 1f / designH
+
+        fun tryEdgeStep(
+            handle: ResizeHandle,
+            targetX: Float,
+            targetY: Float,
+            targetW: Float,
+            targetH: Float,
+        ): ScreenCutoutGeometry? {
+            val geom =
+                clampCutoutResize(
+                    cutoutId = cur.id,
+                    handle = handle,
+                    originalX = curX,
+                    originalY = curY,
+                    originalWidth = curW,
+                    originalHeight = curH,
+                    targetX = targetX,
+                    targetY = targetY,
+                    targetWidth = targetW,
+                    targetHeight = targetH,
+                    allCutouts = allCutouts,
+                    minCutoutSize = MIN_GAMEPAD_CUTOUT_SIZE,
+                    rotation = cur.rotation,
+                    minNormX = hostViewport.minNormX,
+                    maxNormX = hostViewport.maxNormX,
+                    minNormY = hostViewport.minNormY,
+                    maxNormY = hostViewport.maxNormY,
+                )
+            return if (abs(geom.w - curW) > METO_RESIZE_EPSILON || abs(geom.h - curH) > METO_RESIZE_EPSILON) {
+                geom
+            } else {
+                null
+            }
+        }
+
+        repeat(abs(dx)) {
+            if (dx > 0) {
+                if (nextHToggle == 0) {
+                    val rightGeom = tryEdgeStep(ResizeHandle.RIGHT, curX, curY, curW + stepW, curH)
+                    if (rightGeom != null) {
+                        curX = rightGeom.x
+                        curW = rightGeom.w
+                        nextHToggle = 1
+                    } else {
+                        val leftGeom = tryEdgeStep(ResizeHandle.LEFT, curX - stepW, curY, curW + stepW, curH)
+                        if (leftGeom != null) {
+                            curX = leftGeom.x
+                            curW = leftGeom.w
+                            nextHToggle = 0
+                        }
+                    }
+                } else {
+                    val leftGeom = tryEdgeStep(ResizeHandle.LEFT, curX - stepW, curY, curW + stepW, curH)
+                    if (leftGeom != null) {
+                        curX = leftGeom.x
+                        curW = leftGeom.w
+                        nextHToggle = 0
+                    } else {
+                        val rightGeom = tryEdgeStep(ResizeHandle.RIGHT, curX, curY, curW + stepW, curH)
+                        if (rightGeom != null) {
+                            curX = rightGeom.x
+                            curW = rightGeom.w
+                            nextHToggle = 1
+                        }
+                    }
+                }
+            } else if (dx < 0) {
+                if (nextHToggle == 1) {
+                    val rightGeom = tryEdgeStep(ResizeHandle.RIGHT, curX, curY, curW - stepW, curH)
+                    if (rightGeom != null) {
+                        curX = rightGeom.x
+                        curW = rightGeom.w
+                        nextHToggle = 0
+                    } else {
+                        val leftGeom = tryEdgeStep(ResizeHandle.LEFT, curX + stepW, curY, curW - stepW, curH)
+                        if (leftGeom != null) {
+                            curX = leftGeom.x
+                            curW = leftGeom.w
+                            nextHToggle = 1
+                        }
+                    }
+                } else {
+                    val leftGeom = tryEdgeStep(ResizeHandle.LEFT, curX + stepW, curY, curW - stepW, curH)
+                    if (leftGeom != null) {
+                        curX = leftGeom.x
+                        curW = leftGeom.w
+                        nextHToggle = 1
+                    } else {
+                        val rightGeom = tryEdgeStep(ResizeHandle.RIGHT, curX, curY, curW - stepW, curH)
+                        if (rightGeom != null) {
+                            curX = rightGeom.x
+                            curW = rightGeom.w
+                            nextHToggle = 0
+                        }
+                    }
+                }
+            }
+        }
+
+        repeat(abs(dy)) {
+            if (dy < 0) {
+                if (nextVToggle == 0) {
+                    val topGeom = tryEdgeStep(ResizeHandle.TOP, curX, curY - stepH, curW, curH + stepH)
+                    if (topGeom != null) {
+                        curY = topGeom.y
+                        curH = topGeom.h
+                        nextVToggle = 1
+                    } else {
+                        val bottomGeom = tryEdgeStep(ResizeHandle.BOTTOM, curX, curY, curW, curH + stepH)
+                        if (bottomGeom != null) {
+                            curY = bottomGeom.y
+                            curH = bottomGeom.h
+                            nextVToggle = 0
+                        }
+                    }
+                } else {
+                    val bottomGeom = tryEdgeStep(ResizeHandle.BOTTOM, curX, curY, curW, curH + stepH)
+                    if (bottomGeom != null) {
+                        curY = bottomGeom.y
+                        curH = bottomGeom.h
+                        nextVToggle = 0
+                    } else {
+                        val topGeom = tryEdgeStep(ResizeHandle.TOP, curX, curY - stepH, curW, curH + stepH)
+                        if (topGeom != null) {
+                            curY = topGeom.y
+                            curH = topGeom.h
+                            nextVToggle = 1
+                        }
+                    }
+                }
+            } else if (dy > 0) {
+                if (nextVToggle == 1) {
+                    val topGeom = tryEdgeStep(ResizeHandle.TOP, curX, curY + stepH, curW, curH - stepH)
+                    if (topGeom != null) {
+                        curY = topGeom.y
+                        curH = topGeom.h
+                        nextVToggle = 0
+                    } else {
+                        val bottomGeom = tryEdgeStep(ResizeHandle.BOTTOM, curX, curY, curW, curH - stepH)
+                        if (bottomGeom != null) {
+                            curY = bottomGeom.y
+                            curH = bottomGeom.h
+                            nextVToggle = 1
+                        }
+                    }
+                } else {
+                    val bottomGeom = tryEdgeStep(ResizeHandle.BOTTOM, curX, curY, curW, curH - stepH)
+                    if (bottomGeom != null) {
+                        curY = bottomGeom.y
+                        curH = bottomGeom.h
+                        nextVToggle = 1
+                    } else {
+                        val topGeom = tryEdgeStep(ResizeHandle.TOP, curX, curY + stepH, curW, curH - stepH)
+                        if (topGeom != null) {
+                            curY = topGeom.y
+                            curH = topGeom.h
+                            nextVToggle = 0
+                        }
+                    }
+                }
+            }
+        }
+
+        bottomHToggle = nextHToggle
+        bottomVToggle = nextVToggle
 
         var updated =
             cur.copy(
-                destX = resized.x,
-                destY = resized.y,
-                destWidth = resized.width,
-                destHeight = resized.height,
+                destX = curX,
+                destY = curY,
+                destWidth = curW,
+                destHeight = curH,
             )
         if (updated.aspectRatioMode == AspectRatioMode.BOTTOM) {
             updated =
                 adjustSourceCropToAspectRatio(
                     cutout = updated,
-                    screenW = secScreenW,
-                    screenH = secScreenH,
+                    screenW = designW,
+                    screenH = designH,
                     srcW = srcWidth,
                     srcH = srcHeight,
                 )

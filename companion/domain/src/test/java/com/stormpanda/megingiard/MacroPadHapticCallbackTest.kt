@@ -45,7 +45,7 @@ class MacroPadHapticCallbackTest {
     private fun captureEngine(): Pair<MutableList<HapticCall>, MacroPadHitTestEngine> {
         val captured = mutableListOf<HapticCall>()
         val engine =
-            MacroPadHitTestEngine({ it }) { buttonId, strength, customDurationMs, customAmplitude, magnitude ->
+            MacroPadHitTestEngine { buttonId, strength, customDurationMs, customAmplitude, magnitude ->
                 captured += HapticCall(buttonId, strength, customDurationMs, customAmplitude, magnitude)
             }
         return captured to engine

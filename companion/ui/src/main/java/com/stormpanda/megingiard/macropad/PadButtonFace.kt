@@ -85,12 +85,12 @@ private val PBF_POLYGON_SHAPES: Map<ButtonShape, Shape> =
         }.toMap()
 
 /**
- * Resolves the Compose [Shape] for a [PadButton] given its [buttonShape], dimensions, and trackpoint state.
+ * Resolves the Compose [Shape] for a [PadButton] given its [buttonShape], pixel dimensions, and trackpoint state.
  */
 internal fun resolvePadButtonShape(
     buttonShape: ButtonShape,
-    widthDp: Float,
-    heightDp: Float,
+    widthPx: Float,
+    heightPx: Float,
     isTrackpoint: Boolean = false,
 ): Shape {
     if (isTrackpoint) return CircleShape
@@ -101,7 +101,7 @@ internal fun resolvePadButtonShape(
 
         ButtonShape.ROUNDED_SQUARE -> PBF_ROUNDED_SQUARE_SHAPE
 
-        ButtonShape.CIRCLE -> if (widthDp == heightDp) CircleShape else PBF_PILL_SHAPE
+        ButtonShape.CIRCLE -> if (widthPx == heightPx) CircleShape else PBF_PILL_SHAPE
 
         ButtonShape.HEXAGON_1,
         ButtonShape.HEXAGON_2,
@@ -123,8 +123,8 @@ internal fun resolvePadButtonShape(
 internal fun resolvePadButtonPreviewShape(buttonShape: ButtonShape): Shape =
     resolvePadButtonShape(
         buttonShape = buttonShape,
-        widthDp = MP_BUTTON_BASE_UNIT_DP,
-        heightDp = MP_BUTTON_BASE_UNIT_DP,
+        widthPx = MP_THOR_DEFAULT_BUTTON_SIZE_PX,
+        heightPx = MP_THOR_DEFAULT_BUTTON_SIZE_PX,
         isTrackpoint = false,
     )
 

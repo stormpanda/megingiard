@@ -11,20 +11,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
@@ -47,10 +44,15 @@ private const val CS_ROTATION_BR = -45f
 
 private const val CS_FALLBACK_SRC_WIDTH = 1920f
 private const val CS_FALLBACK_SRC_HEIGHT = 1080f
-private const val CS_FALLBACK_SEC_WIDTH = 1240f
-private const val CS_FALLBACK_SEC_HEIGHT = 1080f
 private const val CS_ROTATION_90 = 90
 private const val CS_ROTATION_270 = 270
+
+private data class CropCornerSpec(
+    val handle: ResizeHandle,
+    val centerX: Float,
+    val centerY: Float,
+    val rotation: Float,
+)
 
 @Composable
 fun CropSelectorOverlay(
@@ -70,14 +72,13 @@ fun CropSelectorOverlay(
     val captureSourceHeight by ScreenCaptureManager.captureSourceHeight.collectAsStateWithLifecycle()
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else CS_FALLBACK_SRC_WIDTH
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else CS_FALLBACK_SRC_HEIGHT
-
-    val context = LocalContext.current
-    val secDisplaySize = remember(context) { DisplayDetector.resolveSecondaryDisplaySize(context) }
-    val secScreenW = secDisplaySize?.widthPx?.toFloat() ?: CS_FALLBACK_SEC_WIDTH
-    val secScreenH = secDisplaySize?.heightPx?.toFloat() ?: CS_FALLBACK_SEC_HEIGHT
+    val currentSrcWidthState = rememberUpdatedState(srcWidth)
+    val currentSrcHeightState = rememberUpdatedState(srcHeight)
 
     fun updateCutoutWithNewCrop(
         cutout: ScreenCutout,
+        designW: Float,
+        designH: Float,
         newX: Float,
         newY: Float,
         newW: Float,
@@ -86,11 +87,13 @@ fun CropSelectorOverlay(
         maxDestH: Float = 0f,
     ): ScreenCutout {
         var updated = cutout.copy(srcX = newX, srcY = newY, srcWidth = newW, srcHeight = newH)
-        if (updated.aspectRatioMode == AspectRatioMode.TOP) {
-            val cropRatio = (newW * srcWidth) / (newH * srcHeight)
+        if (updated.aspectRatioMode == AspectRatioMode.TOP && designW > 0f && designH > 0f) {
+            val curSrcW = currentSrcWidthState.value
+            val curSrcH = currentSrcHeightState.value
+            val cropRatio = (newW * curSrcW) / (newH * curSrcH)
             val isQuarter = (updated.rotation == CS_ROTATION_90 || updated.rotation == CS_ROTATION_270)
             val effectiveCropRatio = if (isQuarter && cropRatio > 0f) (1f / cropRatio) else cropRatio
-            val normRatio = effectiveCropRatio * (secScreenH / secScreenW)
+            val normRatio = effectiveCropRatio * (designH / designW)
             val (newDestW, newDestH) =
                 adjustDestSizeToAspectRatio(
                     destX = updated.destX,
@@ -98,17 +101,17 @@ fun CropSelectorOverlay(
                     destWidth = updated.destWidth,
                     destHeight = updated.destHeight,
                     cropRatio = cropRatio,
-                    screenW = secScreenW,
-                    screenH = secScreenH,
+                    screenW = designW,
+                    screenH = designH,
                     rotation = updated.rotation,
                 )
 
             var finalW = newDestW
             var finalH = newDestH
 
-            if (maxDestW > 0f && maxDestH > 0f) {
-                val limitW = minOf(maxDestW, 1f - updated.destX)
-                val limitH = minOf(maxDestH, 1f - updated.destY)
+            if (maxDestW > 0f && maxDestH > 0f && normRatio > 0f) {
+                val limitW = minOf(maxDestW, (1f - updated.destX).coerceAtLeast(MIN_GAMEPAD_CUTOUT_SIZE))
+                val limitH = minOf(maxDestH, (1f - updated.destY).coerceAtLeast(MIN_GAMEPAD_CUTOUT_SIZE))
                 finalW = minOf(limitW, limitH * normRatio)
                 finalH = minOf(limitH, limitW / normRatio)
             }
@@ -240,7 +243,10 @@ fun CropSelectorOverlay(
         ) {
             val curLayout = currentLayoutState.value
             val curCutout = currentCutoutState.value
-            val cutoutRatio = (curCutout.destWidth * secScreenW) / (curCutout.destHeight * secScreenH)
+            val curDesignCanvas = curLayout.effectiveDesignCanvas
+            val curDesignW = curDesignCanvas.widthPx.toFloat()
+            val curDesignH = curDesignCanvas.heightPx.toFloat()
+            val cutoutRatio = (curCutout.destWidth * curDesignW) / (curCutout.destHeight * curDesignH)
             val geom =
                 clampCropResizeProportional(
                     handle = handle,
@@ -273,10 +279,23 @@ fun CropSelectorOverlay(
             newH: Float,
         ) {
             val curLayout = currentLayoutState.value
+            val curDesignCanvas = curLayout.effectiveDesignCanvas
+            val curDesignW = curDesignCanvas.widthPx.toFloat()
+            val curDesignH = curDesignCanvas.heightPx.toFloat()
             val updated =
                 curLayout.mirrorCutouts.map {
                     if (it.id == cutoutId) {
-                        updateCutoutWithNewCrop(it, newX, newY, newW, newH, gestureStartDestW, gestureStartDestH)
+                        updateCutoutWithNewCrop(
+                            cutout = it,
+                            designW = curDesignW,
+                            designH = curDesignH,
+                            newX = newX,
+                            newY = newY,
+                            newW = newW,
+                            newH = newH,
+                            maxDestW = gestureStartDestW,
+                            maxDestH = gestureStartDestH,
+                        )
                     } else {
                         it
                     }
@@ -293,43 +312,46 @@ fun CropSelectorOverlay(
 
                 val corners =
                     listOf(
-                        Triple(
-                            ResizeHandle.TOP_LEFT,
-                            cropLeft - cornerMarginPx - handleThicknessPx / 2f,
-                            (cropTop - cornerMarginPx - handleThicknessPx / 2f) to CS_ROTATION_TL,
+                        CropCornerSpec(
+                            handle = ResizeHandle.TOP_LEFT,
+                            centerX = cropLeft - cornerMarginPx - handleThicknessPx / 2f,
+                            centerY = cropTop - cornerMarginPx - handleThicknessPx / 2f,
+                            rotation = CS_ROTATION_TL,
                         ),
-                        Triple(
-                            ResizeHandle.TOP_RIGHT,
-                            cropLeft + cropW + cornerMarginPx + handleThicknessPx / 2f,
-                            (cropTop - cornerMarginPx - handleThicknessPx / 2f) to CS_ROTATION_TR,
+                        CropCornerSpec(
+                            handle = ResizeHandle.TOP_RIGHT,
+                            centerX = cropLeft + cropW + cornerMarginPx + handleThicknessPx / 2f,
+                            centerY = cropTop - cornerMarginPx - handleThicknessPx / 2f,
+                            rotation = CS_ROTATION_TR,
                         ),
-                        Triple(
-                            ResizeHandle.BOTTOM_LEFT,
-                            cropLeft - cornerMarginPx - handleThicknessPx / 2f,
-                            (cropTop + cropH + cornerMarginPx + handleThicknessPx / 2f) to CS_ROTATION_BL,
+                        CropCornerSpec(
+                            handle = ResizeHandle.BOTTOM_LEFT,
+                            centerX = cropLeft - cornerMarginPx - handleThicknessPx / 2f,
+                            centerY = cropTop + cropH + cornerMarginPx + handleThicknessPx / 2f,
+                            rotation = CS_ROTATION_BL,
                         ),
-                        Triple(
-                            ResizeHandle.BOTTOM_RIGHT,
-                            cropLeft + cropW + cornerMarginPx + handleThicknessPx / 2f,
-                            (cropTop + cropH + cornerMarginPx + handleThicknessPx / 2f) to CS_ROTATION_BR,
+                        CropCornerSpec(
+                            handle = ResizeHandle.BOTTOM_RIGHT,
+                            centerX = cropLeft + cropW + cornerMarginPx + handleThicknessPx / 2f,
+                            centerY = cropTop + cropH + cornerMarginPx + handleThicknessPx / 2f,
+                            rotation = CS_ROTATION_BR,
                         ),
                     )
-                for ((handle, centerX, yAndRot) in corners) {
-                    val (centerY, rot) = yAndRot
+                for (corner in corners) {
                     ResizeHandleView(
                         offset =
                             IntOffset(
-                                (centerX - cornerTouchSizePx / 2f).roundToInt(),
-                                (centerY - cornerTouchSizePx / 2f).roundToInt(),
+                                (corner.centerX - cornerTouchSizePx / 2f).roundToInt(),
+                                (corner.centerY - cornerTouchSizePx / 2f).roundToInt(),
                             ),
                         touchWidth = CS_CORNER_TOUCH_SIZE,
                         touchHeight = CS_CORNER_TOUCH_SIZE,
                         handleWidth = CS_EDGE_HANDLE_LENGTH,
                         handleHeight = CS_EDGE_HANDLE_THICKNESS,
-                        rotation = rot,
+                        rotation = corner.rotation,
                         color = colors.accent,
                         onDragStart = { captureDragStart() },
-                        onDrag = { totalDx, totalDy -> handleCornerDrag(handle, totalDx, totalDy) },
+                        onDrag = { totalDx, totalDy -> handleCornerDrag(corner.handle, totalDx, totalDy) },
                     )
                 }
             } else {

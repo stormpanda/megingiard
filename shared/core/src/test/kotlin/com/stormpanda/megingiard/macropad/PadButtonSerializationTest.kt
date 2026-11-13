@@ -22,7 +22,26 @@ class PadButtonSerializationTest {
         }
 
     @Test
-    fun `modern PadButton with stepless dimensions survives JSON round-trip`() {
+    fun `LayoutCanvasSpec computes derived button sizes for Thor RP Duo and tiny canvas floor`() {
+        assertEquals(1240, THOR_BOTTOM_CANVAS_SPEC.widthPx)
+        assertEquals(1080, THOR_BOTTOM_CANVAS_SPEC.heightPx)
+        assertEquals(1080, THOR_BOTTOM_CANVAS_SPEC.shortEdgePx)
+        assertEquals(MP_THOR_MIN_BUTTON_SIZE_PX, THOR_BOTTOM_CANVAS_SPEC.minButtonSizePx, 0.001f)
+        assertEquals(MP_THOR_DEFAULT_BUTTON_SIZE_PX, THOR_BOTTOM_CANVAS_SPEC.baseButtonSizePx, 0.001f)
+        assertEquals(MP_THOR_LARGE_CONTROL_MIN_SIZE_PX, THOR_BOTTOM_CANVAS_SPEC.largeControlMinSizePx, 0.001f)
+
+        val duoSpec = LayoutCanvasSpec(widthPx = 1280, heightPx = 960)
+        assertEquals(960, duoSpec.shortEdgePx)
+        assertEquals(60f, duoSpec.minButtonSizePx, 0.001f)
+        assertEquals(120f, duoSpec.baseButtonSizePx, 0.001f)
+        assertEquals(240f, duoSpec.largeControlMinSizePx, 0.001f)
+
+        val tinySpec = LayoutCanvasSpec(widthPx = 100, heightPx = 80)
+        assertEquals(MP_BUTTON_SERIALIZER_FLOOR_PX, tinySpec.minButtonSizePx, 0.001f)
+    }
+
+    @Test
+    fun `modern PadButton with stepless pixel dimensions survives JSON round-trip`() {
         val button =
             PadButton(
                 id = "btn-stepless-1",
@@ -30,22 +49,59 @@ class PadButtonSerializationTest {
                 posY = 0.65f,
                 label = "Custom",
                 action = PadAction.KeyboardKey(30, "A"),
-                widthDp = 95f,
-                heightDp = 140f,
+                widthPx = 185f,
+                heightPx = 240f,
             )
 
         val encoded = json.encodeToString(button)
-        // Verify widthDp and heightDp are present, and buttonSize is NOT present
-        assertTrue(encoded.contains("\"widthDp\":95.0") || encoded.contains("\"widthDp\":95"))
-        assertTrue(encoded.contains("\"heightDp\":140.0") || encoded.contains("\"heightDp\":140"))
+        // Verify widthPx and heightPx are present, and legacy widthDp/heightDp/buttonSize are NOT present
+        assertTrue(encoded.contains("\"widthPx\":185.0") || encoded.contains("\"widthPx\":185"))
+        assertTrue(encoded.contains("\"heightPx\":240.0") || encoded.contains("\"heightPx\":240"))
+        assertFalse(encoded.contains("\"widthDp\""))
+        assertFalse(encoded.contains("\"heightDp\""))
         assertFalse(encoded.contains("\"buttonSize\""))
 
         val decoded = json.decodeFromString<PadButton>(encoded)
         assertEquals(button, decoded)
+
+        // RP Duo minimum 60 px button survives raw JSON decode without being clamped up to Thor's 68 px
+        val duoMinButton = button.copy(id = "btn-duo-min", widthPx = 60f, heightPx = 60f)
+        val decodedDuoMin = json.decodeFromString<PadButton>(json.encodeToString(duoMinButton))
+        assertEquals(60f, decodedDuoMin.widthPx, 0.001f)
+        assertEquals(60f, decodedDuoMin.heightPx, 0.001f)
     }
 
     @Test
-    fun `legacy JSON with ButtonSize SIZE_2X1 deserializes to 120x60 dp`() {
+    fun `legacy widthDp and heightDp migrate via THOR_BOTTOM_DENSITY rounded to integer pixels`() {
+        val cases =
+            listOf(
+                30f to 69f,
+                60f to 138f,
+                90f to 208f,
+                120f to 277f,
+                180f to 415f,
+            )
+        for ((dp, expectedPx) in cases) {
+            val legacyJson =
+                """
+                {
+                    "id": "btn-dp-$dp",
+                    "posX": 0.5,
+                    "posY": 0.5,
+                    "label": "Legacy",
+                    "action": { "type": "keyboard_key", "keycode": 30, "label": "A" },
+                    "widthDp": $dp,
+                    "heightDp": $dp
+                }
+                """.trimIndent()
+            val decoded = json.decodeFromString<PadButton>(legacyJson)
+            assertEquals(expectedPx, decoded.widthPx, 0.001f)
+            assertEquals(expectedPx, decoded.heightPx, 0.001f)
+        }
+    }
+
+    @Test
+    fun `legacy JSON with ButtonSize SIZE_2X1 deserializes to 277x138 px`() {
         val legacyJson =
             """
             {
@@ -63,12 +119,12 @@ class PadButtonSerializationTest {
             """.trimIndent()
 
         val decoded = json.decodeFromString<PadButton>(legacyJson)
-        assertEquals(120f, decoded.widthDp, 0.01f)
-        assertEquals(60f, decoded.heightDp, 0.01f)
+        assertEquals(277f, decoded.widthPx, 0.01f)
+        assertEquals(138f, decoded.heightPx, 0.01f)
     }
 
     @Test
-    fun `legacy JSON with ButtonSize SIZE_1X2 deserializes to 60x120 dp`() {
+    fun `legacy JSON with ButtonSize SIZE_1X2 deserializes to 138x277 px`() {
         val legacyJson =
             """
             {
@@ -86,12 +142,12 @@ class PadButtonSerializationTest {
             """.trimIndent()
 
         val decoded = json.decodeFromString<PadButton>(legacyJson)
-        assertEquals(60f, decoded.widthDp, 0.01f)
-        assertEquals(120f, decoded.heightDp, 0.01f)
+        assertEquals(138f, decoded.widthPx, 0.01f)
+        assertEquals(277f, decoded.heightPx, 0.01f)
     }
 
     @Test
-    fun `legacy JSON with ButtonSize SIZE_2X2 deserializes to 120x120 dp`() {
+    fun `legacy JSON with ButtonSize SIZE_2X2 deserializes to 277x277 px`() {
         val legacyJson =
             """
             {
@@ -109,12 +165,12 @@ class PadButtonSerializationTest {
             """.trimIndent()
 
         val decoded = json.decodeFromString<PadButton>(legacyJson)
-        assertEquals(120f, decoded.widthDp, 0.01f)
-        assertEquals(120f, decoded.heightDp, 0.01f)
+        assertEquals(277f, decoded.widthPx, 0.01f)
+        assertEquals(277f, decoded.heightPx, 0.01f)
     }
 
     @Test
-    fun `legacy TrackpointMove action migrates size to widthDp and heightDp`() {
+    fun `legacy TrackpointMove action migrates size to widthPx heightPx and CIRCLE shape`() {
         val trackpointSmallJson =
             """
             {
@@ -122,6 +178,7 @@ class PadButtonSerializationTest {
                 "posX": 0.5,
                 "posY": 0.5,
                 "label": "TP Small",
+                "buttonShape": "SQUARE",
                 "action": {
                     "type": "trackpoint",
                     "size": "SMALL"
@@ -130,8 +187,28 @@ class PadButtonSerializationTest {
             """.trimIndent()
 
         val decodedSmall = json.decodeFromString<PadButton>(trackpointSmallJson)
-        assertEquals(90f, decodedSmall.widthDp, 0.01f)
-        assertEquals(90f, decodedSmall.heightDp, 0.01f)
+        assertEquals(208f, decodedSmall.widthPx, 0.01f)
+        assertEquals(208f, decodedSmall.heightPx, 0.01f)
+        assertEquals(ButtonShape.CIRCLE, decodedSmall.buttonShape)
+
+        val trackpointMediumJson =
+            """
+            {
+                "id": "btn-trackpoint-medium",
+                "posX": 0.5,
+                "posY": 0.5,
+                "label": "TP Medium",
+                "action": {
+                    "type": "trackpoint",
+                    "size": "MEDIUM"
+                }
+            }
+            """.trimIndent()
+
+        val decodedMedium = json.decodeFromString<PadButton>(trackpointMediumJson)
+        assertEquals(277f, decodedMedium.widthPx, 0.01f)
+        assertEquals(277f, decodedMedium.heightPx, 0.01f)
+        assertEquals(ButtonShape.CIRCLE, decodedMedium.buttonShape)
 
         val trackpointLargeJson =
             """
@@ -148,12 +225,13 @@ class PadButtonSerializationTest {
             """.trimIndent()
 
         val decodedLarge = json.decodeFromString<PadButton>(trackpointLargeJson)
-        assertEquals(180f, decodedLarge.widthDp, 0.01f)
-        assertEquals(180f, decodedLarge.heightDp, 0.01f)
+        assertEquals(415f, decodedLarge.widthPx, 0.01f)
+        assertEquals(415f, decodedLarge.heightPx, 0.01f)
+        assertEquals(ButtonShape.CIRCLE, decodedLarge.buttonShape)
     }
 
     @Test
-    fun `legacy JSON without buttonSize or dimensions defaults to 60x60 dp`() {
+    fun `legacy JSON without buttonSize or dimensions defaults to 138x138 px`() {
         val legacyJson =
             """
             {
@@ -170,32 +248,49 @@ class PadButtonSerializationTest {
             """.trimIndent()
 
         val decoded = json.decodeFromString<PadButton>(legacyJson)
-        assertEquals(MP_BUTTON_BASE_UNIT_DP, decoded.widthDp, 0.01f)
-        assertEquals(MP_BUTTON_BASE_UNIT_DP, decoded.heightDp, 0.01f)
+        assertEquals(138f, decoded.widthPx, 0.01f)
+        assertEquals(138f, decoded.heightPx, 0.01f)
     }
 
     @Test
-    fun `dimensions below minimum or negative are clamped to MP_BUTTON_MIN_SIZE_DP`() {
-        val jsonStr =
+    fun `dimensions below floor or negative are clamped to MP_BUTTON_SERIALIZER_FLOOR_PX`() {
+        val modernJsonStr =
             """
             {
-                "id": "btn-too-small",
-                "label": "Small",
+                "id": "btn-too-small-px",
+                "label": "Small Px",
                 "posX": 0.5,
                 "posY": 0.5,
                 "action": { "type": "keyboard_key", "keycode": 30, "label": "A" },
-                "widthDp": 10.0,
+                "widthPx": 8.0,
+                "heightPx": -50.0
+            }
+            """.trimIndent()
+
+        val decodedModern = json.decodeFromString<PadButton>(modernJsonStr)
+        assertEquals(MP_BUTTON_SERIALIZER_FLOOR_PX, decodedModern.widthPx, 0.001f)
+        assertEquals(MP_BUTTON_SERIALIZER_FLOOR_PX, decodedModern.heightPx, 0.001f)
+
+        val legacyJsonStr =
+            """
+            {
+                "id": "btn-too-small-dp",
+                "label": "Small Dp",
+                "posX": 0.5,
+                "posY": 0.5,
+                "action": { "type": "keyboard_key", "keycode": 30, "label": "A" },
+                "widthDp": 2.0,
                 "heightDp": -50.0
             }
             """.trimIndent()
 
-        val decoded = json.decodeFromString<PadButton>(jsonStr)
-        assertEquals(MP_BUTTON_MIN_SIZE_DP, decoded.widthDp, 0.001f)
-        assertEquals(MP_BUTTON_MIN_SIZE_DP, decoded.heightDp, 0.001f)
+        val decodedLegacy = json.decodeFromString<PadButton>(legacyJsonStr)
+        assertEquals(MP_BUTTON_SERIALIZER_FLOOR_PX, decodedLegacy.widthPx, 0.001f)
+        assertEquals(MP_BUTTON_SERIALIZER_FLOOR_PX, decodedLegacy.heightPx, 0.001f)
     }
 
     @Test
-    fun `partial dimensions deserialize with missing dimension falling back to base unit`() {
+    fun `partial dimensions deserialize with missing dimension falling back to legacy base unit`() {
         val jsonStr =
             """
             {
@@ -209,12 +304,12 @@ class PadButtonSerializationTest {
             """.trimIndent()
 
         val decoded = json.decodeFromString<PadButton>(jsonStr)
-        assertEquals(90f, decoded.widthDp, 0.001f)
-        assertEquals(MP_BUTTON_BASE_UNIT_DP, decoded.heightDp, 0.001f)
+        assertEquals(208f, decoded.widthPx, 0.001f)
+        assertEquals(138f, decoded.heightPx, 0.001f)
     }
 
     @Test
-    fun `trackpoint button normalizes non-square dimensions to equal max size`() {
+    fun `trackpoint button normalizes non-square dimensions to equal max size and CIRCLE shape`() {
         val jsonStr =
             """
             {
@@ -222,22 +317,24 @@ class PadButtonSerializationTest {
                 "label": "TP",
                 "posX": 0.5,
                 "posY": 0.5,
+                "buttonShape": "SQUARE",
                 "action": {
                     "type": "trackpoint",
                     "mode": "virtual_touch"
                 },
-                "widthDp": 100.0,
-                "heightDp": 150.0
+                "widthPx": 200.0,
+                "heightPx": 300.0
             }
             """.trimIndent()
 
         val decoded = json.decodeFromString<PadButton>(jsonStr)
-        assertEquals(150f, decoded.widthDp, 0.001f)
-        assertEquals(150f, decoded.heightDp, 0.001f)
+        assertEquals(300f, decoded.widthPx, 0.001f)
+        assertEquals(300f, decoded.heightPx, 0.001f)
+        assertEquals(ButtonShape.CIRCLE, decoded.buttonShape)
     }
 
     @Test
-    fun `dimensions with Infinity or NaN deserialize clamped to base unit`() {
+    fun `dimensions with Infinity or NaN deserialize to legacy fallback 138 px`() {
         val specialJson =
             Json {
                 ignoreUnknownKeys = true
@@ -250,14 +347,14 @@ class PadButtonSerializationTest {
                 label = "Inf",
                 posX = 0.5f,
                 posY = 0.5f,
-                widthDp = Float.POSITIVE_INFINITY,
-                heightDp = Float.NEGATIVE_INFINITY,
+                widthPx = Float.POSITIVE_INFINITY,
+                heightPx = Float.NEGATIVE_INFINITY,
                 action = PadAction.KeyboardKey(30, "A"),
             )
         val encoded = specialJson.encodeToString(button)
         val decoded = specialJson.decodeFromString<PadButton>(encoded)
-        assertEquals(MP_BUTTON_BASE_UNIT_DP, decoded.widthDp, 0.001f)
-        assertEquals(MP_BUTTON_BASE_UNIT_DP, decoded.heightDp, 0.001f)
+        assertEquals(138f, decoded.widthPx, 0.001f)
+        assertEquals(138f, decoded.heightPx, 0.001f)
 
         val nanButton =
             PadButton(
@@ -265,61 +362,74 @@ class PadButtonSerializationTest {
                 label = "NaN",
                 posX = 0.5f,
                 posY = 0.5f,
-                widthDp = Float.NaN,
-                heightDp = Float.NaN,
+                widthPx = Float.NaN,
+                heightPx = Float.NaN,
                 action = PadAction.KeyboardKey(30, "A"),
             )
         val nanEncoded = specialJson.encodeToString(nanButton)
         val nanDecoded = specialJson.decodeFromString<PadButton>(nanEncoded)
-        assertEquals(MP_BUTTON_BASE_UNIT_DP, nanDecoded.widthDp, 0.001f)
-        assertEquals(MP_BUTTON_BASE_UNIT_DP, nanDecoded.heightDp, 0.001f)
+        assertEquals(138f, nanDecoded.widthPx, 0.001f)
+        assertEquals(138f, nanDecoded.heightPx, 0.001f)
     }
 
     @Test
-    fun `withActionSizing for ScrollWheel enforces minimum height of 120 dp`() {
+    fun `withActionSizing for ScrollWheel enforces canvas largeControlMinSizePx on Thor and RP Duo`() {
         val button =
             PadButton(
                 id = "btn-sw",
                 label = "SW",
                 posX = 0.5f,
                 posY = 0.5f,
-                widthDp = 60f,
-                heightDp = 60f,
+                widthPx = 136f,
+                heightPx = 136f,
                 action = PadAction.KeyboardKey(30, "A"),
             )
-        val updated = button.withActionSizing(PadAction.ScrollWheel)
-        assertEquals(60f, updated.widthDp, 0.001f)
-        assertEquals(MP_SCROLL_WHEEL_MIN_HEIGHT_DP, updated.heightDp, 0.001f)
+        val updatedThor = button.withActionSizing(PadAction.ScrollWheel, THOR_BOTTOM_CANVAS_SPEC)
+        assertEquals(136f, updatedThor.widthPx, 0.001f)
+        assertEquals(MP_THOR_LARGE_CONTROL_MIN_SIZE_PX, updatedThor.heightPx, 0.001f)
 
-        // Preserves taller height if already >= 120 dp
-        val tallButton = button.copy(heightDp = 180f)
-        val updatedTall = tallButton.withActionSizing(PadAction.ScrollWheel)
-        assertEquals(180f, updatedTall.heightDp, 0.001f)
+        val duoSpec = LayoutCanvasSpec(1280, 960)
+        val duoButton = button.copy(widthPx = 120f, heightPx = 120f)
+        val updatedDuo = duoButton.withActionSizing(PadAction.ScrollWheel, duoSpec)
+        assertEquals(120f, updatedDuo.widthPx, 0.001f)
+        assertEquals(240f, updatedDuo.heightPx, 0.001f)
+
+        // Preserves taller height if already >= largeControlMinSizePx
+        val tallButton = button.copy(heightPx = 400f)
+        val updatedTall = tallButton.withActionSizing(PadAction.ScrollWheel, THOR_BOTTOM_CANVAS_SPEC)
+        assertEquals(400f, updatedTall.heightPx, 0.001f)
     }
 
     @Test
-    fun `withActionSizing for TrackpointMove enforces 1 to 1 aspect ratio, CIRCLE shape, and minimum 120 dp`() {
+    fun `withActionSizing for TrackpointMove enforces 1 to 1 aspect ratio CIRCLE shape and canvas largeControlMinSizePx`() {
         val button =
             PadButton(
                 id = "btn-tp",
                 label = "TP",
                 posX = 0.5f,
                 posY = 0.5f,
-                widthDp = 60f,
-                heightDp = 80f,
+                widthPx = 136f,
+                heightPx = 180f,
                 buttonShape = ButtonShape.SQUARE,
                 action = PadAction.KeyboardKey(30, "A"),
             )
-        val updated = button.withActionSizing(PadAction.TrackpointMove())
-        assertEquals(MP_TRACKPOINT_DEFAULT_SIZE_DP, updated.widthDp, 0.001f)
-        assertEquals(MP_TRACKPOINT_DEFAULT_SIZE_DP, updated.heightDp, 0.001f)
-        assertEquals(ButtonShape.CIRCLE, updated.buttonShape)
+        val updatedThor = button.withActionSizing(PadAction.TrackpointMove(), THOR_BOTTOM_CANVAS_SPEC)
+        assertEquals(MP_THOR_LARGE_CONTROL_MIN_SIZE_PX, updatedThor.widthPx, 0.001f)
+        assertEquals(MP_THOR_LARGE_CONTROL_MIN_SIZE_PX, updatedThor.heightPx, 0.001f)
+        assertEquals(ButtonShape.CIRCLE, updatedThor.buttonShape)
 
-        // Expands both dimensions to the larger one if > 120 dp
-        val largeButton = button.copy(widthDp = 160f, heightDp = 100f)
-        val updatedLarge = largeButton.withActionSizing(PadAction.TrackpointMove())
-        assertEquals(160f, updatedLarge.widthDp, 0.001f)
-        assertEquals(160f, updatedLarge.heightDp, 0.001f)
+        val duoSpec = LayoutCanvasSpec(1280, 960)
+        val duoButton = button.copy(widthPx = 120f, heightPx = 160f)
+        val updatedDuo = duoButton.withActionSizing(PadAction.TrackpointMove(), duoSpec)
+        assertEquals(240f, updatedDuo.widthPx, 0.001f)
+        assertEquals(240f, updatedDuo.heightPx, 0.001f)
+        assertEquals(ButtonShape.CIRCLE, updatedDuo.buttonShape)
+
+        // Expands both dimensions to the larger one if > largeControlMinSizePx
+        val largeButton = button.copy(widthPx = 360f, heightPx = 200f)
+        val updatedLarge = largeButton.withActionSizing(PadAction.TrackpointMove(), THOR_BOTTOM_CANVAS_SPEC)
+        assertEquals(360f, updatedLarge.widthPx, 0.001f)
+        assertEquals(360f, updatedLarge.heightPx, 0.001f)
     }
 
     @Test
@@ -330,14 +440,14 @@ class PadButtonSerializationTest {
                 label = "K",
                 posX = 0.5f,
                 posY = 0.5f,
-                widthDp = 75f,
-                heightDp = 95f,
+                widthPx = 175f,
+                heightPx = 215f,
                 buttonShape = ButtonShape.ICON_ONLY,
                 action = PadAction.ScrollWheel,
             )
         val updated = button.withActionSizing(PadAction.KeyboardKey(30, "A"))
-        assertEquals(75f, updated.widthDp, 0.001f)
-        assertEquals(95f, updated.heightDp, 0.001f)
+        assertEquals(175f, updated.widthPx, 0.001f)
+        assertEquals(215f, updated.heightPx, 0.001f)
         assertEquals(ButtonShape.ICON_ONLY, updated.buttonShape)
     }
 
