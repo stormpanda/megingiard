@@ -36,6 +36,7 @@ import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertThrows
@@ -851,5 +852,60 @@ class ConfigExportImportStructureTest {
             assertEquals(60f, importedRpDuo.buttons.single().widthPx, 0.001f)
             assertEquals(60f, importedRpDuo.buttons.single().heightPx, 0.001f)
             assertEquals(THOR_BOTTOM_CANVAS_SPEC, importedLegacy.designCanvas)
+        }
+
+    @Test
+    fun testApplyProfileImportWithoutMediaClearsMissingHasTransparencyMask() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            File(context.filesDir, CutoutMaskFileStore.MASKS_DIR).deleteRecursively()
+            try {
+                val cutout =
+                    ScreenCutout(
+                        id = "cutout-no-media-src",
+                        name = "Masked HUD",
+                        srcX = 0.1f,
+                        srcY = 0.1f,
+                        srcWidth = 0.3f,
+                        srcHeight = 0.3f,
+                        destX = 0.1f,
+                        destY = 0.1f,
+                        destWidth = 0.3f,
+                        destHeight = 0.3f,
+                        hasTransparencyMask = true,
+                    )
+                val layout = PadLayout(id = "layout-no-media-src", name = "Main", mirrorCutouts = listOf(cutout))
+                val profileName = "ProfileImportedWithoutMaskMedia"
+                val export =
+                    MegingiardExport(
+                        schemaVersion = SCHEMA_VERSION,
+                        metadata = testMetadata,
+                        checksum = "dummy",
+                        settings = emptyMap(),
+                        profiles =
+                            listOf(
+                                PadProfile(
+                                    id = "p-no-media-src",
+                                    name = profileName,
+                                    layouts = listOf(layout),
+                                ),
+                            ),
+                    )
+
+                ConfigManager.applyProfileImport(context, export, emptyMap())
+
+                val importedProfile = MacroPadState.profiles.value.first { it.name == profileName }
+                val importedCutout =
+                    importedProfile.layouts
+                        .single()
+                        .mirrorCutouts
+                        .single()
+                assertFalse(
+                    "hasTransparencyMask must be cleared when .mgrd was exported without media",
+                    importedCutout.hasTransparencyMask,
+                )
+            } finally {
+                File(context.filesDir, CutoutMaskFileStore.MASKS_DIR).deleteRecursively()
+            }
         }
 }

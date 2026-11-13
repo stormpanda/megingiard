@@ -33,8 +33,8 @@ class PServerBootstrapperTest {
 
         // 3. Mirror DEX copy and permission setup
         assertTrue(
-            "Must unlink existing read-only DEX before copying",
-            script.contains("rm -f /data/local/tmp/megingiard_mirror.dex"),
+            "Must unlink existing binary and read-only DEX before copying",
+            script.contains("rm -f /data/local/tmp/megingiard_privd /data/local/tmp/megingiard_mirror.dex"),
         )
         assertTrue(
             "Must copy staged DEX when valid",
@@ -84,10 +84,21 @@ class PServerBootstrapperTest {
                 keyHex = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
             )
 
-        // Must not contain DEX copy commands
+        // Must unconditionally unlink stale remote DEX and omit DEX copy / --dexfile flag
+        assertTrue(
+            "Must still unlink stale remote DEX when DEX verification fails",
+            script.contains("rm -f /data/local/tmp/megingiard_privd_debug /data/local/tmp/megingiard_mirror_debug.dex"),
+        )
         assertFalse("Must not copy DEX when invalid", script.contains("cp /cache/privd_dex"))
+        assertFalse("Must not pass --dexfile when DEX is absent or invalid", script.contains("--dexfile"))
         assertTrue("Must kill debug process name", script.contains("kill -9 \$(pidof megingiard_privd_debug 2>/dev/null)"))
         assertTrue("Must provision with debug port", script.contains("--port 51244"))
+        assertTrue(
+            "Must spawn input-only daemon without --dexfile",
+            script.contains(
+                "/data/local/tmp/megingiard_privd_debug --keyfile /data/local/tmp/megingiard_privd_debug.key --port 51244 </dev/null >/dev/null 2>&1 &",
+            ),
+        )
         assertTrue("Must echo completion marker", script.contains("echo \"MGRD_SPAWN_OK\""))
     }
 }

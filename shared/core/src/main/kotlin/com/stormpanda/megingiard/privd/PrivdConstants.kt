@@ -9,7 +9,7 @@ object PrivdConstants {
      * `megingiard_mirror.dex` runtime payload. Incrementing this value triggers automatic
      * binary/DEX re-push and reconnection across app upgrades and downgrades.
      */
-    const val PRIVD_VERSION = 20
+    const val PRIVD_VERSION = 21
 
     const val DAEMON_BASE_NAME = "megingiard_privd"
     const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"

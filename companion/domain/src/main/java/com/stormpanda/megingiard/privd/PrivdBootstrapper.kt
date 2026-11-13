@@ -49,6 +49,11 @@ private const val REMOTE_FILE_MODE = UNIX_FILE_TYPE_REGULAR + UNIX_MODE_755
 private const val MS_PER_SECOND = 1_000L
 private const val UINT_MASK = 0xffffffffL
 
+private data class DaemonPushResult(
+    val daemonOk: Boolean,
+    val hasValidDex: Boolean,
+)
+
 /**
  * Stages of the on-device ADB Wireless-Debugging bootstrap flow.
  * The UI maps each stage to a localized progress label.
@@ -200,12 +205,12 @@ object PrivdBootstrapper {
         _stage.value = BootstrapStage.PUSHING_BINARY
         PrivdClient.disconnect()
         stopExistingDaemon(context, mgr)
-        val pushOk =
+        val pushResult =
             runCatching { pushDaemon(context, mgr) }.getOrElse { e ->
                 AppLog.w(TAG, "pushDaemon() threw: $e")
-                false
+                DaemonPushResult(daemonOk = false, hasValidDex = false)
             }
-        if (!pushOk) {
+        if (!pushResult.daemonOk) {
             PrivdManager.reportBootstrapFailure(PrivdError.BOOTSTRAP_PUSH_FAILED)
             disconnectQuietly(mgr)
             _stage.value = BootstrapStage.IDLE
@@ -245,7 +250,7 @@ object PrivdBootstrapper {
         // Spawn
         _stage.value = BootstrapStage.SPAWNING_DAEMON
         val spawnOk =
-            runCatching { spawnDaemon(context, mgr) }.getOrElse { e ->
+            runCatching { spawnDaemon(context, mgr, hasValidDex = pushResult.hasValidDex) }.getOrElse { e ->
                 AppLog.w(TAG, "spawnDaemon() threw: $e")
                 false
             }
@@ -392,12 +397,12 @@ object PrivdBootstrapper {
     private fun pushDaemon(
         context: Context,
         mgr: PrivdAdbConnectionManager,
-    ): Boolean {
+    ): DaemonPushResult {
         val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
         val binaryBytes = context.assets.open(PrivdConstants.DAEMON_ASSET_NAME).use { it.readBytes() }
         if (!BinaryIntegrity.verify(PrivdConstants.DAEMON_ASSET_NAME, binaryBytes)) {
             AppLog.e(TAG, "Refusing to push ${PrivdConstants.DAEMON_ASSET_NAME} — integrity check failed")
-            return false
+            return DaemonPushResult(daemonOk = false, hasValidDex = false)
         }
         val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
         AppLog.d(TAG, "push: ${binaryBytes.size} bytes -> $remotePath")
@@ -406,16 +411,21 @@ object PrivdBootstrapper {
                 syncSendFile(s, binaryBytes, remotePath, REMOTE_FILE_MODE) &&
                     verifyRemoteSize(s, remotePath, binaryBytes.size)
             } ?: false
-        if (!daemonOk) return false
+        if (!daemonOk) return DaemonPushResult(daemonOk = false, hasValidDex = false)
 
         // Also push the privileged-mirror DEX (used by Privileged Mode mirror).
-        // The DEX is harmless if Privileged Mirror is never enabled, so we always
-        // push it as part of the bootstrap to avoid a separate setup flow.
-        val dexBytes = context.assets.open(PrivdConstants.MIRROR_DEX_ASSET_NAME).use { it.readBytes() }
+        // If verification or push fails, stopExistingDaemon already unlinked any stale remote DEX
+        // and spawnDaemon omits --dexfile so the daemon runs in input-only degraded mode.
+        val dexBytes =
+            try {
+                context.assets.open(PrivdConstants.MIRROR_DEX_ASSET_NAME).use { it.readBytes() }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Mirror DEX asset missing (${e.message}) — privileged mirror will be unavailable")
+                return DaemonPushResult(daemonOk = true, hasValidDex = false)
+            }
         if (!BinaryIntegrity.verify(PrivdConstants.MIRROR_DEX_ASSET_NAME, dexBytes)) {
             AppLog.e(TAG, "Refusing to push ${PrivdConstants.MIRROR_DEX_ASSET_NAME} — integrity check failed")
-            // Daemon push already succeeded; treat as DEX failure (non-fatal below).
-            return true
+            return DaemonPushResult(daemonOk = true, hasValidDex = false)
         }
         val dexRemotePath = PrivdConstants.getMirrorDexRemotePath(isDebug)
         AppLog.d(TAG, "push: ${dexBytes.size} bytes -> $dexRemotePath")
@@ -427,8 +437,7 @@ object PrivdBootstrapper {
         if (!dexOk) {
             AppLog.w(TAG, "mirror DEX push failed — privileged mirror will be unavailable until next bootstrap")
         }
-        // Daemon push is the gating step; DEX failure is non-fatal.
-        return true
+        return DaemonPushResult(daemonOk = true, hasValidDex = dexOk)
     }
 
     private fun syncSendFile(
@@ -570,16 +579,18 @@ object PrivdBootstrapper {
     private fun spawnDaemon(
         context: Context,
         mgr: PrivdAdbConnectionManager,
+        hasValidDex: Boolean,
     ): Boolean {
         val isDebug = PrivdConstants.isDebugPackageName(context.packageName)
         val remotePath = PrivdConstants.getDaemonRemotePath(isDebug)
         val dexPath = PrivdConstants.getMirrorDexRemotePath(isDebug)
         val stateFilePath = PrivdConstants.getStateKeyFilePath(isDebug)
         val portStart = PrivdConstants.getPortStart(isDebug)
+        val dexArg = if (hasValidDex) " --dexfile $dexPath" else ""
         // Run the daemon in the foreground. Since the daemon forks inside
         // detach_from_shell(), the parent exits immediately after writing the
         // token, which cleanly closes the shell stdout pipe without any race.
-        val cmd = "shell:$remotePath --keyfile $stateFilePath --dexfile $dexPath --port $portStart"
+        val cmd = "shell:$remotePath --keyfile $stateFilePath$dexArg --port $portStart"
         AppLog.d(TAG, "spawn cmd: $cmd")
         val stream = mgr.openStream(cmd) ?: return false
         return stream.use { s ->

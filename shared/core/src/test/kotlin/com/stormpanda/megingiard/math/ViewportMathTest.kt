@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.math
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ViewportMathTest {
@@ -145,5 +146,26 @@ class ViewportMathTest {
         assertEquals(1f, zeroAll.scale, 0.0001f)
         assertEquals(1f, zeroAll.viewportWidthPx, 0.001f)
         assertEquals(1f, zeroAll.viewportHeightPx, 0.001f)
+    }
+
+    @Test
+    fun `calculateDesignViewport and scale helpers guard NaN and Infinity without propagating non-finite floats`() {
+        val nanHost = ViewportMath.calculateDesignViewport(Float.NaN, 960f, 1240f, 1080f)
+        assertTrue(nanHost.scale.isFinite())
+        assertTrue(nanHost.viewportWidthPx.isFinite() && nanHost.viewportWidthPx > 0f)
+        assertTrue(nanHost.viewportHeightPx.isFinite() && nanHost.viewportHeightPx > 0f)
+        assertEquals(nanHost.leftPx, nanHost.normToScreenX(Float.NaN), 0.0001f)
+        assertEquals(0f, nanHost.screenToNormX(Float.POSITIVE_INFINITY), 0.0001f)
+
+        val infDesign = ViewportMath.calculateDesignViewport(1280f, 960f, Float.POSITIVE_INFINITY, 1080f)
+        assertTrue(infDesign.scale.isFinite())
+        assertEquals(1280f, infDesign.viewportWidthPx, 0.001f)
+        assertEquals(960f, infDesign.viewportHeightPx, 0.001f)
+
+        assertEquals(1f, ViewportMath.calculateAspectFitScale(Float.NaN, 1080f, 1920f, 1080f), 0.0001f)
+        assertEquals(1f, ViewportMath.calculateAspectFillScale(1920f, Float.POSITIVE_INFINITY, 1920f, 1080f), 0.0001f)
+        val (maxTx, maxTy) = ViewportMath.getMaxOffsets(1920f, 1080f, 1920f, 1080f, Float.NaN)
+        assertEquals(0f, maxTx, 0.0001f)
+        assertEquals(0f, maxTy, 0.0001f)
     }
 }

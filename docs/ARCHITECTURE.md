@@ -52,7 +52,7 @@ Megingiard is structured as a **Feature-First Modular Architecture** split acros
    - **`:shared:catalog`** — Installed app index, ROM file scanning, system definitions (`InstalledAppsManager`, `RomManager`, `DisplayDetector`, `RomLauncherRegistry`).
    - **`:shared:media`** — External artwork fetchers, HTTP clients, and caching layers (`SteamGridDbClient`).
    - **`:shared:session`** — Active game detection engines (`EmulatorDetectionFunnel`, `PcEmulatorDetector`, `RetroArchDetector`, `Pcsx2AndroidDetector`, `YuzuDetector`, `PpssppDetector`).
-   - **`:shared:core`** — Pure JVM/Kotlin data models, serializable schemas, logging facade (`AppLog`), constants, and math helpers (`ViewportMath`).
+   - **`:shared:core`** — Pure JVM/Kotlin data models, serializable schemas, device profiles (`KnownDeviceProfiles`), logging facade (`AppLog`), constants, and math helpers (`ViewportMath`, `AlignmentMath`, `TouchSensorMath`).
 
 4. **Auxiliary Standalone Modules**
    - **`:mirrorserver`** — Standalone shell-UID DEX executable loaded via `/system/bin/app_process` for un-throttled privileged display mirroring.
@@ -82,7 +82,7 @@ Megingiard runs on dual-screen Android gaming handhelds (such as the AYN Thor an
 
 ```
 Primary Display (DEFAULT_DISPLAY) — top screen, game display & deep configuration overlays
-  ├─ [running games / other apps — captured by MediaProjection]
+  ├─ [running games / other apps — mirrored via DirectMirrorServer]
   └─ PrimaryOverlayManager / PrimaryOverlayActivity (translucent 16:9 widescreen settings, inspectors, crop selector, & tutorials)
 
 Secondary Display (non-default displayId) — bottom screen, interactive deck & tools
@@ -146,7 +146,7 @@ Every socket connection completes mutual HMAC-SHA256 authentication before norma
 
 ### Release Obfuscation
 
-Release builds enable R8 minification and resource shrinking. This is not the primary trust boundary, but it raises the effort required to patch out signature, binary-integrity, or socket-authentication checks. [app/proguard-rules.pro](../app/proguard-rules.pro) preserves manifest components, serialization metadata, and line-number information needed for diagnosis.
+Release builds enable R8 minification and resource shrinking. This is not the primary trust boundary, but it raises the effort required to patch out signature, binary-integrity, or socket-authentication checks. [companion/ui/proguard-rules.pro](../companion/ui/proguard-rules.pro), [companion/domain/proguard-rules.pro](../companion/domain/proguard-rules.pro), and [gamefocus/ui/proguard-rules.pro](../gamefocus/ui/proguard-rules.pro) preserve manifest components, serialization metadata, and line-number information needed for diagnosis.
 
 ---
 
@@ -155,7 +155,7 @@ Release builds enable R8 minification and resource shrinking. This is not the pr
 | Decision                                                 | Rationale                                                                                                                                                                                                 | Details                                                                                        |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | Embedded mirror in `MainActivity` Compose tree           | Eliminates `Presentation` window Z-order conflicts and enables unified, seamless layering of all overlays, dialogs, and tools in Compose                                                                  | [mirror/FEATURE.md](features/mirror/technical-implementation.md#architecture-capture-pipeline)                  |
-| Privileged mirror direct-to-Surface transport            | Shell-UID DEX process (`megingiard_mirror.dex`) creates virtual display (`SurfaceControl` on SDK 33, `DisplayControl` from `services.jar` on SDK 34+) rendering directly into the app's master cutout surface without user consent prompts. | [mirror/FEATURE.md](features/mirror/technical-implementation.md#architecture-privileged-capture-pipeline-fr-m9) |
+| Privileged mirror direct-to-Surface transport            | Shell-UID DEX process (`megingiard_mirror.dex`) creates virtual display (`SurfaceControl.createDisplay` on SDK 33, `DisplayManager.createVirtualDisplay` with `VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR` on SDK 34+) rendering directly into the app's master cutout surface without user consent prompts. | [mirror/FEATURE.md](features/mirror/technical-implementation.md#architecture-privileged-capture-pipeline-fr-m9) |
 | `WindowOverlayLifecycleOwner` (synthetic)                | Bridges Jetpack Compose lifecycle and ViewModel requirements into WindowManager-backed primary screen overlays                                                                                            | [mirror/FEATURE.md](features/mirror/technical-implementation.md#synthetic-lifecycle-owner-for-primary-screen-overlays) |
 | System Service daemon (`megingiard_privd`)               | Mandatory on-device daemon running under shell UID via hardware root bridge or ADB Wireless Debugging; unifies low-latency multi-touch (dynamically discovered primary touchscreen), uinput mouse/keyboard, and loopback screenshot streaming over TCP. | [privileged-mode/FEATURE.md](features/privileged-mode/FEATURE.md)                              |
 | Inline gamepad and touch recording overlays              | Records macro-ready gamepad & touch input from Compose overlays in the macro editor and forwards them live through injectors                                                                              | [macropad/FEATURE.md](features/macropad/requirements-macros-layouts.md#fr-p7-macros)                               |

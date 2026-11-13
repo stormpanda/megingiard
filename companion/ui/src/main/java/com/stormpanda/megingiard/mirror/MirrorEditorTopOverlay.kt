@@ -1,43 +1,22 @@
 package com.stormpanda.megingiard.mirror
 
-import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -54,23 +33,18 @@ import androidx.compose.material.icons.rounded.FilterCenterFocus
 import androidx.compose.material.icons.rounded.Flip
 import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Save
-import androidx.compose.material.icons.rounded.UnfoldLess
-import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,35 +52,20 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -123,34 +82,36 @@ import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalFirstContentRequester
-import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
-import com.stormpanda.megingiard.ui.handle2DAdjustmentKeyEvent
 import com.stormpanda.megingiard.ui.handleAdjustmentKeyEvent
 import com.stormpanda.megingiard.ui.isBackKey
-import com.stormpanda.megingiard.ui.launchDirectionalRepeat
-import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
-import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "MirrorEditorTopOverlay"
 
-private val METO_TEXT_SIZE_PILL = 9.5.sp
 private val METO_PILL_CORNER = 12.dp
 private val METO_PILL_SHAPE = RoundedCornerShape(METO_PILL_CORNER)
-private val METO_PILL_PADDING_H = 7.dp
-private val METO_PILL_PADDING_V = 2.dp
+private val METO_CAPSULE_BORDER_ADJUSTING = 1.5.dp
+private val METO_CAPSULE_BORDER_DEFAULT = 1.dp
+private const val METO_CAPSULE_BG_ALPHA = 0.15f
+private val METO_CAPSULE_PADDING_H = 4.dp
+private val METO_CAPSULE_PADDING_V = 2.dp
+private val METO_CAROUSEL_READOUT_PADDING_H = 4.dp
 
 private const val METO_EXIT_PROMPT_DISMISS_DELAY_MS = 100L
+private const val METO_SAVE_EXIT_SPLIT_DURATION_MS = 180
+private const val METO_SPLIT_VISIBLE_EPSILON = 0.001f
+private const val METO_SAVE_CARD_UNSAVED_BG_ALPHA = 0.20f
+private const val METO_DISCARD_CARD_BG_ALPHA = 0.15f
+private const val METO_DEFAULT_NEW_CROP_OFFSET = 0.25f
+private const val METO_DEFAULT_NEW_CROP_SIZE = 0.5f
+
 private val METO_SCROLL_EXTRA_PADDING = 0.dp
 private val METO_TOAST_TOP_PADDING = 16.dp
 private val METO_CAROUSEL_BUTTON_SIZE = 16.dp
@@ -182,7 +143,6 @@ fun MirrorEditorTopOverlay(
     AppLog.d(TAG, "MirrorEditorTopOverlay: composition")
     val colors = LocalAppColors.current
     val context = LocalContext.current
-    val density = LocalDensity.current
     val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
     val layout = activeLayout ?: return
 
@@ -267,6 +227,25 @@ fun MirrorEditorTopOverlay(
     val designCanvas = layout.effectiveDesignCanvas
     val secScreenW = designCanvas.widthPx.toFloat()
     val secScreenH = designCanvas.heightPx.toFloat()
+    val currentHostViewport =
+        remember(hostSecondaryCanvas, secScreenW, secScreenH) {
+            val hostSpec = hostSecondaryCanvas
+            if (hostSpec != null && hostSpec.widthPx > 0 && hostSpec.heightPx > 0) {
+                ViewportMath.calculateDesignViewport(
+                    hostWidthPx = hostSpec.widthPx.toFloat(),
+                    hostHeightPx = hostSpec.heightPx.toFloat(),
+                    designWidthPx = secScreenW,
+                    designHeightPx = secScreenH,
+                )
+            } else {
+                ViewportMath.calculateDesignViewport(
+                    hostWidthPx = secScreenW,
+                    hostHeightPx = secScreenH,
+                    designWidthPx = secScreenW,
+                    designHeightPx = secScreenH,
+                )
+            }
+        }
 
     var topHToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
     var topVToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
@@ -343,8 +322,10 @@ fun MirrorEditorTopOverlay(
                     0
                 }
             if (stepDelta == 0) return@updateCutout null
+            val destDenom = cur.destHeight * designH
+            if (destDenom <= 0f || srcWidth <= 0f) return@updateCutout null
             val isQuarter = (cur.rotation == METO_ROTATION_90 || cur.rotation == METO_ROTATION_270)
-            val rawCutoutRatio = (cur.destWidth * designW) / (cur.destHeight * designH)
+            val rawCutoutRatio = (cur.destWidth * designW) / destDenom
             val cutoutRatio = if (isQuarter && rawCutoutRatio > 0f) (1f / rawCutoutRatio) else rawCutoutRatio
             val normCropRatio = cutoutRatio * (srcHeight / srcWidth)
             val geom =
@@ -385,7 +366,9 @@ fun MirrorEditorTopOverlay(
                 srcHeight = resized.height,
             )
         if (updated.aspectRatioMode == AspectRatioMode.TOP) {
-            val cropRatio = (updated.srcWidth * srcWidth) / (updated.srcHeight * srcHeight)
+            val cropDenom = updated.srcHeight * srcHeight
+            if (cropDenom <= 0f) return@updateCutout updated
+            val cropRatio = (updated.srcWidth * srcWidth) / cropDenom
             val (newDestW, newDestH) =
                 adjustDestSizeToAspectRatio(
                     destX = updated.destX,
@@ -396,6 +379,10 @@ fun MirrorEditorTopOverlay(
                     screenW = designW,
                     screenH = designH,
                     rotation = updated.rotation,
+                    minDestX = hostViewport.minNormX,
+                    maxDestX = hostViewport.maxNormX,
+                    minDestY = hostViewport.minNormY,
+                    maxDestY = hostViewport.maxNormY,
                 )
             val destGeom =
                 clampCutoutResize(
@@ -516,8 +503,10 @@ fun MirrorEditorTopOverlay(
                     0
                 }
             if (stepDelta == 0) return@updateCutout null
+            val cropDenom = cur.srcHeight * srcHeight
+            if (cropDenom <= 0f) return@updateCutout null
             val isQuarter = (cur.rotation == METO_ROTATION_90 || cur.rotation == METO_ROTATION_270)
-            val rawCropRatio = (cur.srcWidth * srcWidth) / (cur.srcHeight * srcHeight)
+            val rawCropRatio = (cur.srcWidth * srcWidth) / cropDenom
             val effectiveCropRatio = if (isQuarter && rawCropRatio > 0f) (1f / rawCropRatio) else rawCropRatio
             val normRatio = effectiveCropRatio * (designH / designW)
             if (normRatio <= 0f) return@updateCutout null
@@ -888,10 +877,10 @@ fun MirrorEditorTopOverlay(
                                             R.string.settings_mirror_cutout_default_name_fmt,
                                             cutouts.size + 1,
                                         ),
-                                    srcX = 0.25f,
-                                    srcY = 0.25f,
-                                    srcWidth = 0.5f,
-                                    srcHeight = 0.5f,
+                                    srcX = METO_DEFAULT_NEW_CROP_OFFSET,
+                                    srcY = METO_DEFAULT_NEW_CROP_OFFSET,
+                                    srcWidth = METO_DEFAULT_NEW_CROP_SIZE,
+                                    srcHeight = METO_DEFAULT_NEW_CROP_SIZE,
                                     destX = slot.destX,
                                     destY = slot.destY,
                                     destWidth = slot.destWidth,
@@ -919,6 +908,7 @@ fun MirrorEditorTopOverlay(
                     srcHeight = srcHeight,
                     secScreenW = secScreenW,
                     secScreenH = secScreenH,
+                    hostViewport = currentHostViewport,
                     onUpdate = { updatedCutout ->
                         val updatedList =
                             cutouts.map {
@@ -974,6 +964,7 @@ fun MirrorEditorTopOverlay(
                     allCutouts = cutouts,
                     secScreenW = secScreenW,
                     secScreenH = secScreenH,
+                    hostViewport = currentHostViewport,
                     onUpdate = { updatedCutout ->
                         val updatedList =
                             cutouts.map {
@@ -1019,17 +1010,25 @@ fun MirrorEditorTopOverlay(
                     hasChanges = hasChanges,
                     saveFocusRequester = saveFocusRequester,
                     onSave = {
+                        val currentIds = currentCutouts.mapTo(HashSet()) { it.id }
+                        val removedIds = savedCutouts.map { it.id }.filter { it !in currentIds }
+                        removedIds.forEach { removedId ->
+                            CutoutMaskManager.deleteMaskAsync(context, removedId)
+                        }
+                        savedCutouts = currentCutouts
+                        MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
                         if (showExitPrompt) {
-                            savedCutouts = currentCutouts
-                            MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
                             onDone()
                         } else {
-                            savedCutouts = currentCutouts
-                            MacroPadState.saveMirrorCutouts(layout.id, currentCutouts)
                             DialogToastManager.show(context.getString(R.string.mirror_editor_saved_toast))
                         }
                     },
                     onDiscard = {
+                        val savedIds = savedCutouts.mapTo(HashSet()) { it.id }
+                        val unsavedAddedIds = currentCutouts.map { it.id }.filter { it !in savedIds }
+                        unsavedAddedIds.forEach { addedId ->
+                            CutoutMaskManager.deleteMaskAsync(context, addedId)
+                        }
                         MacroPadState.updateLayout(layout.copy(mirrorCutouts = savedCutouts))
                         onCancel()
                     },
@@ -1071,11 +1070,16 @@ private fun TargetCutoutCarouselCard(
         }
     }
 
+    val fallbackCutoutName =
+        stringResource(
+            R.string.settings_mirror_cutout_default_name_fmt,
+            if (currentIdx >= 0) currentIdx + 1 else 1,
+        )
     val titleText =
         if (!hasCutouts) {
             stringResource(R.string.mirror_editor_no_cutouts)
         } else {
-            selectedCutout?.name?.ifBlank { "Cutout ${currentIdx + 1}" } ?: "Cutout ${currentIdx + 1}"
+            selectedCutout?.name?.ifBlank { fallbackCutoutName } ?: fallbackCutoutName
         }
 
     val readoutText = if (hasCutouts) "${currentIdx + 1}/${cutouts.size}" else "-"
@@ -1121,8 +1125,8 @@ private fun TargetCutoutCarouselCard(
         modifier = modifier,
     ) { isFocused ->
         val capsuleBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
-        val capsuleBorderWidth = if (isAdjusting) 1.5.dp else 1.dp
-        val capsuleBg = if (isAdjusting) colors.accent.copy(alpha = 0.15f) else colors.surfaceVariant
+        val capsuleBorderWidth = if (isAdjusting) METO_CAPSULE_BORDER_ADJUSTING else METO_CAPSULE_BORDER_DEFAULT
+        val capsuleBg = if (isAdjusting) colors.accent.copy(alpha = METO_CAPSULE_BG_ALPHA) else colors.surfaceVariant
         val arrowTint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary
 
         Row(
@@ -1130,7 +1134,7 @@ private fun TargetCutoutCarouselCard(
                 Modifier
                     .background(capsuleBg, METO_PILL_SHAPE)
                     .border(capsuleBorderWidth, capsuleBorderColor, METO_PILL_SHAPE)
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                    .padding(horizontal = METO_CAPSULE_PADDING_H, vertical = METO_CAPSULE_PADDING_V),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
@@ -1152,10 +1156,10 @@ private fun TargetCutoutCarouselCard(
             Text(
                 text = readoutText,
                 color = if (isAdjusting) colors.accent else colors.onSurface,
-                fontSize = METO_TEXT_SIZE_PILL,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 4.dp),
+                modifier = Modifier.padding(horizontal = METO_CAROUSEL_READOUT_PADDING_H),
             )
 
             Box(
@@ -1184,6 +1188,7 @@ private fun AspectRatioCard(
     srcHeight: Float,
     secScreenW: Float,
     secScreenH: Float,
+    hostViewport: DesignViewport,
     onUpdate: (ScreenCutout) -> Unit,
     modifier: Modifier = Modifier,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
@@ -1210,19 +1215,26 @@ private fun AspectRatioCard(
             )
 
         if (nextMode == AspectRatioMode.TOP) {
-            val cropRatio = (updatedCutout.srcWidth * srcWidth) / (updatedCutout.srcHeight * srcHeight)
-            val (newDestW, newDestH) =
-                adjustDestSizeToAspectRatio(
-                    destX = updatedCutout.destX,
-                    destY = updatedCutout.destY,
-                    destWidth = updatedCutout.destWidth,
-                    destHeight = updatedCutout.destHeight,
-                    cropRatio = cropRatio,
-                    screenW = secScreenW,
-                    screenH = secScreenH,
-                    rotation = updatedCutout.rotation,
-                )
-            updatedCutout = updatedCutout.copy(destWidth = newDestW, destHeight = newDestH)
+            val cropDenom = updatedCutout.srcHeight * srcHeight
+            if (cropDenom > 0f) {
+                val cropRatio = (updatedCutout.srcWidth * srcWidth) / cropDenom
+                val (newDestW, newDestH) =
+                    adjustDestSizeToAspectRatio(
+                        destX = updatedCutout.destX,
+                        destY = updatedCutout.destY,
+                        destWidth = updatedCutout.destWidth,
+                        destHeight = updatedCutout.destHeight,
+                        cropRatio = cropRatio,
+                        screenW = secScreenW,
+                        screenH = secScreenH,
+                        rotation = updatedCutout.rotation,
+                        minDestX = hostViewport.minNormX,
+                        maxDestX = hostViewport.maxNormX,
+                        minDestY = hostViewport.minNormY,
+                        maxDestY = hostViewport.maxNormY,
+                    )
+                updatedCutout = updatedCutout.copy(destWidth = newDestW, destHeight = newDestH)
+            }
         } else if (nextMode == AspectRatioMode.BOTTOM) {
             updatedCutout =
                 adjustSourceCropToAspectRatio(
@@ -1301,6 +1313,7 @@ private fun RotationCard(
     allCutouts: List<ScreenCutout>,
     secScreenW: Float,
     secScreenH: Float,
+    hostViewport: DesignViewport,
     onUpdate: (ScreenCutout) -> Unit,
     modifier: Modifier = Modifier,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
@@ -1321,6 +1334,10 @@ private fun RotationCard(
                 allCutouts = allCutouts,
                 screenW = secScreenW,
                 screenH = secScreenH,
+                minDestX = hostViewport.minNormX,
+                maxDestX = hostViewport.maxNormX,
+                minDestY = hostViewport.minNormY,
+                maxDestY = hostViewport.maxNormY,
             )
         if (rotated != null) {
             onUpdate(rotated)
@@ -1423,7 +1440,12 @@ private fun DeleteCutoutCard(
                 isConfirming = true
             }
         },
-        onFocusChanged = onFocusChanged,
+        onFocusChanged = { focused ->
+            if (!focused) {
+                isConfirming = false
+            }
+            onFocusChanged?.invoke(focused)
+        },
         onCustomKeyEvent = { event ->
             if (isConfirming && isBackKey(event.nativeKeyEvent.keyCode)) {
                 if (event.type == KeyEventType.KeyUp) {
@@ -1551,65 +1573,62 @@ private fun ToolboxSaveExitRow(
         }
     }
 
-    val splitFraction by animateFloatAsState(
-        targetValue = if (showExitPrompt) 1f else 0f,
-        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
-        label = "toolboxSaveExitSplitFraction",
-    )
+    val splitFractionState =
+        animateFloatAsState(
+            targetValue = if (showExitPrompt) 1f else 0f,
+            animationSpec = tween(durationMillis = METO_SAVE_EXIT_SPLIT_DURATION_MS, easing = FastOutSlowInEasing),
+            label = "toolboxSaveExitSplitFraction",
+        )
 
-    val isPromptActive = showExitPrompt || splitFraction > 0.05f
+    var keepDiscardMounted by remember { mutableStateOf(showExitPrompt) }
+    LaunchedEffect(showExitPrompt) {
+        if (showExitPrompt) {
+            keepDiscardMounted = true
+        } else {
+            delay(METO_SAVE_EXIT_SPLIT_DURATION_MS.toLong())
+            keepDiscardMounted = false
+        }
+    }
+
+    val shouldMountDiscard = showExitPrompt || keepDiscardMounted
     val effectiveTitle =
-        if (isPromptActive) {
+        if (shouldMountDiscard) {
             stringResource(R.string.gamepad_action_save)
         } else {
             stringResource(R.string.mirror_editor_save_changes)
         }
 
-    BoxWithConstraints(
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        val totalWidth = maxWidth
-        val targetCardWidth = ((totalWidth - TOOLBOX_ITEM_SPACING) / 2f).coerceAtLeast(0.dp)
-        val currentSpacing = TOOLBOX_ITEM_SPACING * splitFraction
-        val card2VisibleWidth = targetCardWidth * splitFraction
-        val card1VisibleWidth =
-            (
-                totalWidth - (
-                    if (splitFraction > 0.001f) {
-                        card2VisibleWidth + currentSpacing
-                    } else {
-                        0.dp
-                    }
-                )
-            ).coerceAtLeast(0.dp)
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    Layout(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clipToBounds(),
+        content = {
             // Card 1: Save Changes / Save & Exit (Persistent! Never unmounts!)
             ToolboxActionCard(
                 title = effectiveTitle,
                 icon = Icons.Rounded.Save,
-                actionBadge = if (!isPromptActive && !hasChanges) stringResource(R.string.mirror_editor_saved_badge) else null,
+                actionBadge =
+                    if (!shouldMountDiscard && !hasChanges) {
+                        stringResource(R.string.mirror_editor_saved_badge)
+                    } else {
+                        null
+                    },
                 isAccent = true,
-                cardBgColor = if (hasChanges) colors.accent.copy(alpha = 0.20f) else null,
+                cardBgColor = if (hasChanges) colors.accent.copy(alpha = METO_SAVE_CARD_UNSAVED_BG_ALPHA) else null,
                 cardFocusRequester = saveFocusRequester,
                 onFocusChanged = { isSaveFocused = it },
                 onClick = onSave,
-                modifier = Modifier.width(card1VisibleWidth),
             )
 
-            if (splitFraction > 0.001f) {
-                Spacer(modifier = Modifier.width(currentSpacing))
-
+            if (shouldMountDiscard) {
                 Box(
                     modifier =
                         Modifier
-                            .width(card2VisibleWidth)
                             .clipToBounds()
+                            .focusProperties { canFocus = showExitPrompt }
                             .graphicsLayer {
-                                alpha = splitFraction
+                                alpha = splitFractionState.value
                             },
                     contentAlignment = Alignment.CenterStart,
                 ) {
@@ -1617,12 +1636,51 @@ private fun ToolboxSaveExitRow(
                         title = stringResource(R.string.gamepad_action_discard),
                         icon = Icons.Rounded.Close,
                         isDestructive = true,
-                        cardBgColor = colors.error.copy(alpha = 0.15f),
+                        cardBgColor = colors.error.copy(alpha = METO_DISCARD_CARD_BG_ALPHA),
                         onClick = onDiscard,
                         onFocusChanged = { isDiscardFocused = it },
-                        modifier = Modifier.requiredWidth(targetCardWidth),
                     )
                 }
+            }
+        },
+    ) { measurables, constraints ->
+        val fraction = splitFractionState.value.coerceIn(0f, 1f)
+        val totalWidthPx = constraints.maxWidth
+        val spacingPx = TOOLBOX_ITEM_SPACING.roundToPx()
+        val targetCardWidthPx = ((totalWidthPx - spacingPx) / 2).coerceAtLeast(0)
+        val currentSpacingPx = (spacingPx * fraction).roundToInt()
+        val card2VisibleWidthPx =
+            if (measurables.size > 1 && fraction > METO_SPLIT_VISIBLE_EPSILON) {
+                (targetCardWidthPx * fraction).roundToInt().coerceAtLeast(0)
+            } else {
+                0
+            }
+        val card1WidthPx =
+            (
+                totalWidthPx - (
+                    if (card2VisibleWidthPx > 0) {
+                        card2VisibleWidthPx + currentSpacingPx
+                    } else {
+                        0
+                    }
+                )
+            ).coerceAtLeast(0)
+
+        val card1Placeable = measurables[0].measure(Constraints.fixedWidth(card1WidthPx))
+        val card2Placeable =
+            if (measurables.size > 1) {
+                measurables[1].measure(Constraints.fixedWidth(targetCardWidthPx))
+            } else {
+                null
+            }
+        val rowHeight = max(card1Placeable.height, card2Placeable?.height ?: 0)
+        layout(totalWidthPx, rowHeight) {
+            card1Placeable.placeRelative(0, (rowHeight - card1Placeable.height) / 2)
+            if (card2Placeable != null && card2VisibleWidthPx > 0) {
+                card2Placeable.placeRelative(
+                    card1WidthPx + currentSpacingPx,
+                    (rowHeight - card2Placeable.height) / 2,
+                )
             }
         }
     }

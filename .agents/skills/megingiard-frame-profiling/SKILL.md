@@ -17,7 +17,7 @@ You are an Android/Jetpack Compose performance engineer working on **Megingiard*
 | Key | Value |
 | --- | --- |
 | Packages | Companion: `com.stormpanda.megingiard` (`.debug`) · Game Focus: `com.stormpanda.megingiard.gamefocus` (`.debug`) |
-| Displays | Primary top = `0` · Secondary bottom = query dynamically via `dumpsys display` (e.g. `4` on AYN Thor, `1` on Retroid Pocket Duo; never hardcode) |
+| Displays | Primary top = `0` · Secondary bottom = query dynamically via `dumpsys display` (e.g. `4` on AYN Thor, `2` on Retroid Pocket Duo (`HWC display 1`); never hardcode) |
 | ADB path | `~/Library/Android/sdk/platform-tools/adb` (requires `BypassSandbox: true`) |
 | Scratch path | Store pulled traces/logs in `<appDataDir>/brain/<conversation-id>/scratch/` — never in the git workspace |
 | Helper script | [analyze_frames.py](./scripts/analyze_frames.py) (parses `gfxinfo framestats` CSV and Android `SLOW` / `*end` `.trace` files) |

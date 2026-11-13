@@ -59,10 +59,17 @@ object DisplayDetector {
     }
 
     /**
-     * Resolves the logical (rotation-adjusted) full pixel dimensions of [display], or `null`
-     * if valid positive dimensions cannot be determined.
+     * Resolves the logical (rotation-adjusted, `wm size`-aware) full pixel dimensions of [display],
+     * falling back to hardware [Display.Mode] scanout dimensions when logical size is unavailable,
+     * or `null` if positive dimensions cannot be determined.
      */
     fun resolveDisplaySize(display: Display): DisplayPixelSize? {
+        val point = Point()
+        @Suppress("DEPRECATION")
+        display.getRealSize(point)
+        if (point.x > 0 && point.y > 0) {
+            return DisplayPixelSize(widthPx = point.x, heightPx = point.y)
+        }
         val mode = display.mode
         if (mode != null && mode.physicalWidth > 0 && mode.physicalHeight > 0) {
             val swapAxes =
@@ -72,14 +79,7 @@ object DisplayDetector {
             val h = if (swapAxes) mode.physicalWidth else mode.physicalHeight
             return DisplayPixelSize(widthPx = w, heightPx = h)
         }
-        val point = Point()
-        @Suppress("DEPRECATION")
-        display.getRealSize(point)
-        return if (point.x > 0 && point.y > 0) {
-            DisplayPixelSize(widthPx = point.x, heightPx = point.y)
-        } else {
-            null
-        }
+        return null
     }
 
     /**

@@ -2,11 +2,9 @@
 
 > Mandatory rules for AI coding agents unless the human operator explicitly overrides them.
 >
-> This file states every rule compactly and must stay **below 20 KB** so it is loaded in full
-> into every agent session. Rationale and code examples for §7–§16 live in
-> [`docs/agents/CODING_GUIDE.md`](docs/agents/CODING_GUIDE.md) under the **same section
-> numbers** — read the matching section before editing code in that area. Put new long
-> examples there, not here.
+> Must stay **below 20 KB** so every session loads it in full. Rationale and examples for
+> §7–§16 live in [`docs/agents/CODING_GUIDE.md`](docs/agents/CODING_GUIDE.md) under the
+> **same section numbers** — read the matching section before editing code there.
 
 ---
 
@@ -52,10 +50,9 @@
 | `docs/features/touchpad/FEATURE.md` | Virtual Touchpad |
 | `docs/features/updates/FEATURE.md` | Update Check & Release Launcher |
 
-- **Documentation language is English only** — every `*.md` file in this repository.
-- **New features:** create `docs/features/<feature>/FEATURE.md` from the template first, then add a row to the table above.
-- **Size cap:** every `*.md` file < 40 KB so it fits one agent read (`verify.sh`-enforced). Split larger specs into sibling part files listed in a document map at the top of `FEATURE.md`; doc sync (§5) covers all parts.
-- **Doc sync after every change:** see §5.
+- **English only** in every `*.md` file.
+- **New features:** create `docs/features/<feature>/FEATURE.md` from the template first, then add a row above.
+- **Size cap:** every `*.md` < 40 KB (`verify.sh`-enforced). Split larger specs into sibling part files listed in a doc map at the top of `FEATURE.md`; doc sync (§5) covers all parts.
 
 ---
 
@@ -77,8 +74,8 @@
 
 ### 3.2 Native binaries
 
-- After modifying `companion/ui/src/main/cpp/megingiard_privd.c`, run `./scripts/build_megingiard_privd.sh` from the workspace root **before** proposing the commit message. Fix build errors before continuing.
-- **Daemon versioning:** when changing the daemon or its protocol, increment `PRIVD_VERSION` in both `megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then rebuild.
+- After editing `companion/ui/src/main/cpp/megingiard_privd.c`, run `./scripts/build_megingiard_privd.sh` from the workspace root **before** proposing the commit message, and fix any build errors.
+- **Daemon versioning:** on daemon or protocol changes, increment `PRIVD_VERSION` in both `megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then rebuild.
 
 ### 3.3 Unit tests
 
@@ -88,14 +85,14 @@ After every implementation (feature, bug fix, refactor):
 2. **Update existing tests** whose behaviour or signature changed.
 3. **Run `./scripts/verify.sh`** and report the result. Confirm new test classes ran via their `build/test-results/**/TEST-*.xml`.
 
-- Placement: `:shared:core` → `shared/core/src/test/kotlin/`; other modules → `<module>/src/test/java/`. Prefer plain JUnit over Robolectric when possible.
-- New `src/test` directory in a module → add its task to `scripts/run_unit_tests.sh` (the only place the task list lives).
-- Failure unrelated to the change set → inspect its `TEST-*.xml`, re-run once, report as flaky (with test name), not as a regression.
-- Logic untestable without major refactoring → state it as a follow-up task; never skip silently.
+- Placement: `:shared:core` → `shared/core/src/test/kotlin/`; other modules → `<module>/src/test/java/`. Prefer plain JUnit over Robolectric.
+- New `src/test` dir → add its task to `scripts/run_unit_tests.sh` (canonical task list).
+- Unrelated failure → inspect `TEST-*.xml`, re-run once, report as flaky (with test name), not a regression.
+- Logic untestable without major refactoring → note as a follow-up task; never skip silently.
 
 ### 3.4 Auto code review
 
-After completing an implementation and before proposing the commit message, run the `megingiard-code-review` skill on all modified files (grep sweeps + file-by-file checklist). Because this review is part of your own implementation task, **fix the findings directly** and list them in your summary. (A review the user requests on its own presents findings first — see the skill.)
+Before proposing the commit message, run `megingiard-code-review` on all modified files (grep sweeps + file-by-file checklist). For self-review after implementation, **fix findings directly** and list them in your summary. (Standalone user-requested reviews present findings first — see the skill.)
 
 ### 3.5 Done checklist
 
@@ -131,21 +128,21 @@ After every set of changes, propose a copy-paste-ready commit message (no placeh
 - bullet describing change 2
 ```
 
-- Run `git status` first. The message MUST cover **every** file it lists (staged and unstaged alike) — not just what you remember editing. Never include files already committed earlier in the conversation.
+- Run `git status` first. Cover **every** listed file (staged and unstaged) — never omit edited files or include files committed earlier.
 - Types: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`. Keep commits atomic when feasible (§14).
 
 ---
 
 ## 5 Documentation Sync After Changes
 
-Applies to **every** change that affects behaviour, interface, or architecture — including bug fixes, refactors, and dependency updates:
+Applies to **every** change affecting behaviour, interface, or architecture (features, fixes, refactors, dependency updates):
 
-1. Identify the owning `FEATURE.md` file(s) via the §2 table, read them, and fix any Functional Requirement or Technical Implementation text the change invalidated; document new behaviour.
-2. Architecturally significant changes → also update `docs/ARCHITECTURE.md`.
-3. Security-affecting changes → also update `SECURITY_CONCEPT.md` and the detailed doc owning the mechanism (`docs/ARCHITECTURE.md`, `docs/BUILD_NATIVE.md`, or the feature's `FEATURE.md`).
-4. New features → new `FEATURE.md` from the template + row in §2.
-5. **In-app help:** if user interaction changes (buttons, modes, settings, gestures), update the matching `HelpModal`, onboarding popups, and strings in every locale (§9.2). **Every settings option visible in the UI must have an explanation entry in its HelpModal.**
-6. **Walkthroughs** / session summaries include a "Future Improvements" section listing code, design, or architecture improvements noticed during the work (even if unrelated).
+1. Read owning `FEATURE.md` file(s) (§2), fix invalidated Functional Requirements / Technical Implementation text, and document new behaviour.
+2. Architectural changes → update `docs/ARCHITECTURE.md`.
+3. Security changes → update `SECURITY_CONCEPT.md` plus the detailed doc (`docs/ARCHITECTURE.md`, `docs/BUILD_NATIVE.md`, or `FEATURE.md`).
+4. New features → new `FEATURE.md` from template + row in §2.
+5. **In-app help:** on user-interaction changes (buttons, modes, settings, gestures), update matching `HelpModal`, onboarding popups, and strings in every locale (§9.2). **Every visible settings option must have an explanation entry in its HelpModal.**
+6. **Walkthroughs** / session summaries include a "Future Improvements" section for code, design, or architecture improvements noticed during the work.
 
 ---
 
@@ -223,13 +220,13 @@ Applies to **every** change that affects behaviour, interface, or architecture �
 
 ## 11 Android Manifest & Permissions
 
-Only declare components whose classes exist (missing classes crash on some OEMs). Required permissions: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PROJECTION`, `POST_NOTIFICATIONS`.
+Only declare components whose classes exist (missing classes crash on some OEMs). Required permissions: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PROJECTION`, `FOREGROUND_SERVICE_SPECIAL_USE`, `POST_NOTIFICATIONS`.
 
 ---
 
 ## 12 Resource & Hardware Lifecycle — details: [CODING_GUIDE §12](docs/agents/CODING_GUIDE.md#12-resource--hardware-lifecycle)
 
-- **12.1 Teardown order:** `super.onDestroy()` → `scope.cancel()` → release hardware (`VirtualDisplay`, `MediaProjection`) → dismiss windows/Presentations. The scope is always cancelled before resources are released.
+- **12.1 Teardown order:** `super.onDestroy()` → `scope.cancel()` → release hardware (`VirtualDisplay`, `MediaProjection`) → dismiss windows/Presentations. Always cancel the scope before releasing resources.
 - **12.2** Activities meant for the primary screen launched from a secondary-screen context set `ActivityOptions.makeBasic().apply { launchDisplayId = Display.DEFAULT_DISPLAY }`.
 - **12.3** Use `Presentation.hide()` / `show()` for mode switches; `dismiss()` only in final teardown. `SurfaceView`s fed by `VirtualDisplay` call `setZOrderMediaOverlay(true)`.
 - **12.4** Low-level protocol rules live in the feature specs (mirror, keyboard, touchpad `FEATURE.md`), not here.
@@ -253,8 +250,8 @@ Conventional Commits; short imperative summary, blank line, bullet details; atom
 
 1. `minSdk = 33` and `targetSdk = 35` (in sync with `compileSdk`).
 2. Existing user-facing functionality — no removals without explicit operator approval.
-3. The hardware mirroring pipeline (`MediaProjection` → `VirtualDisplay` → `SurfaceView` inside `Presentation`).
-4. The synthetic `LifecycleOwner` in `Presentation` (required for Compose in the service window).
+3. The hardware mirroring pipelines (`MediaProjection` → `VirtualDisplay` → `SurfaceView` in `Presentation`, and `DirectMirrorServer` → `MasterSurfaceRegistry` → `EmbeddedMirrorView`).
+4. Synthetic `LifecycleOwner`s in `Presentation` and `WindowOverlayLifecycleOwner` (required for Compose in service/overlay windows).
 5. Companion autonomy from Game Focus (§6.1).
 
 ---

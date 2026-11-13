@@ -55,6 +55,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -210,7 +211,7 @@ internal class CategorySlideEntry(
 ) {
     var category by mutableStateOf(category)
     var renderOffset by mutableFloatStateOf(initialOffset)
-    var targetOffset: Float = initialOffset
+    var targetOffset by mutableFloatStateOf(initialOffset)
     var isActive by mutableStateOf(initiallyActive)
     var isSelected by mutableStateOf(initiallySelected)
     var zOrder by mutableFloatStateOf(initialZOrder)
@@ -901,6 +902,7 @@ private data class FocusedCategoryObservation(
     val category: GameFocusCategory,
     val categoryApps: List<InstalledAppInfo>,
     val currentApp: InstalledAppInfo?,
+    val isHoldRepeating: Boolean,
 )
 
 private data class BackgroundFocusObservation(
@@ -930,6 +932,7 @@ private fun GalleryNavigationEffects(
     val nextLetterTrigger by viewModel.nextLetterTrigger.collectAsState()
     val dpadLeftTrigger by viewModel.dpadLeftTrigger.collectAsState()
     val dpadStepRightTrigger by viewModel.dpadStepRightTrigger.collectAsState()
+    val isHoldRepeating by viewModel.isHoldRepeating.collectAsState()
     val scope = rememberCoroutineScope()
     val currentEditingAppInfo by rememberUpdatedState(editingAppInfo)
     val currentResolveCategoryApps by rememberUpdatedState(resolveCategoryApps)
@@ -963,10 +966,12 @@ private fun GalleryNavigationEffects(
                         if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
                     val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
                     val prevIndex = if (safeBase > 0) safeBase - 1 else categoryApps.size - 1
-                    AppLog.d(
-                        TAG,
-                        "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$prevIndex",
-                    )
+                    if (!isHoldRepeating) {
+                        AppLog.d(
+                            TAG,
+                            "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$prevIndex",
+                        )
+                    }
                     activePagerState.animateScrollToPage(
                         page = prevIndex,
                         animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
@@ -991,10 +996,12 @@ private fun GalleryNavigationEffects(
                         if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
                     val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
                     val nextIndex = if (safeBase < categoryApps.size - 1) safeBase + 1 else 0
-                    AppLog.d(
-                        TAG,
-                        "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$nextIndex",
-                    )
+                    if (!isHoldRepeating) {
+                        AppLog.d(
+                            TAG,
+                            "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$nextIndex",
+                        )
+                    }
                     activePagerState.animateScrollToPage(
                         page = nextIndex,
                         animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
@@ -1048,10 +1055,12 @@ private fun GalleryNavigationEffects(
                     letterNavState.selectedIndex = initialIndex
                 }
                 letterNavState.selectedIndex = (letterNavState.selectedIndex - 1).coerceAtLeast(0)
-                AppLog.d(
-                    TAG,
-                    "L1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
-                )
+                if (!isHoldRepeating) {
+                    AppLog.d(
+                        TAG,
+                        "L1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
+                    )
+                }
             }
         }
     }
@@ -1070,10 +1079,12 @@ private fun GalleryNavigationEffects(
                     letterNavState.selectedIndex = initialIndex
                 }
                 letterNavState.selectedIndex = (letterNavState.selectedIndex + 1).coerceAtMost(uniqueLetters.size - 1)
-                AppLog.d(
-                    TAG,
-                    "R1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
-                )
+                if (!isHoldRepeating) {
+                    AppLog.d(
+                        TAG,
+                        "R1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
+                    )
+                }
             }
         }
     }
@@ -1085,6 +1096,8 @@ private fun GalleryNavigationEffects(
         var syncedCategoryAppsRef: List<InstalledAppInfo>? = null
         var lastReportedCategoryId: String? = null
         var lastReportedApp: InstalledAppInfo? = null
+        var lastLoggedCategoryId: String? = null
+        var lastLoggedApp: InstalledAppInfo? = null
 
         snapshotFlow {
             val cat = selectedCategoryState.value
@@ -1092,6 +1105,7 @@ private fun GalleryNavigationEffects(
                 category = cat,
                 categoryApps = currentResolveCategoryApps(cat),
                 currentApp = currentAppState.value,
+                isHoldRepeating = isHoldRepeating,
             )
         }.collectLatest { observation ->
             val category = observation.category
@@ -1129,8 +1143,16 @@ private fun GalleryNavigationEffects(
                 viewModel.setFocusedApp(resolvedApp)
                 if (resolvedApp != null) {
                     lastHighlightedPackages[category.id] = resolvedApp.packageName
-                    AppLog.d(TAG, "Focused game changed for ${category.id}: package=${resolvedApp.packageName}, label=${resolvedApp.label}")
                 }
+            }
+
+            if (!observation.isHoldRepeating &&
+                resolvedApp != null &&
+                (category.id != lastLoggedCategoryId || resolvedApp != lastLoggedApp)
+            ) {
+                lastLoggedCategoryId = category.id
+                lastLoggedApp = resolvedApp
+                AppLog.d(TAG, "Focused game changed for ${category.id}: package=${resolvedApp.packageName}, label=${resolvedApp.label}")
             }
         }
     }
@@ -1243,7 +1265,9 @@ private fun GalleryCategoryCoordinator(
     pagerStateProvider: (GameFocusCategory) -> PagerState,
 ) {
     val selectedCategory = selectedCategoryState.value
-    controller.onSelectedCategoryChanged(selectedCategory, categories)
+    SideEffect {
+        controller.onSelectedCategoryChanged(selectedCategory, categories)
+    }
 
     val currentCategories by rememberUpdatedState(categories)
     val currentAppsByCategoryId by rememberUpdatedState(appsByCategoryId)
@@ -2477,17 +2501,18 @@ internal fun DualScreenLaunchButtons(
 
 @Composable
 internal fun rememberCoverBitmap(appInfo: InstalledAppInfo): ImageBitmap? {
-    if (appInfo.coverPath == null) return null
-    val cached = FocusImageCache.getCoverBitmap(appInfo)
-    if (cached != null) return cached
-
-    var loadedBitmap by remember(appInfo.packageName, appInfo.coverPath, appInfo.coverLastModified) {
-        mutableStateOf<ImageBitmap?>(null)
+    val coverPath = appInfo.coverPath
+    val cached = if (coverPath != null) FocusImageCache.getCoverBitmap(appInfo) else null
+    var loadedBitmap by remember(appInfo.packageName, coverPath, appInfo.coverLastModified) {
+        mutableStateOf(cached)
     }
-    LaunchedEffect(appInfo.packageName, appInfo.coverPath, appInfo.coverLastModified) {
-        loadedBitmap = FocusImageCache.getCoverBitmapAsync(appInfo)
+    val resolved = cached ?: loadedBitmap
+    if (coverPath != null && resolved == null) {
+        LaunchedEffect(appInfo.packageName, coverPath, appInfo.coverLastModified) {
+            loadedBitmap = FocusImageCache.getCoverBitmapAsync(appInfo)
+        }
     }
-    return loadedBitmap
+    return if (coverPath != null) resolved else null
 }
 
 @Composable
@@ -2495,20 +2520,20 @@ internal fun rememberIconBitmap(
     appInfo: InstalledAppInfo,
     enabled: Boolean = true,
 ): ImageBitmap? {
-    if (!enabled) return null
-    val cached = FocusImageCache.getCachedIconBitmap(appInfo)
-    if (cached != null) return cached
-    if (FocusImageCache.isIconMissing(appInfo)) return null
-
     val context = LocalContext.current
     val iconVersion = if (appInfo.isRom) appInfo.logoLastModified else appInfo.lastUpdateTime
+    val cached = if (enabled) FocusImageCache.getCachedIconBitmap(appInfo) else null
+    val isMissing = enabled && FocusImageCache.isIconMissing(appInfo)
     var loadedBitmap by remember(appInfo.packageName, appInfo.activityName, iconVersion) {
-        mutableStateOf<ImageBitmap?>(null)
+        mutableStateOf(cached)
     }
-    LaunchedEffect(appInfo.packageName, appInfo.activityName, iconVersion) {
-        loadedBitmap = FocusImageCache.getIconBitmapAsync(context, appInfo)
+    val resolved = cached ?: loadedBitmap
+    if (enabled && !isMissing && resolved == null) {
+        LaunchedEffect(appInfo.packageName, appInfo.activityName, iconVersion) {
+            loadedBitmap = FocusImageCache.getIconBitmapAsync(context, appInfo)
+        }
     }
-    return loadedBitmap
+    return if (enabled && !isMissing) resolved else null
 }
 
 private sealed interface LibraryIconLoadResult {
@@ -2526,26 +2551,45 @@ internal fun rememberLibraryIconBitmap(
     appInfo: InstalledAppInfo,
     enabled: Boolean = true,
 ): ImageBitmap? {
-    if (!enabled) return null
     val customPath = appInfo.libraryIconPath
-    if (customPath == null || FocusImageCache.isLibraryIconMissing(appInfo.packageName, appInfo.libraryIconLastModified)) {
-        return rememberIconBitmap(appInfo, enabled = true)
-    }
-    val cachedCustom = FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
-    if (cachedCustom != null) return cachedCustom
+    val isCustomMissing =
+        customPath == null || FocusImageCache.isLibraryIconMissing(appInfo.packageName, appInfo.libraryIconLastModified)
+    val cachedCustom =
+        if (enabled && !isCustomMissing) {
+            FocusImageCache.getCachedLibraryIconBitmap(appInfo.packageName, appInfo.libraryIconLastModified)
+        } else {
+            null
+        }
 
     var customResult by remember(appInfo.packageName, customPath, appInfo.libraryIconLastModified) {
-        mutableStateOf<LibraryIconLoadResult>(LibraryIconLoadResult.Loading)
+        mutableStateOf(
+            when {
+                !enabled -> LibraryIconLoadResult.Loading
+                isCustomMissing -> LibraryIconLoadResult.Failed
+                cachedCustom != null -> LibraryIconLoadResult.Success(cachedCustom)
+                else -> LibraryIconLoadResult.Loading
+            },
+        )
     }
-    LaunchedEffect(appInfo.packageName, customPath, appInfo.libraryIconLastModified) {
-        val diskBitmap = FocusImageCache.getLibraryIconBitmapAsync(appInfo)
-        customResult = if (diskBitmap != null) LibraryIconLoadResult.Success(diskBitmap) else LibraryIconLoadResult.Failed
+    val effectiveCustom =
+        when {
+            !enabled -> null
+            cachedCustom != null -> cachedCustom
+            isCustomMissing -> null
+            else -> (customResult as? LibraryIconLoadResult.Success)?.bitmap
+        }
+    val shouldLoadCustom =
+        enabled && !isCustomMissing && effectiveCustom == null && customResult is LibraryIconLoadResult.Loading
+    if (shouldLoadCustom) {
+        LaunchedEffect(appInfo.packageName, customPath, appInfo.libraryIconLastModified) {
+            val diskBitmap = FocusImageCache.getLibraryIconBitmapAsync(appInfo)
+            customResult = if (diskBitmap != null) LibraryIconLoadResult.Success(diskBitmap) else LibraryIconLoadResult.Failed
+        }
     }
-    return when (val result = customResult) {
-        is LibraryIconLoadResult.Success -> result.bitmap
-        LibraryIconLoadResult.Loading -> null
-        LibraryIconLoadResult.Failed -> rememberIconBitmap(appInfo, enabled = true)
-    }
+    val shouldFallbackToAppIcon =
+        enabled && effectiveCustom == null && (isCustomMissing || customResult is LibraryIconLoadResult.Failed)
+    val fallbackIcon = rememberIconBitmap(appInfo, enabled = shouldFallbackToAppIcon)
+    return if (!enabled) null else (effectiveCustom ?: fallbackIcon)
 }
 
 @Composable
@@ -2553,19 +2597,19 @@ internal fun rememberAppPalette(
     appInfo: InstalledAppInfo,
     enabled: Boolean = true,
 ): ExtractedAppPalette? {
-    if (!enabled) return null
-    val cached = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
-    if (cached != null) return cached
-
     val appColors = LocalAppColors.current
     val iconVersion = if (appInfo.isRom) appInfo.logoLastModified else appInfo.lastUpdateTime
+    val cached = if (enabled) AppPaletteExtractor.getCachedColorsOrNull(appInfo) else null
     var loadedPalette by remember(appInfo.packageName, appInfo.coverPath, appInfo.coverLastModified, iconVersion) {
-        mutableStateOf<ExtractedAppPalette?>(null)
+        mutableStateOf(cached)
     }
-    LaunchedEffect(appInfo.packageName, appInfo.coverPath, appInfo.coverLastModified, iconVersion) {
-        loadedPalette = AppPaletteExtractor.extractColorsAsync(appInfo, appColors.accent, appColors.appBackground)
+    val resolved = cached ?: loadedPalette
+    if (enabled && resolved == null) {
+        LaunchedEffect(appInfo.packageName, appInfo.coverPath, appInfo.coverLastModified, iconVersion) {
+            loadedPalette = AppPaletteExtractor.extractColorsAsync(appInfo, appColors.accent, appColors.appBackground)
+        }
     }
-    return loadedPalette
+    return if (enabled) resolved else null
 }
 
 @Composable

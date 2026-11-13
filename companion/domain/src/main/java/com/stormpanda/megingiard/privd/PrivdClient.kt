@@ -6,6 +6,9 @@ import com.stormpanda.megingiard.math.TouchSensorMath
 import com.stormpanda.megingiard.security.HmacUtil
 import com.stormpanda.megingiard.session.ProcessCmdlineProvider
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +16,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -47,6 +51,7 @@ private const val HMAC_HEX_LEN = 64 // SHA-256 digest → 64 hex chars
 private const val VERSION_OK_MIN_SENSOR_TOKENS = 4
 private const val VERSION_OK_WIDTH_INDEX = 2
 private const val VERSION_OK_HEIGHT_INDEX = 3
+internal const val MAX_MULTILINE_RPC_CHARS = 24 * 1024 * 1024
 
 /**
  * Async loopback TCP transport to the `megingiard_privd` daemon.
@@ -100,6 +105,7 @@ object PrivdClient {
     }
 
     private val commandMutex = Mutex()
+    private val teardownScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
      * Raw evdev events streamed from the daemon while a `SUB GAMEPAD` subscription is active.
@@ -322,7 +328,13 @@ object PrivdClient {
             pendingRpc = rpc
             try {
                 send(command)
-                withTimeoutOrNull(timeoutMs) { rpc.deferred.await() }
+                val result = withTimeoutOrNull(timeoutMs) { rpc.deferred.await() }
+                if (result == null && !rpc.deferred.isCompleted) {
+                    AppLog.w(TAG, "executeMultiLineRpc timed out after ${timeoutMs}ms; resetting connection")
+                    rpc.cancel()
+                    markBroken()
+                }
+                result
             } finally {
                 pendingRpc = null
             }
@@ -382,6 +394,19 @@ object PrivdClient {
         return ok
     }
 
+    /**
+     * Dispatches [stopMirror] asynchronously on [teardownScope] (serialized through [commandMutex])
+     * so foreground services can cancel their own lifecycle scope first (`AGENTS.md` §12.1) without
+     * racing a subsequent service restart.
+     */
+    fun requestStopMirrorAsync() {
+        if (!isConnected) return
+        AppLog.d(TAG, "requestStopMirrorAsync()")
+        teardownScope.launch {
+            stopMirror()
+        }
+    }
+
     suspend fun takeScreenshot(
         path: String,
         displayId: Int? = null,
@@ -402,9 +427,10 @@ object PrivdClient {
     }
 
     /**
-     * Captures a PNG screenshot via `megingiard_privd` (`SCREENSHOT_B64`), staging in
-     * `/data/local/tmp` inside the daemon and streaming base64 bytes over loopback TCP
-     * so the app UID can decode or persist the image without cross-UID FUSE issues.
+     * Captures a PNG screenshot via `megingiard_privd` (`SCREENSHOT_B64`), streaming
+     * `screencap -p` stdout over an anonymous pipe inside the daemon and base64-encoding
+     * over loopback TCP so no temporary files are written to `/data/local/tmp` and the app UID
+     * can decode or persist the image without cross-UID FUSE issues.
      *
      * @param displayUniqueId Optional numeric SurfaceFlinger physical display ID (`screencap -d`).
      *                        When `null`, `privd` resolves `(HWC display 0)` automatically.
@@ -762,10 +788,14 @@ internal sealed class PendingRpc {
         private val beginMarker: String,
         private val endMarker: String,
         private val errorPrefix: String,
+        private val maxChars: Int = MAX_MULTILINE_RPC_CHARS,
     ) : PendingRpc() {
         val deferred = CompletableDeferred<String?>()
         private var capturing = false
         private val buffer = StringBuilder()
+
+        internal val bufferedLengthForTest: Int
+            get() = buffer.length
 
         override fun onLine(line: String): Boolean {
             if (line == beginMarker) {
@@ -775,17 +805,28 @@ internal sealed class PendingRpc {
             }
             if (line == endMarker) {
                 capturing = false
-                deferred.complete(buffer.toString())
+                val payload = buffer.toString()
                 buffer.clear()
+                buffer.trimToSize()
+                deferred.complete(payload)
                 return true
             }
             if (line.startsWith(errorPrefix)) {
                 capturing = false
                 buffer.clear()
+                buffer.trimToSize()
                 deferred.complete(null)
                 return true
             }
             if (capturing) {
+                if (buffer.length + line.length + 1 > maxChars) {
+                    AppLog.w(TAG, "PendingRpc.MultiLine exceeded max capacity ($maxChars chars) before '$endMarker'")
+                    capturing = false
+                    buffer.clear()
+                    buffer.trimToSize()
+                    deferred.complete(null)
+                    return true
+                }
                 buffer.append(line).append('\n')
                 return true
             }
@@ -794,6 +835,8 @@ internal sealed class PendingRpc {
 
         override fun cancel() {
             capturing = false
+            buffer.clear()
+            buffer.trimToSize()
             deferred.complete(null)
         }
     }

@@ -1655,4 +1655,44 @@ class MacroPadStateTest {
         assertEquals(272f, copiedTpOnThor.widthPx, 0.001f)
         assertEquals(272f, copiedTpOnThor.heightPx, 0.001f)
     }
+
+    @Test
+    fun `duplicateButtonInLayout preserves black-bar button offsets and updateLayoutLive mutates activeLayout`() {
+        // Host = RP Duo (1280x960), Layout = Thor (1240x1080) -> pillarbox minNormX = -0.0887f
+        MacroPadState.setHostSecondaryCanvas(LayoutCanvasSpec(widthPx = 1280, heightPx = 960))
+        val barBtn =
+            PadButton(
+                id = "btn-bar-src",
+                label = "Bar",
+                posX = -0.08f,
+                posY = 0.5f,
+                action = PadAction.KeyboardKey(keycode = 30, label = "A"),
+            )
+        val layout =
+            PadLayout(
+                id = "l-bar",
+                name = "BarLayout",
+                designCanvas = THOR_BOTTOM_CANVAS_SPEC,
+                buttons = listOf(barBtn),
+            )
+        loadProfiles(testProfile(id = "p-bar", layouts = listOf(layout), activeLayoutId = "l-bar"))
+
+        MacroPadState.duplicateButtonInLayout(barBtn, "l-bar")
+        val buttons = MacroPadState.activeLayout.value!!.buttons
+        assertEquals(2, buttons.size)
+        // -0.08f + 0.05f = -0.03f (still inside left pillarbox bar, must NOT clamp to 0f!)
+        assertEquals(-0.03f, buttons.last().posX, 0.001f)
+
+        // Live layout update updates in-memory activeLayout immediately
+        val liveShifted = buttons.last().copy(posX = -0.04f)
+        MacroPadState.updateLayoutLive(MacroPadState.activeLayout.value!!.copy(buttons = listOf(barBtn, liveShifted)))
+        assertEquals(
+            -0.04f,
+            MacroPadState.activeLayout.value!!
+                .buttons
+                .last()
+                .posX,
+            0.001f,
+        )
+    }
 }

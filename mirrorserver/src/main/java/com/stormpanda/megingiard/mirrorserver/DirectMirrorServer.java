@@ -21,8 +21,10 @@ public final class DirectMirrorServer {
     private static final int EXIT_CODE_FAILURE = 1;
     private static final int HAS_SURFACE_CLEAR = 0;
     private static final int HAS_SURFACE_PRESENT = 1;
-    private static final int REPLY_FAILURE = 0;
-    private static final int REPLY_SUCCESS = 1;
+    /** Returned when no mirror surface is active (both on successful clear and on setSurface failure). */
+    private static final int REPLY_NO_ACTIVE_SURFACE = 0;
+    /** Returned when an active mirror surface has been bound and configured. */
+    private static final int REPLY_SURFACE_ACTIVE = 1;
     private static final int TRANSACTION_SET_SURFACE = IBinder.FIRST_CALL_TRANSACTION;
     private static final long SURFACE_DELIVERY_TIMEOUT_MS = 5_000L;
 
@@ -234,7 +236,7 @@ public final class DirectMirrorServer {
                     coordinator.release();
                     System.err.println("DirectMirrorServer: app cleared surface");
                     reply.writeNoException();
-                    reply.writeInt(REPLY_FAILURE);
+                    reply.writeInt(REPLY_NO_ACTIVE_SURFACE);
                     return true;
                 }
                 if (hasSurface != HAS_SURFACE_PRESENT) {
@@ -242,7 +244,7 @@ public final class DirectMirrorServer {
                     System.err.println("[DirectMirror] Invalid hasSurface flag: " + hasSurface);
                     if (reply != null) {
                         reply.writeNoException();
-                        reply.writeInt(REPLY_FAILURE);
+                        reply.writeInt(REPLY_NO_ACTIVE_SURFACE);
                     }
                     return true;
                 }
@@ -253,20 +255,20 @@ public final class DirectMirrorServer {
                 AndroidSurfaceHandle handle = surface != null ? new AndroidSurfaceHandle(surface) : null;
                 if (!coordinator.applySurface(handle, w, h)) {
                     reply.writeNoException();
-                    reply.writeInt(REPLY_FAILURE);
+                    reply.writeInt(REPLY_NO_ACTIVE_SURFACE);
                     return true;
                 }
 
                 surfaceDelivered.countDown();
                 System.err.println("DirectMirrorServer: surface parsed & configured");
                 reply.writeNoException();
-                reply.writeInt(REPLY_SUCCESS);
+                reply.writeInt(REPLY_SURFACE_ACTIVE);
                 return true;
             } catch (Throwable t) {
                 System.err.println("DirectMirrorServer: setSurface failed: " + t);
                 t.printStackTrace();
                 reply.writeNoException();
-                reply.writeInt(REPLY_FAILURE);
+                reply.writeInt(REPLY_NO_ACTIVE_SURFACE);
                 return true;
             }
         }

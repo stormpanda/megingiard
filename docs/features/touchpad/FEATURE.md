@@ -152,5 +152,6 @@ Dismissal on the secondary display reuses the edge-swipe gesture path: `SwipeGes
 | `TouchpadSettings.kt`                  | `:companion:domain` | Persistent settings in `settings/` for touchpad mode (sensitivity bounds, tap-to-click, scroll, etc.) |
 | `MouseInjector.kt`                     | `:companion:domain` | Relative mouse injection facade routing directly to `PrivdClient`                                    |
 | `TouchInjector.kt`                     | `:companion:domain` | Absolute touch injection facade routing directly to `PrivdClient`                                    |
+| `TouchSensorMath.kt`                   | `:shared:core`      | Pure rotation-aware mapping between Display 0 normalized coordinates and kernel `evdev` touch sensor bounds |
 | `megingiard_privd.c` / `cmd_parsers.h` | C Source            | Megingiard System Service daemon and protocol parsers for multi-touch and virtual mouse injection    |
 | `megingiard_privd_arm64`               | Native Asset        | Pre-built Megingiard System Service binary asset (`companion/ui/src/main/assets/`)                   |

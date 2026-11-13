@@ -108,6 +108,7 @@ internal class MultiCutoutContainer(
             aboveMaskCutouts = above
             belowMaskCutouts = below
             pruneStaleCutoutResources(value)
+            CutoutMaskManager.preloadCutoutsAsync(context, value, ::postInvalidateOnAnimation)
             invalidate()
         }
     var isFrozen: Boolean = false
@@ -649,7 +650,9 @@ internal class MultiCutoutContainer(
         val topExt = if (touchesTop) (blendW / 2f).roundToInt().toFloat() else 0f
         val bottomExt = if (touchesBottom) (blendW / 2f).roundToInt().toFloat() else 0f
         val hasTouching = leftExt > 0f || rightExt > 0f || topExt > 0f || bottomExt > 0f
-        val hasTransparencyMask = cutout.hasTransparencyMask && CutoutMaskManager.hasMask(context, cutout.id)
+        val hasTransparencyMask =
+            cutout.hasTransparencyMask &&
+                CutoutMaskManager.hasCachedMaskOrLoadAsync(context, cutout.id, ::postInvalidateOnAnimation)
 
         val saveCount =
             if (cutout.opacity < 1f || hasTouching || hasTransparencyMask) {
@@ -684,7 +687,11 @@ internal class MultiCutoutContainer(
 
             val cachedFrozenFrame =
                 if (isTargetFrozen && !effectiveManualFrozen) {
-                    AnchorPresenceManager.getFrozenFrame(context, cutout.id)
+                    AnchorPresenceManager.getCachedFrozenFrameOrLoadAsync(
+                        context = context,
+                        cutoutId = cutout.id,
+                        onLoaded = ::postInvalidateOnAnimation,
+                    )
                 } else {
                     null
                 }
@@ -695,12 +702,13 @@ internal class MultiCutoutContainer(
 
             val staticAssetBitmap =
                 if (cutout.renderAsStaticAsset && hasTransparencyMask) {
-                    CutoutMaskManager.getStaticAsset(
+                    CutoutMaskManager.getCachedStaticAssetOrLoadAsync(
                         context = context,
                         cutoutId = cutout.id,
                         translucency = cutout.maskTranslucency,
                         sensitivity = cutout.maskSensitivity,
                         cavityHealing = cutout.maskCavityHealing,
+                        onLoaded = ::postInvalidateOnAnimation,
                     )
                 } else {
                     null
@@ -729,8 +737,8 @@ internal class MultiCutoutContainer(
                 // 1. Base Layer
                 if (isStaticAssetDrawn) {
                     cutoutDestRect.set(0f, 0f, contentW, contentH)
-                    canvas.drawBitmap(staticAssetBitmap!!, null, cutoutDestRect, frozenFramePaint)
-                } else if (isTargetFrozen && hasFrozenBitmap && frozenBitmapToDraw != null) {
+                    canvas.drawBitmap(staticAssetBitmap, null, cutoutDestRect, frozenFramePaint)
+                } else if (isTargetFrozen && hasFrozenBitmap) {
                     // Frozen state (anchor lost or manual freeze): render sharp frozen frame base layer
                     if (blurAlpha < FULL_ALPHA_FLOAT) {
                         frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
@@ -868,12 +876,13 @@ internal class MultiCutoutContainer(
                 // 3. Transparency Mask
                 if (hasTransparencyMask && !isStaticAssetDrawn) {
                     val maskBitmap =
-                        CutoutMaskManager.getMask(
+                        CutoutMaskManager.getCachedMaskOrLoadAsync(
                             context = context,
                             cutoutId = cutout.id,
                             translucency = cutout.maskTranslucency,
                             sensitivity = cutout.maskSensitivity,
                             cavityHealing = cutout.maskCavityHealing,
+                            onLoaded = ::postInvalidateOnAnimation,
                         )
                     if (maskBitmap != null && !maskBitmap.isRecycled) {
                         maskDestRect.set(0f, 0f, contentW, contentH)

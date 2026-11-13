@@ -84,7 +84,6 @@ import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.math.formatButtonDimensionPx
-import com.stormpanda.megingiard.mirror.CutoutMaskFileStore
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeSubPageContent
@@ -113,7 +112,6 @@ import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -198,7 +196,6 @@ fun MacroPadEditor(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
     val activeId by MacroPadState.activeProfileId.collectAsStateWithLifecycle()
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
@@ -474,42 +471,19 @@ fun MacroPadEditor(
                                                     if (layoutMapping != null) {
                                                         val currentProfiles = MacroPadState.profiles.value
                                                         for (origLayout in originalLayouts) {
-                                                            val originalBgPath = origLayout.backgroundImagePath
-                                                            val originalMaskPath = origLayout.maskImagePath
                                                             val newLayoutId = layoutMapping[origLayout.id]
                                                             if (newLayoutId != null) {
-                                                                if (originalBgPath != null) {
-                                                                    scope.launch {
-                                                                        MacroPadMediaRepository.duplicateBackgroundImage(
-                                                                            context,
-                                                                            origLayout.id,
-                                                                            newLayoutId,
-                                                                        )
-                                                                    }
-                                                                }
-                                                                if (originalMaskPath != null) {
-                                                                    scope.launch {
-                                                                        MacroPadMediaRepository.duplicateMaskImage(
-                                                                            context,
-                                                                            origLayout.id,
-                                                                            newLayoutId,
-                                                                        )
-                                                                    }
-                                                                }
                                                                 val newLayout =
                                                                     currentProfiles
                                                                         .asSequence()
                                                                         .flatMap { it.layouts }
                                                                         .firstOrNull { it.id == newLayoutId }
                                                                 if (newLayout != null) {
-                                                                    val filesDir = context.filesDir
-                                                                    scope.launch(Dispatchers.IO) {
-                                                                        CutoutMaskFileStore.duplicateLayoutCutoutAssets(
-                                                                            filesDir,
-                                                                            origLayout,
-                                                                            newLayout,
-                                                                        )
-                                                                    }
+                                                                    MacroPadMediaRepository.duplicateLayoutAssetsAsync(
+                                                                        context = context,
+                                                                        sourceLayout = origLayout,
+                                                                        targetLayout = newLayout,
+                                                                    )
                                                                 }
                                                             }
                                                         }
@@ -530,16 +504,7 @@ fun MacroPadEditor(
                                                     val layoutsToDelete = profile.layouts
                                                     val isDeleted = MacroPadState.deleteProfile(profile.id)
                                                     if (isDeleted) {
-                                                        scope.launch(Dispatchers.IO) {
-                                                            layoutsToDelete.forEach { lay ->
-                                                                MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
-                                                                MacroPadMediaRepository.deleteMaskImage(context, lay.id)
-                                                                CutoutMaskManager.deleteMask(context, lay.id)
-                                                                lay.mirrorCutouts.forEach { cutout ->
-                                                                    CutoutMaskManager.deleteMask(context, cutout.id)
-                                                                }
-                                                            }
-                                                        }
+                                                        MacroPadMediaRepository.deleteLayoutsAssetsAsync(context, layoutsToDelete)
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_profile_deleted_toast, deletedName),
                                                         )
@@ -570,42 +535,18 @@ fun MacroPadEditor(
                                                 },
                                                 onDuplicateLayout = {
                                                     val originalLayout = activeLayout
-                                                    val originalBgPath = originalLayout?.backgroundImagePath
-                                                    val originalMaskPath = originalLayout?.maskImagePath
                                                     val newLayoutId = originalLayout?.id?.let { MacroPadState.duplicateLayout(it) }
                                                     if (originalLayout != null && newLayoutId != null) {
-                                                        if (originalBgPath != null) {
-                                                            scope.launch {
-                                                                MacroPadMediaRepository.duplicateBackgroundImage(
-                                                                    context,
-                                                                    originalLayout.id,
-                                                                    newLayoutId,
-                                                                )
-                                                            }
-                                                        }
-                                                        if (originalMaskPath != null) {
-                                                            scope.launch {
-                                                                MacroPadMediaRepository.duplicateMaskImage(
-                                                                    context,
-                                                                    originalLayout.id,
-                                                                    newLayoutId,
-                                                                )
-                                                            }
-                                                        }
                                                         val duplicatedLayout =
                                                             MacroPadState.activeProfile.value?.layouts?.firstOrNull {
-                                                                it.id ==
-                                                                    newLayoutId
+                                                                it.id == newLayoutId
                                                             }
                                                         if (duplicatedLayout != null) {
-                                                            val filesDir = context.filesDir
-                                                            scope.launch(Dispatchers.IO) {
-                                                                CutoutMaskFileStore.duplicateLayoutCutoutAssets(
-                                                                    filesDir,
-                                                                    originalLayout,
-                                                                    duplicatedLayout,
-                                                                )
-                                                            }
+                                                            MacroPadMediaRepository.duplicateLayoutAssetsAsync(
+                                                                context = context,
+                                                                sourceLayout = originalLayout,
+                                                                targetLayout = duplicatedLayout,
+                                                            )
                                                         }
                                                         val duplicatedName = duplicatedLayout?.name ?: originalLayout.name
                                                         DialogToastManager.show(
@@ -627,14 +568,10 @@ fun MacroPadEditor(
                                                         val deletedName = deletedLayout.name
                                                         val isDeleted = MacroPadState.deleteLayout(deletedLayout.id)
                                                         if (isDeleted) {
-                                                            scope.launch(Dispatchers.IO) {
-                                                                MacroPadMediaRepository.deleteBackgroundImage(context, deletedLayout.id)
-                                                                MacroPadMediaRepository.deleteMaskImage(context, deletedLayout.id)
-                                                                CutoutMaskManager.deleteMask(context, deletedLayout.id)
-                                                                deletedLayout.mirrorCutouts.forEach { cutout ->
-                                                                    CutoutMaskManager.deleteMask(context, cutout.id)
-                                                                }
-                                                            }
+                                                            MacroPadMediaRepository.deleteLayoutsAssetsAsync(
+                                                                context,
+                                                                listOf(deletedLayout),
+                                                            )
                                                             DialogToastManager.show(
                                                                 context.getString(R.string.macropad_layout_deleted_toast, deletedName),
                                                             )
@@ -896,16 +833,7 @@ fun MacroPadEditor(
                                                     val layoutsToDelete = prof.layouts
                                                     val isDeleted = MacroPadState.deleteProfile(prof.id)
                                                     if (isDeleted) {
-                                                        scope.launch(Dispatchers.IO) {
-                                                            layoutsToDelete.forEach { lay ->
-                                                                MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
-                                                                MacroPadMediaRepository.deleteMaskImage(context, lay.id)
-                                                                CutoutMaskManager.deleteMask(context, lay.id)
-                                                                lay.mirrorCutouts.forEach { cutout ->
-                                                                    CutoutMaskManager.deleteMask(context, cutout.id)
-                                                                }
-                                                            }
-                                                        }
+                                                        MacroPadMediaRepository.deleteLayoutsAssetsAsync(context, layoutsToDelete)
                                                         MacroPadNavState.pop()
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_profile_deleted_toast, deletedName),
@@ -1041,14 +969,10 @@ fun MacroPadEditor(
                                                         val deletedName = deletedLayout.name
                                                         val isDeleted = MacroPadState.deleteLayout(deletedLayout.id)
                                                         if (isDeleted) {
-                                                            scope.launch(Dispatchers.IO) {
-                                                                MacroPadMediaRepository.deleteBackgroundImage(context, deletedLayout.id)
-                                                                MacroPadMediaRepository.deleteMaskImage(context, deletedLayout.id)
-                                                                CutoutMaskManager.deleteMask(context, deletedLayout.id)
-                                                                deletedLayout.mirrorCutouts.forEach { cutout ->
-                                                                    CutoutMaskManager.deleteMask(context, cutout.id)
-                                                                }
-                                                            }
+                                                            MacroPadMediaRepository.deleteLayoutsAssetsAsync(
+                                                                context,
+                                                                listOf(deletedLayout),
+                                                            )
                                                             appearanceDraft = null
                                                             MacroPadNavState.pop()
                                                             DialogToastManager.show(
@@ -1185,9 +1109,7 @@ fun MacroPadEditor(
                                                         val deletedName = cutout.name.ifBlank { cutoutTitle }
                                                         val updatedList = layout.mirrorCutouts.filter { it.id != cutoutIdToDelete }
                                                         MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
-                                                        scope.launch(Dispatchers.IO) {
-                                                            CutoutMaskManager.deleteMask(context, cutoutIdToDelete)
-                                                        }
+                                                        CutoutMaskManager.deleteMaskAsync(context, cutoutIdToDelete)
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_cutout_deleted_toast, deletedName),
                                                         )
@@ -1342,38 +1264,17 @@ fun MacroPadEditor(
                                                         val newLayoutId =
                                                             MacroPadState.copyLayoutToProfile(lay, profile.id, targetProfileId)
                                                         if (newLayoutId != null) {
-                                                            if (lay.backgroundImagePath != null) {
-                                                                scope.launch {
-                                                                    MacroPadMediaRepository.duplicateBackgroundImage(
-                                                                        context,
-                                                                        lay.id,
-                                                                        newLayoutId,
-                                                                    )
-                                                                }
-                                                            }
-                                                            if (lay.maskImagePath != null) {
-                                                                scope.launch {
-                                                                    MacroPadMediaRepository.duplicateMaskImage(
-                                                                        context,
-                                                                        lay.id,
-                                                                        newLayoutId,
-                                                                    )
-                                                                }
-                                                            }
                                                             val copiedLayout =
                                                                 MacroPadState.profiles.value
                                                                     .firstOrNull { it.id == targetProfileId }
                                                                     ?.layouts
                                                                     ?.firstOrNull { it.id == newLayoutId }
                                                             if (copiedLayout != null) {
-                                                                val filesDir = context.filesDir
-                                                                scope.launch(Dispatchers.IO) {
-                                                                    CutoutMaskFileStore.duplicateLayoutCutoutAssets(
-                                                                        filesDir,
-                                                                        lay,
-                                                                        copiedLayout,
-                                                                    )
-                                                                }
+                                                                MacroPadMediaRepository.duplicateLayoutAssetsAsync(
+                                                                    context = context,
+                                                                    sourceLayout = lay,
+                                                                    targetLayout = copiedLayout,
+                                                                )
                                                             }
                                                         }
                                                         MacroPadNavState.pop()

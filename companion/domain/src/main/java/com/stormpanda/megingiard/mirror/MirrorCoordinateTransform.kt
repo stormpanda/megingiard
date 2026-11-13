@@ -1,10 +1,12 @@
 package com.stormpanda.megingiard.mirror
 
+import com.stormpanda.megingiard.AppLog
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+private const val TAG = "MirrorCoordTransform"
 private const val OVERLAP_TOLERANCE: Float = 0.0001f
 private const val BINARY_SEARCH_STEPS = 10
 private const val MIN_RESIZE_PX = 8
@@ -341,17 +343,28 @@ fun adjustDestSizeToAspectRatio(
     screenH: Float,
     minCutoutSize: Float = MIN_GAMEPAD_CUTOUT_SIZE,
     rotation: Int = 0,
+    minDestX: Float = 0f,
+    maxDestX: Float = 1f,
+    minDestY: Float = 0f,
+    maxDestY: Float = 1f,
 ): Pair<Float, Float> {
-    if (screenW <= 0f || screenH <= 0f || cropRatio <= 0f) return Pair(destWidth, destHeight)
+    if (screenW <= 0f || screenH <= 0f || cropRatio <= 0f ||
+        !screenW.isFinite() || !screenH.isFinite() || !cropRatio.isFinite()
+    ) {
+        AppLog.w(TAG, "adjustDestSizeToAspectRatio: invalid inputs screen=${screenW}x$screenH cropRatio=$cropRatio")
+        return Pair(destWidth, destHeight)
+    }
 
     val isQuarter = (rotation == ROTATION_90 || rotation == ROTATION_270)
     val effectiveCropRatio = if (isQuarter) (1f / cropRatio) else cropRatio
 
     val normRatio = effectiveCropRatio * (screenH / screenW)
-    if (normRatio <= 0f) return Pair(destWidth, destHeight)
+    if (normRatio <= 0f || !normRatio.isFinite()) return Pair(destWidth, destHeight)
 
-    val maxH = (1f - destY).coerceIn(minCutoutSize, 1f)
-    val maxW = (1f - destX).coerceIn(minCutoutSize, 1f)
+    val maxSpanW = (maxDestX - minDestX).coerceAtLeast(minCutoutSize)
+    val maxSpanH = (maxDestY - minDestY).coerceAtLeast(minCutoutSize)
+    val maxH = (maxDestY - destY).coerceIn(minCutoutSize, maxSpanH)
+    val maxW = (maxDestX - destX).coerceIn(minCutoutSize, maxSpanW)
 
     var targetW = destWidth.coerceIn(minCutoutSize, maxW)
     var targetH = targetW / normRatio
@@ -384,12 +397,13 @@ fun adjustDestSizeToAspectRatio(
  *
  * If rotating between landscape and portrait (0°/180° <-> 90°/270°), destination physical pixel
  * dimensions are swapped (converting normalized dimensions through [screenW] and [screenH])
- * while remaining centered around the cutout's current midpoint and clamped to screen bounds.
+ * while remaining centered around the cutout's current midpoint and clamped to `[minDestX..maxDestX]`
+ * and `[minDestY..maxDestY]` (supporting letterbox/pillarbox black-bar bounds).
  *
  * @param cutout The cutout to rotate.
  * @param targetRotation Target rotation angle in degrees (0, 90, 180, 270).
  * @param allCutouts Sibling cutouts used for collision detection.
- * @param maxDimension Maximum normalized dimension (defaults to 1.0f).
+ * @param maxDimension Maximum normalized dimension when explicit `[minDestX..maxDestX]` bounds are omitted.
  * @param screenW Secondary display surface width in physical pixels (used to preserve physical aspect ratio).
  * @param screenH Secondary display surface height in physical pixels (used to preserve physical aspect ratio).
  * @return The updated [ScreenCutout] if the rotated cutout fits without colliding with any
@@ -402,6 +416,10 @@ fun calculateRotatedCutoutBounds(
     maxDimension: Float = 1.0f,
     screenW: Float = 0f,
     screenH: Float = 0f,
+    minDestX: Float = 0f,
+    maxDestX: Float = maxDimension,
+    minDestY: Float = 0f,
+    maxDestY: Float = maxDimension,
 ): ScreenCutout? {
     val currentIsQuarter = (cutout.rotation == ROTATION_90 || cutout.rotation == ROTATION_270)
     val targetIsQuarter = (targetRotation == ROTATION_90 || targetRotation == ROTATION_270)
@@ -425,15 +443,21 @@ fun calculateRotatedCutoutBounds(
             cutout.destWidth
         }
 
-    if (newW > maxDimension || newH > maxDimension) {
+    val maxSpanW = (maxDestX - minDestX).coerceAtLeast(0f)
+    val maxSpanH = (maxDestY - minDestY).coerceAtLeast(0f)
+    if (newW > maxSpanW || newH > maxSpanH) {
+        AppLog.d(
+            TAG,
+            "calculateRotatedCutoutBounds: cutout=${cutout.id} targetRot=$targetRotation exceeds span (${newW}x$newH > ${maxSpanW}x$maxSpanH)",
+        )
         return null
     }
 
     val centerX = cutout.destX + cutout.destWidth / 2f
     val centerY = cutout.destY + cutout.destHeight / 2f
 
-    val targetX = (centerX - newW / 2f).coerceIn(0f, (maxDimension - newW).coerceAtLeast(0f))
-    val targetY = (centerY - newH / 2f).coerceIn(0f, (maxDimension - newH).coerceAtLeast(0f))
+    val targetX = (centerX - newW / 2f).coerceIn(minDestX, (maxDestX - newW).coerceAtLeast(minDestX))
+    val targetY = (centerY - newH / 2f).coerceIn(minDestY, (maxDestY - newH).coerceAtLeast(minDestY))
 
     val others = allCutouts.filter { it.id != cutout.id }
     val hasOverlap =
@@ -442,6 +466,7 @@ fun calculateRotatedCutoutBounds(
         }
 
     if (hasOverlap) {
+        AppLog.d(TAG, "calculateRotatedCutoutBounds: cutout=${cutout.id} targetRot=$targetRotation blocked by sibling overlap")
         return null
     }
 

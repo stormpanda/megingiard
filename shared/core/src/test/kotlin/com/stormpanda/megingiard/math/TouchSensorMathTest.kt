@@ -87,4 +87,30 @@ class TouchSensorMathTest {
         assertEquals(0f, normClamped.x, 0.0001f)
         assertEquals(1f, normClamped.y, 0.0001f)
     }
+
+    @Test
+    fun `normalizedToSensor guards NaN and Infinity deterministically`() {
+        val nanPoint =
+            TouchSensorMath.normalizedToSensor(
+                normalizedX = Float.NaN,
+                normalizedY = Float.NaN,
+                sensorWidth = 1080,
+                sensorHeight = 1920,
+                rotation = DisplayRotationDegrees.ROT_90,
+            )
+        // NaN defaults to NORM_MIN (0f), which at ROT_90 maps to top-left (1080, 0)
+        assertEquals(1080, nanPoint.x)
+        assertEquals(0, nanPoint.y)
+
+        val infPoint =
+            TouchSensorMath.normalizedToSensor(
+                normalizedX = Float.POSITIVE_INFINITY,
+                normalizedY = Float.NEGATIVE_INFINITY,
+                sensorWidth = 1080,
+                sensorHeight = 1920,
+                rotation = DisplayRotationDegrees.ROT_0,
+            )
+        assertEquals(1620, infPoint.x)
+        assertEquals(-960, infPoint.y)
+    }
 }

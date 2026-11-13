@@ -298,6 +298,46 @@ class GameFocusControllerDispatcherTest {
             }
         }
 
+    @Test
+    fun primaryOverlayAndGalleryDismissStopActiveRepeatsCleanly() =
+        runTest {
+            AppLog.d(TAG, "Testing L1/R1 release while primary overlay is open, overlay repeat guard, and gallery dismiss stopRepeat")
+            val harness = createHarness()
+            try {
+                // Start R1 hold-repeat on Gallery
+                assertTrue(harness.dispatcher.handleKeyDown(GamePadButton.BUTTON_R1.keyCode, repeatCount = 0))
+                assertEquals(1, harness.viewModel.nextLetterTrigger.value)
+
+                // Touch-opening Edit Game primary overlay while R1 is held:
+                // releasing R1 must cancel repeat AND return false so overlay key-up handling is unaffected
+                harness.viewModel.openEditGameOverlay(harness.host.galleryApps.first())
+                assertFalse(harness.dispatcher.handleKeyUp(GamePadButton.BUTTON_R1.keyCode))
+
+                // Close overlay and advance past hold delay -> cancelled R1 repeat must NOT fire
+                harness.viewModel.setEditingAppInfo(null)
+                advanceMs(POST_RELEASE_QUIET_MS)
+                assertEquals(1, harness.viewModel.nextLetterTrigger.value)
+
+                // Joystick deflection while primary overlay is open must not step category or start repeat
+                val categoryBeforeOverlay = harness.viewModel.selectedCategory.value
+                harness.viewModel.setManageGalleriesOpen(true)
+                assertTrue(harness.dispatcher.handleJoystickAxes(NEUTRAL_AXIS, FULL_DOWN_Y))
+                harness.viewModel.setManageGalleriesOpen(false)
+                advanceMs(POST_RELEASE_QUIET_MS)
+                assertEquals(categoryBeforeOverlay, harness.viewModel.selectedCategory.value)
+
+                // Pressing Dismiss/Back on main gallery while holding D-pad RIGHT stops repeat immediately
+                assertTrue(harness.dispatcher.handleKeyDown(KeyEvent.KEYCODE_DPAD_RIGHT, repeatCount = 0))
+                val stepsBeforeDismiss = harness.viewModel.dpadStepRightTrigger.value
+                assertTrue(harness.dispatcher.handleKeyDown(GamePadButton.BUTTON_B.keyCode, repeatCount = 0))
+                assertEquals(1, harness.host.galleryDismissCount)
+                advanceMs(POST_RELEASE_QUIET_MS)
+                assertEquals(stepsBeforeDismiss, harness.viewModel.dpadStepRightTrigger.value)
+            } finally {
+                harness.dispatcher.stopRepeat()
+            }
+        }
+
     private fun TestScope.createHarness(): DispatcherHarness {
         val pacer = GameFocusInputPacer { testScheduler.currentTime }
         val viewModel = FocusTopLauncherViewModel(pacer)

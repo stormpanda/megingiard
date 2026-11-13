@@ -65,12 +65,13 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 20
+#define PRIVD_VERSION 21
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
 #define INPUT_PATH_PREFIX "/dev/input/event"
 #define MAX_LINE 512
+#define MAX_SCREENSHOT_PNG_BYTES (16 * 1024 * 1024)
 
 #ifndef INPUT_PROP_DIRECT
 #define INPUT_PROP_DIRECT 0x01
@@ -123,7 +124,7 @@ static volatile int g_client_fd_for_touch_reader = -1;
 /* Direct mirror server child (MIRROR START_DIRECT/STOP). */
 static volatile pid_t g_mirror_pid = -1;
 static char g_mirror_socket[64] = {0};
-static const char *g_dex_file_path = "/data/local/tmp/megingiard_mirror.dex";
+static const char *g_dex_file_path = NULL;
 #define DIRECT_MIRROR_MAIN_CLASS "com.stormpanda.megingiard.mirrorserver.DirectMirrorServer"
 
 /*
@@ -300,7 +301,7 @@ static void signal_handler(int sig) {
  * Returns O_RDWR fd on success, -1 on failure.
  */
 static int init_virtual_mouse(void) {
-    int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+    int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
     if (fd < 0) {
         return -1;
     }
@@ -333,7 +334,7 @@ static int init_virtual_mouse(void) {
  * Returns O_RDWR fd on success, -1 on failure.
  */
 static int init_virtual_keyboard(void) {
-    int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+    int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK | O_CLOEXEC);
     if (fd < 0) {
         return -1;
     }
@@ -367,7 +368,7 @@ static int init_virtual_keyboard(void) {
  *   - whose EVIOCGNAME does NOT start with "Megingiard" (skip our own
  *     virtual uinput device if it happens to be running concurrently)
  *
- * Returns the open O_RDWR fd on success, -1 on failure.
+ * Returns the open O_RDWR | O_CLOEXEC fd on success, -1 on failure.
  */
 static int discover_gamepad_fd(void) {
     char path[64];
@@ -378,7 +379,7 @@ static int discover_gamepad_fd(void) {
     for (int i = 0; i < SCAN_MAX; i++) {
         snprintf(path, sizeof(path), "%s%d", INPUT_PATH_PREFIX, i);
 
-        int probe_fd = open(path, O_RDONLY);
+        int probe_fd = open(path, O_RDONLY | O_CLOEXEC);
         if (probe_fd < 0) continue;
 
         memset(key_bits, 0, sizeof(key_bits));
@@ -400,7 +401,7 @@ static int discover_gamepad_fd(void) {
         if (!test_bit(BTN_SOUTH, key_bits)) continue;
         if (!test_bit(ABS_X, abs_bits))     continue;
 
-        int rw_fd = open(path, O_RDWR);
+        int rw_fd = open(path, O_RDWR | O_CLOEXEC);
         if (rw_fd >= 0) {
             fprintf(stderr, "privd: gamepad=%s name=\"%s\"\n", path, devname);
             return rw_fd;
@@ -409,85 +410,113 @@ static int discover_gamepad_fd(void) {
     return -1;
 }
 
+static int resolve_primary_touch_path_from_dumpsys(char *out_path, size_t out_size) {
+    if (!out_path || out_size == 0) return 0;
+    out_path[0] = '\0';
+    FILE *fp = popen("/system/bin/dumpsys input 2>/dev/null", "r");
+    if (!fp) {
+        return 0;
+    }
+    int found = parse_dumpsys_input_primary_touch_path(fp, out_path, out_size);
+    pclose(fp);
+    return found;
+}
+
+static int open_verified_touch_node(
+    const char *path,
+    int require_verified_name,
+    const char *source_tag,
+    int *out_width,
+    int *out_height
+) {
+    unsigned long abs_bits[NBITS(ABS_MAX + 1)];
+    unsigned long prop_bits[NBITS(INPUT_PROP_MAX + 1)];
+    char devname[256];
+
+    int probe_fd = open(path, O_RDONLY | O_CLOEXEC);
+    if (probe_fd < 0) return -1;
+
+    memset(abs_bits, 0, sizeof(abs_bits));
+    memset(prop_bits, 0, sizeof(prop_bits));
+    memset(devname, 0, sizeof(devname));
+
+    if (ioctl(probe_fd, EVIOCGBIT(EV_ABS, sizeof(abs_bits)), abs_bits) < 0 ||
+        ioctl(probe_fd, EVIOCGPROP(sizeof(prop_bits)), prop_bits) < 0 ||
+        ioctl(probe_fd, EVIOCGNAME(sizeof(devname)), devname) < 0) {
+        close(probe_fd);
+        return -1;
+    }
+
+    if (is_excluded_touch_device_name(devname) ||
+        (require_verified_name && !is_verified_primary_touch_device_name(devname)) ||
+        !test_bit(INPUT_PROP_DIRECT, prop_bits) ||
+        !test_bit(ABS_MT_POSITION_X, abs_bits) ||
+        !test_bit(ABS_MT_POSITION_Y, abs_bits)) {
+        close(probe_fd);
+        return -1;
+    }
+
+    struct input_absinfo abs_x;
+    struct input_absinfo abs_y;
+    memset(&abs_x, 0, sizeof(abs_x));
+    memset(&abs_y, 0, sizeof(abs_y));
+    int w = 0;
+    int h = 0;
+    if (ioctl(probe_fd, EVIOCGABS(ABS_MT_POSITION_X), &abs_x) == 0 &&
+        ioctl(probe_fd, EVIOCGABS(ABS_MT_POSITION_Y), &abs_y) == 0) {
+        w = compute_evdev_axis_span(abs_x.minimum, abs_x.maximum);
+        h = compute_evdev_axis_span(abs_y.minimum, abs_y.maximum);
+    }
+    close(probe_fd);
+
+    if (w <= 0 || h <= 0) {
+        return -1;
+    }
+
+    int rw_fd = open(path, O_RDWR | O_CLOEXEC);
+    if (rw_fd < 0) {
+        return -1;
+    }
+
+    if (out_width) *out_width = w;
+    if (out_height) *out_height = h;
+    fprintf(stderr, "privd: touch=%s name=\"%s\" sensor=%dx%d source=%s\n",
+            path, devname, w, h, source_tag ? source_tag : "unknown");
+    return rw_fd;
+}
+
 /*
- * Walks /dev/input/event0..eventN and selects the primary direct touchscreen:
- *   - has INPUT_PROP_DIRECT (excludes external controller touchpads)
- *   - has ABS_MT_POSITION_X and ABS_MT_POSITION_Y multi-touch axes
- *   - passes is_primary_touch_device_name() (excludes virtual "Megingiard*"
- *     nodes and secondary "*_sec" / "*Secondary*" panels such as fts_ts_sec)
- *   - prefers exact "fts_ts" (rank 2) if multiple candidates exist
+ * Deterministically discovers and opens the primary Display 0 direct touchscreen:
+ *   1. Queries Android's InputReader (`dumpsys input`) for the exact `/dev/input/eventN`
+ *      bound to `Viewport INTERNAL: displayId=0` and validates its evdev capabilities.
+ *   2. If `dumpsys input` is unavailable (e.g. early boot), falls back strictly to
+ *      exact hardware-verified primary touchscreen names (`"fts_ts"`).
  *
  * Writes hardware sensor pixel dimensions (maximum - minimum + 1) to out_width /
  * out_height and returns an O_RDWR | O_CLOEXEC fd, or -1 if none is found.
  */
 static int discover_primary_touch_fd(int *out_width, int *out_height) {
-    char path[64];
-    unsigned long abs_bits[NBITS(ABS_MAX + 1)];
-    unsigned long prop_bits[NBITS(INPUT_PROP_MAX + 1)];
-    char devname[256];
+    if (out_width) *out_width = 0;
+    if (out_height) *out_height = 0;
 
-    int best_fd = -1;
-    int best_rank = 0;
-    int best_w = 0;
-    int best_h = 0;
-
-    for (int i = 0; i < SCAN_MAX; i++) {
-        snprintf(path, sizeof(path), "%s%d", INPUT_PATH_PREFIX, i);
-
-        int probe_fd = open(path, O_RDONLY | O_CLOEXEC);
-        if (probe_fd < 0) continue;
-
-        memset(abs_bits, 0, sizeof(abs_bits));
-        memset(prop_bits, 0, sizeof(prop_bits));
-        memset(devname, 0, sizeof(devname));
-
-        if (ioctl(probe_fd, EVIOCGBIT(EV_ABS, sizeof(abs_bits)), abs_bits) < 0 ||
-            ioctl(probe_fd, EVIOCGPROP(sizeof(prop_bits)), prop_bits) < 0 ||
-            ioctl(probe_fd, EVIOCGNAME(sizeof(devname)), devname) < 0) {
-            close(probe_fd);
-            continue;
-        }
-
-        int rank = is_primary_touch_device_name(devname);
-        if (rank <= 0 ||
-            !test_bit(INPUT_PROP_DIRECT, prop_bits) ||
-            !test_bit(ABS_MT_POSITION_X, abs_bits) ||
-            !test_bit(ABS_MT_POSITION_Y, abs_bits)) {
-            close(probe_fd);
-            continue;
-        }
-
-        struct input_absinfo abs_x;
-        struct input_absinfo abs_y;
-        memset(&abs_x, 0, sizeof(abs_x));
-        memset(&abs_y, 0, sizeof(abs_y));
-        int w = 0;
-        int h = 0;
-        if (ioctl(probe_fd, EVIOCGABS(ABS_MT_POSITION_X), &abs_x) == 0 &&
-            ioctl(probe_fd, EVIOCGABS(ABS_MT_POSITION_Y), &abs_y) == 0) {
-            w = abs_x.maximum - abs_x.minimum + 1;
-            h = abs_y.maximum - abs_y.minimum + 1;
-        }
-        close(probe_fd);
-
-        if (rank <= best_rank) continue;
-
-        int rw_fd = open(path, O_RDWR | O_CLOEXEC);
-        if (rw_fd >= 0) {
-            if (best_fd >= 0) close(best_fd);
-            best_fd = rw_fd;
-            best_rank = rank;
-            best_w = (w > 0) ? w : 0;
-            best_h = (h > 0) ? h : 0;
-            fprintf(stderr, "privd: touch=%s name=\"%s\" sensor=%dx%d rank=%d\n",
-                    path, devname, best_w, best_h, rank);
-            if (rank == 2) break;
+    char dumpsys_path[64];
+    if (resolve_primary_touch_path_from_dumpsys(dumpsys_path, sizeof(dumpsys_path))) {
+        int fd = open_verified_touch_node(dumpsys_path, 0, "dumpsys_input", out_width, out_height);
+        if (fd >= 0) {
+            return fd;
         }
     }
 
-    if (out_width) *out_width = best_w;
-    if (out_height) *out_height = best_h;
-    return best_fd;
+    char path[64];
+    for (int i = 0; i < SCAN_MAX; i++) {
+        snprintf(path, sizeof(path), "%s%d", INPUT_PATH_PREFIX, i);
+        int fd = open_verified_touch_node(path, 1, "verified_name", out_width, out_height);
+        if (fd >= 0) {
+            return fd;
+        }
+    }
+
+    return -1;
 }
 
 
@@ -555,6 +584,10 @@ static int read_line(int fd, char *out) {
 
 static int start_direct_mirror_child(int width, int height) {
     if (g_mirror_pid > 0) return 0; /* already running */
+    if (g_dex_file_path == NULL || g_dex_file_path[0] == '\0' || access(g_dex_file_path, R_OK) != 0) {
+        fprintf(stderr, "privd: mirror DEX unavailable or unprovisioned\n");
+        return -1;
+    }
 
     snprintf(g_mirror_socket, sizeof(g_mirror_socket),
              "megingiard.mirror.direct.%d", (int)getpid());
@@ -841,9 +874,15 @@ static int read_line_n(int fd, char *out, int max_len) {
  * (daemon must refuse to start without it).
  */
 static int load_state_file(void) {
-    FILE *f = fopen(g_state_file_path, "r");
-    if (!f) {
+    int fd = open(g_state_file_path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
         fprintf(stderr, "privd: state file not found: %s\n", g_state_file_path);
+        return 0;
+    }
+    FILE *f = fdopen(fd, "r");
+    if (!f) {
+        close(fd);
+        fprintf(stderr, "privd: state file fdopen failed: %s\n", g_state_file_path);
         return 0;
     }
     char line[128];
@@ -894,7 +933,7 @@ static int provision_state(const char *key_hex) {
         }
     }
     /* Write with mode 0600 so only the shell user (UID 2000) can read it. */
-    int fd = open(g_state_file_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    int fd = open(g_state_file_path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
     if (fd < 0) {
         fprintf(stderr, "privd: provision: cannot write %s: %s\n", g_state_file_path, strerror(errno));
         return 1;
@@ -926,7 +965,7 @@ static int authenticate_client(int client_fd) {
     uint8_t nonce[NONCE_BYTES];
     if (getrandom(nonce, NONCE_BYTES, 0) != (ssize_t)NONCE_BYTES) {
         /* Fallback: /dev/urandom (available on all Android versions). */
-        int urnd = open("/dev/urandom", O_RDONLY);
+        int urnd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
         if (urnd < 0) return 0;
         ssize_t r = read(urnd, nonce, NONCE_BYTES);
         close(urnd);
@@ -1195,17 +1234,49 @@ static const char *resolve_primary_sf_display_id(void) {
     return g_primary_sf_display_id;
 }
 
-static int run_screencap_to_file(const char *display_id_str, const char *out_path) {
+static int run_screencap_to_memory(
+    const char *display_id_str,
+    uint8_t **out_buf,
+    size_t *out_len
+) {
+    static const uint8_t png_magic[8] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'};
+    *out_buf = NULL;
+    *out_len = 0;
+
+    int pipefd[2];
+    if (pipe(pipefd) != 0) {
+        return -1;
+    }
+    (void)fcntl(pipefd[0], F_SETFD, FD_CLOEXEC);
+    (void)fcntl(pipefd[1], F_SETFD, FD_CLOEXEC);
+
     pid_t pid = fork();
-    if (pid < 0) return -1;
+    if (pid < 0) {
+        close(pipefd[0]);
+        close(pipefd[1]);
+        return -1;
+    }
     if (pid == 0) {
+        close(pipefd[0]);
+        if (dup2(pipefd[1], STDOUT_FILENO) < 0) {
+            _exit(127);
+        }
+        if (pipefd[1] != STDOUT_FILENO) {
+            close(pipefd[1]);
+        }
+        int devnull = open("/dev/null", O_WRONLY);
+        if (devnull >= 0) {
+            (void)dup2(devnull, STDERR_FILENO);
+            if (devnull != STDERR_FILENO) {
+                close(devnull);
+            }
+        }
         if (display_id_str != NULL && display_id_str[0] != '\0') {
             char *args[] = {
                 (char *)"/system/bin/screencap",
                 (char *)"-d",
                 (char *)display_id_str,
                 (char *)"-p",
-                (char *)out_path,
                 NULL
             };
             execv(args[0], args);
@@ -1213,18 +1284,68 @@ static int run_screencap_to_file(const char *display_id_str, const char *out_pat
             char *args[] = {
                 (char *)"/system/bin/screencap",
                 (char *)"-p",
-                (char *)out_path,
                 NULL
             };
             execv(args[0], args);
         }
         _exit(127);
     }
+
+    close(pipefd[1]);
+
+    size_t cap = 256 * 1024;
+    size_t len = 0;
+    uint8_t *buf = (uint8_t *)malloc(cap);
+    int read_failed = (buf == NULL);
+
+    uint8_t chunk[16384];
+    while (1) {
+        ssize_t r = read(pipefd[0], chunk, sizeof(chunk));
+        if (r == 0) break;
+        if (r < 0) {
+            if (errno == EINTR) continue;
+            read_failed = 1;
+            break;
+        }
+        if (!read_failed) {
+            if (len + (size_t)r > MAX_SCREENSHOT_PNG_BYTES) {
+                read_failed = 1;
+            } else {
+                while (len + (size_t)r > cap) {
+                    size_t next_cap = cap * 2;
+                    if (next_cap > MAX_SCREENSHOT_PNG_BYTES) {
+                        next_cap = MAX_SCREENSHOT_PNG_BYTES;
+                    }
+                    uint8_t *grown = (uint8_t *)realloc(buf, next_cap);
+                    if (!grown) {
+                        read_failed = 1;
+                        break;
+                    }
+                    buf = grown;
+                    cap = next_cap;
+                }
+                if (!read_failed) {
+                    memcpy(buf + len, chunk, (size_t)r);
+                    len += (size_t)r;
+                }
+            }
+        }
+    }
+    close(pipefd[0]);
+
     int status = 0;
-    if (waitpid(pid, &status, 0) != pid) return -1;
-    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) return -1;
-    struct stat st;
-    if (stat(out_path, &st) != 0 || st.st_size <= 0) return -1;
+    if (waitpid(pid, &status, 0) != pid ||
+        !WIFEXITED(status) ||
+        WEXITSTATUS(status) != 0 ||
+        read_failed ||
+        len < sizeof(png_magic) ||
+        memcmp(buf, png_magic, sizeof(png_magic)) != 0) {
+        free(buf);
+        return -1;
+    }
+
+    *out_buf = buf;
+    *out_len = len;
     return 0;
 }
 
@@ -1232,46 +1353,36 @@ static void handle_screenshot_b64(int client_fd, const char *explicit_display_id
     static const char b64_table[] =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    char tmp_path[128];
-    snprintf(tmp_path, sizeof(tmp_path), "/data/local/tmp/mgrd_shot_%d.png", g_port_start);
-    unlink(tmp_path);
-
     const char *target_id = explicit_display_id;
     if (target_id == NULL || target_id[0] == '\0') {
         target_id = resolve_primary_sf_display_id();
     }
 
-    int ok = (run_screencap_to_file(target_id, tmp_path) == 0);
+    uint8_t *png_buf = NULL;
+    size_t png_len = 0;
+    int ok = (run_screencap_to_memory(target_id, &png_buf, &png_len) == 0);
     if (!ok && (explicit_display_id == NULL || explicit_display_id[0] == '\0') &&
         target_id != NULL && target_id[0] != '\0') {
         /* Fallback to default screencap without -d if physical ID lookup failed. */
-        unlink(tmp_path);
-        ok = (run_screencap_to_file(NULL, tmp_path) == 0);
+        ok = (run_screencap_to_memory(NULL, &png_buf, &png_len) == 0);
     }
 
-    if (!ok) {
-        unlink(tmp_path);
+    if (!ok || png_buf == NULL) {
+        free(png_buf);
         pthread_mutex_lock(&g_send_mutex);
         (void)write_all(client_fd, "SCREENSHOT_ERR CAPTURE_FAILED\n", 30);
         pthread_mutex_unlock(&g_send_mutex);
         return;
     }
 
-    FILE *fp = fopen(tmp_path, "rb");
-    if (!fp) {
-        unlink(tmp_path);
-        pthread_mutex_lock(&g_send_mutex);
-        (void)write_all(client_fd, "SCREENSHOT_ERR OPEN_FAILED\n", 27);
-        pthread_mutex_unlock(&g_send_mutex);
-        return;
-    }
-
     pthread_mutex_lock(&g_send_mutex);
     if (write_all(client_fd, "SCREENSHOT_BEGIN\n", 17) == 0) {
-        uint8_t in_buf[768];
         char out_buf[1028];
-        size_t n;
-        while ((n = fread(in_buf, 1, sizeof(in_buf), fp)) > 0) {
+        size_t offset = 0;
+        while (offset < png_len) {
+            size_t n = png_len - offset;
+            if (n > 768) n = 768;
+            const uint8_t *in_buf = png_buf + offset;
             size_t o = 0;
             size_t i = 0;
             while (i + 2 < n) {
@@ -1300,13 +1411,13 @@ static void handle_screenshot_b64(int client_fd, const char *explicit_display_id
             }
             out_buf[o++] = '\n';
             if (write_all(client_fd, out_buf, o) != 0) break;
+            offset += n;
         }
         (void)write_all(client_fd, "SCREENSHOT_END\n", 15);
     }
     pthread_mutex_unlock(&g_send_mutex);
 
-    fclose(fp);
-    unlink(tmp_path);
+    free(png_buf);
 }
 
 /*
@@ -1676,6 +1787,8 @@ int main(int argc, char *argv[]) {
             if (errno == EINTR) continue;
             break;
         }
+        /* Prevent forked children (e.g. DirectMirrorServer app_process) from inheriting client_fd. */
+        (void)fcntl(client, F_SETFD, FD_CLOEXEC);
         /* HMAC challenge-response: reject clients that cannot prove they hold
          * the per-install key provisioned during bootstrap.
          * authenticate_client() sends CHAL, reads AUTH, verifies HMAC-SHA256,

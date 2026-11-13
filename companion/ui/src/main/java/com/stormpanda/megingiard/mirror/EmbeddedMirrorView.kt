@@ -27,6 +27,7 @@ import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 
 private const val TAG = "EmbeddedMirrorView"
@@ -56,6 +57,7 @@ fun EmbeddedMirrorView(
     val isMirrorEditorBackgroundHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val layout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
+    val mediaRevision by MacroPadMediaRepository.mediaRevision.collectAsStateWithLifecycle()
 
     val effectiveCutouts = overrideCutouts ?: cutouts
     val effectiveDesignCanvas: LayoutCanvasSpec? = if (overrideCutouts == null) layout?.effectiveDesignCanvas else null
@@ -69,7 +71,12 @@ fun EmbeddedMirrorView(
         mutableStateOf<Bitmap?>(null)
     }
 
-    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion, effectiveShowLayoutBackground) {
+    LaunchedEffect(
+        layout?.backgroundImagePath,
+        layout?.backgroundImageVersion,
+        effectiveShowLayoutBackground,
+        mediaRevision,
+    ) {
         if (!effectiveShowLayoutBackground) {
             bgBitmap = null
             return@LaunchedEffect
@@ -91,7 +98,12 @@ fun EmbeddedMirrorView(
         }
     }
 
-    LaunchedEffect(layout?.maskImagePath, layout?.maskImageVersion, effectiveShowLayoutBackground) {
+    LaunchedEffect(
+        layout?.maskImagePath,
+        layout?.maskImageVersion,
+        effectiveShowLayoutBackground,
+        mediaRevision,
+    ) {
         if (!effectiveShowLayoutBackground) {
             maskBitmap = null
             return@LaunchedEffect
@@ -201,9 +213,14 @@ fun EmbeddedMirrorView(
         }
     }
 
-    // React to visual anchor presence state changes (instant freeze / unfreeze transition)
+    // React to visual anchor presence and async cutout mask/asset cache updates
     LaunchedEffect(Unit) {
-        AnchorPresenceManager.presenceRevision.collect {
+        combine(
+            AnchorPresenceManager.presenceRevision,
+            CutoutMaskManager.cacheRevision,
+        ) { presenceRev, cacheRev ->
+            presenceRev to cacheRev
+        }.collect {
             containerHolder.container?.postInvalidateOnAnimation()
         }
     }

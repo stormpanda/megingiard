@@ -317,6 +317,14 @@ class CutoutMaskManagerTest {
             )
 
             CutoutMaskManager.invalidateCache(cutoutId)
+            assertFalse(
+                "invalidateCache must evict without recycling bitmaps that may still be drawn on the UI thread",
+                maskBitmap.isRecycled,
+            )
+            assertFalse(
+                "invalidateCache must evict without recycling freeze bitmaps that may still be drawn on the UI thread",
+                freezeBitmap.isRecycled,
+            )
             assertTrue(CutoutMaskFileStore.baseMaskFile(context.filesDir, cutoutId).exists())
             assertTrue(CutoutMaskManager.hasMask(context, cutoutId))
             assertNotNull(CutoutMaskManager.getMask(context, cutoutId))
@@ -324,6 +332,30 @@ class CutoutMaskManagerTest {
             assertEquals(0xFFFFAA00.toInt(), CutoutMaskManager.getFreezeFrame(context, cutoutId)!!.getPixel(2, 2))
         } finally {
             CutoutMaskManager.deleteMask(context, cutoutId)
+        }
+    }
+
+    @Test
+    fun `invalidateCache clears negative maskExistenceCache after async asset duplication finishes`() {
+        val context = RuntimeEnvironment.getApplication()
+        val sourceId = "test_async_dup_src"
+        val targetId = "test_async_dup_dst"
+        val maskBitmap = Bitmap.createBitmap(12, 12, Bitmap.Config.ARGB_8888)
+
+        try {
+            CutoutMaskManager.saveMask(context, sourceId, maskBitmap)
+            // Simulate UI checking targetId before background asset duplication completes -> caches false
+            assertFalse(CutoutMaskManager.hasMask(context, targetId))
+
+            // Background duplication copies files and invalidates negative cache
+            CutoutMaskFileStore.duplicateAssetsForId(context.filesDir, sourceId, targetId)
+            CutoutMaskManager.invalidateCache(targetId)
+
+            assertTrue(CutoutMaskManager.hasMask(context, targetId))
+            assertNotNull(CutoutMaskManager.getMask(context, targetId))
+        } finally {
+            CutoutMaskManager.deleteMask(context, sourceId)
+            CutoutMaskManager.deleteMask(context, targetId)
         }
     }
 }

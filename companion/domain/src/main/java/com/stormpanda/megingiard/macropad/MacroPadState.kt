@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.channels.BufferOverflow
@@ -866,6 +867,22 @@ object MacroPadState {
         )
     }
 
+    /**
+     * Updates [layout] in memory without writing to DataStore or emitting per-frame log spam.
+     * Used during 60–120 Hz pointer drag/resize MOVE events; callers MUST commit via [updateLayout]
+     * when the gesture finishes or cancels.
+     */
+    fun updateLayoutLive(layout: PadLayout) {
+        updateState(persist = false) {
+            val profile = _activeProfile.value ?: return@updateState
+            applyProfileUpdateLocked(
+                profile.copy(
+                    layouts = profile.layouts.map { if (it.id == layout.id) layout else it },
+                ),
+            )
+        }
+    }
+
     fun updateCutout(updatedCutout: ScreenCutout) {
         val layout = activeLayout.value ?: return
         val updatedList =
@@ -873,6 +890,19 @@ object MacroPadState {
                 if (it.id == updatedCutout.id) updatedCutout else it
             }
         updateLayout(layout.copy(mirrorCutouts = updatedList))
+    }
+
+    /**
+     * Updates [updatedCutout] in memory without writing to DataStore or emitting per-frame log spam.
+     * Callers MUST commit via [updateCutout] or [updateLayout] when the gesture ends.
+     */
+    fun updateCutoutLive(updatedCutout: ScreenCutout) {
+        val layout = activeLayout.value ?: return
+        val updatedList =
+            layout.mirrorCutouts.map {
+                if (it.id == updatedCutout.id) updatedCutout else it
+            }
+        updateLayoutLive(layout.copy(mirrorCutouts = updatedList))
     }
 
     fun deleteLayout(layoutId: String): Boolean {
@@ -1262,21 +1292,37 @@ object MacroPadState {
         button: PadButton,
         layoutId: String,
     ) {
-        val newPosX = (button.posX + DUPLICATE_BUTTON_OFFSET).coerceIn(0f, 1f)
-        val newPosY = (button.posY + DUPLICATE_BUTTON_OFFSET).coerceIn(0f, 1f)
-        val clonedButton =
-            button.copy(
-                id = UUID.randomUUID().toString(),
-                posX = newPosX,
-                posY = newPosY,
-            )
-
+        var clonedPosX = 0f
+        var clonedPosY = 0f
         val changed =
             updateLayoutInProfiles(layoutId) { layout ->
+                val hostCanvas = _hostSecondaryCanvas.value
+                val (minX, maxX, minY, maxY) =
+                    if (hostCanvas != null && hostCanvas.widthPx > 0 && hostCanvas.heightPx > 0) {
+                        val designCanvas = layout.effectiveDesignCanvas
+                        val vp =
+                            ViewportMath.calculateDesignViewport(
+                                hostWidthPx = hostCanvas.widthPx.toFloat(),
+                                hostHeightPx = hostCanvas.heightPx.toFloat(),
+                                designWidthPx = designCanvas.widthPx.toFloat(),
+                                designHeightPx = designCanvas.heightPx.toFloat(),
+                            )
+                        arrayOf(vp.minNormX, vp.maxNormX, vp.minNormY, vp.maxNormY)
+                    } else {
+                        arrayOf(0f, 1f, 0f, 1f)
+                    }
+                clonedPosX = (button.posX + DUPLICATE_BUTTON_OFFSET).coerceIn(minX, maxX)
+                clonedPosY = (button.posY + DUPLICATE_BUTTON_OFFSET).coerceIn(minY, maxY)
+                val clonedButton =
+                    button.copy(
+                        id = UUID.randomUUID().toString(),
+                        posX = clonedPosX,
+                        posY = clonedPosY,
+                    )
                 layout.copy(buttons = layout.buttons + clonedButton)
             }
         if (changed) {
-            AppLog.d(TAG, "duplicateButtonInLayout buttonId=${button.id} layoutId=$layoutId offset to ($newPosX, $newPosY)")
+            AppLog.d(TAG, "duplicateButtonInLayout buttonId=${button.id} layoutId=$layoutId offset to ($clonedPosX, $clonedPosY)")
         }
     }
 

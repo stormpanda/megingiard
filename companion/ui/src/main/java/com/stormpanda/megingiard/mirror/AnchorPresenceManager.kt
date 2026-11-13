@@ -515,6 +515,22 @@ object AnchorPresenceManager {
         return CutoutMaskManager.getFreezeFrame(context, cutoutId)
     }
 
+    /**
+     * Non-blocking UI-thread frozen-frame lookup for [MultiCutoutContainer.dispatchDraw].
+     * Prefers the in-memory live frozen crop, falling back asynchronously to the persisted reference freeze frame.
+     */
+    fun getCachedFrozenFrameOrLoadAsync(
+        context: Context,
+        cutoutId: String,
+        onLoaded: () -> Unit = {},
+    ): Bitmap? {
+        lastValidFrameBitmaps[cutoutId]?.let { bmp ->
+            if (!bmp.isRecycled) return bmp
+            lastValidFrameBitmaps.remove(cutoutId)
+        }
+        return CutoutMaskManager.getCachedFreezeFrameOrLoadAsync(context, cutoutId, onLoaded)
+    }
+
     @VisibleForTesting
     internal fun setFrozenFrameForTesting(
         cutoutId: String,

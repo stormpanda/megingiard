@@ -7,6 +7,8 @@ private const val VM_DEFAULT_SCALE = 1f
 private const val VM_MIN_DIMENSION_PX = 1f
 private const val VM_CENTER_DIVISOR = 2f
 
+private fun Float.isPositiveFinite(): Boolean = isFinite() && this > 0f
+
 /**
  * Centered aspect-fitted viewport mapping a layout's authoring `designCanvas` (`[0..1] × [0..1]`)
  * into a physical host secondary display (`[0..hostWidthPx] × [0..hostHeightPx]`).
@@ -31,16 +33,18 @@ data class DesignViewport(
     val maxNormY: Float,
 ) {
     /** Converts a normalized `designCanvas` X coordinate (`0..1`, or `< 0` / `> 1` in bars) to host screen pixels. */
-    fun normToScreenX(normX: Float): Float = leftPx + normX * viewportWidthPx
+    fun normToScreenX(normX: Float): Float = if (normX.isFinite()) leftPx + normX * viewportWidthPx else leftPx
 
     /** Converts a normalized `designCanvas` Y coordinate (`0..1`, or `< 0` / `> 1` in bars) to host screen pixels. */
-    fun normToScreenY(normY: Float): Float = topPx + normY * viewportHeightPx
+    fun normToScreenY(normY: Float): Float = if (normY.isFinite()) topPx + normY * viewportHeightPx else topPx
 
     /** Converts a host screen X pixel coordinate to normalized `designCanvas` coordinates. */
-    fun screenToNormX(screenX: Float): Float = if (viewportWidthPx > 0f) (screenX - leftPx) / viewportWidthPx else 0f
+    fun screenToNormX(screenX: Float): Float =
+        if (screenX.isFinite() && viewportWidthPx.isPositiveFinite()) (screenX - leftPx) / viewportWidthPx else 0f
 
     /** Converts a host screen Y pixel coordinate to normalized `designCanvas` coordinates. */
-    fun screenToNormY(screenY: Float): Float = if (viewportHeightPx > 0f) (screenY - topPx) / viewportHeightPx else 0f
+    fun screenToNormY(screenY: Float): Float =
+        if (screenY.isFinite() && viewportHeightPx.isPositiveFinite()) (screenY - topPx) / viewportHeightPx else 0f
 }
 
 /**
@@ -51,7 +55,7 @@ object ViewportMath {
      * Computes the centered, aspect-fitted [DesignViewport] for rendering and hit-testing a layout
      * authored at `(designWidthPx × designHeightPx)` inside a host container of `(hostWidthPx × hostHeightPx)`.
      *
-     * Returns a safe `1:1` fallback viewport when any host or design dimension is `<= 0f`.
+     * Returns a safe `1:1` fallback viewport when any host or design dimension is non-positive or non-finite.
      */
     fun calculateDesignViewport(
         hostWidthPx: Float,
@@ -59,17 +63,21 @@ object ViewportMath {
         designWidthPx: Float,
         designHeightPx: Float,
     ): DesignViewport {
-        if (hostWidthPx <= 0f || hostHeightPx <= 0f || designWidthPx <= 0f || designHeightPx <= 0f) {
+        if (!hostWidthPx.isPositiveFinite() ||
+            !hostHeightPx.isPositiveFinite() ||
+            !designWidthPx.isPositiveFinite() ||
+            !designHeightPx.isPositiveFinite()
+        ) {
             val safeW =
                 when {
-                    hostWidthPx > 0f -> hostWidthPx
-                    designWidthPx > 0f -> designWidthPx
+                    hostWidthPx.isPositiveFinite() -> hostWidthPx
+                    designWidthPx.isPositiveFinite() -> designWidthPx
                     else -> VM_MIN_DIMENSION_PX
                 }
             val safeH =
                 when {
-                    hostHeightPx > 0f -> hostHeightPx
-                    designHeightPx > 0f -> designHeightPx
+                    hostHeightPx.isPositiveFinite() -> hostHeightPx
+                    designHeightPx.isPositiveFinite() -> designHeightPx
                     else -> VM_MIN_DIMENSION_PX
                 }
             return DesignViewport(
@@ -116,9 +124,9 @@ object ViewportMath {
 
             scaleX < scaleY -> {
                 viewportW = hostWidthPx
-                viewportH = designHeightPx * scale
+                viewportH = (designHeightPx * scale).coerceAtMost(hostHeightPx)
                 leftPx = 0f
-                topPx = (hostHeightPx - viewportH) / VM_CENTER_DIVISOR
+                topPx = ((hostHeightPx - viewportH) / VM_CENTER_DIVISOR).coerceAtLeast(0f)
                 minNormX = 0f
                 maxNormX = 1f
                 minNormY = if (topPx == 0f) 0f else -topPx / viewportH
@@ -126,9 +134,9 @@ object ViewportMath {
             }
 
             else -> {
-                viewportW = designWidthPx * scale
+                viewportW = (designWidthPx * scale).coerceAtMost(hostWidthPx)
                 viewportH = hostHeightPx
-                leftPx = (hostWidthPx - viewportW) / VM_CENTER_DIVISOR
+                leftPx = ((hostWidthPx - viewportW) / VM_CENTER_DIVISOR).coerceAtLeast(0f)
                 topPx = 0f
                 minNormX = if (leftPx == 0f) 0f else -leftPx / viewportW
                 maxNormX = (hostWidthPx - leftPx) / viewportW
@@ -163,7 +171,13 @@ object ViewportMath {
         contentW: Float,
         contentH: Float,
     ): Float {
-        if (contentW <= 0f || contentH <= 0f || containerW <= 0f || containerH <= 0f) return 1f
+        if (!contentW.isPositiveFinite() ||
+            !contentH.isPositiveFinite() ||
+            !containerW.isPositiveFinite() ||
+            !containerH.isPositiveFinite()
+        ) {
+            return VM_DEFAULT_SCALE
+        }
         return min(containerW / contentW, containerH / contentH)
     }
 
@@ -176,7 +190,13 @@ object ViewportMath {
         contentW: Float,
         contentH: Float,
     ): Float {
-        if (contentW <= 0f || contentH <= 0f || containerW <= 0f || containerH <= 0f) return 1f
+        if (!contentW.isPositiveFinite() ||
+            !contentH.isPositiveFinite() ||
+            !containerW.isPositiveFinite() ||
+            !containerH.isPositiveFinite()
+        ) {
+            return VM_DEFAULT_SCALE
+        }
         return max(containerW / contentW, containerH / contentH)
     }
 
@@ -190,6 +210,14 @@ object ViewportMath {
         contentH: Float,
         scale: Float,
     ): Pair<Float, Float> {
+        if (!containerW.isPositiveFinite() ||
+            !containerH.isPositiveFinite() ||
+            !contentW.isPositiveFinite() ||
+            !contentH.isPositiveFinite() ||
+            !scale.isPositiveFinite()
+        ) {
+            return Pair(0f, 0f)
+        }
         val scaledW = contentW * scale
         val scaledH = contentH * scale
         val maxTx = max(0f, (scaledW - containerW) / VM_CENTER_DIVISOR)

@@ -137,11 +137,15 @@ internal class GameFocusControllerDispatcher(
     }
 
     fun stopRepeat() {
-        if (currentRepeatInput == null && repeatJob == null) return
-        AppLog.d(TAG, "stopRepeat: currentRepeatInput was $currentRepeatInput")
+        val hadRepeat = currentRepeatInput != null || repeatJob != null
+        if (!hadRepeat && !viewModel.isHoldRepeating.value) return
+        if (hadRepeat) {
+            AppLog.d(TAG, "stopRepeat: currentRepeatInput was $currentRepeatInput")
+        }
         currentRepeatInput = null
         repeatJob?.cancel()
         repeatJob = null
+        viewModel.setHoldRepeating(false)
     }
 
     private fun stopDirectionalRepeat() {
@@ -169,7 +173,7 @@ internal class GameFocusControllerDispatcher(
             !viewModel.isLibraryOpen.value
 
     private fun isRepeatableInputSupported(input: RepeatableInput): Boolean {
-        if (viewModel.folderToRemove.value != null) return false
+        if (isPrimaryOverlayOpen() || viewModel.folderToRemove.value != null) return false
         return when (input) {
             RepeatableInput.UP,
             RepeatableInput.DOWN,
@@ -227,16 +231,19 @@ internal class GameFocusControllerDispatcher(
             }
         }
 
-    private fun performRepeatableStep(input: RepeatableInput): Boolean {
+    private fun performRepeatableStep(
+        input: RepeatableInput,
+        isRepeatTick: Boolean = false,
+    ): Boolean {
         if (!isRepeatableInputSupported(input)) return false
 
         if (input == RepeatableInput.L1 || input == RepeatableInput.R1) {
             if (viewModel.isLibraryOpen.value) {
                 val moved =
                     if (input == RepeatableInput.L1) {
-                        viewModel.cycleLibraryTabUp(host.activeLibraryTabs)
+                        viewModel.cycleLibraryTabUp(host.activeLibraryTabs, logTransition = !isRepeatTick)
                     } else {
-                        viewModel.cycleLibraryTabDown(host.activeLibraryTabs)
+                        viewModel.cycleLibraryTabDown(host.activeLibraryTabs, logTransition = !isRepeatTick)
                     }
                 if (moved) {
                     viewModel.setLibraryFocusedIndex(0)
@@ -312,7 +319,7 @@ internal class GameFocusControllerDispatcher(
                     }
 
                     LauncherScrollDirection.UP -> {
-                        val moved = viewModel.cycleCategoryUp(host.activeCategories)
+                        val moved = viewModel.cycleCategoryUp(host.activeCategories, logTransition = !isRepeatTick)
                         if (moved) {
                             host.playClickHaptic()
                         }
@@ -320,7 +327,7 @@ internal class GameFocusControllerDispatcher(
                     }
 
                     LauncherScrollDirection.DOWN -> {
-                        val moved = viewModel.cycleCategoryDown(host.activeCategories)
+                        val moved = viewModel.cycleCategoryDown(host.activeCategories, logTransition = !isRepeatTick)
                         if (moved) {
                             host.playClickHaptic()
                         }
@@ -340,12 +347,13 @@ internal class GameFocusControllerDispatcher(
 
         currentRepeatInput = input
         repeatJob?.cancel()
+        viewModel.setHoldRepeating(false)
 
         val initialChannel = resolveInputChannel(input)
         val remainingCooldownMs = viewModel.inputPacer.remainingCooldownMs(initialChannel)
         val firstWaitMs =
             if (remainingCooldownMs == 0L) {
-                if (performRepeatableStep(input)) {
+                if (performRepeatableStep(input, isRepeatTick = false)) {
                     viewModel.inputPacer.commit(initialChannel)
                 }
                 initialChannel.initialHoldDelayMs
@@ -357,16 +365,26 @@ internal class GameFocusControllerDispatcher(
         repeatJob =
             scope.launch {
                 var nextWaitMs = firstWaitMs
+                var markedRepeating = false
                 while (isActive && currentRepeatInput == input) {
                     delay(nextWaitMs)
                     if (!isActive || currentRepeatInput != input) return@launch
+                    if (isPrimaryOverlayOpen()) {
+                        stopRepeat()
+                        return@launch
+                    }
                     val channel = resolveInputChannel(input)
                     val cooldownMs = viewModel.inputPacer.remainingCooldownMs(channel)
                     if (cooldownMs > 0L) {
                         nextWaitMs = cooldownMs
                         continue
                     }
-                    if (performRepeatableStep(input)) {
+                    if (!markedRepeating) {
+                        markedRepeating = true
+                        viewModel.setHoldRepeating(true)
+                        AppLog.d(TAG, "Hold-repeat loop active for $input on ${channel.name}")
+                    }
+                    if (performRepeatableStep(input, isRepeatTick = true)) {
                         viewModel.inputPacer.commit(channel)
                     }
                     nextWaitMs = channel.minIntervalMs
@@ -664,6 +682,7 @@ internal class GameFocusControllerDispatcher(
             }
 
             isDismissKey(keyCode) -> {
+                stopRepeat()
                 AppLog.i(TAG, "Dismiss/Back key pressed on main gallery (keyCode=$keyCode)")
                 host.onGalleryDismiss()
                 return true
@@ -697,11 +716,13 @@ internal class GameFocusControllerDispatcher(
         }
 
         val releasedInput = keyCodeToRepeatableInput(keyCode)
-        if (releasedInput != null && (releasedInput.isDirectional() || !isPrimaryOverlayOpen())) {
+        if (releasedInput != null) {
             if (currentRepeatInput == releasedInput) {
                 stopRepeat()
             }
-            return true
+            if (releasedInput.isDirectional() || !isPrimaryOverlayOpen()) {
+                return true
+            }
         }
 
         if (!isPrimaryOverlayOpen() && keyCode == GamePadButton.BUTTON_R2.keyCode) {

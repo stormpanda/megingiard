@@ -48,7 +48,7 @@
 
 ### FR-GF11: Dual-Screen App Pairing
 
-- Game Focus MUST allow users to pair an application or ROM displayed on the top screen with a companion Android application to be launched simultaneously on the bottom screen (Display 4).
+- Game Focus MUST allow users to pair an application or ROM displayed on the top screen with a companion Android application to be launched simultaneously on the secondary bottom screen (`DisplayDetector.findSecondaryDisplay(context)`).
 - The action menu on the main gallery poster carousel (`ExpandableActionsMenu`, triggered via Button `Y` / `KEYCODE_BUTTON_Y`) MUST display:
   - `"Pair Bottom App"` (`splitscreen` icon) when the highlighted item is unpaired (totaling 4 menu items: Favorite, Artwork, Hide, Pair Bottom App).
   - `"Change Paired App"` (`splitscreen` icon) and `"Remove Paired App"` (`delete` icon with destructive styling) when the highlighted item is currently paired (totaling 5 menu items: Favorite, Artwork, Hide, Change Paired App, Remove Paired App).
@@ -64,19 +64,19 @@
 - When an app or ROM has a paired bottom companion:
   - The gallery layout MUST render a secondary subtitle line below the main title featuring a `splitscreen` Material Symbol icon (`14.dp`) in `onSurfaceSecondary` color alongside the paired app's label, anchored such that the title and poster carousel maintain an identical, stationary baseline without upward layout shift.
   - The primary launch button in `DualScreenLaunchButtons` MUST update its label to `[A] Dual Launch`.
-  - Pressing Gamepad Button **A** (`KEYCODE_BUTTON_A` / `KEYCODE_DPAD_CENTER`) or tapping the top launch button from the main gallery carousel MUST launch both the top application on Display 0 and the paired companion app on Display 4 simultaneously without artificial delay.
-  - Button **X** (`KEYCODE_BUTTON_X`) in the gallery MUST continue launching only the highlighted app on Display 4.
-  - Library launches (`FocusLibraryScreen`) remain single-screen launches on either Display 0 (Button A) or Display 4 (Button X), unaffected by pairings.
+  - Pressing Gamepad Button **A** (`KEYCODE_BUTTON_A` / `KEYCODE_DPAD_CENTER`) or tapping the top launch button from the main gallery carousel MUST launch both the top application on Display 0 and the paired companion app on the secondary bottom display simultaneously without artificial delay.
+  - Button **X** (`KEYCODE_BUTTON_X`) in the gallery MUST continue launching only the highlighted app on the secondary bottom display.
+  - Library launches (`FocusLibraryScreen`) remain single-screen launches on either Display 0 (Button A) or the secondary bottom display (Button X), unaffected by pairings.
 - Pairings MUST be persisted to disk (`filesDir/gamefocus_app_pairs.json`) via `GameFocusPairManager` using atomic file writes (`AtomicFile`).
 
 ### FR-GF12: Default Launcher Companion Restoration
 
-- When Game Focus is configured as the Android system's default home launcher (`PackageManager.resolveActivity` with `MATCH_DEFAULT_ONLY` matches Game Focus), returning to the home screen MUST automatically restore / bring Megingiard Companion to the foreground on the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`, Display 4).
+- When Game Focus is configured as the Android system's default home launcher (`PackageManager.resolveActivity` with `MATCH_DEFAULT_ONLY` matches Game Focus), returning to the home screen MUST automatically restore / bring Megingiard Companion to the foreground on the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`).
 - **Home Navigation Triggers:**
   - Launching or returning to Game Focus from an external game or app via system home navigation (`savedInstanceState == null && intent.hasCategory(Intent.CATEGORY_HOME)` in `onCreate`, or incoming `CATEGORY_HOME` intent in `onNewIntent`).
   - Pressing the hardware Home key or controller Home button (`KEYCODE_HOME` / `KEYCODE_BUTTON_MODE`) while inside Game Focus.
 - **Strict Default Launcher Guard:** If Game Focus is NOT the system's default launcher (e.g. launched manually while stock Android or another launcher is active), automatic companion restoration MUST be skipped to avoid unexpectedly stealing focus or changing apps on the secondary display.
-- **State Preservation:** Megingiard Companion MUST be brought to front using `Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` and `ActivityOptions.setLaunchDisplayId(secondaryDisplayId)`, preserving its existing view/screen state (MacroPad, Touchpad, Keyboard, Mirror) on Display 4 rather than resetting to a default tool.
+- **State Preservation:** Megingiard Companion MUST be brought to front using `Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` and `ActivityOptions.setLaunchDisplayId(secondaryDisplayId)`, preserving its existing view/screen state (MacroPad, Touchpad, Keyboard, Mirror) on the secondary bottom display rather than resetting to a default tool.
 - **Standalone Autonomy:** The restoration logic resides strictly within `:gamefocus:domain` and `:gamefocus:ui`. Megingiard Companion has zero knowledge of or dependency on Game Focus.
 
 ### FR-GF13: Back Button Session Restoration
@@ -85,7 +85,7 @@
   - **Sub-View Dismissal:** If a sub-view, modal, or dialog is open (Library grid, actions menu, artwork dialog, core chooser, or pairing modal), the Back action MUST dismiss that sub-view/dialog first and return the user to the main gallery.
   - **Root Gallery Restoration:** When already on the root gallery, the Back action MUST bring back up the applications that were active before navigating Home:
     - **Top Screen (Display 0):** Brings the previous top game or application back to the foreground using `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` and `ActivityOptions.setLaunchDisplayId(0)`.
-    - **Bottom Screen (Display 4):** If a non-companion bottom app was active (such as a paired app or an app launched to the bottom screen via Button X), brings that application back to the foreground on Display 4 using `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` and `ActivityOptions.setLaunchDisplayId(secondaryDisplayId)`. If no bottom app was running (or only Megingiard Companion was on Display 4), Display 4 is left untouched.
+    - **Bottom Screen (Secondary Display):** If a non-companion bottom app was active (such as a paired app or an app launched to the bottom screen via Button X), brings that application back to the foreground on the secondary bottom display using `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_RESET_TASK_IF_NEEDED` and `ActivityOptions.setLaunchDisplayId(secondaryDisplayId)`. If no bottom app was running (or only Megingiard Companion was on the secondary bottom display), the bottom display is left untouched.
   - **Empty Session Guard:** If Back is pressed on the root gallery but no previous session is tracked (e.g. freshly booted), Game Focus MUST consume the Back event and do nothing, preventing the launcher from closing or exiting.
   - **Always Active:** Back button session restoration operates whenever Game Focus is running, regardless of whether it is configured as the default system launcher or opened manually.
 

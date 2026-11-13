@@ -191,14 +191,7 @@ object AppPaletteExtractor {
     private fun getCacheKey(appInfo: InstalledAppInfo): String {
         val coverPath = appInfo.coverPath
         if (coverPath != null) {
-            val modTime =
-                if (appInfo.coverLastModified > 0L) {
-                    appInfo.coverLastModified
-                } else {
-                    val file = File(coverPath)
-                    if (file.exists()) file.lastModified() else 0L
-                }
-            return "${appInfo.packageName}:$coverPath:$modTime"
+            return "${appInfo.packageName}:$coverPath:${appInfo.coverLastModified}"
         }
         val kind = if (appInfo.isRom) "logo" else "icon"
         val version = if (appInfo.isRom) appInfo.logoLastModified else appInfo.lastUpdateTime

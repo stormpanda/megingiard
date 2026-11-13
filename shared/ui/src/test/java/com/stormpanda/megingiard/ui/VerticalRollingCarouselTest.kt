@@ -84,4 +84,23 @@ class VerticalRollingCarouselTest {
             }
         }
     }
+
+    @Test
+    fun testComputeTarget_isPureUntilCommitted() {
+        AppLog.d(TAG, "Testing RollingOffsetTracker.computeTarget purity when composition aborts")
+        val tracker = RollingOffsetTracker(initialIndex = 0)
+        val initial = tracker.computeTarget(selectedIndex = 0, itemCount = 4)
+        tracker.commitTarget(selectedIndex = 0, itemCount = 4, computedTarget = initial)
+        assertEquals(0f, tracker.targetOffset, 0.0001f)
+
+        // Simulate an uncommitted composition pass for selectedIndex = 3 (wraps backward to -1f)
+        val uncommitted = tracker.computeTarget(selectedIndex = 3, itemCount = 4)
+        assertEquals(-1f, uncommitted, 0.0001f)
+        // Without commitTarget(), tracker state remains untouched so a retry computes -1f again
+        assertEquals(0f, tracker.targetOffset, 0.0001f)
+        assertEquals(-1f, tracker.computeTarget(selectedIndex = 3, itemCount = 4), 0.0001f)
+
+        tracker.commitTarget(selectedIndex = 3, itemCount = 4, computedTarget = uncommitted)
+        assertEquals(-1f, tracker.targetOffset, 0.0001f)
+    }
 }

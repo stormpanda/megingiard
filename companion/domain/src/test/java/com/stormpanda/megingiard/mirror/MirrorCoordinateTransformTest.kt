@@ -1981,6 +1981,54 @@ class MirrorCoordinateTransformTest {
     }
 
     @Test
+    fun `calculateRotatedCutoutBounds and adjustDestSizeToAspectRatio preserve black bar bounds`() {
+        val barCutout =
+            ScreenCutout(
+                id = "cutout_bar",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 0.4f,
+                srcHeight = 0.2f,
+                destX = -0.07f,
+                destY = 0.2f,
+                destWidth = 0.12f,
+                destHeight = 0.24f,
+                rotation = 0,
+            )
+        // Rotate 180 deg in left pillarbox bar [-0.08..1.08] -> must NOT snap destX to 0f!
+        val rotated180 =
+            calculateRotatedCutoutBounds(
+                cutout = barCutout,
+                targetRotation = 180,
+                allCutouts = listOf(barCutout),
+                minDestX = -0.08f,
+                maxDestX = 1.08f,
+                minDestY = 0f,
+                maxDestY = 1f,
+            )
+        assertNotNull(rotated180)
+        assertEquals(-0.07f, rotated180!!.destX, EPS)
+
+        // Aspect lock in right pillarbox bar [destX = 0.96, maxDestX = 1.08] -> maxW = 0.12, not 0.04!
+        val (adjW, adjH) =
+            adjustDestSizeToAspectRatio(
+                destX = 0.96f,
+                destY = 0.2f,
+                destWidth = 0.12f,
+                destHeight = 0.12f,
+                cropRatio = 1f,
+                screenW = 1000f,
+                screenH = 1000f,
+                minDestX = -0.08f,
+                maxDestX = 1.08f,
+                minDestY = 0f,
+                maxDestY = 1f,
+            )
+        assertEquals(0.12f, adjW, EPS)
+        assertEquals(0.12f, adjH, EPS)
+    }
+
+    @Test
     fun `clampCutoutDrag allows dragging into active black bar bounds and avoids collisions`() {
         val barCutout =
             ScreenCutout(

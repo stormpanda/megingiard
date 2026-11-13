@@ -193,8 +193,10 @@ internal fun rememberLayoutLayerBitmaps(
     context: Context,
     layout: PadLayout?,
 ): LayoutLayerBitmaps {
+    val mediaRevision by MacroPadMediaRepository.mediaRevision.collectAsStateWithLifecycle()
+
     var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion) {
+    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion, mediaRevision) {
         val path = layout?.backgroundImagePath
         if (path != null) {
             try {
@@ -210,7 +212,7 @@ internal fun rememberLayoutLayerBitmaps(
     }
 
     var maskBitmap by remember(layout?.maskImagePath, layout?.maskImageVersion) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(layout?.maskImagePath, layout?.maskImageVersion) {
+    LaunchedEffect(layout?.maskImagePath, layout?.maskImageVersion, mediaRevision) {
         val path = layout?.maskImagePath
         if (path != null) {
             try {
@@ -239,6 +241,8 @@ internal fun LayoutImageLayer(
     val maskBitmap = bitmaps.maskBitmap
     if (bgBitmap == null && maskBitmap == null) return
 
+    val previewLayout by MacroPadState.previewLayout.collectAsStateWithLifecycle()
+
     val bgImageDimFilter =
         remember(layout?.backgroundImageDim) {
             dimColorFilter(layout?.backgroundImageDim ?: 0f)
@@ -249,7 +253,7 @@ internal fun LayoutImageLayer(
         }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        val currentLayout = MacroPadState.previewLayout.value ?: layout
+        val currentLayout = previewLayout ?: layout
         val designCanvas = currentLayout?.effectiveDesignCanvas ?: THOR_BOTTOM_CANVAS_SPEC
         val vp =
             if (viewport != null && viewport.hostWidthPx > 0f && viewport.hostHeightPx > 0f) {
@@ -579,7 +583,7 @@ private fun EditableButtonsCanvas(
                 if (activeProfile != null) {
                     val currentLayout = activeProfile.layouts.firstOrNull { it.id == targetLayoutId }
                     if (currentLayout != null) {
-                        MacroPadState.updateLayout(
+                        MacroPadState.updateLayoutLive(
                             currentLayout.copy(
                                 buttons =
                                     currentLayout.buttons.map { b ->
@@ -588,6 +592,13 @@ private fun EditableButtonsCanvas(
                             ),
                         )
                     }
+                }
+            },
+            onDragFinished = {
+                val activeProfile = MacroPadState.activeProfile.value
+                val currentLayout = activeProfile?.layouts?.firstOrNull { it.id == targetLayoutId }
+                if (currentLayout != null) {
+                    MacroPadState.updateLayout(currentLayout)
                 }
             },
         )
@@ -761,7 +772,15 @@ private fun EditableButtonsCanvas(
                             b
                         }
                     }
-                MacroPadState.updateLayout(curLayout.copy(buttons = updated))
+                MacroPadState.updateLayoutLive(curLayout.copy(buttons = updated))
+            }
+
+            fun commitCurrentLayout() {
+                val curLayout =
+                    MacroPadState.activeProfile.value
+                        ?.layouts
+                        ?.firstOrNull { it.id == layout.id } ?: return
+                MacroPadState.updateLayout(curLayout)
             }
 
             edgeDefs.forEach { def ->
@@ -783,11 +802,13 @@ private fun EditableButtonsCanvas(
                             AppLog.d(TAG, "onEdgeDragEnd: btnId=${activeBtn.id} handle=${def.handle}")
                             isEdgeDragging = false
                             wasAspectSnapped = false
+                            commitCurrentLayout()
                         },
                         onDragCancel = {
                             AppLog.d(TAG, "onEdgeDragCancel: btnId=${activeBtn.id} handle=${def.handle}")
                             isEdgeDragging = false
                             wasAspectSnapped = false
+                            commitCurrentLayout()
                         },
                         onDrag = { totalDx, totalDy -> handleEdgeDrag(def.handle, totalDx, totalDy) },
                     )
@@ -802,7 +823,6 @@ private fun EditableButtonsCanvas(
                 buttonTopPx = destTop,
                 buttonBottomPx = destTop + chipHeightPx,
                 canvasW = hostW,
-                accentColor = accentColor,
                 visible = isHudVisible,
             )
         } else {
@@ -836,7 +856,6 @@ private fun EditableButtonsCanvas(
                 buttonTopPx = destTop,
                 buttonBottomPx = destTop + chipHeightPx,
                 canvasW = hostW,
-                accentColor = accentColor,
                 visible = isAdjustingViaGamepad && !isCropping,
                 extraClearancePx = handleSizePx + paddingPx,
             )
@@ -857,6 +876,7 @@ private fun DraggableButton(
     onTouch: () -> Unit,
     onDragActiveChanged: (Boolean) -> Unit = {},
     onPositionChanged: (Float, Float) -> Unit,
+    onDragFinished: () -> Unit = {},
 ) {
     val chipWidthPx = btn.widthPx * viewport.scale
     val chipHeightPx = btn.heightPx * viewport.scale
@@ -878,6 +898,7 @@ private fun DraggableButton(
     val currentViewport = rememberUpdatedState(viewport)
     val currentOnPositionChanged = rememberUpdatedState(onPositionChanged)
     val currentOnDragActiveChanged = rememberUpdatedState(onDragActiveChanged)
+    val currentOnDragFinished = rememberUpdatedState(onDragFinished)
     val currentGridMode = rememberUpdatedState(gridMode)
     val currentAlignmentSnapping = rememberUpdatedState(alignmentSnapping)
 
@@ -931,9 +952,11 @@ private fun DraggableButton(
                                 },
                                 onDragEnd = {
                                     currentOnDragActiveChanged.value(false)
+                                    currentOnDragFinished.value()
                                 },
                                 onDragCancel = {
                                     currentOnDragActiveChanged.value(false)
+                                    currentOnDragFinished.value()
                                 },
                                 onDrag = { change, drag ->
                                     change.consume()
@@ -1265,7 +1288,6 @@ private fun ButtonDimensionHud(
     buttonTopPx: Float,
     buttonBottomPx: Float,
     canvasW: Float,
-    accentColor: Color,
     visible: Boolean,
     extraClearancePx: Float = 0f,
 ) {
@@ -1306,7 +1328,7 @@ private fun ButtonDimensionHud(
                 Modifier
                     .onSizeChanged { hudWidthPx = it.width.toFloat() }
                     .background(colors.surfaceVariant.copy(alpha = PC_HUD_BG_ALPHA), PC_HUD_SHAPE)
-                    .border(PC_HUD_BORDER_WIDTH, accentColor.copy(alpha = PC_HUD_BORDER_ALPHA), PC_HUD_SHAPE)
+                    .border(PC_HUD_BORDER_WIDTH, colors.accent.copy(alpha = PC_HUD_BORDER_ALPHA), PC_HUD_SHAPE)
                     .padding(horizontal = PC_HUD_PADDING_H, vertical = PC_HUD_PADDING_V),
             contentAlignment = Alignment.Center,
         ) {

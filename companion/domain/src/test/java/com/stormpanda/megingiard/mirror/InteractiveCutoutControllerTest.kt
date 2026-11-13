@@ -4,6 +4,7 @@ import com.stormpanda.megingiard.math.ViewportMath
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -50,6 +51,7 @@ class InteractiveCutoutControllerTest {
     @After
     fun tearDown() {
         InteractiveCutoutController.reset()
+        InteractiveCutoutController.scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
         Dispatchers.resetMain()
     }
 

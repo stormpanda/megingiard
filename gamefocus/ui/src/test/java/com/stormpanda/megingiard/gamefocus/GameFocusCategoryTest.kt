@@ -9,8 +9,6 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-private const val TAG = "GameFocusCategoryTest"
-
 class GameFocusCategoryTest {
     private val categories = GameFocusCategory.builtIns
 

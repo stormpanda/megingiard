@@ -85,7 +85,7 @@ Each button supports one of the following actions:
 - **Visual Action Pickers (`VisualKeyboardPicker`, `VisualGamepadPicker`, `VisualMousePicker`, `ActionGridSubPages`)**:
   - In the button editor, selecting the primary action card opens a dedicated visual sub-page picker:
     - **Visual Keyboard Picker**: Displays a full, interactive virtual keyboard layout (F-keys, number row, QWERTY rows, bottom control row, navigation cluster) with 2D D-pad spatial navigation and (A) key selection.
-    - **Visual Gamepad Picker**: Displays an interactive virtual controller layout matching the physical AYN Thor handheld (L1/L2, R1/R2 shoulders/triggers, Select & Start system buttons, Left Stick 3x3 grid with L3 click and 8-way directional inputs, D-Pad 3x3 grid with 8-way directional inputs, Home button, ABXY face buttons 3x3 grid respecting global face-button swap, and Right Stick 3x3 grid with R3 click and 8-way directional inputs) with 2D D-pad spatial navigation.
+    - **Visual Gamepad Picker**: Displays an interactive virtual controller layout matching the physical dual-screen handheld (L1/L2, R1/R2 shoulders/triggers, Select & Start system buttons, Left Stick 3x3 grid with L3 click and 8-way directional inputs, D-Pad 3x3 grid with 8-way directional inputs, Home button, ABXY face buttons 3x3 grid respecting global face-button swap, and Right Stick 3x3 grid with R3 click and 8-way directional inputs) with 2D D-pad spatial navigation.
     - **Visual Mouse Picker**: Displays all 7 mouse actions (Left Click, Right Click, Middle Click, Back / Mouse 4, Forward / Mouse 5, Scroll Wheel, and Trackpoint) arranged in a reusable 2-column card grid (`GamepadTwoColumnGrid`).
     - **Touch Action Picker**: Displays both touch actions (Touch Tap and Single Touch Gesture) in a 2-column card grid (`MacroPadSubPage.ChooseTouchAction`).
     - **Mirror Action Picker**: Displays all 5 screen mirror actions (Mirror Start/Stop, Mirror Freeze, Mirror Viewport, Touch Projection, and Background Peek) in a 2-column card grid.
@@ -118,7 +118,7 @@ Each button supports one of the following actions:
 - Each finger is independently tracked by `PointerId`; down and up events are matched per pointer so no button is accidentally stuck in the pressed state.
 - The gesture detector scope incorporates a `try-finally` block that invokes `engine.releaseAll()` to ensure both visual highlighted states and virtual input injections are cleanly released if a gesture is cancelled by system interruptions (such as status bar pull-down, system back gestures, or the Quick Menu overlay taking focus).
 
-### FR-P6: No Special Permissions Required
+### FR-P6.1: Privileged Input Routing Without App-Level Root
 
-- The MacroPad MUST function without root access or additional Android permissions beyond the app's declared set.
-- On the AYN Thor, `/dev/uinput` is accessible under the standard shell UID (2000), and `/dev/input/event6` (touch injection) is `crw-rw-rw-`.
+- The MacroPad MUST function without root access in the Android app process or additional Android permissions beyond the app's declared set.
+- Under Megingiard System Service (`megingiard_privd`), `/dev/uinput` and the dynamically discovered primary touchscreen `evdev` node (`dumpsys input` `Viewport INTERNAL: displayId=0`, e.g. `/dev/input/event6` on AYN Thor, `/dev/input/event5` on Retroid Pocket Duo) are accessed directly by the daemon.

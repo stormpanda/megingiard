@@ -354,7 +354,7 @@ Open Settings to create a layout.</string>
     <string name="wrong_screen_help_title">設定與放置說明</string>
     <string name="wrong_screen_help_step1">1. 在下螢幕重新開啟 Megingiard，然後點選「重試」。</string>
     <string name="wrong_screen_help_step2">2. 建議：如果您的啟動器支援，請將 Megingiard 固定在下螢幕以保持其位置。</string>
-    <string name="wrong_screen_help_step3">3. 焦點模式：由於 Megingiard 僅使用觸控控制，請在 AYN 設定中將焦點模式設為「上螢幕」。</string>
+    <string name="wrong_screen_help_step3">3. 焦點模式：由於 Megingiard 僅使用觸控控制，請在掌機設定中將焦點模式設為「上螢幕」。</string>
     <string name="mirror_control_label_start">開始</string>
     <string name="mirror_control_label_stop">停止</string>
     <string name="mirror_control_label_freeze">凍結</string>

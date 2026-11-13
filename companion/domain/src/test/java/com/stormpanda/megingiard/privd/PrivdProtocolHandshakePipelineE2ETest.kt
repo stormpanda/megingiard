@@ -17,6 +17,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -309,5 +310,37 @@ class PrivdProtocolHandshakePipelineE2ETest {
 
             serverJob.cancel()
             serverSocket.close()
+        }
+
+    @Test
+    fun testPendingMultiLineRpcCapsBufferAndClearsOnCancel() =
+        runBlocking {
+            val cappedRpc =
+                PendingRpc.MultiLine(
+                    beginMarker = "READ_BEGIN",
+                    endMarker = "READ_END",
+                    errorPrefix = "READ_ERR",
+                    maxChars = 32,
+                )
+            assertTrue(cappedRpc.onLine("READ_BEGIN"))
+            assertTrue(cappedRpc.onLine("123456789012345"))
+            // Next line pushes buffer length past 32 chars -> fail-safe null completion + buffer clear
+            assertTrue(cappedRpc.onLine("12345678901234567890"))
+            assertTrue(cappedRpc.deferred.isCompleted)
+            assertNull(cappedRpc.deferred.await())
+            assertEquals(0, cappedRpc.bufferedLengthForTest)
+
+            val cancelledRpc =
+                PendingRpc.MultiLine(
+                    beginMarker = "SCREENSHOT_BEGIN",
+                    endMarker = "SCREENSHOT_END",
+                    errorPrefix = "SCREENSHOT_ERR",
+                )
+            assertTrue(cancelledRpc.onLine("SCREENSHOT_BEGIN"))
+            assertTrue(cancelledRpc.onLine("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo="))
+            assertTrue(cancelledRpc.bufferedLengthForTest > 0)
+            cancelledRpc.cancel()
+            assertEquals(0, cancelledRpc.bufferedLengthForTest)
+            assertNull(cancelledRpc.deferred.await())
         }
 }

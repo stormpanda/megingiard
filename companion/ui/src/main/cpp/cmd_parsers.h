@@ -4,37 +4,198 @@
 #include "uinput_common.h"
 
 #define MAX_TOUCH_SLOTS 10
+#define MAX_DUMPSYS_EVENTHUB_ENTRIES 64
+#define MAX_DUMPSYS_DEVICE_HUB_IDS 4
 
 /**
- * Classifies an evdev device name for primary touchscreen selection.
+ * Returns 1 if an evdev device name is explicitly excluded from primary
+ * touchscreen binding (NULL, empty, virtual "Megingiard*" nodes, or the
+ * hardware-verified Retroid Pocket Duo secondary panel "fts_ts_sec").
  *
- * Returns:
- *   0 — reject (NULL, empty, virtual "Megingiard*" device, or secondary "*_sec" / "*-sec" / "*Secondary*" panel)
- *   2 — preferred primary touchscreen match (exact "fts_ts")
- *   1 — generic candidate primary touchscreen
+ * Zero-Heuristics (AGENTS.md §7.5): never guess via speculative substrings
+ * (such as "_sec_" which falsely rejects Samsung "sec_ts" touch controllers).
  */
-static inline int is_primary_touch_device_name(const char* devname) {
-    if (!devname || devname[0] == '\0') return 0;
+static inline int is_excluded_touch_device_name(const char* devname) {
+    if (!devname || devname[0] == '\0') return 1;
     if (strncmp(devname, "Megingiard", 10) == 0 || strncmp(devname, "megingiard", 10) == 0) {
+        return 1;
+    }
+    if (strcmp(devname, "fts_ts_sec") == 0) {
+        return 1;
+    }
+    return 0;
+}
+
+/**
+ * Returns 1 if an evdev device name matches an exact hardware-verified primary
+ * touchscreen driver name ("fts_ts" on AYN Thor and Retroid Pocket Duo), used
+ * solely as a deterministic fallback when `dumpsys input` is unavailable.
+ */
+static inline int is_verified_primary_touch_device_name(const char* devname) {
+    if (is_excluded_touch_device_name(devname)) return 0;
+    return (strcmp(devname, "fts_ts") == 0) ? 1 : 0;
+}
+
+/**
+ * Safely computes the hardware axis span (maximum - minimum + 1) in 64-bit
+ * signed arithmetic. Returns 0 on invalid, zero/negative, or overflowing bounds.
+ */
+static inline int compute_evdev_axis_span(int32_t minimum, int32_t maximum) {
+    int64_t span = (int64_t)maximum - (int64_t)minimum + 1;
+    if (span <= 0 || span > INT32_MAX) {
         return 0;
     }
-    size_t len = strlen(devname);
-    if (len >= 4) {
-        const char* suffix = devname + (len - 4);
-        if (strcmp(suffix, "_sec") == 0 || strcmp(suffix, "-sec") == 0 ||
-            strcmp(suffix, "_SEC") == 0 || strcmp(suffix, "-SEC") == 0) {
-            return 0;
+    return (int)span;
+}
+
+/**
+ * Parses `dumpsys input` diagnostic output to deterministically resolve the
+ * `/dev/input/eventN` path bound by Android's InputReader to Display 0
+ * (`Viewport INTERNAL: displayId=0`).
+ *
+ * Returns 1 and writes the resolved path to `out_path` on success, or 0 if not found.
+ */
+static inline int parse_dumpsys_input_primary_touch_path(
+    FILE* stream,
+    char* out_path,
+    size_t out_size
+) {
+    if (!stream || !out_path || out_size < 20) return 0;
+    out_path[0] = '\0';
+
+    struct {
+        int hub_id;
+        char path[64];
+    } hub_entries[MAX_DUMPSYS_EVENTHUB_ENTRIES];
+    int hub_count = 0;
+
+    int section = 0; /* 0 = none, 1 = Event Hub State, 2 = Input Reader State */
+    int cur_hub_id = -999;
+
+    int cur_dev_hub_ids[MAX_DUMPSYS_DEVICE_HUB_IDS];
+    int cur_dev_hub_count = 0;
+    int cur_dev_is_touch = 0;
+    int cur_dev_primary_vp = 0;
+    int cur_dev_excluded = 0;
+
+    char line[512];
+    while (fgets(line, (int)sizeof(line), stream) != NULL) {
+        size_t raw_len = strlen(line);
+        while (raw_len > 0 && (line[raw_len - 1] == '\n' || line[raw_len - 1] == '\r')) {
+            line[--raw_len] = '\0';
+        }
+
+        size_t indent = 0;
+        while (line[indent] == ' ' || line[indent] == '\t') {
+            indent++;
+        }
+        const char* trimmed = line + indent;
+        if (trimmed[0] == '\0') continue;
+
+        if (strncmp(trimmed, "Event Hub State:", 16) == 0) {
+            section = 1;
+            cur_hub_id = -999;
+            continue;
+        }
+        if (strncmp(trimmed, "Input Reader State:", 19) == 0) {
+            section = 2;
+            cur_dev_hub_count = 0;
+            cur_dev_is_touch = 0;
+            cur_dev_primary_vp = 0;
+            cur_dev_excluded = 0;
+            continue;
+        }
+        if (strncmp(trimmed, "Input Dispatcher State:", 23) == 0) {
+            break;
+        }
+
+        if (section == 1) {
+            if (indent >= 2 && indent <= 8 &&
+                ((trimmed[0] >= '0' && trimmed[0] <= '9') || trimmed[0] == '-')) {
+                char* endptr = NULL;
+                long parsed_id = strtol(trimmed, &endptr, 10);
+                if (endptr > trimmed && endptr[0] == ':' &&
+                    (endptr[1] == ' ' || endptr[1] == '\0')) {
+                    cur_hub_id = (int)parsed_id;
+                    continue;
+                }
+            }
+            if (cur_hub_id >= 0 && strncmp(trimmed, "Path: /dev/input/event", 22) == 0) {
+                const char* path_start = trimmed + 6; /* "/dev/input/event..." */
+                const char* digits = trimmed + 22;
+                size_t dlen = 0;
+                while (digits[dlen] >= '0' && digits[dlen] <= '9') {
+                    dlen++;
+                }
+                if (dlen > 0 && (digits[dlen] == '\0' || digits[dlen] == ' ') &&
+                    hub_count < MAX_DUMPSYS_EVENTHUB_ENTRIES) {
+                    size_t copy_len = 16 + dlen; /* strlen("/dev/input/event") == 16 */
+                    if (copy_len < sizeof(hub_entries[0].path)) {
+                        hub_entries[hub_count].hub_id = cur_hub_id;
+                        memcpy(hub_entries[hub_count].path, path_start, copy_len);
+                        hub_entries[hub_count].path[copy_len] = '\0';
+                        hub_count++;
+                    }
+                }
+            }
+        } else if (section == 2) {
+            if (strncmp(trimmed, "Device ", 7) == 0) {
+                char* endptr = NULL;
+                (void)strtol(trimmed + 7, &endptr, 10);
+                if (endptr > trimmed + 7 && endptr[0] == ':') {
+                    cur_dev_hub_count = 0;
+                    cur_dev_is_touch = 0;
+                    cur_dev_primary_vp = 0;
+                    const char* devname = endptr + 1;
+                    while (*devname == ' ') devname++;
+                    cur_dev_excluded = is_excluded_touch_device_name(devname);
+                    continue;
+                }
+            }
+
+            if (strncmp(trimmed, "EventHub Devices: [", 19) == 0) {
+                const char* p = trimmed + 19;
+                cur_dev_hub_count = 0;
+                while (*p != '\0' && *p != ']' &&
+                       cur_dev_hub_count < MAX_DUMPSYS_DEVICE_HUB_IDS) {
+                    while (*p == ' ' || *p == ',') p++;
+                    if (*p == ']' || *p == '\0') break;
+                    char* endptr = NULL;
+                    long hid = strtol(p, &endptr, 10);
+                    if (endptr == p) break;
+                    if (hid >= 0) {
+                        cur_dev_hub_ids[cur_dev_hub_count++] = (int)hid;
+                    }
+                    p = endptr;
+                }
+            } else if (strstr(trimmed, "Touch Input Mapper") != NULL ||
+                       strcmp(trimmed, "DeviceType: touchScreen") == 0 ||
+                       strstr(trimmed, "TOUCHSCREEN") != NULL) {
+                cur_dev_is_touch = 1;
+            } else if (strncmp(trimmed, "Viewport INTERNAL: displayId=0", 30) == 0) {
+                char boundary = trimmed[30];
+                if (boundary == ',' || boundary == ' ' || boundary == '\0') {
+                    cur_dev_primary_vp = 1;
+                }
+            }
+
+            if (!cur_dev_excluded && cur_dev_is_touch && cur_dev_primary_vp &&
+                cur_dev_hub_count > 0) {
+                for (int h = 0; h < cur_dev_hub_count; h++) {
+                    int target_hub = cur_dev_hub_ids[h];
+                    for (int e = 0; e < hub_count; e++) {
+                        if (hub_entries[e].hub_id == target_hub) {
+                            strncpy(out_path, hub_entries[e].path, out_size - 1);
+                            out_path[out_size - 1] = '\0';
+                            return 1;
+                        }
+                    }
+                }
+            }
         }
     }
-    if (strstr(devname, "_sec_") != NULL ||
-        strstr(devname, "Secondary") != NULL ||
-        strstr(devname, "secondary") != NULL) {
-        return 0;
-    }
-    if (strcmp(devname, "fts_ts") == 0) {
-        return 2;
-    }
-    return 1;
+
+    return 0;
 }
 
 /**

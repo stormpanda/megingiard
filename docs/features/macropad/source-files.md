@@ -33,9 +33,9 @@
 | `PadActionSubPickers.kt` | Sub-widgets for configuring action details: `KeyboardKeyPicker`, `GamepadButtonPicker`, `MouseActionPicker`, `TrackpointPicker`, `MacroPicker`, `SwitchToLayoutPicker`, `SwitchToProfilePicker`, `TouchTapPicker`, and `SingleTouchGesturePicker` |
 | `ActionGridSubPages.kt` | Shared `ActionGridItem` model and 2-column grid sub-pages (`ChooseButtonTypeSubPageContent`, `TouchActionPickerSubPageContent`, `MirrorActionPickerSubPageContent`, `ToolsActionPickerSubPageContent`, `LayoutActionPickerSubPageContent`, `MediaActionPickerSubPageContent`, `MacroActionPickerSubPageContent`) |
 | `VisualKeyboardPicker.kt` | Interactive virtual keyboard sub-page (`VisualKeyboardPicker`) with 2D D-pad spatial navigation |
-| `VisualGamepadPicker.kt` | Interactive virtual AYN Thor controller sub-page (`VisualGamepadPicker`) with 2D D-pad spatial navigation |
+| `VisualGamepadPicker.kt` | Interactive virtual handheld controller sub-page (`VisualGamepadPicker`) with 2D D-pad spatial navigation |
 | `VisualMousePicker.kt` | 2-column mouse action picker sub-page (`VisualMousePicker`) |
-| `AppLauncherManager.kt` | Resolves app names/icons via `PackageManager` and launches target apps on Display 4 with floating restore bubble |
+| `AppLauncherManager.kt` | Resolves app names/icons via `PackageManager` and launches target apps on the secondary display with floating restore bubble |
 | `AppLauncherPicker.kt` | Card component in button editor for selecting an App Quick-Switch target |
 | `AppPickerUtils.kt` | Helper functions for loading and filtering installed launcher applications |
 | `FloatingBubbleOverlay.kt` | Secondary-display `TYPE_ACCESSIBILITY_OVERLAY` draggable bubble that restores Megingiard when tapped |
@@ -45,8 +45,8 @@
 | `MacroStepEditDialog.kt` | In-deck sub-page (`MacroStepEditSubPageContent`) for creating/editing a single `MacroStep` with `ShiftMode`, visual key/gamepad pickers, and timing sliders |
 | `MacroStepListItem.kt` | Helper formatting, direction arrow (`dirArrow`), and icon resolution functions for macro steps |
 | `MacroTextSequenceDialog.kt` | In-deck sub-page (`TextSequenceGeneratorSubPageContent`) that converts a typed text string into timed `KeyboardKeyTap` macro steps |
-| `PhysicalGamepadRecordingSheet.kt` | Companion recording HUD rendered on Display 4 during physical gamepad recording with live stick radars, D-Pad compass, active button pills, and Stop/Cancel actions |
-| `TouchRecordingSheet.kt` | Companion recording HUD rendered on Display 4 during touch macro and button touch/gesture recording (`TAP`, `SINGLE_GESTURE`, `GESTURE`) with live 16:9 multi-touch radar, gesture trails, and mode-appropriate Cancel / Stop & Save actions |
+| `PhysicalGamepadRecordingSheet.kt` | Companion recording HUD rendered on the secondary display during physical gamepad recording with live stick radars, D-Pad compass, active button pills, and Stop/Cancel actions |
+| `TouchRecordingSheet.kt` | Companion recording HUD rendered on the secondary display during touch macro and button touch/gesture recording (`TAP`, `SINGLE_GESTURE`, `GESTURE`) with live 16:9 multi-touch radar, gesture trails, and mode-appropriate Cancel / Stop & Save actions |
 | `CopyDialogs.kt` | In-deck sub-pages (`CopyLayoutSubPageContent`, `CopyButtonSubPageContent`) for copying layouts and buttons across profiles/layouts |
 | `ReorderOverlays.kt` | In-deck reorder sub-pages (`ReorderProfilesSubPageContent`, `ReorderLayoutsSubPageContent`, `ReorderButtonsSubPageContent`, `ReorderMacrosSubPageContent`, `ReorderMacroStepsSubPageContent`) |
 | `EditorBaseComponents.kt` | Reusable preview boxes (`ButtonPreviewBox`), section headers, and editor UI primitives |
@@ -83,6 +83,8 @@
 | `BackgroundScaleMode.kt` (`:shared:core`) | Enum defining `FILL`, `FIT`, and `STRETCH` image scaling modes |
 | `CutoutLostAnchorEffect.kt` (`:shared:core`) | Enum defining visual fallback behavior when a layout's reference anchor is lost |
 | `GamepadKeycodes.kt` (`:shared:core`) | Linux `BTN_*` and `ABS_*` constants and controller preset definitions |
+| `KnownDeviceProfiles.kt` (`:shared:core`) | Hardware device profile definitions (`AYN Thor`, `Retroid Pocket Duo`) including `LayoutCanvasSpec` defaults and vendor package exclusion prefixes |
+| `TouchSensorMath.kt` (`:shared:core`) | Pure rotation-aware mapping between Display 0 normalized coordinates and kernel `evdev` primary touch sensor bounds |
 | `ViewportMath.kt` (`:shared:core`) | Pure viewport fitting math including `DesignViewport` (`calculateDesignViewport`) for aspect-fitting `PadLayout.effectiveDesignCanvas` inside host displays and converting between screen pixels and normalized design/black-bar coordinates |
 | `AlignmentMath.kt` (`:shared:core`) | Pure math helpers for center alignment snapping, 2D gamepad button/cutout movement, pixel-based button edge/gamepad resizing (`MPE_RESIZE_NORMAL_STEP_PX = 10f`, `MPE_RESIZE_FINE_STEP_PX = 1f`, `formatButtonDimensionPx`), host black-bar bounds (`minNormX..maxNormX`, `minNormY..maxNormY`), guide line discovery, and rectangular/radial grid snapping |
 | `MaterialSymbols.kt` (`:shared:ui`) | `MaterialSymbolsFamily` (variable font, FILL=1) and `MaterialSymbol(name, size, tint)` composable |

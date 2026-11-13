@@ -316,21 +316,129 @@ static void test_gamepad_protocol_parsing(void) {
     printf("PASS\n");
 }
 
+static FILE* open_string_stream(const char* text) {
+    FILE* tmp = tmpfile();
+    assert(tmp != NULL);
+    if (text && text[0] != '\0') {
+        size_t len = strlen(text);
+        assert(fwrite(text, 1, len, tmp) == len);
+    }
+    rewind(tmp);
+    return tmp;
+}
+
 static void test_primary_touch_device_name_filtering(void) {
-    printf("[TEST] Primary touchscreen device name filtering... ");
-    assert(is_primary_touch_device_name("fts_ts") == 2);
-    assert(is_primary_touch_device_name("goodix_ts") == 1);
-    assert(is_primary_touch_device_name("synaptics_dsx") == 1);
-    assert(is_primary_touch_device_name("fts_ts_sec") == 0);
-    assert(is_primary_touch_device_name("goodix_ts_sec") == 0);
-    assert(is_primary_touch_device_name("goodix-sec") == 0);
-    assert(is_primary_touch_device_name("fts_ts_SEC") == 0);
-    assert(is_primary_touch_device_name("Touchscreen Secondary") == 0);
-    assert(is_primary_touch_device_name("secondary_touch") == 0);
-    assert(is_primary_touch_device_name("Megingiard Virtual Mouse") == 0);
-    assert(is_primary_touch_device_name("megingiard_touch") == 0);
-    assert(is_primary_touch_device_name("") == 0);
-    assert(is_primary_touch_device_name(NULL) == 0);
+    printf("[TEST] Primary touchscreen device name & axis span guards... ");
+    assert(is_verified_primary_touch_device_name("fts_ts") == 1);
+    assert(is_verified_primary_touch_device_name("fts_ts_sec") == 0);
+    assert(is_verified_primary_touch_device_name("goodix_ts") == 0);
+    assert(is_verified_primary_touch_device_name("Megingiard Virtual Mouse") == 0);
+    assert(is_verified_primary_touch_device_name("") == 0);
+    assert(is_verified_primary_touch_device_name(NULL) == 0);
+
+    // Zero-Heuristics: Samsung "panel0_sec_ts" is NOT excluded when bound via dumpsys input
+    assert(is_excluded_touch_device_name("panel0_sec_ts") == 0);
+    assert(is_excluded_touch_device_name("goodix_ts") == 0);
+    assert(is_excluded_touch_device_name("fts_ts") == 0);
+    assert(is_excluded_touch_device_name("fts_ts_sec") == 1);
+    assert(is_excluded_touch_device_name("Megingiard Virtual Keyboard") == 1);
+    assert(is_excluded_touch_device_name("megingiard_touch") == 1);
+    assert(is_excluded_touch_device_name("") == 1);
+    assert(is_excluded_touch_device_name(NULL) == 1);
+
+    // Axis span overflow and degenerate bounds checks
+    assert(compute_evdev_axis_span(0, 1079) == 1080);
+    assert(compute_evdev_axis_span(0, 1919) == 1920);
+    assert(compute_evdev_axis_span(0, -1) == 0);
+    assert(compute_evdev_axis_span(100, 50) == 0);
+    assert(compute_evdev_axis_span(INT32_MIN, INT32_MAX) == 0);
+    assert(compute_evdev_axis_span(0, INT32_MAX) == 0);
+    printf("PASS\n");
+}
+
+static void test_dumpsys_input_primary_touch_resolution(void) {
+    printf("[TEST] dumpsys input primary touchscreen resolution... ");
+    char path[64];
+
+    // Case 1: Retroid Pocket Duo where secondary touchscreen appears BEFORE primary in EventHub
+    const char* rp_duo_dump =
+        "INPUT MANAGER (dumpsys input)\n"
+        "\n"
+        "Event Hub State:\n"
+        "  BuiltInKeyboardId: -2\n"
+        "  Devices:\n"
+        "    -1: Virtual\n"
+        "      Classes: 0x40000023\n"
+        "      Path: \n"
+        "    4: fts_ts_sec\n"
+        "      Classes: TOUCH | TOUCH_MT\n"
+        "      Path: /dev/input/event6\n"
+        "    5: fts_ts\n"
+        "      Classes: TOUCH | TOUCH_MT\n"
+        "      Path: /dev/input/event5\n"
+        "\n"
+        "Input Reader State:\n"
+        "  Device 3: fts_ts_sec\n"
+        "    EventHub Devices: [ 4 ]\n"
+        "    Sources: TOUCHSCREEN\n"
+        "    Touch Input Mapper (mode - DIRECT):\n"
+        "      Parameters:\n"
+        "        DeviceType: touchScreen\n"
+        "      Viewport EXTERNAL: displayId=2, uniqueId=local:4630946671160541331\n"
+        "  Device 4: fts_ts\n"
+        "    EventHub Devices: [ 5 ]\n"
+        "    Sources: TOUCHSCREEN\n"
+        "    Touch Input Mapper (mode - DIRECT):\n"
+        "      Parameters:\n"
+        "        DeviceType: touchScreen\n"
+        "      Viewport INTERNAL: displayId=0, uniqueId=local:4630947039571902866\n"
+        "\n"
+        "Input Dispatcher State:\n";
+    FILE* f1 = open_string_stream(rp_duo_dump);
+    assert(parse_dumpsys_input_primary_touch_path(f1, path, sizeof(path)) == 1);
+    assert(strcmp(path, "/dev/input/event5") == 0);
+    fclose(f1);
+
+    // Case 2: Non-fts_ts Samsung sec_ts controller ("panel0_sec_ts") on higher event7
+    const char* sec_ts_dump =
+        "Event Hub State:\n"
+        "  Devices:\n"
+        "    2: panel1_sec_ts\n"
+        "      Path: /dev/input/event3\n"
+        "    9: panel0_sec_ts\n"
+        "      Path: /dev/input/event7\n"
+        "Input Reader State:\n"
+        "  Device 10: Megingiard Virtual Mouse\n"
+        "    EventHub Devices: [ 2 ]\n"
+        "    Viewport INTERNAL: displayId=0, uniqueId=local:0\n"
+        "  Device 11: panel1_sec_ts\n"
+        "    EventHub Devices: [ 2 ]\n"
+        "    Touch Input Mapper (mode - DIRECT):\n"
+        "      Viewport INTERNAL: displayId=4, uniqueId=local:1\n"
+        "  Device 12: panel0_sec_ts\n"
+        "    EventHub Devices: [ 9 ]\n"
+        "    Touch Input Mapper (mode - DIRECT):\n"
+        "      Viewport INTERNAL: displayId=0, uniqueId=local:0\n";
+    FILE* f2 = open_string_stream(sec_ts_dump);
+    assert(parse_dumpsys_input_primary_touch_path(f2, path, sizeof(path)) == 1);
+    assert(strcmp(path, "/dev/input/event7") == 0);
+    fclose(f2);
+
+    // Case 3: displayId=01 must NOT match displayId=0
+    const char* mismatch_dump =
+        "Event Hub State:\n"
+        "  Devices:\n"
+        "    5: goodix_ts\n"
+        "      Path: /dev/input/event4\n"
+        "Input Reader State:\n"
+        "  Device 2: goodix_ts\n"
+        "    EventHub Devices: [ 5 ]\n"
+        "    Touch Input Mapper (mode - DIRECT):\n"
+        "      Viewport INTERNAL: displayId=01, uniqueId=local:9\n";
+    FILE* f3 = open_string_stream(mismatch_dump);
+    assert(parse_dumpsys_input_primary_touch_path(f3, path, sizeof(path)) == 0);
+    fclose(f3);
+
     printf("PASS\n");
 }
 
@@ -342,6 +450,7 @@ int main(void) {
     test_touch_protocol_parsing();
     test_gamepad_protocol_parsing();
     test_primary_touch_device_name_filtering();
+    test_dumpsys_input_primary_touch_resolution();
     printf("All Native C unit tests PASSED successfully!\n");
     return 0;
 }

@@ -99,6 +99,9 @@ class FocusTopLauncherViewModel(
     private val _isStarted = MutableStateFlow(false)
     val isStarted: StateFlow<Boolean> = _isStarted.asStateFlow()
 
+    private val _isHoldRepeating = MutableStateFlow(false)
+    val isHoldRepeating: StateFlow<Boolean> = _isHoldRepeating.asStateFlow()
+
     private val _areButtonPromptsVisible = MutableStateFlow(true)
     val areButtonPromptsVisible: StateFlow<Boolean> = _areButtonPromptsVisible.asStateFlow()
 
@@ -179,20 +182,30 @@ class FocusTopLauncherViewModel(
         _selectedCategory.value = category
     }
 
-    fun cycleCategoryUp(categories: List<GameFocusCategory>): Boolean {
+    fun cycleCategoryUp(
+        categories: List<GameFocusCategory>,
+        logTransition: Boolean = true,
+    ): Boolean {
         val prevCategory = _selectedCategory.value.previous(categories)
         if (prevCategory != _selectedCategory.value) {
-            AppLog.i(TAG, "Category UP -> switching launcher category to ${prevCategory.id}")
+            if (logTransition) {
+                AppLog.i(TAG, "Category UP -> switching launcher category to ${prevCategory.id}")
+            }
             _selectedCategory.value = prevCategory
             return true
         }
         return false
     }
 
-    fun cycleCategoryDown(categories: List<GameFocusCategory>): Boolean {
+    fun cycleCategoryDown(
+        categories: List<GameFocusCategory>,
+        logTransition: Boolean = true,
+    ): Boolean {
         val nextCategory = _selectedCategory.value.next(categories)
         if (nextCategory != _selectedCategory.value) {
-            AppLog.i(TAG, "Category DOWN -> switching launcher category to ${nextCategory.id}")
+            if (logTransition) {
+                AppLog.i(TAG, "Category DOWN -> switching launcher category to ${nextCategory.id}")
+            }
             _selectedCategory.value = nextCategory
             return true
         }
@@ -322,20 +335,30 @@ class FocusTopLauncherViewModel(
         _librarySelectedTab.value = tab
     }
 
-    fun cycleLibraryTabUp(tabs: List<LibraryTab>): Boolean {
+    fun cycleLibraryTabUp(
+        tabs: List<LibraryTab>,
+        logTransition: Boolean = true,
+    ): Boolean {
         val prevTab = _librarySelectedTab.value.previous(tabs)
         if (prevTab != _librarySelectedTab.value) {
-            AppLog.i(TAG, "Library tab UP -> switching tab to ${prevTab.id}")
+            if (logTransition) {
+                AppLog.i(TAG, "Library tab UP -> switching tab to ${prevTab.id}")
+            }
             _librarySelectedTab.value = prevTab
             return true
         }
         return false
     }
 
-    fun cycleLibraryTabDown(tabs: List<LibraryTab>): Boolean {
+    fun cycleLibraryTabDown(
+        tabs: List<LibraryTab>,
+        logTransition: Boolean = true,
+    ): Boolean {
         val nextTab = _librarySelectedTab.value.next(tabs)
         if (nextTab != _librarySelectedTab.value) {
-            AppLog.i(TAG, "Library tab DOWN -> switching tab to ${nextTab.id}")
+            if (logTransition) {
+                AppLog.i(TAG, "Library tab DOWN -> switching tab to ${nextTab.id}")
+            }
             _librarySelectedTab.value = nextTab
             return true
         }
@@ -401,6 +424,10 @@ class FocusTopLauncherViewModel(
 
     fun setStarted(started: Boolean) {
         _isStarted.value = started
+    }
+
+    fun setHoldRepeating(repeating: Boolean) {
+        _isHoldRepeating.value = repeating
     }
 
     fun stepLibraryFocus(

@@ -82,8 +82,10 @@ object TouchSensorMath {
         sensorHeight: Int = DEFAULT_SENSOR_HEIGHT,
         rotation: DisplayRotationDegrees = DisplayRotationDegrees.ROT_90,
     ): SensorPixelPoint {
-        val cx = normalizedX.coerceIn(MIN_CLAMP_OVERRUN, MAX_CLAMP_OVERRUN)
-        val cy = normalizedY.coerceIn(MIN_CLAMP_OVERRUN, MAX_CLAMP_OVERRUN)
+        val safeX = if (normalizedX.isNaN()) NORM_MIN else normalizedX
+        val safeY = if (normalizedY.isNaN()) NORM_MIN else normalizedY
+        val cx = safeX.coerceIn(MIN_CLAMP_OVERRUN, MAX_CLAMP_OVERRUN)
+        val cy = safeY.coerceIn(MIN_CLAMP_OVERRUN, MAX_CLAMP_OVERRUN)
         val w = (if (sensorWidth > 0) sensorWidth else DEFAULT_SENSOR_WIDTH).toFloat()
         val h = (if (sensorHeight > 0) sensorHeight else DEFAULT_SENSOR_HEIGHT).toFloat()
 
@@ -132,24 +134,29 @@ object TouchSensorMath {
         val w = (if (sensorWidth > 0) sensorWidth else DEFAULT_SENSOR_WIDTH).toFloat()
         val h = (if (sensorHeight > 0) sensorHeight else DEFAULT_SENSOR_HEIGHT).toFloat()
 
-        val (nx, ny) =
-            when (rotation) {
-                DisplayRotationDegrees.ROT_0 -> {
-                    (rawX.toFloat() / w) to (rawY.toFloat() / h)
-                }
-
-                DisplayRotationDegrees.ROT_90 -> {
-                    (rawY.toFloat() / h) to (NORM_MAX - (rawX.toFloat() / w))
-                }
-
-                DisplayRotationDegrees.ROT_180 -> {
-                    (NORM_MAX - (rawX.toFloat() / w)) to (NORM_MAX - (rawY.toFloat() / h))
-                }
-
-                DisplayRotationDegrees.ROT_270 -> {
-                    (NORM_MAX - (rawY.toFloat() / h)) to (rawX.toFloat() / w)
-                }
+        val nx: Float
+        val ny: Float
+        when (rotation) {
+            DisplayRotationDegrees.ROT_0 -> {
+                nx = rawX.toFloat() / w
+                ny = rawY.toFloat() / h
             }
+
+            DisplayRotationDegrees.ROT_90 -> {
+                nx = rawY.toFloat() / h
+                ny = NORM_MAX - (rawX.toFloat() / w)
+            }
+
+            DisplayRotationDegrees.ROT_180 -> {
+                nx = NORM_MAX - (rawX.toFloat() / w)
+                ny = NORM_MAX - (rawY.toFloat() / h)
+            }
+
+            DisplayRotationDegrees.ROT_270 -> {
+                nx = NORM_MAX - (rawY.toFloat() / h)
+                ny = rawX.toFloat() / w
+            }
+        }
 
         return NormalizedTouchPoint(
             x = nx.coerceIn(NORM_MIN, NORM_MAX),

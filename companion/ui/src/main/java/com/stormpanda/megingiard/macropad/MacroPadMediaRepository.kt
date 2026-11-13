@@ -5,8 +5,16 @@ import android.graphics.Bitmap
 import android.net.Uri
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.BitmapUtils
+import com.stormpanda.megingiard.mirror.CutoutMaskFileStore
+import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -20,11 +28,76 @@ private const val MASK_PREFIX = "mask_"
  * Encapsulates filesystem and bitmap storage operations for MacroPad layout backgrounds and masks.
  */
 object MacroPadMediaRepository {
+    private val appIoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     @Volatile
     internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
+    private val _mediaRevision = MutableStateFlow(0)
+    val mediaRevision: StateFlow<Int> = _mediaRevision.asStateFlow()
+
     fun resetForTesting() {
         ioDispatcher = Dispatchers.IO
+    }
+
+    /**
+     * Copies layout background, mask, and cutout calibration files asynchronously on an application-scoped
+     * IO coroutine so unmounting UI screens cannot cancel duplication mid-flight, then invalidates negative
+     * caches and bumps [mediaRevision] so active canvases reload the newly copied assets.
+     */
+    fun duplicateLayoutAssetsAsync(
+        context: Context,
+        sourceLayout: PadLayout,
+        targetLayout: PadLayout,
+    ) {
+        val appContext = context.applicationContext
+        appIoScope.launch(ioDispatcher) {
+            if (sourceLayout.backgroundImagePath != null) {
+                duplicateBackgroundImage(appContext, sourceLayout.id, targetLayout.id)
+            }
+            if (sourceLayout.maskImagePath != null) {
+                duplicateMaskImage(appContext, sourceLayout.id, targetLayout.id)
+            }
+            CutoutMaskFileStore.duplicateLayoutCutoutAssets(appContext.filesDir, sourceLayout, targetLayout)
+            CutoutMaskManager.invalidateCache(targetLayout.id)
+            targetLayout.mirrorCutouts.forEach { cutout ->
+                CutoutMaskManager.invalidateCache(cutout.id)
+            }
+            CutoutMaskManager.notifyAssetsChanged()
+            _mediaRevision.value++
+            AppLog.i(TAG, "Duplicated media and cutout assets from layout ${sourceLayout.id} to ${targetLayout.id}")
+        }
+    }
+
+    /**
+     * Deletes background, mask, and cutout calibration files for [layouts] on an application-scoped
+     * IO coroutine so immediate navigation (`MacroPadNavState.pop()`) never cancels cleanup.
+     */
+    fun deleteLayoutsAssetsAsync(
+        context: Context,
+        layouts: List<PadLayout>,
+    ) {
+        if (layouts.isEmpty()) return
+        val appContext = context.applicationContext
+        layouts.forEach { lay ->
+            CutoutMaskManager.invalidateCache(lay.id)
+            lay.mirrorCutouts.forEach { cutout ->
+                CutoutMaskManager.invalidateCache(cutout.id)
+            }
+        }
+        appIoScope.launch(ioDispatcher) {
+            layouts.forEach { lay ->
+                deleteBackgroundImage(appContext, lay.id)
+                deleteMaskImage(appContext, lay.id)
+                CutoutMaskManager.deleteMask(appContext, lay.id)
+                lay.mirrorCutouts.forEach { cutout ->
+                    CutoutMaskManager.deleteMask(appContext, cutout.id)
+                }
+            }
+            CutoutMaskManager.notifyAssetsChanged()
+            _mediaRevision.value++
+            AppLog.i(TAG, "Deleted media and cutout assets for ${layouts.size} layout(s)")
+        }
     }
 
     /**

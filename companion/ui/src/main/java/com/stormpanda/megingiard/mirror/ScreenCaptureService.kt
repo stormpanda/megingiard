@@ -25,7 +25,6 @@ import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -33,6 +32,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import android.R as AndroidR
 
 private const val TAG = "ScreenCaptureService"
 private const val DIRECT_MIRROR_MAX_RETRIES = 3
@@ -59,22 +59,24 @@ class ScreenCaptureService : Service() {
         object : DisplayManager.DisplayListener {
             override fun onDisplayAdded(displayId: Int) {
                 if (displayId == Display.DEFAULT_DISPLAY) return
-                getSystemService(DisplayManager::class.java)
-                    ?.getDisplay(displayId)
-                    ?.let { updateHostSecondaryCanvas(it) }
+                val secondary = DisplayDetector.findSecondaryDisplay(this@ScreenCaptureService)
+                if (secondary != null && secondary.displayId == displayId) {
+                    updateHostSecondaryCanvas(secondary)
+                }
             }
 
             override fun onDisplayRemoved(displayId: Int) {
                 if (displayId != Display.DEFAULT_DISPLAY) {
-                    AppLog.d(TAG, "Secondary display removed: displayId=$displayId")
+                    AppLog.d(TAG, "Non-default display removed: displayId=$displayId")
                 }
             }
 
             override fun onDisplayChanged(displayId: Int) {
                 if (displayId == Display.DEFAULT_DISPLAY) return
-                getSystemService(DisplayManager::class.java)
-                    ?.getDisplay(displayId)
-                    ?.let { updateHostSecondaryCanvas(it) }
+                val secondary = DisplayDetector.findSecondaryDisplay(this@ScreenCaptureService)
+                if (secondary != null && secondary.displayId == displayId) {
+                    updateHostSecondaryCanvas(secondary)
+                }
             }
         }
 
@@ -161,7 +163,7 @@ class ScreenCaptureService : Service() {
                 .Builder(this, channelId)
                 .setContentTitle(getString(R.string.app_name))
                 .setContentText(getString(R.string.notification_mirroring_active))
-                .setSmallIcon(android.R.drawable.ic_menu_view)
+                .setSmallIcon(AndroidR.drawable.ic_menu_view)
                 .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -191,10 +193,7 @@ class ScreenCaptureService : Service() {
         AppLog.i(TAG, "Starting Direct Privd mirror capture")
 
         val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-        val secondaryDisplay =
-            displayManager
-                .getDisplays()
-                .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+        val secondaryDisplay = DisplayDetector.findSecondaryDisplay(this)
         if (secondaryDisplay == null) {
             AppLog.e(TAG, "startPrivdPath: no secondary display")
             AppStateManager.setPromptInFlight(false)
@@ -285,13 +284,11 @@ class ScreenCaptureService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: cleanup sequence")
+        scope.cancel()
         if (isDirectMirrorRunning) {
             isDirectMirrorRunning = false
-            scope.launch(NonCancellable) {
-                runCatching { PrivdClient.stopMirror() }
-            }
+            PrivdClient.requestStopMirrorAsync()
         }
-        scope.cancel()
         getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(displayListener)
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
         AppStateManager.setPromptInFlight(false)

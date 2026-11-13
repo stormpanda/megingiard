@@ -28,6 +28,39 @@ SUMMARY_PREFIXES = (
 )
 
 
+REQUIRED_CSV_COLUMNS = (
+    "Flags",
+    "IntendedVsync",
+    "Vsync",
+    "HandleInputStart",
+    "AnimationStart",
+    "PerformTraversalsStart",
+    "DrawStart",
+    "SyncQueued",
+    "SyncStart",
+    "IssueDrawCommandsStart",
+    "SwapBuffers",
+    "FrameCompleted",
+)
+
+# Default Android 12–16 (SDK 31–36) column positions when header row is omitted.
+DEFAULT_CSV_COLUMN_INDICES = {
+    "Flags": 0,
+    "IntendedVsync": 2,
+    "Vsync": 3,
+    "HandleInputStart": 7,
+    "AnimationStart": 8,
+    "PerformTraversalsStart": 9,
+    "DrawStart": 10,
+    "SyncQueued": 14,
+    "SyncStart": 15,
+    "IssueDrawCommandsStart": 16,
+    "SwapBuffers": 17,
+    "FrameCompleted": 18,
+    "GpuCompleted": 21,
+}
+
+
 def analyze_gfxinfo(path: Path, budget_ms: float, top_n: int) -> None:
     text = path.read_text(encoding="utf-8", errors="replace")
     print("=== GFXINFO SUMMARY ===")
@@ -37,36 +70,52 @@ def analyze_gfxinfo(path: Path, budget_ms: float, top_n: int) -> None:
             print(line)
 
     in_csv = False
+    col_idx = dict(DEFAULT_CSV_COLUMN_INDICES)
     frames = []
     for raw in text.splitlines():
         line = raw.strip()
         if line == "---PROFILEDATA---":
             in_csv = not in_csv
+            if in_csv:
+                col_idx = dict(DEFAULT_CSV_COLUMN_INDICES)
             continue
-        if not in_csv or not line or line.startswith("Flags"):
+        if not in_csv or not line:
             continue
-        parts = [p for p in line.split(",") if p != ""]
-        if len(parts) < 16:
+        if line.startswith("Flags"):
+            header_cols = [c.strip() for c in line.rstrip(",").split(",")]
+            parsed_map = {name: idx for idx, name in enumerate(header_cols) if name}
+            if all(req in parsed_map for req in REQUIRED_CSV_COLUMNS):
+                col_idx = parsed_map
+            continue
+
+        parts = [p.strip() for p in line.rstrip(",").split(",")]
+        max_req_idx = max(col_idx[req] for req in REQUIRED_CSV_COLUMNS)
+        if len(parts) <= max_req_idx:
             continue
         try:
-            cols = [int(x) for x in parts[:20]]
+            flags = int(parts[col_idx["Flags"]])
+            if flags != 0:
+                continue
+            intended = int(parts[col_idx["IntendedVsync"]])
+            vsync = int(parts[col_idx["Vsync"]])
+            input_s = int(parts[col_idx["HandleInputStart"]])
+            anim_s = int(parts[col_idx["AnimationStart"]])
+            trav_s = int(parts[col_idx["PerformTraversalsStart"]])
+            draw_s = int(parts[col_idx["DrawStart"]])
+            sync_q = int(parts[col_idx["SyncQueued"]])
+            sync_s = int(parts[col_idx["SyncStart"]])
+            issue_s = int(parts[col_idx["IssueDrawCommandsStart"]])
+            swap_s = int(parts[col_idx["SwapBuffers"]])
+            done = int(parts[col_idx["FrameCompleted"]])
+            gpu_idx = col_idx.get("GpuCompleted", -1)
+            gpu_raw = (
+                int(parts[gpu_idx])
+                if 0 <= gpu_idx < len(parts) and parts[gpu_idx] != ""
+                else -1
+            )
         except ValueError:
             continue
-        flags = cols[0]
-        if flags != 0:
-            continue
-        intended = cols[1]
-        vsync = cols[2]
-        input_s = cols[6]
-        anim_s = cols[7]
-        trav_s = cols[8]
-        draw_s = cols[10]
-        sync_q = cols[11]
-        sync_s = cols[12]
-        issue_s = cols[13]
-        swap_s = cols[14]
-        done = cols[15]
-        gpu_done = cols[18] if len(cols) > 18 and cols[18] > issue_s else done
+        gpu_done = gpu_raw if gpu_raw > issue_s else done
 
         total_ms = (done - intended) / 1e6
         if total_ms <= 0 or total_ms > 5000:
@@ -113,26 +162,44 @@ def parse_art_trace(data: bytes):
     records = []
 
     if data[:4] == b"SLOW":
+        if len(data) < 8:
+            return methods, threads, records
         version, offset = struct.unpack_from("<HH", data, 4)
         record_size = struct.unpack_from("<H", data, 16)[0] if version >= 3 and len(data) >= 18 else 14
+        if record_size < 10 or offset > len(data):
+            return methods, threads, records
         pos = offset
         while pos + 2 <= len(data):
             tid = struct.unpack_from("<H", data, pos)[0]
             if tid == 0:
+                if pos + 3 > len(data):
+                    break
                 op = data[pos + 2]
                 if op == 1:
+                    if pos + 5 > len(data):
+                        break
                     slen = struct.unpack_from("<H", data, pos + 3)[0]
+                    if pos + 5 + slen > len(data):
+                        break
                     s = data[pos + 5 : pos + 5 + slen].decode("utf-8", errors="replace")
                     pos += 5 + slen
                     parts = s.strip().split("\t")
                     if len(parts) >= 3:
                         methods[int(parts[0], 16)] = f"{parts[1]}.{parts[2]}"
                 elif op == 2:
+                    if pos + 7 > len(data):
+                        break
                     rtid, slen = struct.unpack_from("<HH", data, pos + 3)
+                    if pos + 7 + slen > len(data):
+                        break
                     threads[rtid] = data[pos + 7 : pos + 7 + slen].decode("utf-8", errors="replace").strip()
                     pos += 7 + slen
                 elif op == 3:
+                    if pos + 7 > len(data):
+                        break
                     slen = struct.unpack_from("<I", data, pos + 3)[0]
+                    if pos + 7 + slen > len(data):
+                        break
                     pos += 7 + slen
                 else:
                     break
@@ -174,9 +241,13 @@ def parse_art_trace(data: bytes):
 
     pos = 0
     if body[:4] == b"SLOW":
+        if len(body) < 8:
+            return methods, threads, records
         version, offset = struct.unpack_from("<HH", body, 4)
         if version >= 3 and len(body) >= 18:
             record_size = struct.unpack_from("<H", body, 16)[0]
+        if record_size < 10 or offset > len(body):
+            return methods, threads, records
         pos = offset
     while pos + record_size <= len(body):
         tid = struct.unpack_from("<H", body, pos)[0]

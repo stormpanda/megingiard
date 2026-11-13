@@ -22,7 +22,7 @@ The agent workflow in [AGENTS.md](../AGENTS.md#3-checklist-for-every-change) mir
 
 ## Native Asset Integrity
 
-Megingiard treats native helpers and the privileged mirror DEX as pinned assets. A normal Gradle build generates `NativeBinaryHashes.kt` from the bytes in `companion/ui/src/main/assets/` through the `:domain:generateNativeBinaryHashes` task. The generated map contains SHA-256 values for:
+Megingiard treats native helpers and the privileged mirror DEX as pinned assets. A normal Gradle build generates `NativeBinaryHashes.kt` from the bytes in `companion/ui/src/main/assets/` through the `:companion:domain:generateNativeBinaryHashes` task. The generated map contains SHA-256 values for:
 
 - `megingiard_privd_arm64`
 - `megingiard_mirror.dex`
@@ -41,12 +41,12 @@ The `megingiard_privd` daemon uses a per-install HMAC key generated on the devic
 
 `companion/ui/src/main/cpp/megingiard_privd.c`
 
-The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug; current protocol `PRIVD_VERSION = 20`). It provides:
-1. Multi-touch injection (`D`/`M`/`U`) and touchscreen event observation (`SUB TOUCH`) via the dynamically discovered primary touchscreen `evdev` node (`INPUT_PROP_DIRECT` + `ABS_MT_POSITION_X/Y` + `EVIOCGABS`, excluding `*_sec` secondary panels; sensor dimensions reported in `VERSION_OK 20 <touchW> <touchH>`).
+The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug; current protocol `PRIVD_VERSION = 21`). It provides:
+1. Multi-touch injection (`D`/`M`/`U`) and touchscreen event observation (`SUB TOUCH`) via the dynamically discovered primary touchscreen `evdev` node (`dumpsys input` `Viewport INTERNAL: displayId=0` resolution with exact `"fts_ts"` fallback, `INPUT_PROP_DIRECT` + `ABS_MT_POSITION_X/Y` + `EVIOCGABS`, excluding `"fts_ts_sec"` and `"Megingiard*"`; sensor dimensions reported in `VERSION_OK 21 <touchW> <touchH>`).
 2. Mouse event injection (`MM`/`MB`/`MW`/`MH`) via `/dev/uinput`.
 3. Keyboard key injection (`KB_START`/`KB_STOP`/`KD`/`KU`) via `/dev/uinput`.
 4. Gamepad input injection (`GD`/`GU`/`HD`/`JS`) and physical gamepad observation (`SUB GAMEPAD`) via `/dev/input/event*`.
-5. Display screenshot capture (`SCREENSHOT [<display_id>] <path>` and loopback base64 streaming `SCREENSHOT_B64 [<display_id>]`) via `/system/bin/screencap`, resolving the 64-bit SurfaceFlinger `(HWC display 0)` physical ID automatically on Android 14+.
+5. Display screenshot capture (`SCREENSHOT [<display_id>] <path>` and in-memory pipe-streamed loopback base64 `SCREENSHOT_B64 [<display_id>]`) via `/system/bin/screencap`, resolving the 64-bit SurfaceFlinger `(HWC display 0)` physical ID automatically on Android 14+.
 6. Privileged text file reading (`READ_FILE <path>`) and process listing (`LIST_PROCESSES`) from `/proc` for active game detection.
 7. Low-latency lifecycle control (`PING`/`VERSION`/`QUIT`) and privileged DEX spawning (`MIRROR START_DIRECT`/`MIRROR STOP`).
 
@@ -92,7 +92,7 @@ mirrorserver/src/main/java/com/stormpanda/megingiard/mirrorserver/
 
 ### Runtime deployment
 
-`PServerBootstrapper` (Tier-1 root bridge) and `PrivdBootstrapper` (Tier-2 ADB-Wireless) remove any prior `/data/local/tmp/megingiard_mirror*.dex` file and deploy the DEX to `/data/local/tmp/megingiard_mirror.dex` (or `/data/local/tmp/megingiard_mirror_debug.dex` for debug builds) with read-only permissions (`chmod 0444`, mode `0100444`) as required by Android 14+ dynamic code loading. For direct-Surface privileged mirroring, the daemon spawns:
+`PServerBootstrapper` (Tier-1 root bridge) and `PrivdBootstrapper` (Tier-2 ADB-Wireless) remove any prior `/data/local/tmp/megingiard_mirror*.dex` file and deploy the verified DEX to `/data/local/tmp/megingiard_mirror.dex` (or `/data/local/tmp/megingiard_mirror_debug.dex` for debug builds) with read-only permissions (`chmod 0444`, mode `0100444`) as required by Android 14+ dynamic code loading, passing `--dexfile <path>` to `megingiard_privd` (if `megingiard_mirror.dex` fails `BinaryIntegrity.verify()` during Tier-1 bootstrap, `PServerBootstrapper` removes any remote DEX and omits `--dexfile` so the daemon runs in input-only mode and rejects `MIRROR START_DIRECT`). For direct-Surface privileged mirroring, the daemon spawns:
 
 ```bash
 CLASSPATH=/data/local/tmp/megingiard_mirror.dex \
@@ -101,4 +101,4 @@ CLASSPATH=/data/local/tmp/megingiard_mirror.dex \
    <socket> <w> <h>
 ```
 
-`DirectMirrorServer` registers a temporary `ServiceManager` Binder named `megingiard.direct.surface`, binds its readiness socket, then waits for the app to send the currently published `MasterSurfaceRegistry` `Surface` over Binder. Once received, `SurfaceControlReflect` creates a virtual display (`SurfaceControl.createDisplay` on `SDK < 34`, or `com.android.server.display.DisplayControl.createVirtualDisplay` loaded from `/system/framework/services.jar` + `libandroid_servers.so` on `SDK >= 34`) and binds it directly onto that `Surface`.
+`DirectMirrorServer` registers a temporary `ServiceManager` Binder named `megingiard.direct.surface`, binds its readiness socket, then waits for the app to send the currently published `MasterSurfaceRegistry` `Surface` over Binder. Once received, `SurfaceControlReflect` creates a virtual display (`SurfaceControl.createDisplay` on `SDK < 34`, or `android.hardware.display.DisplayManager.createVirtualDisplay` with `VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR` mirroring Display `0` on `SDK >= 34`) and binds it directly onto that `Surface`.

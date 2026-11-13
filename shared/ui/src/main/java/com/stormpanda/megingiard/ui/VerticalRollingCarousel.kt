@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -73,26 +75,17 @@ internal class RollingOffsetTracker(
     var targetOffset: Float = initialIndex.toFloat()
         private set
 
-    fun resolveTarget(
+    fun computeTarget(
         selectedIndex: Int,
         itemCount: Int,
-        logChanges: Boolean = false,
     ): Float {
         if (itemCount <= 0) return targetOffset
         if (lastItemCount == 0 || itemCount != lastItemCount) {
-            val shouldLog = lastItemCount != 0 && selectedIndex != lastIndex
-            lastItemCount = itemCount
-            lastIndex = selectedIndex
-            targetOffset = selectedIndex.toFloat()
-            if (logChanges && shouldLog) {
-                AppLog.d(TAG, "Selected index changed to $selectedIndex (itemCount=$itemCount)")
-            }
-            return targetOffset
+            return selectedIndex.toFloat()
         }
         if (selectedIndex == lastIndex) {
             return targetOffset
         }
-        lastIndex = selectedIndex
         var delta = (selectedIndex - targetOffset) % itemCount
         val halfCount = itemCount / VRC_HALF_DIVISOR
         if (delta > halfCount) {
@@ -100,11 +93,27 @@ internal class RollingOffsetTracker(
         } else if (delta < -halfCount) {
             delta += itemCount
         }
-        targetOffset += delta
-        if (logChanges) {
-            AppLog.d(TAG, "Selected index changed to $selectedIndex")
-        }
-        return targetOffset
+        return targetOffset + delta
+    }
+
+    fun commitTarget(
+        selectedIndex: Int,
+        itemCount: Int,
+        computedTarget: Float,
+    ) {
+        if (itemCount <= 0) return
+        lastItemCount = itemCount
+        lastIndex = selectedIndex
+        targetOffset = computedTarget
+    }
+
+    fun resolveTarget(
+        selectedIndex: Int,
+        itemCount: Int,
+    ): Float {
+        val computed = computeTarget(selectedIndex, itemCount)
+        commitTarget(selectedIndex, itemCount, computed)
+        return computed
     }
 }
 
@@ -159,6 +168,7 @@ fun <T> VerticalRollingCarousel(
                 val size = currentItemsState.value.size
                 if (size > 0) {
                     val nextIndex = (currentSelectedIndexState.value - 1).floorMod(size)
+                    AppLog.d(TAG, "Step up clicked -> index=$nextIndex")
                     currentOnSelectedIndexChangeState.value(nextIndex)
                 }
             }
@@ -170,13 +180,17 @@ fun <T> VerticalRollingCarousel(
                 val size = currentItemsState.value.size
                 if (size > 0) {
                     val nextIndex = (currentSelectedIndexState.value + 1).floorMod(size)
+                    AppLog.d(TAG, "Step down clicked -> index=$nextIndex")
                     currentOnSelectedIndexChangeState.value(nextIndex)
                 }
             }
         }
 
     val offsetTracker = remember { RollingOffsetTracker(selectedIndex) }
-    val targetOffset = offsetTracker.resolveTarget(selectedIndex, items.size, logChanges = true)
+    val targetOffset = offsetTracker.computeTarget(selectedIndex, items.size)
+    SideEffect {
+        offsetTracker.commitTarget(selectedIndex, items.size, targetOffset)
+    }
 
     val animatedOffsetState =
         animateFloatAsState(
@@ -192,6 +206,7 @@ fun <T> VerticalRollingCarousel(
                 if (size > 0) {
                     val centerIndex = animatedOffsetState.value.roundToInt()
                     val tappedIndex = (centerIndex + slotOffset).floorMod(size)
+                    AppLog.d(TAG, "Slot tapped (offset=$slotOffset) -> index=$tappedIndex")
                     currentOnSelectedIndexChangeState.value(tappedIndex)
                 }
             }
@@ -316,6 +331,7 @@ private fun <T> RollingItemsViewport(
     val rotationMax = if (visibleItemsCount == VRC_DEFAULT_VISIBLE_COUNT) VRC_ROLL_ANGLE_DEG else VRC_ROLL_ANGLE_COMPACT_DEG
     val alphaDecay = if (visibleItemsCount == VRC_DEFAULT_VISIBLE_COUNT) VRC_ALPHA_DECAY else VRC_ALPHA_DECAY_COMPACT
     val maxVisibleDiff = (halfVisible + VRC_NEIGHBOR_GUARD_SLOTS).toFloat()
+    val currentOnTapSlot by rememberUpdatedState(onTapSlot)
 
     Box(
         modifier =
@@ -325,7 +341,7 @@ private fun <T> RollingItemsViewport(
                         detectTapGestures { tapOffset ->
                             val slotOffset = floor(tapOffset.y / itemHeightPx).toInt() - halfVisible
                             if (slotOffset in -halfVisible..halfVisible && (showNeighboringItems || slotOffset == 0)) {
-                                onTapSlot(slotOffset)
+                                currentOnTapSlot(slotOffset)
                             }
                         }
                     }

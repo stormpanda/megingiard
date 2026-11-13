@@ -99,7 +99,6 @@ private const val MP_SCROLL_CHEVRON_GAP_BASE_PX = MP_SCROLL_CHEVRON_GAP_BASE_DP 
 private const val MP_SCROLL_CHEVRON_DIM_ALPHA = 0.5f
 private const val MP_PEEK_ICON_BASE_DP = 24f
 private const val MP_PEEK_ICON_BASE_PX = MP_PEEK_ICON_BASE_DP * THOR_BOTTOM_DENSITY
-private val MP_PEEK_ICON_SIZE = 24.dp
 
 // Outer gradient edge alpha at resting state; intermediate stops follow r² quadratic curve.
 internal const val MP_BTN_GRADIENT_OUTER = 0.7f
@@ -495,7 +494,7 @@ internal fun ScrollWheelFace(
 @Composable
 internal fun BackgroundPeekFace(
     accentColor: Color,
-    iconSize: Dp = MP_PEEK_ICON_SIZE,
+    iconSize: Dp,
 ) {
     val isPeekActive by MacroPadState.isPeekActive.collectAsStateWithLifecycle()
     Icon(

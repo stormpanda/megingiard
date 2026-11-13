@@ -6,6 +6,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.math.DesignViewport
+import com.stormpanda.megingiard.math.DisplayRotationDegrees
 import com.stormpanda.megingiard.math.ViewportMath
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -256,8 +257,30 @@ class MacroPadHitTestEngine(
                     MP_TRACKPOINT_SENSITIVITY *
                         tpAction.sensitivity.coerceIn(MP_TRACKPOINT_SENSITIVITY_MIN, MP_TRACKPOINT_SENSITIVITY_MAX)
                 if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
-                    val dxNormalized = (deltaX * effectiveSens) / LOGICAL_SCREEN_WIDTH
-                    val dyNormalized = (deltaY * effectiveSens) / LOGICAL_SCREEN_HEIGHT
+                    val rot = TouchInjector.primaryDisplayRotation
+                    val swapAxes = rot == DisplayRotationDegrees.ROT_90 || rot == DisplayRotationDegrees.ROT_270
+                    val sensorW = TouchInjector.activeSensorWidth
+                    val sensorH = TouchInjector.activeSensorHeight
+                    val rawW = if (swapAxes) sensorH else sensorW
+                    val rawH = if (swapAxes) sensorW else sensorH
+                    val logicalW =
+                        if (rawW > 0) {
+                            rawW.toFloat()
+                        } else if (swapAxes) {
+                            LOGICAL_SCREEN_WIDTH
+                        } else {
+                            LOGICAL_SCREEN_HEIGHT
+                        }
+                    val logicalH =
+                        if (rawH > 0) {
+                            rawH.toFloat()
+                        } else if (swapAxes) {
+                            LOGICAL_SCREEN_HEIGHT
+                        } else {
+                            LOGICAL_SCREEN_WIDTH
+                        }
+                    val dxNormalized = (deltaX * effectiveSens) / logicalW
+                    val dyNormalized = (deltaY * effectiveSens) / logicalH
 
                     val currentDxSign =
                         if (dxNormalized > 0f) {

@@ -71,6 +71,11 @@ echo "Device:            $DEVICE"
 echo "TOP    display ID: $ID_TOP"
 echo "BOTTOM display ID: $ID_BOTTOM"
 
+cleanup_remote() {
+  "${ADB_CMD[@]}" shell rm -f /data/local/tmp/mgnrd_top.png /data/local/tmp/mgnrd_bottom.png >/dev/null 2>&1 || true
+}
+trap cleanup_remote EXIT
+
 echo "Capturing TOP screen…"
 "${ADB_CMD[@]}" shell screencap -d "$ID_TOP" -p /data/local/tmp/mgnrd_top.png
 "${ADB_CMD[@]}" pull /data/local/tmp/mgnrd_top.png "$OUTDIR/${TS}_TOP.png"
@@ -79,7 +84,7 @@ echo "Capturing BOTTOM screen…"
 "${ADB_CMD[@]}" shell screencap -d "$ID_BOTTOM" -p /data/local/tmp/mgnrd_bottom.png
 "${ADB_CMD[@]}" pull /data/local/tmp/mgnrd_bottom.png "$OUTDIR/${TS}_BOTTOM.png"
 
-"${ADB_CMD[@]}" shell rm -f /data/local/tmp/mgnrd_top.png /data/local/tmp/mgnrd_bottom.png
+cleanup_remote
 
 echo "Saved:"
 echo "  $OUTDIR/${TS}_TOP.png"

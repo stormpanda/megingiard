@@ -659,10 +659,22 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
             var frozenHidden by remember { mutableStateOf(hidden) }
             val lastCatalogTracker = remember { LastCatalogRef(allApps) }
-            if (lastCatalogTracker.apps !== allApps) {
-                lastCatalogTracker.apps = allApps
-                if (frozenHidden != hidden) {
-                    frozenHidden = hidden
+            val editingAppInfo by viewModel.editingAppInfo.collectAsStateWithLifecycle()
+            val isManageGalleriesOpen by viewModel.isManageGalleriesOpen.collectAsStateWithLifecycle()
+            val isPrimaryOverlayOpen = editingAppInfo != null || isManageGalleriesOpen
+
+            LaunchedEffect(isPrimaryOverlayOpen) {
+                if (isPrimaryOverlayOpen) {
+                    controllerDispatcher.stopRepeat()
+                }
+            }
+
+            SideEffect {
+                if (lastCatalogTracker.apps !== allApps) {
+                    lastCatalogTracker.apps = allApps
+                    if (frozenHidden != hidden) {
+                        frozenHidden = hidden
+                    }
                 }
             }
             val handleSnapHidden: (Set<String>) -> Unit =
@@ -835,6 +847,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
             applyImmersiveSystemBars()
+        } else {
+            controllerDispatcher.stopRepeat()
         }
     }
 
@@ -852,6 +866,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        controllerDispatcher.stopRepeat()
         unregisterPackageChangeReceiver()
         viewModel.setStarted(false)
         if (launchedTopScreenPackage == null) {
@@ -1211,15 +1226,14 @@ private fun LauncherSelectionGuard(
     val isLibraryOpen by viewModel.isLibraryOpen.collectAsStateWithLifecycle()
 
     val selectionTracker = remember { LastSelectionTracker(selectedCategory, isLibraryOpen) }
-    if (selectionTracker.category != selectedCategory || selectionTracker.isLibraryOpen != isLibraryOpen) {
-        selectionTracker.category = selectedCategory
-        selectionTracker.isLibraryOpen = isLibraryOpen
-        if (frozenHidden != liveHidden) {
-            onSnapHidden(liveHidden)
-        }
-    }
-
     SideEffect {
+        if (selectionTracker.category != selectedCategory || selectionTracker.isLibraryOpen != isLibraryOpen) {
+            selectionTracker.category = selectedCategory
+            selectionTracker.isLibraryOpen = isLibraryOpen
+            if (frozenHidden != liveHidden) {
+                onSnapHidden(liveHidden)
+            }
+        }
         if (selectedCategory !in categories) {
             val fallbackCategory = categories.first()
             AppLog.i(TAG, "Selected gallery ${selectedCategory.id} is not visible -> falling back to ${fallbackCategory.id}")

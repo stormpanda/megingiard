@@ -820,15 +820,26 @@ object ConfigManager {
                         }
 
                     val cutoutIdPairs = layout.mirrorCutouts.map { cutout -> cutout to UUID.randomUUID().toString() }
-                    val remappedCutouts =
-                        cutoutIdPairs.map { (cutout, newCutoutId) ->
-                            cutout.copy(id = newCutoutId)
-                        }
-
                     extractOrCopyCutoutMaskAssets(context.filesDir, images, oldLayoutId, newLayoutId)
                     for ((oldCutout, newCutoutId) in cutoutIdPairs) {
                         extractOrCopyCutoutMaskAssets(context.filesDir, images, oldCutout.id, newCutoutId)
                     }
+                    val remappedCutouts =
+                        cutoutIdPairs.map { (cutout, newCutoutId) ->
+                            val hasMaskOnDisk =
+                                cutout.hasTransparencyMask &&
+                                    CutoutMaskFileStore.baseMaskFile(context.filesDir, newCutoutId).exists()
+                            if (cutout.hasTransparencyMask && !hasMaskOnDisk) {
+                                AppLog.w(
+                                    TAG,
+                                    "importMacroPadData: cleared stale hasTransparencyMask on cutout $newCutoutId (base mask absent)",
+                                )
+                            }
+                            cutout.copy(
+                                id = newCutoutId,
+                                hasTransparencyMask = hasMaskOnDisk,
+                            )
+                        }
 
                     @Suppress("DEPRECATION")
                     val remappedLayout =

@@ -140,32 +140,35 @@ object PServerBootstrapper {
         processName: String,
         portStart: Int,
         keyHex: String,
-    ): String =
-        """
-        kill -9 ${'$'}(pidof $processName 2>/dev/null) 2>/dev/null
-        rm -f $remoteBinPath
-        cp $stagedBinPath $remoteBinPath
-        chmod 755 $remoteBinPath
-        chown 2000:2000 $remoteBinPath
-        ${if (hasValidDex) {
-            """
-            rm -f $remoteDexPath
-            cp $stagedDexPath $remoteDexPath
-            chmod 0444 $remoteDexPath
-            chown 2000:2000 $remoteDexPath
+    ): String {
+        val dexDeployBlock =
+            if (hasValidDex) {
+                """
+                cp $stagedDexPath $remoteDexPath
+                chmod 0444 $remoteDexPath
+                chown 2000:2000 $remoteDexPath
+                """.trimIndent()
+            } else {
+                ""
+            }
+        val dexSpawnArg = if (hasValidDex) " --dexfile $remoteDexPath" else ""
+        return """
+            kill -9 ${'$'}(pidof $processName 2>/dev/null) 2>/dev/null
+            rm -f $remoteBinPath $remoteDexPath
+            cp $stagedBinPath $remoteBinPath
+            chmod 755 $remoteBinPath
+            chown 2000:2000 $remoteBinPath
+            $dexDeployBlock
+            $remoteBinPath --keyfile $stateFilePath --port $portStart --provision $keyHex
+            PROV_RET=${'$'}?
+            if [ ${'$'}PROV_RET -ne 0 ]; then
+                echo "PROVISION_FAILED_${'$'}PROV_RET"
+                exit 1
+            fi
+            chown 2000:2000 $stateFilePath
+            chmod 600 $stateFilePath
+            $remoteBinPath --keyfile $stateFilePath$dexSpawnArg --port $portStart </dev/null >/dev/null 2>&1 &
+            echo "$SPAWN_OK_MARKER"
             """.trimIndent()
-        } else {
-            ""
-        }}
-        $remoteBinPath --keyfile $stateFilePath --port $portStart --provision $keyHex
-        PROV_RET=${'$'}?
-        if [ ${'$'}PROV_RET -ne 0 ]; then
-            echo "PROVISION_FAILED_${'$'}PROV_RET"
-            exit 1
-        fi
-        chown 2000:2000 $stateFilePath
-        chmod 600 $stateFilePath
-        $remoteBinPath --keyfile $stateFilePath --dexfile $remoteDexPath --port $portStart </dev/null >/dev/null 2>&1 &
-        echo "$SPAWN_OK_MARKER"
-        """.trimIndent()
+    }
 }

@@ -79,9 +79,9 @@ Megingiard uses a two-tier bootstrap architecture:
 
 | Feature | Implementation & Capabilities |
 | --- | --- |
-| **Direct screen mirroring** | Direct `SurfaceControl` / `DisplayControl` mirror via `mirrorserver` DEX spawned by the daemon directly onto app Surface. Zero consent prompts, zero MediaProjection overhead. |
-| **Top screen capture** | High-speed screen capture via daemon `/system/bin/screencap` (`SCREENSHOT_B64` loopback PNG streaming, resolving 64-bit SurfaceFlinger HWC physical IDs on Android 14+). Zero permission dialogs. |
-| **Multi-touch injection** | Low-latency multi-touch injection via direct raw `input_event` writes to the dynamically discovered primary touchscreen `evdev` node (`INPUT_PROP_DIRECT` + `EVIOCGABS`, e.g. `/dev/input/event6` on AYN Thor, `/dev/input/event5` on Retroid Pocket Duo). |
+| **Direct screen mirroring** | Direct `SurfaceControl.createDisplay` (`SDK 33`) / `DisplayManager.createVirtualDisplay` (`SDK >= 34`) mirror via `mirrorserver` DEX spawned by the daemon directly onto app Surface. Zero consent prompts, zero MediaProjection overhead. |
+| **Top screen capture** | High-speed screen capture via daemon `/system/bin/screencap` (`SCREENSHOT_B64` in-memory pipe PNG streaming, resolving 64-bit SurfaceFlinger HWC physical IDs on Android 14+). Zero permission dialogs. |
+| **Multi-touch injection** | Low-latency multi-touch injection via direct raw `input_event` writes to the dynamically discovered primary touchscreen `evdev` node (`dumpsys input` `Viewport INTERNAL: displayId=0` + `EVIOCGABS`, e.g. `/dev/input/event6` on AYN Thor, `/dev/input/event5` on Retroid Pocket Duo). |
 | **Relative mouse** | Low-latency virtual mouse injection via kernel `/dev/uinput`. |
 | **Virtual keyboard** | Low-latency virtual keyboard key injection via kernel `/dev/uinput`. |
 | **Gamepad merge & physical recording** | Single-controller emulation merging MacroPad events into physical controller evdev stream, plus raw controller event recording. |
