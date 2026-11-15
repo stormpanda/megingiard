@@ -242,18 +242,19 @@ internal fun LayoutImageLayer(
     if (bgBitmap == null && maskBitmap == null) return
 
     val previewLayout by MacroPadState.previewLayout.collectAsStateWithLifecycle()
+    val effectiveLayout = previewLayout ?: layout
 
     val bgImageDimFilter =
-        remember(layout?.backgroundImageDim) {
-            dimColorFilter(layout?.backgroundImageDim ?: 0f)
+        remember(effectiveLayout?.backgroundImageDim) {
+            dimColorFilter(effectiveLayout?.backgroundImageDim ?: 0f)
         }
     val maskImageDimFilter =
-        remember(layout?.maskImageDim) {
-            dimColorFilter(layout?.maskImageDim ?: 0f)
+        remember(effectiveLayout?.maskImageDim) {
+            dimColorFilter(effectiveLayout?.maskImageDim ?: 0f)
         }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        val currentLayout = previewLayout ?: layout
+        val currentLayout = effectiveLayout
         val designCanvas = currentLayout?.effectiveDesignCanvas ?: THOR_BOTTOM_CANVAS_SPEC
         val vp =
             if (viewport != null && viewport.hostWidthPx > 0f && viewport.hostHeightPx > 0f) {
@@ -357,12 +358,6 @@ internal fun PadCanvas(
                     widthPx = canvasSize.width.toFloat(),
                     heightPx = canvasSize.height.toFloat(),
                     density = density.density,
-                ),
-            )
-            MacroPadState.setHostSecondaryCanvas(
-                LayoutCanvasSpec(
-                    widthPx = canvasSize.width,
-                    heightPx = canvasSize.height,
                 ),
             )
         }
@@ -501,7 +496,6 @@ internal fun PadCanvas(
                 viewport = designViewport,
                 canvasSize = canvasSize,
                 selectedButtonId = selectedButtonId,
-                accentColor = accentColor,
                 gridMode = gridMode,
                 alignmentSnapping = buttonAlignmentSnapping,
                 isLocked = isLocked,
@@ -551,12 +545,12 @@ private fun EditableButtonsCanvas(
     viewport: DesignViewport,
     canvasSize: IntSize,
     selectedButtonId: String?,
-    accentColor: Color,
     gridMode: GridMode,
     alignmentSnapping: Boolean,
     isLocked: Boolean,
     isCropping: Boolean,
 ) {
+    val accentColor = LocalAppColors.current.accent
     val density = LocalDensity.current
     val isAdjustingViaGamepad by MacroPadState.isAdjustingButtonViaGamepad.collectAsStateWithLifecycle()
     var draggingBodyButtonId by remember { mutableStateOf<String?>(null) }

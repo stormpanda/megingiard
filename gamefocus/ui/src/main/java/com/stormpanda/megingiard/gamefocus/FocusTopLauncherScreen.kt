@@ -119,6 +119,7 @@ import com.stormpanda.megingiard.ui.VerticalRollingCarousel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -140,6 +141,7 @@ private val FTL_ROM_ICON_SHAPE = RoundedCornerShape(FTL_ROM_ICON_CORNER_RADIUS)
 private val FTL_ROM_LOGO_HORIZONTAL_PADDING = 4.dp
 private const val FTL_ROM_LOGO_WIDTH_FRACTION = 0.85f
 private const val FTL_SQUARE_ASPECT_RATIO = 1f
+private const val FTL_PAIRED_LABEL_WEIGHT = 1f
 private val FTL_FALLBACK_ICON_SIZE = 48.dp
 private val FTL_BADGE_PADDING = 10.dp
 private val FTL_BADGE_ICON_SIZE = 22.dp
@@ -189,6 +191,7 @@ private const val FTL_PROMPT_SLIDE_DIVISOR = 2
 private class LetterNavigationOverlayState {
     var isActive by mutableStateOf(false)
     var selectedIndex by mutableIntStateOf(0)
+    var interactionTick by mutableIntStateOf(0)
 }
 
 internal fun categoryStepDirection(
@@ -928,10 +931,6 @@ private fun GalleryNavigationEffects(
     letterNavState: LetterNavigationOverlayState,
     lastHighlightedPackages: MutableMap<String, String>,
 ) {
-    val prevLetterTrigger by viewModel.prevLetterTrigger.collectAsState()
-    val nextLetterTrigger by viewModel.nextLetterTrigger.collectAsState()
-    val dpadLeftTrigger by viewModel.dpadLeftTrigger.collectAsState()
-    val dpadStepRightTrigger by viewModel.dpadStepRightTrigger.collectAsState()
     val isHoldRepeating by viewModel.isHoldRepeating.collectAsState()
     val scope = rememberCoroutineScope()
     val currentEditingAppInfo by rememberUpdatedState(editingAppInfo)
@@ -952,60 +951,64 @@ private fun GalleryNavigationEffects(
     }
 
     // Handle D-pad LEFT step with wrap-around
-    LaunchedEffect(dpadLeftTrigger) {
-        if (dpadLeftTrigger > 0) {
-            val selectedCategory = selectedCategoryState.value
-            val categoryApps = currentResolveCategoryApps(selectedCategory)
-            if (categoryApps.isNotEmpty()) {
-                if (letterNavState.isActive) {
-                    AppLog.i(TAG, "D-pad LEFT pressed while letter carousel active -> cancelling overlay without action")
-                    letterNavState.isActive = false
-                } else {
-                    val activePagerState = currentPagerStateProvider(selectedCategory)
-                    val baseIndex =
-                        if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
-                    val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
-                    val prevIndex = if (safeBase > 0) safeBase - 1 else categoryApps.size - 1
-                    if (!isHoldRepeating) {
-                        AppLog.d(
-                            TAG,
-                            "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$prevIndex",
+    LaunchedEffect(viewModel) {
+        viewModel.dpadLeftTrigger.drop(1).collectLatest { trigger ->
+            if (trigger > 0) {
+                val selectedCategory = selectedCategoryState.value
+                val categoryApps = currentResolveCategoryApps(selectedCategory)
+                if (categoryApps.isNotEmpty()) {
+                    if (letterNavState.isActive) {
+                        AppLog.i(TAG, "D-pad LEFT pressed while letter carousel active -> cancelling overlay without action")
+                        letterNavState.isActive = false
+                    } else {
+                        val activePagerState = currentPagerStateProvider(selectedCategory)
+                        val baseIndex =
+                            if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
+                        val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
+                        val prevIndex = if (safeBase > 0) safeBase - 1 else categoryApps.size - 1
+                        if (!viewModel.isHoldRepeating.value) {
+                            AppLog.d(
+                                TAG,
+                                "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$prevIndex",
+                            )
+                        }
+                        activePagerState.animateScrollToPage(
+                            page = prevIndex,
+                            animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
                         )
                     }
-                    activePagerState.animateScrollToPage(
-                        page = prevIndex,
-                        animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
-                    )
                 }
             }
         }
     }
 
     // Handle D-pad RIGHT step with wrap-around
-    LaunchedEffect(dpadStepRightTrigger) {
-        if (dpadStepRightTrigger > 0) {
-            val selectedCategory = selectedCategoryState.value
-            val categoryApps = currentResolveCategoryApps(selectedCategory)
-            if (categoryApps.isNotEmpty()) {
-                if (letterNavState.isActive) {
-                    AppLog.i(TAG, "D-pad RIGHT pressed while letter carousel active -> cancelling overlay without action")
-                    letterNavState.isActive = false
-                } else {
-                    val activePagerState = currentPagerStateProvider(selectedCategory)
-                    val baseIndex =
-                        if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
-                    val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
-                    val nextIndex = if (safeBase < categoryApps.size - 1) safeBase + 1 else 0
-                    if (!isHoldRepeating) {
-                        AppLog.d(
-                            TAG,
-                            "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$nextIndex",
+    LaunchedEffect(viewModel) {
+        viewModel.dpadStepRightTrigger.drop(1).collectLatest { trigger ->
+            if (trigger > 0) {
+                val selectedCategory = selectedCategoryState.value
+                val categoryApps = currentResolveCategoryApps(selectedCategory)
+                if (categoryApps.isNotEmpty()) {
+                    if (letterNavState.isActive) {
+                        AppLog.i(TAG, "D-pad RIGHT pressed while letter carousel active -> cancelling overlay without action")
+                        letterNavState.isActive = false
+                    } else {
+                        val activePagerState = currentPagerStateProvider(selectedCategory)
+                        val baseIndex =
+                            if (activePagerState.isScrollInProgress) activePagerState.targetPage else activePagerState.currentPage
+                        val safeBase = baseIndex.coerceIn(0, categoryApps.size - 1)
+                        val nextIndex = if (safeBase < categoryApps.size - 1) safeBase + 1 else 0
+                        if (!viewModel.isHoldRepeating.value) {
+                            AppLog.d(
+                                TAG,
+                                "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage}, targetPage=${activePagerState.targetPage} -> target=$nextIndex",
+                            )
+                        }
+                        activePagerState.animateScrollToPage(
+                            page = nextIndex,
+                            animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
                         )
                     }
-                    activePagerState.animateScrollToPage(
-                        page = nextIndex,
-                        animationSpec = tween(durationMillis = FTL_CAROUSEL_ANIMATION_DURATION_MS, easing = FastOutSlowInEasing),
-                    )
                 }
             }
         }
@@ -1022,68 +1025,77 @@ private fun GalleryNavigationEffects(
     }
 
     // Auto-hide and commit letter navigation after debounce
-    LaunchedEffect(letterNavState.isActive, letterNavState.selectedIndex, prevLetterTrigger, nextLetterTrigger) {
-        if (letterNavState.isActive) {
-            delay(FTL_LETTER_NAV_DEBOUNCE_MS)
-            val selectedCategory = selectedCategoryState.value
-            val categoryApps = currentResolveCategoryApps(selectedCategory)
-            val uniqueLetters = uniqueLettersByCategoryIdState.value[selectedCategory.id].orEmpty()
-            val targetLetter = uniqueLetters.getOrNull(letterNavState.selectedIndex)
-            letterNavState.isActive = false
-            if (targetLetter != null && categoryApps.isNotEmpty()) {
-                val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(categoryApps, targetLetter)
-                val activePagerState = currentPagerStateProvider(selectedCategory)
-                AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
-                scope.launch {
-                    activePagerState.animateScrollToPage(targetAppIndex)
+    LaunchedEffect(Unit) {
+        snapshotFlow { letterNavState.isActive to letterNavState.interactionTick }
+            .collectLatest { (isActive, _) ->
+                if (isActive) {
+                    delay(FTL_LETTER_NAV_DEBOUNCE_MS)
+                    val selectedCategory = selectedCategoryState.value
+                    val categoryApps = currentResolveCategoryApps(selectedCategory)
+                    val uniqueLetters = uniqueLettersByCategoryIdState.value[selectedCategory.id].orEmpty()
+                    val targetLetter = uniqueLetters.getOrNull(letterNavState.selectedIndex)
+                    letterNavState.isActive = false
+                    if (targetLetter != null && categoryApps.isNotEmpty()) {
+                        val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(categoryApps, targetLetter)
+                        val activePagerState = currentPagerStateProvider(selectedCategory)
+                        AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
+                        scope.launch {
+                            activePagerState.animateScrollToPage(targetAppIndex)
+                        }
+                    }
                 }
             }
-        }
     }
 
     // Handle Gamepad L1 step (previous starting letter in letter carousel)
-    LaunchedEffect(prevLetterTrigger) {
-        if (prevLetterTrigger > 0) {
-            val selectedCategory = selectedCategoryState.value
-            val categoryApps = currentResolveCategoryApps(selectedCategory)
-            val uniqueLetters = uniqueLettersByCategoryIdState.value[selectedCategory.id].orEmpty()
-            if (categoryApps.isNotEmpty() && uniqueLetters.isNotEmpty()) {
-                if (!letterNavState.isActive) {
-                    letterNavState.isActive = true
-                    val currentLetter = currentAppState.value?.let { LetterNavigationHelper.getStartingLetter(it.label) }
-                    val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
-                    letterNavState.selectedIndex = initialIndex
-                }
-                letterNavState.selectedIndex = (letterNavState.selectedIndex - 1).coerceAtLeast(0)
-                if (!isHoldRepeating) {
-                    AppLog.d(
-                        TAG,
-                        "L1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
-                    )
+    LaunchedEffect(viewModel) {
+        viewModel.prevLetterTrigger.drop(1).collect { trigger ->
+            if (trigger > 0) {
+                val selectedCategory = selectedCategoryState.value
+                val categoryApps = currentResolveCategoryApps(selectedCategory)
+                val uniqueLetters = uniqueLettersByCategoryIdState.value[selectedCategory.id].orEmpty()
+                if (categoryApps.isNotEmpty() && uniqueLetters.isNotEmpty()) {
+                    if (!letterNavState.isActive) {
+                        letterNavState.isActive = true
+                        val currentLetter = currentAppState.value?.let { LetterNavigationHelper.getStartingLetter(it.label) }
+                        val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
+                        letterNavState.selectedIndex = initialIndex
+                    }
+                    letterNavState.selectedIndex = (letterNavState.selectedIndex - 1).coerceAtLeast(0)
+                    letterNavState.interactionTick++
+                    if (!viewModel.isHoldRepeating.value) {
+                        AppLog.d(
+                            TAG,
+                            "L1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
+                        )
+                    }
                 }
             }
         }
     }
 
     // Handle Gamepad R1 step (next starting letter in letter carousel)
-    LaunchedEffect(nextLetterTrigger) {
-        if (nextLetterTrigger > 0) {
-            val selectedCategory = selectedCategoryState.value
-            val categoryApps = currentResolveCategoryApps(selectedCategory)
-            val uniqueLetters = uniqueLettersByCategoryIdState.value[selectedCategory.id].orEmpty()
-            if (categoryApps.isNotEmpty() && uniqueLetters.isNotEmpty()) {
-                if (!letterNavState.isActive) {
-                    letterNavState.isActive = true
-                    val currentLetter = currentAppState.value?.let { LetterNavigationHelper.getStartingLetter(it.label) }
-                    val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
-                    letterNavState.selectedIndex = initialIndex
-                }
-                letterNavState.selectedIndex = (letterNavState.selectedIndex + 1).coerceAtMost(uniqueLetters.size - 1)
-                if (!isHoldRepeating) {
-                    AppLog.d(
-                        TAG,
-                        "R1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
-                    )
+    LaunchedEffect(viewModel) {
+        viewModel.nextLetterTrigger.drop(1).collect { trigger ->
+            if (trigger > 0) {
+                val selectedCategory = selectedCategoryState.value
+                val categoryApps = currentResolveCategoryApps(selectedCategory)
+                val uniqueLetters = uniqueLettersByCategoryIdState.value[selectedCategory.id].orEmpty()
+                if (categoryApps.isNotEmpty() && uniqueLetters.isNotEmpty()) {
+                    if (!letterNavState.isActive) {
+                        letterNavState.isActive = true
+                        val currentLetter = currentAppState.value?.let { LetterNavigationHelper.getStartingLetter(it.label) }
+                        val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
+                        letterNavState.selectedIndex = initialIndex
+                    }
+                    letterNavState.selectedIndex = (letterNavState.selectedIndex + 1).coerceAtMost(uniqueLetters.size - 1)
+                    letterNavState.interactionTick++
+                    if (!viewModel.isHoldRepeating.value) {
+                        AppLog.d(
+                            TAG,
+                            "R1 letter carousel step for ${selectedCategory.id}: selected index=${letterNavState.selectedIndex} ('${uniqueLetters[letterNavState.selectedIndex]}')",
+                        )
+                    }
                 }
             }
         }
@@ -1746,7 +1758,7 @@ private fun GalleryTitleOrLetterSection(
                                             ),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(FTL_SQUARE_ASPECT_RATIO, fill = false),
+                                        modifier = Modifier.weight(FTL_PAIRED_LABEL_WEIGHT, fill = false),
                                     )
                                 }
                             }

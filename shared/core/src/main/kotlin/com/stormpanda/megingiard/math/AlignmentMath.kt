@@ -925,4 +925,4 @@ fun calculateGamepadButtonResize(
  * Formats a button dimension in design-canvas pixels for display in the editor, HUD, and labels.
  * Formats as an integer pixel value (e.g. "136", "68").
  */
-fun formatButtonDimensionPx(px: Float): String = px.roundToInt().toString()
+fun formatButtonDimensionPx(px: Float): String = (if (px.isFinite()) px.roundToInt() else 0).toString()

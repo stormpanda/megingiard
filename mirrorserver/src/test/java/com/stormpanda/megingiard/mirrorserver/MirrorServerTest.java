@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -95,6 +96,46 @@ public class MirrorServerTest {
         FakeSurfaceHandle invalidSurface = new FakeSurfaceHandle("invalid", false, events);
         assertFalse(failingCoordinator.applySurface(invalidSurface, 1920, 1080));
         assertEquals(List.of("releaseSurface:invalid"), events);
+    }
+
+    @Test
+    public void handleSurfaceCommand_handlesPresentClearAndInvalidFlagsSafely() {
+        List<String> events = new ArrayList<>();
+        DirectMirrorServer.SessionCoordinator<FakeSurfaceHandle> coordinator =
+                new DirectMirrorServer.SessionCoordinator<>(
+                        (name, width, height, displayId, surface) -> {
+                            events.add("open:" + surface.id);
+                            return () -> events.add("close:" + surface.id);
+                        });
+        CountDownLatch delivered = new CountDownLatch(1);
+
+        FakeSurfaceHandle s1 = new FakeSurfaceHandle("s1", true, events);
+        int presentReply =
+                coordinator.handleSurfaceCommand(
+                        delivered,
+                        DirectMirrorServer.SessionCoordinator.HAS_SURFACE_PRESENT,
+                        () -> new DirectMirrorServer.SurfacePayload<>(1920, 1080, s1));
+        assertEquals(DirectMirrorServer.SessionCoordinator.REPLY_SURFACE_ACTIVE, presentReply);
+        assertEquals(0L, delivered.getCount());
+
+        int clearReply =
+                coordinator.handleSurfaceCommand(
+                        delivered,
+                        DirectMirrorServer.SessionCoordinator.HAS_SURFACE_CLEAR,
+                        () -> {
+                            throw new AssertionError("payloadReader must not run on CLEAR");
+                        });
+        assertEquals(DirectMirrorServer.SessionCoordinator.REPLY_NO_ACTIVE_SURFACE, clearReply);
+
+        int invalidFlagReply =
+                coordinator.handleSurfaceCommand(
+                        new CountDownLatch(1),
+                        99,
+                        () -> {
+                            throw new AssertionError("payloadReader must not run on invalid flag");
+                        });
+        assertEquals(DirectMirrorServer.SessionCoordinator.REPLY_NO_ACTIVE_SURFACE, invalidFlagReply);
+        assertEquals(List.of("open:s1", "close:s1", "releaseSurface:s1"), events);
     }
 
     private static final class FakeSurfaceHandle implements DirectMirrorServer.SurfaceHandle {

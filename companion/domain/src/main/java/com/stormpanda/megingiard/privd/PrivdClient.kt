@@ -52,6 +52,7 @@ private const val VERSION_OK_MIN_SENSOR_TOKENS = 4
 private const val VERSION_OK_WIDTH_INDEX = 2
 private const val VERSION_OK_HEIGHT_INDEX = 3
 internal const val MAX_MULTILINE_RPC_CHARS = 24 * 1024 * 1024
+internal const val MAX_READ_FILE_RPC_CHARS = 262_144
 
 /**
  * Async loopback TCP transport to the `megingiard_privd` daemon.
@@ -329,8 +330,12 @@ object PrivdClient {
             try {
                 send(command)
                 val result = withTimeoutOrNull(timeoutMs) { rpc.deferred.await() }
-                if (result == null && !rpc.deferred.isCompleted) {
-                    AppLog.w(TAG, "executeMultiLineRpc timed out after ${timeoutMs}ms; resetting connection")
+                if (result == null && (!rpc.deferred.isCompleted || rpc.overflowed)) {
+                    AppLog.w(
+                        TAG,
+                        "executeMultiLineRpc failed (timeout=${!rpc.deferred.isCompleted}, " +
+                            "overflow=${rpc.overflowed}); resetting connection",
+                    )
                     rpc.cancel()
                     markBroken()
                 }
@@ -407,25 +412,6 @@ object PrivdClient {
         }
     }
 
-    suspend fun takeScreenshot(
-        path: String,
-        displayId: Int? = null,
-    ): Boolean {
-        val cmd = if (displayId != null) "SCREENSHOT $displayId $path\n" else "SCREENSHOT $path\n"
-        val ok =
-            executeBooleanRpc(
-                command = cmd,
-                timeoutMs = SCREENSHOT_TIMEOUT_MS,
-                rpc =
-                    PendingRpc.SingleLine(
-                        successPrefix = "SCREENSHOT_OK",
-                        errorPrefix = "SCREENSHOT_ERR",
-                    ),
-            )
-        AppLog.i(TAG, "takeScreenshot($path, displayId=$displayId) -> $ok")
-        return ok
-    }
-
     /**
      * Captures a PNG screenshot via `megingiard_privd` (`SCREENSHOT_B64`), streaming
      * `screencap -p` stdout over an anonymous pipe inside the daemon and base64-encoding
@@ -477,6 +463,7 @@ object PrivdClient {
                         beginMarker = "READ_BEGIN",
                         endMarker = "READ_END",
                         errorPrefix = "READ_ERR",
+                        maxChars = MAX_READ_FILE_RPC_CHARS,
                     ),
             )
         AppLog.i(TAG, "readTextFile($path) fetched ${result?.length ?: 0} bytes")
@@ -794,9 +781,14 @@ internal sealed class PendingRpc {
         private var capturing = false
         private val buffer = StringBuilder()
 
-        internal val bufferedLengthForTest: Int
-            get() = buffer.length
+        @Volatile
+        var overflowed: Boolean = false
+            private set
 
+        internal val bufferedLengthForTest: Int
+            @Synchronized get() = buffer.length
+
+        @Synchronized
         override fun onLine(line: String): Boolean {
             if (line == beginMarker) {
                 capturing = true
@@ -822,6 +814,7 @@ internal sealed class PendingRpc {
                 if (buffer.length + line.length + 1 > maxChars) {
                     AppLog.w(TAG, "PendingRpc.MultiLine exceeded max capacity ($maxChars chars) before '$endMarker'")
                     capturing = false
+                    overflowed = true
                     buffer.clear()
                     buffer.trimToSize()
                     deferred.complete(null)
@@ -833,6 +826,7 @@ internal sealed class PendingRpc {
             return false
         }
 
+        @Synchronized
         override fun cancel() {
             capturing = false
             buffer.clear()

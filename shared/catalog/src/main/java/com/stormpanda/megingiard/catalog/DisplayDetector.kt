@@ -54,7 +54,11 @@ object DisplayDetector {
      * mapped to [DisplayRotationDegrees].
      */
     fun resolvePrimaryDisplayRotation(context: Context): DisplayRotationDegrees {
-        val primary = findPrimaryDisplay(context) ?: return DisplayRotationDegrees.ROT_90
+        val primary =
+            findPrimaryDisplay(context) ?: run {
+                AppLog.w(TAG, "Primary display unavailable; falling back to ROT_90")
+                return DisplayRotationDegrees.ROT_90
+            }
         return DisplayRotationDegrees.fromSurfaceRotation(primary.rotation)
     }
 

@@ -884,12 +884,8 @@ object MacroPadState {
     }
 
     fun updateCutout(updatedCutout: ScreenCutout) {
-        val layout = activeLayout.value ?: return
-        val updatedList =
-            layout.mirrorCutouts.map {
-                if (it.id == updatedCutout.id) updatedCutout else it
-            }
-        updateLayout(layout.copy(mirrorCutouts = updatedList))
+        AppLog.d(TAG, "updateCutout id=${updatedCutout.id}")
+        applyCutoutToCommittedLayout(updatedCutout, persist = true)
     }
 
     /**
@@ -897,12 +893,39 @@ object MacroPadState {
      * Callers MUST commit via [updateCutout] or [updateLayout] when the gesture ends.
      */
     fun updateCutoutLive(updatedCutout: ScreenCutout) {
-        val layout = activeLayout.value ?: return
-        val updatedList =
-            layout.mirrorCutouts.map {
-                if (it.id == updatedCutout.id) updatedCutout else it
+        applyCutoutToCommittedLayout(updatedCutout, persist = false)
+    }
+
+    private fun applyCutoutToCommittedLayout(
+        updatedCutout: ScreenCutout,
+        persist: Boolean,
+    ) {
+        updateState(persist = persist) {
+            val profile = _activeProfile.value ?: return@updateState
+            val shiftedId =
+                activeShiftLayoutStack.lastOrNull { candidate ->
+                    profile.layouts.any { it.id == candidate }
+                }
+            val targetLayoutId = shiftedId ?: profile.activeLayoutId
+            val targetLayout =
+                profile.layouts.firstOrNull { it.id == targetLayoutId }
+                    ?: profile.layouts.firstOrNull()
+                    ?: return@updateState
+            val updatedCutouts =
+                targetLayout.mirrorCutouts.map {
+                    if (it.id == updatedCutout.id) updatedCutout else it
+                }
+            val updatedLayout = targetLayout.copy(mirrorCutouts = updatedCutouts)
+            applyProfileUpdateLocked(
+                profile.copy(
+                    layouts = profile.layouts.map { if (it.id == updatedLayout.id) updatedLayout else it },
+                ),
+            )
+            val currentPreview = _previewLayout.value
+            if (currentPreview != null && currentPreview.id == updatedLayout.id) {
+                _previewLayout.value = currentPreview.copy(mirrorCutouts = updatedCutouts)
             }
-        updateLayoutLive(layout.copy(mirrorCutouts = updatedList))
+        }
     }
 
     fun deleteLayout(layoutId: String): Boolean {

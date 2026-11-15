@@ -9,6 +9,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
+import android.hardware.display.DisplayManager
 import android.media.MediaScannerConnection
 import android.os.Bundle
 import android.os.Environment
@@ -212,6 +213,25 @@ class MainActivity : ComponentActivity() {
             BackgroundPickerManager.setPickedUri(uri)
         }
 
+    private val primaryDisplayListener =
+        object : DisplayManager.DisplayListener {
+            override fun onDisplayAdded(displayId: Int) = Unit
+
+            override fun onDisplayRemoved(displayId: Int) = Unit
+
+            override fun onDisplayChanged(displayId: Int) {
+                if (displayId == Display.DEFAULT_DISPLAY) {
+                    TouchInjector.updatePrimaryDisplayRotation(
+                        DisplayDetector.resolvePrimaryDisplayRotation(this@MainActivity),
+                    )
+                }
+                val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
+                if (displayId == currentDisplayId) {
+                    AppStateManager.setOnValidScreen(DisplayDetector.isValidScreen(currentDisplayId))
+                }
+            }
+        }
+
     // The manifest declares configChanges that prevent activity recreation when the app
     // is moved between displays. Without this override, Compose never recomposes and
     // context.display retains the old display ID — the wrong-screen overlay would stay
@@ -277,6 +297,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy")
+        getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(primaryDisplayListener)
         LayoutTransitionManager.unregisterWindowProvider()
         InjectorLifecycleManager.stopAll()
     }
@@ -285,6 +306,10 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.onCreate(savedInstanceState)
         LayoutTransitionManager.registerWindowProvider { window }
+        getSystemService(DisplayManager::class.java)?.registerDisplayListener(
+            primaryDisplayListener,
+            Handler(Looper.getMainLooper()),
+        )
 
         // Init settings first so the persisted log level is active before anything
         // else runs (including SignatureGuard below). SettingsManager.init() reads
@@ -645,7 +670,8 @@ class MainActivity : ComponentActivity() {
                                     delay(SCREENSHOT_EXIT_DELAY_MS)
                                     val bottomBitmap = withContext(Dispatchers.Main) { captureWindowBitmap(window) }
                                     val saved = bottomBitmap?.let { saveBitmapToPictures(it, "Bottom") != null } ?: false
-                                    notifyScreenshotResult(saved, bottomBitmap)
+                                    if (!saved) bottomBitmap?.recycle()
+                                    notifyScreenshotResult(saved, if (saved) bottomBitmap else null)
                                 }
 
                                 ScreenshotTarget.BOTH -> {

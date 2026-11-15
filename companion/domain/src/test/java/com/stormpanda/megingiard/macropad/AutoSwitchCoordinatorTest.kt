@@ -145,6 +145,10 @@ class AutoSwitchCoordinatorTest {
         assertEquals("com.retroidpocket.gamelauncher", AutoSwitchCoordinator.foregroundApp.value)
         assertEquals("com.citra.emu", AppStateManager.focusedAppPackageName.value)
         assertEquals(profile2.id, MacroPadState.activeProfileId.value)
+
+        // Third-party apps under com.rp.* are treated as real foreground apps, not Retroid overlays
+        AutoSwitchCoordinator.onPackageChanged("com.rp.awesomegame")
+        assertEquals("com.rp.awesomegame", AutoSwitchCoordinator.foregroundApp.value)
     }
 
     @Test

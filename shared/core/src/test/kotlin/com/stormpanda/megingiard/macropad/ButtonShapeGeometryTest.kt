@@ -320,4 +320,16 @@ class ButtonShapeGeometryTest {
             }
         }
     }
+
+    @Test
+    fun `isNormalizedPointInside rejects NaN and infinite coordinates and sanitizes non-finite dimensions`() {
+        for (shape in ButtonShape.entries) {
+            assertFalse(ButtonShapeGeometry.isNormalizedPointInside(shape, Float.NaN, 0.5f, 60f, 60f))
+            assertFalse(ButtonShapeGeometry.isNormalizedPointInside(shape, 0.5f, Float.NaN, 60f, 60f))
+            assertFalse(ButtonShapeGeometry.isNormalizedPointInside(shape, Float.POSITIVE_INFINITY, 0.5f, 60f, 60f))
+            assertFalse(ButtonShapeGeometry.isNormalizedPointInside(shape, 0.5f, Float.NEGATIVE_INFINITY, 60f, 60f))
+            // Center (0.5, 0.5) remains valid even if widthPx/heightPx are NaN/Infinite
+            assertTrue(ButtonShapeGeometry.isNormalizedPointInside(shape, 0.5f, 0.5f, Float.NaN, Float.POSITIVE_INFINITY))
+        }
+    }
 }

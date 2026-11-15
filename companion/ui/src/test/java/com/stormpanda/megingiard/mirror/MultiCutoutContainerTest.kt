@@ -9,6 +9,7 @@ import com.stormpanda.megingiard.macropad.LayoutCanvasSpec
 import com.stormpanda.megingiard.macropad.LayoutVisualAnchor
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -22,6 +23,12 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class MultiCutoutContainerTest {
+    @After
+    fun tearDown() {
+        MacroPadState.setPreviewLayout(null)
+        CutoutMaskManager.resetForTesting()
+    }
+
     @Test
     fun testDispatchDrawWithEmptyCutoutsExecutesFallbackChildTickWithoutCrash() {
         val context = RuntimeEnvironment.getApplication()

@@ -125,6 +125,7 @@ internal class GameFocusControllerDispatcher(
 ) {
     private var currentRepeatInput: RepeatableInput? = null
     private var repeatJob: Job? = null
+    private var primaryOverlayCenterDownDispatched: Boolean = false
 
     /** True while a primary overlay (Edit Game or Manage Galleries) owns gamepad input. */
     fun isPrimaryOverlayOpen(): Boolean = viewModel.editingAppInfo.value != null || viewModel.isManageGalleriesOpen.value
@@ -132,6 +133,7 @@ internal class GameFocusControllerDispatcher(
     fun consumesUnhandledMotionEvents(): Boolean = isPrimaryOverlayOpen() || viewModel.pairingTargetApp.value != null
 
     fun resetToGallery(): Boolean {
+        primaryOverlayCenterDownDispatched = false
         stopRepeat()
         return viewModel.resetToGallery()
     }
@@ -351,8 +353,9 @@ internal class GameFocusControllerDispatcher(
 
         val initialChannel = resolveInputChannel(input)
         val remainingCooldownMs = viewModel.inputPacer.remainingCooldownMs(initialChannel)
+        val isDeferredInitialStep = remainingCooldownMs > 0L
         val firstWaitMs =
-            if (remainingCooldownMs == 0L) {
+            if (!isDeferredInitialStep) {
                 if (performRepeatableStep(input, isRepeatTick = false)) {
                     viewModel.inputPacer.commit(initialChannel)
                 }
@@ -365,6 +368,7 @@ internal class GameFocusControllerDispatcher(
         repeatJob =
             scope.launch {
                 var nextWaitMs = firstWaitMs
+                var pendingInitialStep = isDeferredInitialStep
                 var markedRepeating = false
                 while (isActive && currentRepeatInput == input) {
                     delay(nextWaitMs)
@@ -377,6 +381,14 @@ internal class GameFocusControllerDispatcher(
                     val cooldownMs = viewModel.inputPacer.remainingCooldownMs(channel)
                     if (cooldownMs > 0L) {
                         nextWaitMs = cooldownMs
+                        continue
+                    }
+                    if (pendingInitialStep) {
+                        pendingInitialStep = false
+                        if (performRepeatableStep(input, isRepeatTick = false)) {
+                            viewModel.inputPacer.commit(channel)
+                        }
+                        nextWaitMs = channel.initialHoldDelayMs
                         continue
                     }
                     if (!markedRepeating) {
@@ -434,6 +446,7 @@ internal class GameFocusControllerDispatcher(
                 return true
             }
             if (isDismissKey(keyCode)) {
+                primaryOverlayCenterDownDispatched = false
                 if (!isRepeat) {
                     AppLog.i(TAG, "handleKeyDown: Back/B-Button pressed while a primary overlay is open")
                     host.onPrimaryOverlayBack()
@@ -442,12 +455,15 @@ internal class GameFocusControllerDispatcher(
             }
             if (keyCode == GamePadButton.BUTTON_A.keyCode) {
                 if (!isRepeat) {
+                    primaryOverlayCenterDownDispatched = true
                     host.dispatchPrimaryOverlayCenterDown()
                 }
                 return true
             }
             return false
         }
+
+        primaryOverlayCenterDownDispatched = false
 
         if (isRepeat) {
             return isLauncherActionKey(keyCode) ||
@@ -735,13 +751,20 @@ internal class GameFocusControllerDispatcher(
 
         if (isPrimaryOverlayOpen()) {
             if (keyCode == GamePadButton.BUTTON_A.keyCode) {
-                val handled = host.dispatchPrimaryOverlayCenterUp()
-                if (!handled) {
-                    host.sendPrimaryOverlayFocusRecovery(GamePadButton.BUTTON_A.keyCode)
+                if (primaryOverlayCenterDownDispatched) {
+                    primaryOverlayCenterDownDispatched = false
+                    val handled = host.dispatchPrimaryOverlayCenterUp()
+                    if (!handled) {
+                        host.sendPrimaryOverlayFocusRecovery(GamePadButton.BUTTON_A.keyCode)
+                    }
                 }
                 return true
             }
             return false
+        }
+
+        if (keyCode == GamePadButton.BUTTON_A.keyCode) {
+            primaryOverlayCenterDownDispatched = false
         }
 
         return isSecondaryModalOpen()

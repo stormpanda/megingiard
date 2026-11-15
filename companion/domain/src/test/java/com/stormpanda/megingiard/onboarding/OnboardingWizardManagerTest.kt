@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.onboarding
 
-import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

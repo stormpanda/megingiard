@@ -74,9 +74,11 @@ static inline int parse_dumpsys_input_primary_touch_path(
 
     int cur_dev_hub_ids[MAX_DUMPSYS_DEVICE_HUB_IDS];
     int cur_dev_hub_count = 0;
-    int cur_dev_is_touch = 0;
-    int cur_dev_primary_vp = 0;
     int cur_dev_excluded = 0;
+    int cur_dev_has_touchscreen_source = 0;
+    int cur_dev_matched_primary_touch = 0;
+    int cur_mapper_is_direct_touch = 0;
+    int cur_mapper_primary_vp = 0;
 
     char line[512];
     while (fgets(line, (int)sizeof(line), stream) != NULL) {
@@ -100,9 +102,11 @@ static inline int parse_dumpsys_input_primary_touch_path(
         if (strncmp(trimmed, "Input Reader State:", 19) == 0) {
             section = 2;
             cur_dev_hub_count = 0;
-            cur_dev_is_touch = 0;
-            cur_dev_primary_vp = 0;
             cur_dev_excluded = 0;
+            cur_dev_has_touchscreen_source = 0;
+            cur_dev_matched_primary_touch = 0;
+            cur_mapper_is_direct_touch = 0;
+            cur_mapper_primary_vp = 0;
             continue;
         }
         if (strncmp(trimmed, "Input Dispatcher State:", 23) == 0) {
@@ -144,8 +148,10 @@ static inline int parse_dumpsys_input_primary_touch_path(
                 (void)strtol(trimmed + 7, &endptr, 10);
                 if (endptr > trimmed + 7 && endptr[0] == ':') {
                     cur_dev_hub_count = 0;
-                    cur_dev_is_touch = 0;
-                    cur_dev_primary_vp = 0;
+                    cur_dev_has_touchscreen_source = 0;
+                    cur_dev_matched_primary_touch = 0;
+                    cur_mapper_is_direct_touch = 0;
+                    cur_mapper_primary_vp = 0;
                     const char* devname = endptr + 1;
                     while (*devname == ' ') devname++;
                     cur_dev_excluded = is_excluded_touch_device_name(devname);
@@ -153,6 +159,7 @@ static inline int parse_dumpsys_input_primary_touch_path(
                 }
             }
 
+            size_t trimmed_len = strlen(trimmed);
             if (strncmp(trimmed, "EventHub Devices: [", 19) == 0) {
                 const char* p = trimmed + 19;
                 cur_dev_hub_count = 0;
@@ -168,18 +175,34 @@ static inline int parse_dumpsys_input_primary_touch_path(
                     }
                     p = endptr;
                 }
-            } else if (strstr(trimmed, "Touch Input Mapper") != NULL ||
-                       strcmp(trimmed, "DeviceType: touchScreen") == 0 ||
-                       strstr(trimmed, "TOUCHSCREEN") != NULL) {
-                cur_dev_is_touch = 1;
+            } else if (strncmp(trimmed, "Sources:", 8) == 0) {
+                cur_dev_has_touchscreen_source = (strstr(trimmed, "TOUCHSCREEN") != NULL) ? 1 : 0;
+            } else if (trimmed_len > 0 && trimmed[trimmed_len - 1] == ':' &&
+                       strstr(trimmed, "Input Mapper") != NULL) {
+                cur_mapper_primary_vp = 0;
+                if (strncmp(trimmed, "Touch Input Mapper (mode - DIRECT):", 35) == 0) {
+                    cur_mapper_is_direct_touch = 1;
+                } else if (strncmp(trimmed, "Touch Input Mapper:", 19) == 0) {
+                    cur_mapper_is_direct_touch = cur_dev_has_touchscreen_source ? 1 : 0;
+                } else {
+                    cur_mapper_is_direct_touch = 0;
+                }
+            } else if (strcmp(trimmed, "DeviceType: touchScreen") == 0) {
+                cur_mapper_is_direct_touch = 1;
+            } else if (strncmp(trimmed, "DeviceType:", 11) == 0) {
+                cur_mapper_is_direct_touch = 0;
             } else if (strncmp(trimmed, "Viewport INTERNAL: displayId=0", 30) == 0) {
                 char boundary = trimmed[30];
                 if (boundary == ',' || boundary == ' ' || boundary == '\0') {
-                    cur_dev_primary_vp = 1;
+                    cur_mapper_primary_vp = 1;
                 }
             }
 
-            if (!cur_dev_excluded && cur_dev_is_touch && cur_dev_primary_vp &&
+            if (cur_mapper_is_direct_touch && cur_mapper_primary_vp) {
+                cur_dev_matched_primary_touch = 1;
+            }
+
+            if (!cur_dev_excluded && cur_dev_matched_primary_touch &&
                 cur_dev_hub_count > 0) {
                 for (int h = 0; h < cur_dev_hub_count; h++) {
                     int target_hub = cur_dev_hub_ids[h];

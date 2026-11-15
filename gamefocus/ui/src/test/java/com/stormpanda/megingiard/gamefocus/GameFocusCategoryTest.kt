@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.gamefocus
 
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.CustomRomFolder
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.gamefocus.domain.GalleryCollection
@@ -9,11 +10,14 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+private const val TAG = "GameFocusCatTest"
+
 class GameFocusCategoryTest {
     private val categories = GameFocusCategory.builtIns
 
     @Test
     fun testNext_wrapsAroundFromLastToFirst() {
+        AppLog.d(TAG, "testNext_wrapsAroundFromLastToFirst")
         var category: GameFocusCategory = GameFocusCategory.GAMES
         category = category.next(categories)
         assertEquals(GameFocusCategory.APPS, category)

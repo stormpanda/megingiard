@@ -126,9 +126,12 @@ class MacroPadHitTestEngine(
     private fun triggerHaptic(
         btn: PadButton,
         magnitude: Float = 0f,
+        log: Boolean = true,
     ) {
         if (btn.hapticStrength != HapticStrength.OFF) {
-            AppLog.d(TAG, "haptic on press: button=${btn.id} strength=${btn.hapticStrength}")
+            if (log) {
+                AppLog.d(TAG, "haptic on press: button=${btn.id} strength=${btn.hapticStrength}")
+            }
             onHapticFeedback?.invoke(
                 btn.id,
                 btn.hapticStrength,
@@ -320,14 +323,14 @@ class MacroPadHitTestEngine(
                     val dx = (deltaX * effectiveSens).roundToInt()
                     val dy = (deltaY * effectiveSens).roundToInt()
                     val mag = sqrt((dx * dx + dy * dy).toFloat())
-                    if (mag > 0f) triggerHaptic(mappedBtn, mag)
+                    if (mag > 0f) triggerHaptic(mappedBtn, mag, log = false)
                 } else {
                     val dx = (deltaX * effectiveSens).roundToInt()
                     val dy = (deltaY * effectiveSens).roundToInt()
                     if (dx != 0 || dy != 0) {
                         MouseInjector.moveMouse(dx, dy)
                         val mag = sqrt((dx * dx + dy * dy).toFloat())
-                        triggerHaptic(mappedBtn, mag)
+                        triggerHaptic(mappedBtn, mag, log = false)
                     }
                 }
             }

@@ -41,6 +41,7 @@ private const val BSG_OCT_INSET = 0.2928932f
 private const val BSG_OCT_FAR = 0.7071068f
 
 private const val BSG_EDGE_EPSILON = 1e-5f
+private const val BSG_MIN_DIMENSION_PX = 1f
 private val BSG_ZERO_OFFSET = NormalizedPoint(0f, 0f)
 
 /**
@@ -266,7 +267,9 @@ object ButtonShapeGeometry {
         heightPx: Float,
         isTrackpoint: Boolean = false,
     ): Boolean {
-        if (nx < 0f || nx > 1f || ny < 0f || ny > 1f) return false
+        if (!nx.isFinite() || !ny.isFinite() || nx < 0f || nx > 1f || ny < 0f || ny > 1f) {
+            return false
+        }
         val effectiveShape = if (isTrackpoint) ButtonShape.CIRCLE else shape
         return when (effectiveShape) {
             ButtonShape.SQUARE,
@@ -319,8 +322,8 @@ object ButtonShapeGeometry {
         heightPx: Float,
         cornerFraction: Float,
     ): Boolean {
-        val w = max(1f, widthPx)
-        val h = max(1f, heightPx)
+        val w = if (widthPx.isFinite()) max(BSG_MIN_DIMENSION_PX, widthPx) else BSG_MIN_DIMENSION_PX
+        val h = if (heightPx.isFinite()) max(BSG_MIN_DIMENSION_PX, heightPx) else BSG_MIN_DIMENSION_PX
         val x = nx * w
         val y = ny * h
         val radius = cornerFraction * min(w, h)

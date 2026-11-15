@@ -108,7 +108,7 @@ fun CompanionViewMode.shouldShowIntegrationHome(
 object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -367,8 +367,10 @@ object AppStateManager {
     }
 
     fun setOnValidScreen(valid: Boolean) {
-        AppLog.i(TAG, "setOnValidScreen($valid)")
-        _isOnValidScreen.value = valid
+        if (_isOnValidScreen.value != valid) {
+            AppLog.i(TAG, "setOnValidScreen($valid)")
+            _isOnValidScreen.value = valid
+        }
     }
 
     fun setPromptInFlight(inFlight: Boolean) {

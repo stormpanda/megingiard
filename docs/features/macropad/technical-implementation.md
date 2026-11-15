@@ -235,7 +235,7 @@ the font file is updated.
 
 ### System Service Input Injection
 
-All input events from MacroPad actions (keyboard, mouse, gamepad, and touch) are dispatched directly over the local abstract domain socket (`megingiard_privd`) via `PrivdClient`:
+All input events from MacroPad actions (keyboard, mouse, gamepad, and touch) are dispatched directly over the authenticated local TCP loopback socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug) to `megingiard_privd` via `PrivdClient`:
 
 - **Mouse actions**: `MouseInjector` transmits relative move (`MM dx dy`), button state (`MB L|R|M|4|5 D|U`), and scroll wheel (`MW delta`) commands.
 - **Keyboard actions**: `KeyInjector` transmits keycode press and release commands (`KD <keycode>`, `KU <keycode>`).

@@ -31,6 +31,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
@@ -304,14 +305,14 @@ class ConfigExportImportStructureTest {
                     mapOf(
                         "global" to
                             mapOf(
-                                "accent_color" to kotlinx.serialization.json.JsonPrimitive(-6087623),
-                                "overlay_at_bottom" to kotlinx.serialization.json.JsonPrimitive(false),
-                                "theme_mode" to kotlinx.serialization.json.JsonPrimitive("DARK"),
+                                "accent_color" to JsonPrimitive(-6087623),
+                                "overlay_at_bottom" to JsonPrimitive(false),
+                                "theme_mode" to JsonPrimitive("DARK"),
                             ),
                         "macropad_settings" to
                             mapOf(
-                                "gamepad_swap_face_buttons" to kotlinx.serialization.json.JsonPrimitive(true),
-                                "privd_deadzone_left" to kotlinx.serialization.json.JsonPrimitive(0.15),
+                                "gamepad_swap_face_buttons" to JsonPrimitive(true),
+                                "privd_deadzone_left" to JsonPrimitive(0.15),
                             ),
                     )
 
@@ -347,8 +348,8 @@ class ConfigExportImportStructureTest {
                     mapOf(
                         "global" to
                             mapOf(
-                                "accent_color" to kotlinx.serialization.json.JsonPrimitive(-16743169),
-                                "overlay_at_bottom" to kotlinx.serialization.json.JsonPrimitive(true),
+                                "accent_color" to JsonPrimitive(-16743169),
+                                "overlay_at_bottom" to JsonPrimitive(true),
                             ),
                     )
                 SettingsManager.importGroupedSettingsAwait(initialSettings)
@@ -379,7 +380,7 @@ class ConfigExportImportStructureTest {
         val layoutId = "layout-full-bg-1"
         val bgLayout = PadLayout(id = layoutId, name = "LayoutWithBg", backgroundImagePath = "backgrounds/bg_$layoutId")
         val bgProfile = PadProfile(id = "profile-full-bg", name = "FullBackupProfile", layouts = listOf(bgLayout))
-        val settingsMap = mapOf("global" to mapOf("accent_color" to kotlinx.serialization.json.JsonPrimitive(-16743169)))
+        val settingsMap = mapOf("global" to mapOf("accent_color" to JsonPrimitive(-16743169)))
         val imageHashes = mapOf("bg_$layoutId" to HmacUtil.sha256Hex(mockImageBytes).lowercase())
 
         val validChecksum = invokeComputeChecksum(settingsMap, listOf(bgProfile), imageHashes)
@@ -422,7 +423,7 @@ class ConfigExportImportStructureTest {
                 maskImagePath = "masks/mask_$layoutId",
             )
         val profile = PadProfile(id = "profile-full-mask-bg", name = "FullBackupMaskProfile", layouts = listOf(bgAndMaskLayout))
-        val settingsMap = mapOf("global" to mapOf("accent_color" to kotlinx.serialization.json.JsonPrimitive(-16743169)))
+        val settingsMap = mapOf("global" to mapOf("accent_color" to JsonPrimitive(-16743169)))
         val imageHashes =
             mapOf(
                 "bg_$layoutId" to HmacUtil.sha256Hex(mockBgBytes).lowercase(),
@@ -538,8 +539,23 @@ class ConfigExportImportStructureTest {
                 profiles = listOf(testProfile),
             )
 
-        ConfigManager.setInAppParsedImport(testExport)
+        ConfigManager.setInAppParsedImport(
+            testExport,
+            images =
+                mapOf(
+                    "bg_l1" to byteArrayOf(1),
+                    "mask_l1" to byteArrayOf(2),
+                    "cutout_masks/mask_c1.png" to byteArrayOf(3),
+                    "cutout_masks/mask_c1_var.bin" to byteArrayOf(4),
+                    "cutout_masks/mask_c1_freeze.png" to byteArrayOf(5),
+                ),
+        )
         assertEquals(testExport, ConfigManager.pendingInAppParsedImport.value?.export)
+        assertEquals(
+            "Only user-facing background/mask images should be counted, excluding cutout calibration sidecars",
+            2,
+            ConfigManager.getPendingInAppImageCount(),
+        )
 
         ConfigManager.setInAppImportError("Corrupted archive")
         assertEquals("Corrupted archive", ConfigManager.inAppImportError.value)

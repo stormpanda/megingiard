@@ -11,6 +11,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -48,6 +51,7 @@ class PrivdProtocolHandshakePipelineE2ETest {
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
         testScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         PrivdClient.disconnect()
         PrivdClient.setTouchSensorDimensionsForTesting()
@@ -59,6 +63,7 @@ class PrivdProtocolHandshakePipelineE2ETest {
         PrivdClient.disconnect()
         PrivdClient.setTouchSensorDimensionsForTesting()
         testScope.cancel()
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -327,6 +332,7 @@ class PrivdProtocolHandshakePipelineE2ETest {
             // Next line pushes buffer length past 32 chars -> fail-safe null completion + buffer clear
             assertTrue(cappedRpc.onLine("12345678901234567890"))
             assertTrue(cappedRpc.deferred.isCompleted)
+            assertTrue(cappedRpc.overflowed)
             assertNull(cappedRpc.deferred.await())
             assertEquals(0, cappedRpc.bufferedLengthForTest)
 
@@ -340,7 +346,64 @@ class PrivdProtocolHandshakePipelineE2ETest {
             assertTrue(cancelledRpc.onLine("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo="))
             assertTrue(cancelledRpc.bufferedLengthForTest > 0)
             cancelledRpc.cancel()
+            assertFalse(cancelledRpc.overflowed)
             assertEquals(0, cancelledRpc.bufferedLengthForTest)
             assertNull(cancelledRpc.deferred.await())
+        }
+
+    @Test
+    fun testOversizedMultiLinePayloadMarksConnectionBrokenToPreventDesync() =
+        runBlocking {
+            val serverSocket = ServerSocket(0)
+            val port = serverSocket.localPort
+            PrivdClient.setPortForTesting(port)
+
+            val serverJob =
+                testScope.launch {
+                    try {
+                        val clientSocket = serverSocket.accept()
+                        val reader = BufferedReader(InputStreamReader(clientSocket.inputStream))
+                        val writer = BufferedWriter(OutputStreamWriter(clientSocket.outputStream))
+
+                        val serverNonce = ByteArray(16).apply { SecureRandom().nextBytes(this) }
+                        writer.write("CHAL ${HmacUtil.bytesToHex(serverNonce)}\n")
+                        writer.flush()
+
+                        reader.readLine()
+                        writer.write("OK\n")
+                        writer.flush()
+
+                        val verifyLine = reader.readLine()!!
+                        val clientNonce = HmacUtil.hexToBytes(verifyLine.substring(7))
+                        writer.write("PROOF ${HmacUtil.computeHmacHex(testKey, clientNonce)}\n")
+                        writer.flush()
+
+                        reader.readLine()
+                        writer.write("VERSION_OK ${PrivdConstants.PRIVD_VERSION} 1080 1920\n")
+                        writer.flush()
+
+                        val cmd = reader.readLine()
+                        if (cmd?.startsWith("READ_FILE ") == true) {
+                            writer.write("READ_BEGIN\n")
+                            val chunk = "A".repeat(4096) + "\n"
+                            // Exceed 262_144 maxChars for readTextFile
+                            repeat(70) {
+                                writer.write(chunk)
+                            }
+                            writer.write("READ_END\n")
+                            writer.flush()
+                        }
+                    } catch (e: Exception) {
+                        // Expected once client closes broken socket on overflow
+                    }
+                }
+
+            assertTrue(PrivdClient.connect())
+            assertNull(PrivdClient.readTextFile("/data/local/tmp/huge.log"))
+            assertEquals(PrivdConnectionState.DISCONNECTED, PrivdClient.state.value)
+
+            PrivdClient.disconnect()
+            serverJob.cancel()
+            serverSocket.close()
         }
 }

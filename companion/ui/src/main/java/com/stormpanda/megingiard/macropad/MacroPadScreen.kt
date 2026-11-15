@@ -55,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.DesignViewport
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
 import com.stormpanda.megingiard.mirror.InteractiveCutoutController
@@ -222,6 +223,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                     layout = l,
                     accentColor = colors.accent,
                     transparentBackground = showEmbeddedMirror,
+                    viewport = screenDesignViewport,
                 )
             }
         }
@@ -275,6 +277,7 @@ internal fun PadSurface(
     accentColor: Color,
     isPeekActive: Boolean = false,
     transparentBackground: Boolean = false,
+    viewport: DesignViewport? = null,
 ) {
     val context = LocalContext.current
     val vibrator = remember { context.getSystemService(Vibrator::class.java) }
@@ -282,26 +285,19 @@ internal fun PadSurface(
     val canvasSize = canvasSizeState.value
     val hapticLastMsByButton = remember { mutableMapOf<String, Long>() }
 
-    LaunchedEffect(canvasSize) {
-        if (canvasSize.width > 0 && canvasSize.height > 0) {
-            MacroPadState.setHostSecondaryCanvas(
-                LayoutCanvasSpec(
-                    widthPx = canvasSize.width,
-                    heightPx = canvasSize.height,
-                ),
-            )
-        }
-    }
-
     val designCanvas = layout.effectiveDesignCanvas
     val designViewport =
-        remember(canvasSize, designCanvas) {
-            ViewportMath.calculateDesignViewport(
-                hostWidthPx = canvasSize.width.toFloat(),
-                hostHeightPx = canvasSize.height.toFloat(),
-                designWidthPx = designCanvas.widthPx.toFloat(),
-                designHeightPx = designCanvas.heightPx.toFloat(),
-            )
+        remember(viewport, canvasSize, designCanvas) {
+            if (viewport != null && viewport.hostWidthPx > 0f && viewport.hostHeightPx > 0f) {
+                viewport
+            } else {
+                ViewportMath.calculateDesignViewport(
+                    hostWidthPx = canvasSize.width.toFloat(),
+                    hostHeightPx = canvasSize.height.toFloat(),
+                    designWidthPx = designCanvas.widthPx.toFloat(),
+                    designHeightPx = designCanvas.heightPx.toFloat(),
+                )
+            }
         }
 
     val layerBitmaps = rememberLayoutLayerBitmaps(context, layout)

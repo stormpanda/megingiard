@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 private const val TAG = "AnchorTestCoordinator"
@@ -65,17 +66,27 @@ object AnchorTestCoordinator {
     private var onUpdateLayoutCallback: ((PadLayout) -> Unit)? = null
     private var activeTestLayout: PadLayout? = null
 
+    private val bitmapLock = Any()
+
     private fun setReferenceBitmap(bitmap: Bitmap?) {
-        val old = _referenceBitmap.value
-        _referenceBitmap.value = bitmap
+        val old =
+            synchronized(bitmapLock) {
+                val previous = _referenceBitmap.value
+                _referenceBitmap.value = bitmap
+                previous
+            }
         if (old != null && old != bitmap && !old.isRecycled) {
             old.recycle()
         }
     }
 
     private fun setLiveCropBitmap(bitmap: Bitmap?) {
-        val old = _liveCropBitmap.value
-        _liveCropBitmap.value = bitmap
+        val old =
+            synchronized(bitmapLock) {
+                val previous = _liveCropBitmap.value
+                _liveCropBitmap.value = bitmap
+                previous
+            }
         if (old != null && old != bitmap && !old.isRecycled) {
             old.recycle()
         }
@@ -113,23 +124,31 @@ object AnchorTestCoordinator {
                 matchThreshold = layout.visualAnchor.effectiveMatchThreshold,
             )
 
-        // Load reference calibrated bitmap (prefer pre-rendered static asset with mask, fallback to freeze frame)
-        val staticAsset = CutoutMaskManager.getStaticAsset(context.applicationContext, layout.id)
-        val freeze = staticAsset ?: CutoutMaskManager.getFreezeFrame(context.applicationContext, layout.id)
-        if (freeze != null && !freeze.isRecycled) {
-            try {
-                setReferenceBitmap(freeze.copy(Bitmap.Config.ARGB_8888, false))
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to copy reference freeze frame bitmap", e)
-                setReferenceBitmap(null)
-            }
-        } else {
-            setReferenceBitmap(null)
-        }
-
+        val appContext = context.applicationContext
         testJob =
             scope.launch(Dispatchers.Default) {
                 AppLog.i(TAG, "Starting anchor test session for layout ${layout.id}")
+                val referenceCopy =
+                    withContext(Dispatchers.IO) {
+                        val staticAsset = CutoutMaskManager.getStaticAsset(appContext, layout.id)
+                        val freeze = staticAsset ?: CutoutMaskManager.getFreezeFrame(appContext, layout.id)
+                        if (freeze != null && !freeze.isRecycled) {
+                            try {
+                                freeze.copy(Bitmap.Config.ARGB_8888, false)
+                            } catch (e: Exception) {
+                                AppLog.e(TAG, "Failed to copy reference freeze frame bitmap", e)
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                    }
+                if (!isActive) {
+                    referenceCopy?.recycle()
+                    return@launch
+                }
+                setReferenceBitmap(referenceCopy)
+
                 delay(TEST_WARMUP_DELAY_MS)
                 if (!isActive) return@launch
 

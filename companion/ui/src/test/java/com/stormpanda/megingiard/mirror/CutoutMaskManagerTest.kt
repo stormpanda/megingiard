@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.mirror
 
 import android.graphics.Bitmap
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -15,6 +16,11 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class CutoutMaskManagerTest {
+    @After
+    fun tearDown() {
+        CutoutMaskManager.resetForTesting()
+    }
+
     @Test
     fun `getMask on non-existent cutout returns null`() {
         val context = RuntimeEnvironment.getApplication()
@@ -356,6 +362,39 @@ class CutoutMaskManagerTest {
         } finally {
             CutoutMaskManager.deleteMask(context, sourceId)
             CutoutMaskManager.deleteMask(context, targetId)
+        }
+    }
+
+    @Test
+    fun `slider tuning sweeps replace prior tuned mask and static asset entries without unbounded accumulation`() {
+        val context = RuntimeEnvironment.getApplication()
+        val cutoutId = "test_bounded_tuning_cache"
+        val maskBitmap = Bitmap.createBitmap(12, 12, Bitmap.Config.ARGB_8888)
+        val varianceMap = ByteArray(144) { (it % 40).toByte() }
+        val freezeBitmap = Bitmap.createBitmap(12, 12, Bitmap.Config.ARGB_8888)
+
+        try {
+            CutoutMaskManager.saveMask(
+                context = context,
+                cutoutId = cutoutId,
+                bitmap = maskBitmap,
+                varianceMap = varianceMap,
+                freezeFrame = freezeBitmap,
+            )
+
+            var firstTuned: Bitmap? = null
+            for (step in 10..80 step 10) {
+                val tuned = CutoutMaskManager.getMask(context, cutoutId, translucency = step, sensitivity = 20)
+                if (firstTuned == null) firstTuned = tuned
+                assertNotNull(tuned)
+                assertNotNull(CutoutMaskManager.getStaticAsset(context, cutoutId, translucency = step, sensitivity = 20))
+            }
+
+            assertEquals(1, CutoutMaskManager.tunedMaskCacheSizeForTest(cutoutId))
+            assertEquals(1, CutoutMaskManager.staticAssetCacheSizeForTest(cutoutId))
+            assertFalse("Evicted tuned bitmap must not be imperatively recycled", firstTuned!!.isRecycled)
+        } finally {
+            CutoutMaskManager.deleteMask(context, cutoutId)
         }
     }
 }

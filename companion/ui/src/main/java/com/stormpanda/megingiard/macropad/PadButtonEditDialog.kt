@@ -115,6 +115,7 @@ internal class Button2DAdjusterState(
     private val coroutineScope: CoroutineScope,
     private val resolveButton: (String) -> PadButton?,
     private val onButtonChange: (PadButton) -> Unit,
+    private val onButtonCommit: () -> Unit = {},
     private val resolveDesignCanvas: () -> LayoutCanvasSpec,
     private val resolveHostViewport: () -> DesignViewport?,
     private val resolveSnapEnabled: () -> Boolean,
@@ -124,6 +125,7 @@ internal class Button2DAdjusterState(
     private var isL2Held by mutableStateOf(false)
     private var activeDirectionKey by mutableIntStateOf(0)
     private var activeRepeatJob by mutableStateOf<Job?>(null)
+    private var hasUncommittedAdjustment = false
 
     fun stopMovingImmediate() {
         activeRepeatJob?.cancel()
@@ -131,6 +133,10 @@ internal class Button2DAdjusterState(
         activeDirectionKey = 0
         isL2Held = false
         isR2Held = false
+        if (hasUncommittedAdjustment) {
+            hasUncommittedAdjustment = false
+            onButtonCommit()
+        }
     }
 
     private fun moveButton(
@@ -165,6 +171,7 @@ internal class Button2DAdjusterState(
                 maxNormY = maxNormY,
             )
         if (newX != targetBtn.posX || newY != targetBtn.posY) {
+            hasUncommittedAdjustment = true
             onButtonChange(targetBtn.copy(posX = newX, posY = newY))
         }
     }
@@ -212,6 +219,7 @@ internal class Button2DAdjusterState(
         if (res.newWidthPx != targetBtn.widthPx || res.newHeightPx != targetBtn.heightPx ||
             res.newNormX != targetBtn.posX || res.newNormY != targetBtn.posY
         ) {
+            hasUncommittedAdjustment = true
             onButtonChange(
                 targetBtn.copy(
                     posX = res.newNormX,
@@ -259,6 +267,10 @@ internal class Button2DAdjusterState(
             activeRepeatJob?.cancel()
             activeRepeatJob = null
             activeDirectionKey = 0
+            if (hasUncommittedAdjustment) {
+                hasUncommittedAdjustment = false
+                onButtonCommit()
+            }
         }
     }
 
@@ -320,6 +332,7 @@ internal class Button2DAdjusterState(
 internal fun rememberButton2DAdjusterState(
     resolveButton: (String) -> PadButton?,
     onButtonChange: (PadButton) -> Unit,
+    onButtonCommit: () -> Unit = {},
 ): Button2DAdjusterState {
     val coroutineScope = rememberCoroutineScope()
     val buttonAlignmentSnapping by MacroPadSettings.buttonAlignmentSnapping.collectAsStateWithLifecycle()
@@ -342,6 +355,7 @@ internal fun rememberButton2DAdjusterState(
 
     val resolveButtonState = rememberUpdatedState(resolveButton)
     val onButtonChangeState = rememberUpdatedState(onButtonChange)
+    val onButtonCommitState = rememberUpdatedState(onButtonCommit)
     val designCanvasState = rememberUpdatedState(designCanvas)
     val hostViewportState = rememberUpdatedState(hostViewport)
     val snapState = rememberUpdatedState(buttonAlignmentSnapping)
@@ -352,6 +366,7 @@ internal fun rememberButton2DAdjusterState(
                 coroutineScope = coroutineScope,
                 resolveButton = { id -> resolveButtonState.value(id) },
                 onButtonChange = { btn -> onButtonChangeState.value(btn) },
+                onButtonCommit = { onButtonCommitState.value() },
                 resolveDesignCanvas = { designCanvasState.value },
                 resolveHostViewport = { hostViewportState.value },
                 resolveSnapEnabled = { snapState.value },
@@ -719,8 +734,11 @@ internal fun EditButtonSubPageContent(
 
     val isNew = savedButton == null
 
-    LaunchedEffect(currentButton) {
-        MacroPadNavState.setButtonDraft(currentButton)
+    LaunchedEffect(Unit) {
+        snapshotFlow { currentButton }
+            .collectLatest { draft ->
+                MacroPadNavState.setButtonDraft(draft)
+            }
     }
 
     val hasChanges =

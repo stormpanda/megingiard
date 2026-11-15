@@ -65,7 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 21
+#define PRIVD_VERSION 22
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
@@ -1363,7 +1363,8 @@ static void handle_screenshot_b64(int client_fd, const char *explicit_display_id
     int ok = (run_screencap_to_memory(target_id, &png_buf, &png_len) == 0);
     if (!ok && (explicit_display_id == NULL || explicit_display_id[0] == '\0') &&
         target_id != NULL && target_id[0] != '\0') {
-        /* Fallback to default screencap without -d if physical ID lookup failed. */
+        /* Invalidate stale cached SurfaceFlinger display ID and retry default screencap. */
+        g_primary_sf_display_id[0] = '\0';
         ok = (run_screencap_to_memory(NULL, &png_buf, &png_len) == 0);
     }
 
@@ -1581,63 +1582,6 @@ static int serve_client(int client_fd) {
             } else {
                 handle_screenshot_b64(client_fd, (alen > 0) ? arg : NULL);
             }
-            continue;
-        }
-
-        if (strncmp(line, "SCREENSHOT ", 11) == 0) {
-            char path[384];
-            char resp[128];
-            int rl;
-            char *p = line + 11;
-            size_t len = strlen(p);
-            while (len > 0 && (p[len - 1] == '\n' || p[len - 1] == '\r')) {
-                p[len - 1] = '\0';
-                len--;
-            }
-            while (*p == ' ') p++;
-            if (len > 0 && len < sizeof(path)) {
-                char *display_id_str = NULL;
-                char *target_path = p;
-                char *space = strchr(p, ' ');
-                if (space != NULL) {
-                    *space = '\0';
-                    display_id_str = p;
-                    target_path = space + 1;
-                    while (*target_path == ' ') target_path++;
-                }
-                strncpy(path, target_path, sizeof(path));
-                path[sizeof(path) - 1] = '\0';
-                pid_t pid = fork();
-                if (pid == 0) {
-                    if (display_id_str != NULL && strlen(display_id_str) > 0) {
-                        char *args[] = {"/system/bin/screencap", "-d", display_id_str, "-p", path, NULL};
-                        execv(args[0], args);
-                    } else {
-                        char *args[] = {"/system/bin/screencap", "-p", path, NULL};
-                        execv(args[0], args);
-                    }
-                    _exit(127);
-                } else if (pid > 0) {
-                    int status;
-                    if (waitpid(pid, &status, 0) == pid) {
-                        if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-                            rl = snprintf(resp, sizeof(resp), "SCREENSHOT_OK\n");
-                        } else {
-                            int exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
-                            rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR %d\n", exit_code);
-                        }
-                    } else {
-                        rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR WAIT_FAILED\n");
-                    }
-                } else {
-                    rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR FORK_FAILED\n");
-                }
-            } else {
-                rl = snprintf(resp, sizeof(resp), "SCREENSHOT_ERR INVALID_PATH\n");
-            }
-            pthread_mutex_lock(&g_send_mutex);
-            (void)write(client_fd, resp, rl);
-            pthread_mutex_unlock(&g_send_mutex);
             continue;
         }
 

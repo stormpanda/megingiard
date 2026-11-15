@@ -180,7 +180,7 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
 - **Button A & Enter Activation:** `Modifier.primaryOverlayFocusable` ensures that physical controller `KEYCODE_BUTTON_A` (96) and `KEYCODE_DPAD_CENTER` trigger item clicks across rows, buttons, and selectable chips.
 - **Bumper Tab Switching:** Pressing `[L1]` (102) or `[R1]` (103) dispatches `BumperDirection.PREV` / `NEXT` events via `PrimaryOverlayInputBridge.bumperEvents`, cycling active tabs and category sidebar filters.
 - **Button B / Back Dismissal:** Pressing `[B]` (97) or `BACK` triggers `onPreviewKeyEvent` / back-press dispatcher to close active dialogs and modals immediately.
-- **Gamepad-First Control Cards (`GamepadComponents.kt`):**
+- **Gamepad-First Control Cards (`GamepadCards.kt` & `GamepadColorPickers.kt`):**
   - `GamepadFocusCard`: Base elevated card container with high-contrast animated accent border, subtle background tint elevation on focus, and D-pad click/stepper key interceptors.
   - `GamepadToggleCard`: Binary toggle switch card with illuminated `[ ON ● ]` / `[ OFF ○ ]` status pill.
   - `GamepadStepperCard`: Stepper card with `◀ Value ▶` adjustment controls navigable with D-pad Left/Right.
@@ -206,10 +206,12 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
 | [QuickMenuDialogs.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuDialogs.kt) | `ShutOffConfirmDialog` modal confirmation dialog for app shutdown |
 | [QuickMenuMirrorCard.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuMirrorCard.kt) | Slide-in MirrorControlCard and MirrorControlIconButton composables |
 | [PrimaryOverlayContainer.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayContainer.kt) | Top-screen bottom-anchored modal sheet container with 3-sided bezel border, slide/fade animation, bumper badges, footer action prompt bar, and auto-focus initialization |
-| [PrimaryOverlayHost.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayHost.kt) | Shared mirror freeze state machine, gamepad key/motion routing, and modal Compose host shared by `PrimaryOverlayManager` and `PrimaryOverlayActivity` |
+| [PrimaryModalHost.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryModalHost.kt) | Shared mirror freeze state machine, gamepad key/motion routing, and modal Compose host shared by `PrimaryOverlayManager` and `PrimaryOverlayActivity` |
 | [PrimaryOverlayManager.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) | WindowManager overlay coordinator on Display 0; routes gamepad key and motion events |
 | [PrimaryOverlayInputBridge.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayInputBridge.kt) | Gamepad bumper event dispatcher, joystick-to-Dpad motion translator, and `primaryOverlayFocusable` modifier |
-| [GamepadComponents.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadComponents.kt) | Gamepad-First UI component library: `GamepadFocusCard`, `GamepadToggleCard`, `GamepadStepperCard`, `GamepadChoiceCard`, `GamepadActionCard`, `GamepadColorPaletteCard`, `GamepadColorPaletteGrid`, and `PrimaryOverlayFooter` |
+| [GamepadCards.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadCards.kt) | Gamepad-First UI card library: `GamepadFocusCard`, `GamepadToggleCard`, `GamepadStepperCard`, `GamepadChoiceCard`, and `GamepadActionCard` |
+| [GamepadColorPickers.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadColorPickers.kt) | Gamepad color controls: `GamepadColorPaletteCard` and `GamepadColorPaletteGrid` |
+| [GamepadScaffold.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadScaffold.kt) | Two-pane console layout scaffold (`GamepadTwoPaneScaffold`) and `PrimaryOverlayFooter` |
 | [AppStateManager.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | `isQuickMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers; holds active swipe state |
 | [SwipeGestureProcessor.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProcessor.kt) | Edge-swipe detection (`pointerInput`); evaluates threshold, triggers haptics, and coordinates release actions |
 | [SwipeGestureProgress.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProgress.kt) | Data model defining the current active swipe type, delta, threshold, and past-threshold flag |

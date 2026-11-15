@@ -439,6 +439,47 @@ static void test_dumpsys_input_primary_touch_resolution(void) {
     assert(parse_dumpsys_input_primary_touch_path(f3, path, sizeof(path)) == 0);
     fclose(f3);
 
+    // Case 4: External Bluetooth controller touchpad (mode - POINTER, DeviceType: pointer)
+    // and multi-mapper composite device (secondary Touch + primary Keyboard) must NOT match
+    // before the real primary touchscreen.
+    const char* pointer_and_composite_dump =
+        "Event Hub State:\n"
+        "  Devices:\n"
+        "    1: Wireless Controller Touchpad\n"
+        "      Path: /dev/input/event11\n"
+        "    2: composite_dock_hid\n"
+        "      Path: /dev/input/event12\n"
+        "    9: panel0_sec_ts\n"
+        "      Path: /dev/input/event7\n"
+        "Input Reader State:\n"
+        "  Device 1: Wireless Controller Touchpad\n"
+        "    EventHub Devices: [ 1 ]\n"
+        "    Sources: MOUSE | TOUCHPAD\n"
+        "    Touch Input Mapper (mode - POINTER):\n"
+        "      Parameters:\n"
+        "        DeviceType: pointer\n"
+        "      Viewport INTERNAL: displayId=0, uniqueId=local:0\n"
+        "  Device 2: composite_dock_hid\n"
+        "    EventHub Devices: [ 2 ]\n"
+        "    Sources: KEYBOARD | TOUCHSCREEN\n"
+        "    Touch Input Mapper (mode - DIRECT):\n"
+        "      Parameters:\n"
+        "        DeviceType: touchScreen\n"
+        "      Viewport EXTERNAL: displayId=2, uniqueId=local:2\n"
+        "    Keyboard Input Mapper:\n"
+        "      Viewport INTERNAL: displayId=0, uniqueId=local:0\n"
+        "  Device 3: panel0_sec_ts\n"
+        "    EventHub Devices: [ 9 ]\n"
+        "    Sources: TOUCHSCREEN\n"
+        "    Touch Input Mapper (mode - DIRECT):\n"
+        "      Parameters:\n"
+        "        DeviceType: touchScreen\n"
+        "      Viewport INTERNAL: displayId=0, uniqueId=local:0\n";
+    FILE* f4 = open_string_stream(pointer_and_composite_dump);
+    assert(parse_dumpsys_input_primary_touch_path(f4, path, sizeof(path)) == 1);
+    assert(strcmp(path, "/dev/input/event7") == 0);
+    fclose(f4);
+
     printf("PASS\n");
 }
 

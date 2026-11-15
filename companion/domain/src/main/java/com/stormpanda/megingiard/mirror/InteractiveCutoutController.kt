@@ -163,7 +163,6 @@ object InteractiveCutoutController {
                 )
 
             val newCrop = CutoutGestureMath.applyPan(currentCrop, deltaNormX, deltaNormY)
-            AppLog.d(TAG, "onMove 1-finger cutout=$cutoutId delta=($deltaNormX, $deltaNormY) crop=$newCrop")
             updateOverrideCrop(cutoutId, newCrop)
             return true
         } else if (pointers.size >= 2) {
@@ -216,10 +215,6 @@ object InteractiveCutoutController {
                     focalNormX = focalNormX,
                     focalNormY = focalNormY,
                 )
-            AppLog.d(
-                TAG,
-                "onMove 2-finger cutout=$cutoutId scale=$scaleFactor midDelta=($deltaNormX, $deltaNormY) crop=$newCrop",
-            )
             updateOverrideCrop(cutoutId, newCrop)
             return true
         }

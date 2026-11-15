@@ -252,8 +252,15 @@ fun MirrorEditorTopOverlay(
     var bottomHToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
     var bottomVToggle by remember(selectedCutout?.id) { mutableIntStateOf(0) }
 
+    fun commitCurrentLayout() {
+        val currentProfile = MacroPadState.activeProfile.value ?: return
+        val currentLayout = currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId } ?: return
+        MacroPadState.updateLayout(currentLayout)
+    }
+
     fun updateCutout(
         cutoutId: String,
+        live: Boolean = false,
         transform: (
             cur: ScreenCutout,
             others: List<ScreenCutout>,
@@ -291,14 +298,19 @@ fun MirrorEditorTopOverlay(
         val updated = transform(cur, others, allCutouts, designW, designH, hostViewport) ?: return
         if (updated == cur) return
         val updatedList = allCutouts.map { if (it.id == cur.id) updated else it }
-        MacroPadState.updateLayout(currentLayout.copy(mirrorCutouts = updatedList))
+        val updatedLayout = currentLayout.copy(mirrorCutouts = updatedList)
+        if (live) {
+            MacroPadState.updateLayoutLive(updatedLayout)
+        } else {
+            MacroPadState.updateLayout(updatedLayout)
+        }
     }
 
     fun moveTopCutout(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) = updateCutout(cutoutId) { cur, _, _, _, _, _ ->
+    ) = updateCutout(cutoutId, live = true) { cur, _, _, _, _, _ ->
         val stepX = 1f / srcWidth
         val stepY = 1f / srcHeight
         cur.copy(
@@ -311,7 +323,7 @@ fun MirrorEditorTopOverlay(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) = updateCutout(cutoutId) { cur, _, allCutouts, designW, designH, hostViewport ->
+    ) = updateCutout(cutoutId, live = true) { cur, _, allCutouts, designW, designH, hostViewport ->
         if (cur.aspectRatioMode == AspectRatioMode.BOTTOM) {
             val stepDelta =
                 if (dx != 0) {
@@ -432,7 +444,7 @@ fun MirrorEditorTopOverlay(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) = updateCutout(cutoutId) { cur, others, allCutouts, designW, designH, hostViewport ->
+    ) = updateCutout(cutoutId, live = true) { cur, others, allCutouts, designW, designH, hostViewport ->
         val dirX =
             if (dx > 0) {
                 1
@@ -491,7 +503,7 @@ fun MirrorEditorTopOverlay(
         cutoutId: String,
         dx: Int,
         dy: Int,
-    ) = updateCutout(cutoutId) { cur, _, allCutouts, designW, designH, hostViewport ->
+    ) = updateCutout(cutoutId, live = true) { cur, _, allCutouts, designW, designH, hostViewport ->
         if (designW <= 0f || designH <= 0f) return@updateCutout null
         if (cur.aspectRatioMode == AspectRatioMode.TOP) {
             val stepDelta =
@@ -930,6 +942,7 @@ fun MirrorEditorTopOverlay(
                     onResize = { dx, dy ->
                         selectedCutout?.id?.let { resizeTopCutout(it, dx, dy) }
                     },
+                    onCommit = ::commitCurrentLayout,
                 )
 
                 // Item 4: Adjust Bottom Cutout Coordinates (Target Screen)
@@ -944,6 +957,7 @@ fun MirrorEditorTopOverlay(
                     onResize = { dx, dy ->
                         selectedCutout?.id?.let { resizeBottomCutout(it, dx, dy) }
                     },
+                    onCommit = ::commitCurrentLayout,
                 )
 
                 // Item 5: Flip Mode

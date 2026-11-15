@@ -15,6 +15,7 @@ import com.stormpanda.megingiard.mirror.CutoutMaskFileStore
 import com.stormpanda.megingiard.security.HmacUtil
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -190,7 +191,12 @@ object ConfigManager {
     private val _inAppImportError = MutableStateFlow<String?>(null)
     val inAppImportError: StateFlow<String?> = _inAppImportError.asStateFlow()
 
-    fun getPendingInAppImageCount(): Int = _pendingInAppParsedImport.value?.images?.size ?: 0
+    fun getPendingInAppImageCount(): Int =
+        _pendingInAppParsedImport.value
+            ?.images
+            ?.keys
+            ?.count { key -> !key.startsWith("${CutoutMaskFileStore.MASKS_DIR}/") }
+            ?: 0
 
     /** Called by MainActivity when an ACTION_VIEW intent with a .mgrd URI is received. */
     fun setPendingUri(uri: Uri) {
@@ -631,6 +637,7 @@ object ConfigManager {
         images: Map<String, ByteArray>? = null,
     ) {
         AppLog.i(TAG, "applyImport: schema=${export.schemaVersion}")
+        val appContext = context.applicationContext
         val resolvedImages =
             images
                 ?: _pendingInAppParsedImport.value?.images?.ifEmpty { null }
@@ -640,7 +647,9 @@ object ConfigManager {
                 SettingsManager.importGroupedSettingsAwait(export.settings)
             }
             if (export.profiles.isNotEmpty()) {
-                importMacroPadData(context, export.profiles, resolvedImages)
+                withContext(NonCancellable + Dispatchers.IO) {
+                    importMacroPadData(appContext, export.profiles, resolvedImages)
+                }
             }
         } finally {
             clearPendingImport()
@@ -659,12 +668,15 @@ object ConfigManager {
     ) {
         AppLog.i(TAG, "applyProfileImport: schema=${export.schemaVersion} profiles=${export.profiles.size}")
         check(export.profiles.isNotEmpty()) { "The file does not contain any profiles" }
+        val appContext = context.applicationContext
         val resolvedImages =
             images
                 ?: _pendingInAppParsedImport.value?.images?.ifEmpty { null }
                 ?: _pendingParsedImport.value?.images.orEmpty()
         try {
-            importMacroPadData(context, export.profiles, resolvedImages)
+            withContext(NonCancellable + Dispatchers.IO) {
+                importMacroPadData(appContext, export.profiles, resolvedImages)
+            }
         } finally {
             clearPendingImport()
             clearInAppPendingImport()

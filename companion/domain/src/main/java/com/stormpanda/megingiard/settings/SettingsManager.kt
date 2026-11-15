@@ -11,6 +11,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.InternalBackup
+import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.macropad.LayoutCanvasSpec
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.update.UpdateManager
@@ -170,6 +171,7 @@ object SettingsManager {
                 MacroPadState.setHostSecondaryCanvas(LayoutCanvasSpec(size.widthPx, size.heightPx))
             }
         }
+        TouchInjector.updatePrimaryDisplayRotation(DisplayDetector.resolvePrimaryDisplayRotation(appContext))
 
         // Apply bootstrap settings (log level, theme, accent, SteamGridDB token,
         // and MacroPad profiles) synchronously before returning so that code

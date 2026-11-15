@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.mirror
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import androidx.annotation.VisibleForTesting
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -11,6 +12,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileOutputStream
@@ -47,8 +49,14 @@ object CutoutMaskManager {
     val cacheRevision: StateFlow<Int> = _cacheRevision.asStateFlow()
 
     fun notifyAssetsChanged() {
-        _cacheRevision.value++
+        _cacheRevision.update { it + 1 }
     }
+
+    @VisibleForTesting
+    internal fun tunedMaskCacheSizeForTest(cutoutId: String): Int = tunedMaskCache.keys.count { it.startsWith("$cutoutId:") }
+
+    @VisibleForTesting
+    internal fun staticAssetCacheSizeForTest(cutoutId: String): Int = staticAssetCache.keys.count { it.startsWith("$cutoutId:") }
 
     internal fun resetDispatcherForTesting() {
         ioDispatcher = Dispatchers.IO
@@ -124,6 +132,7 @@ object CutoutMaskManager {
                 }
 
             val tunedBitmap = Bitmap.createBitmap(tunedPixels, width, height, Bitmap.Config.ARGB_8888)
+            evictStaleTunedMasksExcept(cutoutId, cacheKey)
             tunedMaskCache[cacheKey] = tunedBitmap
             AppLog.d(
                 TAG,
@@ -185,6 +194,7 @@ object CutoutMaskManager {
 
             val staticPixels = CutoutAutoTuner.buildStaticAsset(basePixels, maskPixels, width, height)
             val staticBitmap = Bitmap.createBitmap(staticPixels, width, height, Bitmap.Config.ARGB_8888)
+            evictStaleStaticAssetsExcept(cutoutId, cacheKey)
             staticAssetCache[cacheKey] = staticBitmap
             AppLog.d(
                 TAG,
@@ -409,7 +419,29 @@ object CutoutMaskManager {
             } catch (e: Exception) {
                 AppLog.e(TAG, "Failed to delete mask files asynchronously for cutout $cutoutId", e)
             }
-            _cacheRevision.value++
+            _cacheRevision.update { it + 1 }
+        }
+    }
+
+    private fun evictStaleTunedMasksExcept(
+        cutoutId: String,
+        keepKey: String,
+    ) {
+        val prefix = "$cutoutId:"
+        val keysToRemove = tunedMaskCache.keys.filter { it.startsWith(prefix) && it != keepKey }
+        for (key in keysToRemove) {
+            tunedMaskCache.remove(key)
+        }
+    }
+
+    private fun evictStaleStaticAssetsExcept(
+        cutoutId: String,
+        keepKey: String,
+    ) {
+        val prefix = "$cutoutId:"
+        val keysToRemove = staticAssetCache.keys.filter { it.startsWith(prefix) && it != keepKey }
+        for (key in keysToRemove) {
+            staticAssetCache.remove(key)
         }
     }
 
@@ -454,7 +486,7 @@ object CutoutMaskManager {
                     if (exists) {
                         getBaseMask(appContext, cutoutId)
                     }
-                    _cacheRevision.value++
+                    _cacheRevision.update { it + 1 }
                     withContext(Dispatchers.Main.immediate) {
                         onLoaded()
                     }
@@ -498,7 +530,7 @@ object CutoutMaskManager {
                     try {
                         val loaded = getBaseMask(appContext, cutoutId)
                         if (loaded != null) {
-                            _cacheRevision.value++
+                            _cacheRevision.update { it + 1 }
                             withContext(Dispatchers.Main.immediate) {
                                 onLoaded()
                             }
@@ -534,7 +566,7 @@ object CutoutMaskManager {
                             cavityHealing = cavityHealing,
                         )
                     if (generated != null) {
-                        _cacheRevision.value++
+                        _cacheRevision.update { it + 1 }
                         withContext(Dispatchers.Main.immediate) {
                             onLoaded()
                         }
@@ -581,7 +613,7 @@ object CutoutMaskManager {
                             cavityHealing = cavityHealing,
                         )
                     if (generated != null) {
-                        _cacheRevision.value++
+                        _cacheRevision.update { it + 1 }
                         withContext(Dispatchers.Main.immediate) {
                             onLoaded()
                         }
@@ -615,7 +647,7 @@ object CutoutMaskManager {
                 try {
                     val loaded = getFreezeFrame(appContext, cutoutId)
                     if (loaded != null) {
-                        _cacheRevision.value++
+                        _cacheRevision.update { it + 1 }
                         withContext(Dispatchers.Main.immediate) {
                             onLoaded()
                         }

@@ -156,9 +156,11 @@ private const val FLS_NEIGHBOR_1_ALPHA = 0.45f
 private const val FLS_NEIGHBOR_1_ANGLE_FACTOR = 0.7f
 private const val FLS_NEIGHBOR_2_ALPHA = 0.25f
 private const val FLS_NEIGHBOR_2_ANGLE_FACTOR = 1.4f
+private const val FLS_GRADIENT_STOP_START = 0.0f
 private const val FLS_GRADIENT_STOP_SOLID = 0.2f
 private const val FLS_GRADIENT_STOP_MID = 0.5f
 private const val FLS_GRADIENT_STOP_SOLID_BOTTOM = 0.8f
+private const val FLS_GRADIENT_STOP_END = 1.0f
 private const val FLS_GRADIENT_MID_ALPHA = 0.8f
 
 private val FLS_NEIGHBOR_STYLES =
@@ -287,19 +289,19 @@ fun FocusLibraryScreen(
     val topGradientBrush =
         remember(appColors.appBackground) {
             Brush.verticalGradient(
-                0.0f to appColors.appBackground,
+                FLS_GRADIENT_STOP_START to appColors.appBackground,
                 FLS_GRADIENT_STOP_SOLID to appColors.appBackground,
                 FLS_GRADIENT_STOP_MID to appColors.appBackground.copy(alpha = FLS_GRADIENT_MID_ALPHA),
-                FLS_VISIBLE_CARD_ALPHA to Color.Transparent,
+                FLS_GRADIENT_STOP_END to Color.Transparent,
             )
         }
     val bottomGradientBrush =
         remember(appColors.appBackground) {
             Brush.verticalGradient(
-                0.0f to Color.Transparent,
+                FLS_GRADIENT_STOP_START to Color.Transparent,
                 FLS_GRADIENT_STOP_MID to appColors.appBackground.copy(alpha = FLS_GRADIENT_MID_ALPHA),
                 FLS_GRADIENT_STOP_SOLID_BOTTOM to appColors.appBackground,
-                FLS_VISIBLE_CARD_ALPHA to appColors.appBackground,
+                FLS_GRADIENT_STOP_END to appColors.appBackground,
             )
         }
 

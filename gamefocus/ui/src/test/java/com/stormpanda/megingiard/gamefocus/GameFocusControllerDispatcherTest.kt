@@ -85,7 +85,8 @@ class GameFocusControllerDispatcherTest {
                 harness.dispatcher.handleKeyUp(KeyEvent.KEYCODE_DPAD_RIGHT)
                 assertEquals(1, harness.viewModel.dpadStepRightTrigger.value)
 
-                // Holding during the remaining 55 ms cooldown defers step 1 to exact cooldown expiry (t = 115 ms)
+                // Holding during the remaining 55 ms cooldown defers step 1 to exact cooldown expiry (t = 115 ms),
+                // then honors initialHoldDelayMs before entering hold-repeat cadence.
                 harness.dispatcher.handleKeyDown(KeyEvent.KEYCODE_DPAD_RIGHT, repeatCount = 0)
                 assertEquals(1, harness.viewModel.dpadStepRightTrigger.value)
 
@@ -94,9 +95,17 @@ class GameFocusControllerDispatcherTest {
 
                 advanceMs(ONE_MS)
                 assertEquals(2, harness.viewModel.dpadStepRightTrigger.value)
+                assertFalse(harness.viewModel.isHoldRepeating.value)
+
+                advanceMs(ITEM_INITIAL_HOLD_DELAY_MS - ONE_MS)
+                assertEquals(2, harness.viewModel.dpadStepRightTrigger.value)
+
+                advanceMs(ONE_MS)
+                assertEquals(3, harness.viewModel.dpadStepRightTrigger.value)
+                assertTrue(harness.viewModel.isHoldRepeating.value)
 
                 advanceMs(ITEM_REPEAT_INTERVAL_MS)
-                assertEquals(3, harness.viewModel.dpadStepRightTrigger.value)
+                assertEquals(4, harness.viewModel.dpadStepRightTrigger.value)
             } finally {
                 harness.dispatcher.stopRepeat()
             }
@@ -222,17 +231,28 @@ class GameFocusControllerDispatcherTest {
                 // Directional keys return false so Compose overlay focus traversal handles them
                 assertFalse(harness.dispatcher.handleKeyDown(KeyEvent.KEYCODE_DPAD_RIGHT, repeatCount = 0))
 
-                // Button A dispatches synthetic DPAD_CENTER down once and recovers focus when up is unhandled
+                // Orphan Button A ACTION_UP when opening primary overlay via gallery menu ACTION_DOWN is swallowed
+                // without dispatching synthetic DPAD_CENTER up or focus recovery into the newly opened overlay.
+                harness.host.primaryOverlayCenterUpHandled = false
+                assertTrue(harness.dispatcher.handleKeyUp(GamePadButton.BUTTON_A.keyCode))
+                assertEquals(0, harness.host.primaryOverlayCenterUpCount)
+                assertTrue(harness.host.focusRecoveryKeys.isEmpty())
+
+                // Button A pressed inside the primary overlay dispatches synthetic DPAD_CENTER down once
+                // and recovers focus when paired ACTION_UP is unhandled.
                 assertTrue(harness.dispatcher.handleKeyDown(GamePadButton.BUTTON_A.keyCode, repeatCount = 0))
                 assertTrue(harness.dispatcher.handleKeyDown(GamePadButton.BUTTON_A.keyCode, repeatCount = REPEAT_COUNT_FIRST))
                 assertEquals(1, harness.host.primaryOverlayCenterDownCount)
 
                 harness.host.primaryOverlayCenterUpHandled = false
                 assertTrue(harness.dispatcher.handleKeyUp(GamePadButton.BUTTON_A.keyCode))
+                assertEquals(1, harness.host.primaryOverlayCenterUpCount)
                 assertEquals(listOf(GamePadButton.BUTTON_A.keyCode), harness.host.focusRecoveryKeys)
 
+                assertTrue(harness.dispatcher.handleKeyDown(GamePadButton.BUTTON_A.keyCode, repeatCount = 0))
                 harness.host.primaryOverlayCenterUpHandled = true
                 assertTrue(harness.dispatcher.handleKeyUp(GamePadButton.BUTTON_A.keyCode))
+                assertEquals(2, harness.host.primaryOverlayCenterUpCount)
                 assertEquals(1, harness.host.focusRecoveryKeys.size)
 
                 // Back/B invokes primary overlay dismiss once per press
@@ -381,6 +401,7 @@ private class FakeControllerHost : GameFocusControllerHost {
     var galleryDismissCount: Int = 0
     var primaryOverlayBackCount: Int = 0
     var primaryOverlayCenterDownCount: Int = 0
+    var primaryOverlayCenterUpCount: Int = 0
     var primaryOverlayCenterUpHandled: Boolean = true
     val focusRecoveryKeys: MutableList<Int> = mutableListOf()
     val invokedGalleryMenuIndices: MutableList<Int> = mutableListOf()
@@ -464,7 +485,10 @@ private class FakeControllerHost : GameFocusControllerHost {
         primaryOverlayCenterDownCount++
     }
 
-    override fun dispatchPrimaryOverlayCenterUp(): Boolean = primaryOverlayCenterUpHandled
+    override fun dispatchPrimaryOverlayCenterUp(): Boolean {
+        primaryOverlayCenterUpCount++
+        return primaryOverlayCenterUpHandled
+    }
 
     override fun sendPrimaryOverlayFocusRecovery(keyCode: Int) {
         focusRecoveryKeys += keyCode

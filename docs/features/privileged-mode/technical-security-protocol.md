@@ -28,7 +28,7 @@ OS-level peer credential checks (`SO_PEERCRED` / `peerCredentials.uid` checks) a
 
 #### Mutual HMAC-SHA256 Handshake & Protocol Version Verification
 
-Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`, currently `21`):
+Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`, currently `22`):
 
 ```
 Daemon -> App     CHAL <32-hex-nonce1>\n
@@ -106,11 +106,9 @@ the existing protocol.
 | D → App | `MIRROR_DIRECT_ERR <reason>\n` | Direct mirror child failed to start |
 | App → D | `MIRROR STOP\n` | Terminate the running mirror child (idempotent) |
 | D → App | `MIRROR_STOPPED\n` | Mirror child has been reaped |
-| App → D | `SCREENSHOT [<display_id>] <path>\n` | Take display screenshot (defaults to primary if display_id omitted), output to path |
-| D → App | `SCREENSHOT_OK\n` | Screenshot completed successfully |
 | App → D | `SCREENSHOT_B64 [<display_id>]\n` | Capture screenshot in memory over an `O_CLOEXEC` pipe from `/system/bin/screencap -p` (resolving 64-bit SurfaceFlinger HWC display 0 ID when omitted) and stream base64 PNG |
 | D → App | `SCREENSHOT_BEGIN\n` / `<b64>\n` / `SCREENSHOT_END\n` | Streamed base64 PNG payload markers and lines |
-| D → App | `SCREENSHOT_ERR <reason>\n` | Screenshot failed (e.g. invalid path / execution error) |
+| D → App | `SCREENSHOT_ERR <reason>\n` | Screenshot capture failed |
 | App → D | `READ_FILE <path>\n` | Read text file (up to 128KB) from storage under shell UID |
 | D → App | `READ_BEGIN\n` | Stream file contents start marker |
 | D → App | `READ_END\n` | Stream file contents end marker |
@@ -171,7 +169,7 @@ is exposed by `PrivdBootstrapper.stage` for the manual wizard UI.
 1. **Writer (`PrivdClientWriter`)** — drains a `LinkedBlockingQueue<String>` of ASCII commands into the TCP `Socket` output stream (`BufferedWriter`), flushing whenever the queue empties.
 2. **Reader (`PrivdClientReader`)** — continuously reads `\n`-terminated daemon lines; routes `EVT ` and `EVT_TOUCH ` lines to `SharedFlow`s and dispatches request-response lines to the active `PendingRpc` (`SingleLine` or `MultiLine`).
 
-All 7 request-response RPCs (`ping`, `startDirectMirror`, `stopMirror`, `takeScreenshot`, `captureScreenshotPng`, `readTextFile`, `getRunningProcesses`) are serialized through `commandMutex` and share a single `@Volatile private var pendingRpc: PendingRpc?` reference (`executeSingleLineRpc` / `executeMultiLineRpc`).
+All 6 request-response RPCs (`ping`, `startDirectMirror`, `stopMirror`, `captureScreenshotPng`, `readTextFile`, `getRunningProcesses`) are serialized through `commandMutex` and share a single `@Volatile private var pendingRpc: PendingRpc?` reference (`executeSingleLineRpc` / `executeMultiLineRpc`); oversized multi-line payloads immediately cancel the RPC and call `markBroken()` so unread trailing lines can never desynchronize subsequent RPC framing.
 
 When the socket fails, `markBroken()` acquires `stateLock`, runs `cleanupLocked()` directly to close the socket and cancel any pending RPC, transitions `_state` to `DISCONNECTED`, and notifies `PrivdManager.onClientDisconnected()`.
 
@@ -183,7 +181,7 @@ When the socket fails, `markBroken()` acquires `stateLock`, runs `cleanupLocked(
 
 | File | Responsibility |
 | --- | --- |
-| `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` | Shared daemon version (`PRIVD_VERSION = 21`), asset names, canonical TCP ports (`51234` / `51244`), and remote file/process path helpers |
+| `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` | Shared daemon version (`PRIVD_VERSION = 22`), asset names, canonical TCP ports (`51234` / `51244`), and remote file/process path helpers |
 | `companion/ui/src/main/cpp/megingiard_privd.c` | Native daemon source (TCP loopback server, HMAC-SHA256 auth, `dumpsys input` + `EVIOCGABS` primary touchscreen discovery, `O_CLOEXEC` evdev/uinput writers, passive gamepad/touch streams, pipe-streamed `SCREENSHOT_B64`, `READ_FILE`, `LIST_PROCESSES`) |
 | `companion/ui/src/main/cpp/cmd_parsers.h` | Pure C command parsers (`parse_touch_command`, `parse_mouse_command`, `parse_key_command`, `parse_gamepad_command`, `parse_dumpsys_input_primary_touch_path`, `compute_evdev_axis_span`) shared with native unit tests |
 | `companion/ui/src/main/assets/megingiard_privd_arm64` | Pre-built static arm64 daemon binary |

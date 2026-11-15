@@ -1218,4 +1218,13 @@ class AlignmentMathTest {
         // Other axis (Y) must stay at 1.0f rather than jumping inward
         assertEquals(1.0f, result.newNormY, 0.001f)
     }
+
+    @Test
+    fun `formatButtonDimensionPx rounds finite values and returns zero for NaN or infinity`() {
+        assertEquals("136", formatButtonDimensionPx(136.4f))
+        assertEquals("137", formatButtonDimensionPx(136.6f))
+        assertEquals("0", formatButtonDimensionPx(Float.NaN))
+        assertEquals("0", formatButtonDimensionPx(Float.POSITIVE_INFINITY))
+        assertEquals("0", formatButtonDimensionPx(Float.NEGATIVE_INFINITY))
+    }
 }

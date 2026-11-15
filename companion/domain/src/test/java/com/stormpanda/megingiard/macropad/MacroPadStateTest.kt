@@ -1695,4 +1695,66 @@ class MacroPadStateTest {
             0.001f,
         )
     }
+
+    @Test
+    fun `updateCutoutLive and updateCutout never commit uncommitted previewLayout buttons into profiles`() {
+        val committedButton = testButton(id = "btn-committed", label = "Saved")
+        val cutout =
+            ScreenCutout(
+                id = "cut-1",
+                srcX = 0.1f,
+                srcY = 0.1f,
+                srcWidth = 0.3f,
+                srcHeight = 0.3f,
+                destX = 0.2f,
+                destY = 0.2f,
+                destWidth = 0.4f,
+                destHeight = 0.4f,
+            )
+        val committedLayout =
+            testLayout(
+                id = "l-cut",
+                name = "Main",
+                buttons = listOf(committedButton),
+            ).copy(mirrorCutouts = listOf(cutout))
+        loadProfiles(testProfile(id = "p-cut", layouts = listOf(committedLayout), activeLayoutId = "l-cut"))
+
+        // Stage an uncommitted draft button via previewLayout
+        val draftButton = testButton(id = "btn-draft", label = "Unsaved Draft")
+        MacroPadState.setPreviewButton(draftButton)
+        assertEquals(
+            2,
+            MacroPadState.activeLayout.value!!
+                .buttons.size,
+        )
+
+        // Live and committed cutout updates must update cutout geometry without leaking draftButton into _profiles
+        MacroPadState.updateCutoutLive(cutout.copy(destX = 0.35f))
+        MacroPadState.updateCutout(cutout.copy(destX = 0.45f))
+
+        val storedLayout =
+            MacroPadState.profiles.value
+                .single()
+                .layouts
+                .single()
+        assertEquals(listOf("btn-committed"), storedLayout.buttons.map { it.id })
+        assertEquals(0.45f, storedLayout.mirrorCutouts.single().destX, 0.0001f)
+        // Preview layout also reflects the updated cutout while still keeping its draft button
+        assertEquals(
+            0.45f,
+            MacroPadState.previewLayout.value!!
+                .mirrorCutouts
+                .single()
+                .destX,
+            0.0001f,
+        )
+
+        MacroPadState.clearPreviewLayout()
+        assertEquals(
+            listOf("btn-committed"),
+            MacroPadState.activeLayout.value!!
+                .buttons
+                .map { it.id },
+        )
+    }
 }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -38,6 +39,7 @@ object MacroPadMediaRepository {
 
     fun resetForTesting() {
         ioDispatcher = Dispatchers.IO
+        _mediaRevision.value = 0
     }
 
     /**
@@ -64,7 +66,7 @@ object MacroPadMediaRepository {
                 CutoutMaskManager.invalidateCache(cutout.id)
             }
             CutoutMaskManager.notifyAssetsChanged()
-            _mediaRevision.value++
+            _mediaRevision.update { it + 1 }
             AppLog.i(TAG, "Duplicated media and cutout assets from layout ${sourceLayout.id} to ${targetLayout.id}")
         }
     }
@@ -95,7 +97,7 @@ object MacroPadMediaRepository {
                 }
             }
             CutoutMaskManager.notifyAssetsChanged()
-            _mediaRevision.value++
+            _mediaRevision.update { it + 1 }
             AppLog.i(TAG, "Deleted media and cutout assets for ${layouts.size} layout(s)")
         }
     }

@@ -17,8 +17,9 @@ class KnownDeviceProfilesTest {
         assertTrue(KnownDeviceProfiles.isVendorOverlayPackage("com.rp.gameassistant"))
         assertTrue(KnownDeviceProfiles.isVendorOverlayPackage("com.rp.settings"))
 
-        // Retroid's built-in home launcher must NOT be swallowed as a transient overlay
+        // Retroid's built-in home launcher and third-party com.rp.* games must NOT be swallowed
         assertFalse(KnownDeviceProfiles.isVendorOverlayPackage("com.retroidpocket.gamelauncher"))
+        assertFalse(KnownDeviceProfiles.isVendorOverlayPackage("com.rp.awesomegame"))
         assertFalse(KnownDeviceProfiles.isVendorOverlayPackage("com.retroarch"))
         assertFalse(KnownDeviceProfiles.isVendorOverlayPackage(""))
     }

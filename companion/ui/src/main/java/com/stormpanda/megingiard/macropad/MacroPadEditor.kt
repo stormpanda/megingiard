@@ -66,6 +66,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -113,6 +114,7 @@ import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
@@ -290,10 +292,13 @@ fun MacroPadEditor(
         MacroPadState.setEditingButtonPositions(isEditingPositionsSubPage)
     }
 
-    LaunchedEffect(buttonDraft) {
-        if (buttonDraft != null) {
-            MacroPadState.setPreviewButton(buttonDraft)
-        }
+    LaunchedEffect(Unit) {
+        snapshotFlow { buttonDraft }
+            .collectLatest { draft ->
+                if (draft != null) {
+                    MacroPadState.setPreviewButton(draft)
+                }
+            }
     }
 
     LaunchedEffect(subPageStack, selectedSection) {
@@ -2810,7 +2815,12 @@ private fun EditButtonPositionsSubPageContent(
                     currentLayout.buttons.map {
                         if (it.id == updatedBtn.id) updatedBtn else it
                     }
-                MacroPadState.updateLayout(currentLayout.copy(buttons = updated))
+                MacroPadState.updateLayoutLive(currentLayout.copy(buttons = updated))
+            },
+            onButtonCommit = {
+                MacroPadState.activeLayout.value?.let { committed ->
+                    MacroPadState.updateLayout(committed)
+                }
             },
         )
 
