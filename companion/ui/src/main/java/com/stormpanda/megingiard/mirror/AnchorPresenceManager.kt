@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -34,7 +35,6 @@ import kotlin.math.roundToInt
 
 private const val TAG = "AnchorPresenceManager"
 
-private const val PRESENCE_CHECK_INTERVAL_ACTIVE_MS = 16L // ~60 Hz (1-frame instant content absence detection)
 private const val PRESENCE_CHECK_INTERVAL_LOST_FAST_MS = 33L // ~30 Hz prompt recovery (0–2s)
 private const val PRESENCE_CHECK_INTERVAL_LOST_MEDIUM_MS = 100L // ~10 Hz candidate polling during cutscenes (2–5s)
 private const val PRESENCE_CHECK_INTERVAL_LOST_SLOW_MS = 500L // ~2 Hz idle polling during long loading screens (>5s)
@@ -69,9 +69,13 @@ object AnchorPresenceManager {
     @Volatile
     private var activeSmoother: WeakReference<GpuMotionSmoother>? = null
 
+    private val _monitorWakeSignal = MutableStateFlow(0)
+
     fun registerGpuMotionSmoother(smoother: GpuMotionSmoother) {
-        AppLog.d(TAG, "Registering active GpuMotionSmoother for hardware presence tracking")
-        activeSmoother = WeakReference(smoother)
+        if (activeSmoother?.get() !== smoother) {
+            AppLog.d(TAG, "Registering active GpuMotionSmoother for hardware presence tracking")
+            activeSmoother = WeakReference(smoother)
+        }
         updateSmootherTracking()
     }
 
@@ -155,6 +159,9 @@ object AnchorPresenceManager {
         }
         layoutStates[layoutId] = newState
         layoutConsecutiveCounts[layoutId] = newCount
+        if (newState != curState) {
+            _monitorWakeSignal.update { it + 1 }
+        }
     }
 
     private fun captureOneShotFrozenFrame(layout: PadLayout) {
@@ -251,6 +258,7 @@ object AnchorPresenceManager {
         val shouldMonitor = isCapturing && (hasLayoutAnchor || (isAutoLayoutSwitching && hasAnyAnchoredLayout))
 
         updateSmootherTracking()
+        _monitorWakeSignal.update { it + 1 }
 
         if (shouldMonitor) {
             if (monitorJob?.isActive != true) {
@@ -328,23 +336,22 @@ object AnchorPresenceManager {
                 continue
             }
 
-            // 60 Hz during active display; tiered back-off (33ms -> 100ms -> 500ms) when lost
+            // Event-driven idle when anchor is PRESENT (presence is evaluated directly on the GL thread);
+            // tiered back-off (33ms -> 100ms -> 500ms) when LOST to scan candidate layouts.
             val isCurrentLost = layoutStates[activeLayout.id] == AnchorPresenceState.LOST
-            if (isCurrentLost && lostStateStartMs == 0L) {
+            if (!isCurrentLost) {
+                val wakeSnapshot = _monitorWakeSignal.value
+                _monitorWakeSignal.first { it != wakeSnapshot }
+                continue
+            }
+            if (lostStateStartMs == 0L) {
                 lostStateStartMs = SystemClock.uptimeMillis()
             }
-            val checkInterval =
-                if (!isCurrentLost) {
-                    PRESENCE_CHECK_INTERVAL_ACTIVE_MS
-                } else {
-                    val elapsedSinceLost = (SystemClock.uptimeMillis() - lostStateStartMs).coerceAtLeast(0L)
-                    computeLostCheckInterval(elapsedSinceLost)
-                }
-            delay(checkInterval)
+            val elapsedSinceLost = (SystemClock.uptimeMillis() - lostStateStartMs).coerceAtLeast(0L)
+            delay(computeLostCheckInterval(elapsedSinceLost))
 
-            // Presence is sampled in hardware at 60 Hz directly on the GL thread with 0 CPU readbacks.
             // While the current layout anchor is LOST, candidate layouts are polled to support auto layout switching.
-            if (isCurrentLost && isAutoSwitchEligible) {
+            if (isAutoSwitchEligible) {
                 val frame = MirrorFrameSampler.captureFullFrame()
                 if (frame != null && frame.width > 0 && frame.height > 0) {
                     processCandidateScan(

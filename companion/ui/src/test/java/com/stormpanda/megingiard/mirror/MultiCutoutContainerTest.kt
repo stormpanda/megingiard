@@ -567,4 +567,37 @@ class MultiCutoutContainerTest {
             output.recycle()
         }
     }
+
+    @Test
+    fun testUnchangedPropertySettersSkipRedundantInvalidation() {
+        val context = RuntimeEnvironment.getApplication()
+        val cutout = ScreenCutout.FULLSCREEN
+        val bmp = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
+        var invalidateCalls = 0
+        val container =
+            object : MultiCutoutContainer(context, 1920, 1080) {
+                override fun invalidate() {
+                    invalidateCalls++
+                    super.invalidate()
+                }
+            }
+
+        try {
+            container.cutouts = listOf(cutout)
+            container.isFrozen = true
+            container.bgBitmap = bmp
+            container.bgImageScale = 1.5f
+            val countAfterFirstAssignments = invalidateCalls
+            assertTrue(countAfterFirstAssignments >= 4)
+
+            // Re-assigning identical values/references must not trigger redundant invalidations
+            container.cutouts = listOf(cutout)
+            container.isFrozen = true
+            container.bgBitmap = bmp
+            container.bgImageScale = 1.5f
+            assertEquals(countAfterFirstAssignments, invalidateCalls)
+        } finally {
+            bmp.recycle()
+        }
+    }
 }

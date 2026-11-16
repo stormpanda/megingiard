@@ -31,22 +31,22 @@ When a cutout's shape is set to `CIRCLE`:
 
 To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support limiting the refresh rate of the mirrored screens:
 
-1. **GPU-Level Frame Pacing (`GpuMotionSmoother`)**:
-   `ScreenCaptureManager.maxFps` is derived from `PadLayout.mirrorMaxFps` and passed to `GpuMotionSmoother`, which paces output frame presentation on its OpenGL ES thread to avoid redrawing `TextureView` faster than the configured `maxFps` interval.
+1. **GPU-Level & Surface Frame Pacing (`EmbeddedMirrorView` / `GpuMotionSmoother`)**:
+   `ScreenCaptureManager.maxFps` is derived from `PadLayout.mirrorMaxFps` (`10..120` FPS, supporting 120 Hz secondary panels such as Retroid Pocket Duo). `EmbeddedMirrorView` deduplicates `Surface.setFrameRate()` Binder calls and paces `TextureView` invalidation using nanosecond `SystemClock.elapsedRealtimeNanos()` intervals (`1_000_000_000L / fps`).
 
 ### Motion Smoothing & Hardware Stream Delay (`GpuMotionSmoother`)
 
 To stabilize mirrored UI elements against fast-moving backgrounds and provide leak-free visual anchor freeze transitions with zero CPU memory overhead, we support a 100% GPU-accelerated temporal blending and stream delay pipeline:
 
 1. **Unified GPU Pipeline (`GpuMotionSmoother`)**:
-   Video frames from `DirectMirrorServer` are received on `GpuMotionSmoother.inputSurface`, providing a constant target surface that never changes during profile, layout, or touchpad transitions.
-2. **0% Pass-Through Mode**:
-   When motion smoothing is disabled (0% strength or active Touchpad mode) and stream delay is 0, `GpuMotionSmoother` executes a single-pass 2D quad texture copy (`drawProgram`) directly into `masterSurface`, bypassing FBO blending with ~0.05ms GPU overhead and 0 input latency.
+   Video frames from `DirectMirrorServer` are received on `GpuMotionSmoother.inputSurface`, providing a constant target surface that never changes during profile, layout, or touchpad transitions. Shader attribute/uniform locations are cached once at link time.
+2. **Zero-FBO Single-Pass Fast Path**:
+   When motion smoothing is disabled (`strength <= 0`), stream delay is `0`, and no calibrated visual anchor is actively tracked, `GpuMotionSmoother` skips FBO allocation entirely (saving ~16.6 MB of GPU VRAM) and executes a single-pass `passthroughProgram` quad directly from `oesTextureId` into `Framebuffer 0` (`masterSurface`) without intermediate FBO blits or redundant `glClear` passes.
 3. **Temporal FBO Blending & Circular Delay Queue**:
-   When motion smoothing is active (e.g. 75%, 80%, 85%) or stream delay is configured ($1 \le \text{delay} \le 10$), `GpuMotionSmoother` maintains an OpenGL ES 2.0 FBO circular ring buffer in GPU VRAM (`fboCount = streamDelayFrames + 1`).
+   When motion smoothing is active, stream delay is configured ($1 \le \text{delay} \le 10$), or a calibrated visual anchor is active, `GpuMotionSmoother` lazily allocates an OpenGL ES 2.0 FBO circular ring buffer in GPU VRAM (`fboCount = (streamDelayFrames + 1).coerceIn(2, MAX_LAYOUT_STREAM_DELAY_FRAMES + 2)`).
    - **Pass 1 (Input & Blend):** Incoming OES textures are either blended with the previous frame texture (`blendProgram`) or copied (`passthroughProgram`) into `fboFramebuffers[writeIndex]`.
-   - **Pass 2 (GL Live Anchor Evaluation):** Evaluates the active visual reference anchor signature directly from `fboFramebuffers[writeIndex]` on the GL thread using a localized `glReadPixels` crop ($< 0.05\text{ ms}$). If anchor loss is detected (and `CutoutLostAnchorEffect.FREEZE` is enabled on a layout with cutouts), `AnchorPresenceManager` synchronously sets `GpuMotionSmoother.setFrozen(true)` before Pass 3, captures a one-shot cutout crop snapshot from the delayed `TextureView` on the Main thread (`captureOneShotFrozenFrame`), and immediately unfreezes `GpuMotionSmoother` (`setFrozen(false)`) in `finally` so `TextureView` continues updating for candidate layout scanning and interactive anchor testing.
-   - **Pass 3 (Delayed Presentation):** Draws `fboTextureIds[delayedIndex]` (`(writeIndex - streamDelayFrames + fboCount) % fboCount`) onto `masterSurface` (`TextureView`). This guarantees smooth 60 FPS presentation without frame drops and with zero menu leakage upon anchor loss.
+   - **Pass 2 (GL Live Anchor Evaluation):** Evaluates the active visual reference anchor signature directly from `fboFramebuffers[writeIndex]` on the GL thread using a tight bounding-box `glReadPixels` sub-crop around the sampled signature points ($< 0.05\text{ ms}$). While the anchor remains `PRESENT`, `AnchorPresenceManager` suspends event-driven (`0 Hz` CPU wakeups); if anchor loss is detected, it wakes immediately for candidate layout scanning and (when `CutoutLostAnchorEffect.FREEZE` is enabled) captures a one-shot cutout crop snapshot on the Main thread.
+   - **Pass 3 (Delayed Presentation):** Draws `fboTextureIds[delayedIndex]` (`(writeIndex - streamDelayFrames + fboCount) % fboCount`) onto `masterSurface` (`TextureView`). This guarantees smooth 60/120 FPS presentation without frame drops and with zero menu leakage upon anchor loss.
 
 ### Automated HUD / UI Isolation & Hardware Transparency Mask Pipeline
 

@@ -132,6 +132,7 @@ object CutoutMaskManager {
                 }
 
             val tunedBitmap = Bitmap.createBitmap(tunedPixels, width, height, Bitmap.Config.ARGB_8888)
+            tunedBitmap.prepareToDraw()
             evictStaleTunedMasksExcept(cutoutId, cacheKey)
             tunedMaskCache[cacheKey] = tunedBitmap
             AppLog.d(
@@ -194,6 +195,7 @@ object CutoutMaskManager {
 
             val staticPixels = CutoutAutoTuner.buildStaticAsset(basePixels, maskPixels, width, height)
             val staticBitmap = Bitmap.createBitmap(staticPixels, width, height, Bitmap.Config.ARGB_8888)
+            staticBitmap.prepareToDraw()
             evictStaleStaticAssetsExcept(cutoutId, cacheKey)
             staticAssetCache[cacheKey] = staticBitmap
             AppLog.d(
@@ -222,6 +224,7 @@ object CutoutMaskManager {
         return try {
             val bitmap = BitmapFactory.decodeFile(file.absolutePath)
             if (bitmap != null) {
+                bitmap.prepareToDraw()
                 baseMaskCache[cutoutId] = bitmap
                 maskExistenceCache[cutoutId] = true
                 AppLog.d(TAG, "Loaded mask for cutout $cutoutId (${bitmap.width}x${bitmap.height}) from disk")
@@ -325,6 +328,7 @@ object CutoutMaskManager {
         return try {
             val bitmap = BitmapFactory.decodeFile(file.absolutePath)
             if (bitmap != null) {
+                bitmap.prepareToDraw()
                 freezeFrameCache[cutoutId] = bitmap
                 freezeExistenceCache[cutoutId] = true
                 AppLog.d(TAG, "Loaded freeze frame for cutout $cutoutId (${bitmap.width}x${bitmap.height}) from disk")

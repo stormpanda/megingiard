@@ -119,8 +119,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
             KeyboardLayoutState(keyboardMode, grid)
         }
 
-    val pressedKeys by gestureProcessor.pressedKeys.collectAsStateWithLifecycle()
-
     val densityVal = density.density
     LaunchedEffect(densityVal) {
         gestureProcessor.density = densityVal
@@ -205,7 +203,6 @@ fun KeyboardScreen(modifier: Modifier = Modifier) {
                     KeyboardLayoutGrid(
                         activeState = activeState,
                         gestureProcessor = gestureProcessor,
-                        pressedKeys = pressedKeys,
                         isShiftActive = isShiftActive,
                         isCapsActive = isCapsActive,
                         isAltGrActive = isAltGrActive,

@@ -46,12 +46,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -140,20 +139,37 @@ fun GamepadFocusCard(
         }
     }
 
-    val animatedBorderWidth by animateDpAsState(
-        targetValue = if (isEffectivelyFocused) GC_FOCUS_BORDER_WIDTH else GC_DEFAULT_BORDER_WIDTH,
-        animationSpec = tween(GC_ANIM_DURATION_MS),
-        label = "cardBorderWidth",
-    )
-    val animatedBorderColor by animateColorAsState(
-        targetValue = if (isEffectivelyFocused) colors.accent else unfocusedBorderColor,
-        animationSpec = tween(GC_ANIM_DURATION_MS),
-        label = "cardBorderColor",
-    )
+    var hasEverBeenEffectivelyFocused by remember { mutableStateOf(isEffectivelyFocused) }
+    if (isEffectivelyFocused && !hasEverBeenEffectivelyFocused) {
+        hasEverBeenEffectivelyFocused = true
+    }
+
+    val animatedBorderWidth =
+        if (hasEverBeenEffectivelyFocused) {
+            val bw by animateDpAsState(
+                targetValue = if (isEffectivelyFocused) GC_FOCUS_BORDER_WIDTH else GC_DEFAULT_BORDER_WIDTH,
+                animationSpec = tween(GC_ANIM_DURATION_MS),
+                label = "cardBorderWidth",
+            )
+            bw
+        } else {
+            GC_DEFAULT_BORDER_WIDTH
+        }
+    val animatedBorderColor =
+        if (hasEverBeenEffectivelyFocused) {
+            val bc by animateColorAsState(
+                targetValue = if (isEffectivelyFocused) colors.accent else unfocusedBorderColor,
+                animationSpec = tween(GC_ANIM_DURATION_MS),
+                label = "cardBorderColor",
+            )
+            bc
+        } else {
+            unfocusedBorderColor
+        }
     val animatedBgColor =
         if (cardBgColor != null) {
             cardBgColor
-        } else {
+        } else if (hasEverBeenEffectivelyFocused) {
             val targetBg =
                 if (isEffectivelyFocused) {
                     colors.surface.copy(alpha = GC_CARD_FOCUSED_BG_ALPHA)
@@ -166,12 +182,20 @@ fun GamepadFocusCard(
                 label = "cardBgColor",
             )
             bg
+        } else {
+            colors.surface.copy(alpha = GC_CARD_UNFOCUSED_BG_ALPHA)
         }
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isEffectivelyFocused) GC_FOCUS_ELEVATION else GC_DEFAULT_ELEVATION,
-        animationSpec = tween(GC_ANIM_DURATION_MS),
-        label = "cardElevation",
-    )
+    val animatedElevation =
+        if (hasEverBeenEffectivelyFocused) {
+            val el by animateDpAsState(
+                targetValue = if (isEffectivelyFocused) GC_FOCUS_ELEVATION else GC_DEFAULT_ELEVATION,
+                animationSpec = tween(GC_ANIM_DURATION_MS),
+                label = "cardElevation",
+            )
+            el
+        } else {
+            GC_DEFAULT_ELEVATION
+        }
 
     var lastCustomConsumedDownKeyCode by remember { mutableIntStateOf(0) }
     var lastActionDownKeyCode by remember { mutableIntStateOf(0) }
@@ -275,18 +299,20 @@ fun GamepadFocusCard(
                     this.shadowElevation = animatedElevation.toPx()
                     this.shape = shape
                     this.clip = false
-                }.drawBehind {
+                }.drawWithCache {
                     val outline = shape.createOutline(size, layoutDirection, this)
-                    drawOutline(
-                        outline = outline,
-                        brush = SolidColor(animatedBgColor),
-                        style = Fill,
-                    )
-                    drawOutline(
-                        outline = outline,
-                        brush = SolidColor(animatedBorderColor),
-                        style = Stroke(width = animatedBorderWidth.toPx()),
-                    )
+                    onDrawBehind {
+                        drawOutline(
+                            outline = outline,
+                            color = animatedBgColor,
+                            style = Fill,
+                        )
+                        drawOutline(
+                            outline = outline,
+                            color = animatedBorderColor,
+                            style = Stroke(width = animatedBorderWidth.toPx()),
+                        )
+                    }
                 }
         }
 

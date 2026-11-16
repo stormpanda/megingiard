@@ -251,7 +251,7 @@ class MacroPadHitTestEngine(
         buttons: List<PadButton>,
     ) {
         val mappedId = pointerMap[pointerId] ?: return
-        val mappedBtn = buttons.firstOrNull { it.id == mappedId } ?: pointerButtonMap[pointerId] ?: return
+        val mappedBtn = pointerButtonMap[pointerId] ?: buttons.firstOrNull { it.id == mappedId } ?: return
 
         when {
             mappedBtn.action is PadAction.TrackpointMove -> {
@@ -342,7 +342,7 @@ class MacroPadHitTestEngine(
                 if (units != 0) {
                     MouseInjector.scrollWheel(units)
                     scrollStartY[pointerId] = py
-                    triggerHaptic(mappedBtn, 0f)
+                    triggerHaptic(mappedBtn, 0f, log = false)
                 }
             }
         }

@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
@@ -141,7 +142,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
                 Modifier
                     .align(
                         if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter,
-                    ).graphicsLayer(alpha = alpha.value * swipeAlpha),
+                    ).graphicsLayer { this.alpha = alpha.value * swipeAlpha },
         )
 
         // Keyboard Bar tab (Left/Start)
@@ -153,7 +154,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
                     .align(
                         if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart,
                     ).padding(start = QuickMenuBarLayout.TAB_PADDING)
-                    .graphicsLayer(alpha = alpha.value * swipeAlpha),
+                    .graphicsLayer { this.alpha = alpha.value * swipeAlpha },
         )
 
         // Touchpad Bar tab (Right/End)
@@ -165,7 +166,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
                     .align(
                         if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd,
                     ).padding(end = QuickMenuBarLayout.TAB_PADDING)
-                    .graphicsLayer(alpha = alpha.value * swipeAlpha),
+                    .graphicsLayer { this.alpha = alpha.value * swipeAlpha },
         )
 
         // ─── Sliding gesture pills ───────────────────────────────────────────────
@@ -246,10 +247,10 @@ internal fun QuickMenuSlidingPill(
     Box(
         modifier =
             modifier
-                .offset(y = yOffset)
+                .offset { IntOffset(0, yOffset.roundToPx()) }
                 .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
                 .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
-                .graphicsLayer(alpha = alpha)
+                .graphicsLayer { this.alpha = alpha }
                 .background(color = if (isPastThreshold) colors.accent else colors.controlOverlay, shape = CircleShape)
                 .border(
                     width = PILL_BORDER_WIDTH,

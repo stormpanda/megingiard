@@ -39,7 +39,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -52,9 +51,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.math.DesignViewport
 import com.stormpanda.megingiard.ui.AppPalettes
+import com.stormpanda.megingiard.ui.CompanionAppIconCache
 import com.stormpanda.megingiard.ui.MaterialSymbol
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -117,7 +115,9 @@ internal val MP_AMBIENT_NEUTRAL_TEXT = AppPalettes.macroPadNeutralText
 @Composable
 internal fun PadButton(
     btn: PadButton,
-    layout: PadLayout,
+    defaultBgColor: ColorOption,
+    defaultBorderColor: ColorOption,
+    defaultTextColor: ColorOption,
     isPressed: Boolean,
     viewport: DesignViewport,
     accentColor: Color,
@@ -135,9 +135,9 @@ internal fun PadButton(
 
     val density = LocalDensity.current
 
-    val resolvedBgColorOption = btn.buttonBgColor ?: layout.buttonBgColor
-    val resolvedBorderColorOption = btn.buttonBorderColor ?: layout.buttonBorderColor
-    val resolvedTextColorOption = btn.buttonTextColor ?: layout.buttonTextColor
+    val resolvedBgColorOption = btn.buttonBgColor ?: defaultBgColor
+    val resolvedBorderColorOption = btn.buttonBorderColor ?: defaultBorderColor
+    val resolvedTextColorOption = btn.buttonTextColor ?: defaultTextColor
 
     val effectiveBg = resolveBgColorOption(resolvedBgColorOption, accentColor)
     val effectiveBorder = resolveColorOption(resolvedBorderColorOption, accentColor, MP_AMBIENT_NEUTRAL_BORDER)
@@ -352,27 +352,27 @@ internal fun AppLauncherFace(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    var appIconBitmap by remember(action.packageName) { mutableStateOf<ImageBitmap?>(null) }
-    var resolvedName by remember(action.packageName) { mutableStateOf("") }
+    var appIconBitmap by remember(action.packageName) {
+        mutableStateOf(CompanionAppIconCache.getCachedIcon(action.packageName))
+    }
+    var resolvedName by remember(action.packageName) {
+        mutableStateOf(CompanionAppIconCache.getCachedLabel(action.packageName).orEmpty())
+    }
 
     LaunchedEffect(action.packageName) {
-        if (action.packageName.isNotBlank()) {
-            withContext(Dispatchers.IO) {
-                try {
-                    val pm = context.packageManager
-                    val appInfo = pm.getApplicationInfo(action.packageName, 0)
-                    resolvedName = pm.getApplicationLabel(appInfo).toString()
-                    val drawable = appInfo.loadIcon(pm)
-                    appIconBitmap = drawable?.toImageBitmap()
-                } catch (e: Exception) {
-                    AppLog.d(TAG, "Failed to load icon/label for app launcher ${action.packageName}: ${e.message}")
-                    resolvedName = action.packageName
-                    appIconBitmap = null
-                }
-            }
-        } else {
+        if (action.packageName.isBlank()) {
             appIconBitmap = null
             resolvedName = ""
+        } else {
+            if (appIconBitmap == null || resolvedName.isEmpty()) {
+                AppLog.d(TAG, "Loading uncached launcher icon/label for ${action.packageName}")
+                if (resolvedName.isEmpty()) {
+                    resolvedName = CompanionAppIconCache.loadLabel(context, action.packageName) ?: action.packageName
+                }
+                if (appIconBitmap == null) {
+                    appIconBitmap = CompanionAppIconCache.loadIcon(context, action.packageName)
+                }
+            }
         }
     }
 

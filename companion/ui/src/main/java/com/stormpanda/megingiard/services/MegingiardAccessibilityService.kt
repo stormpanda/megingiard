@@ -147,6 +147,9 @@ class MegingiardAccessibilityService : AccessibilityService() {
         if (!isPrimaryDisplay || eventPackage == packageName) {
             return
         }
+        if (!KeyboardSettings.kbAutoOpenOnFocus.value && !AutoKeyboardFocusCoordinator.isKeyboardAutoOpened.value) {
+            return
+        }
 
         when (event.eventType) {
             AccessibilityEvent.TYPE_VIEW_FOCUSED,

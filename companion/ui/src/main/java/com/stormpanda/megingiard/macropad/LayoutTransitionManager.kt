@@ -24,7 +24,7 @@ import kotlin.coroutines.resume
 
 private const val TAG = "LayoutTransitionManager"
 private const val DEFAULT_TRANSITION_DURATION_MS = 300L
-private const val FRAME_INTERVAL_MS = 16L
+private const val FRAME_INTERVAL_MS = 8L
 private const val FULL_ALPHA_FLOAT = 1.0f
 private const val ZERO_ALPHA_FLOAT = 0.0f
 
@@ -195,6 +195,7 @@ object LayoutTransitionManager {
         }
 
         // Apply snapshot overlay and switch layout state underneath
+        bitmap.prepareToDraw()
         _transitionSnapshot.value = bitmap
         _transitionAlpha.value = FULL_ALPHA_FLOAT
         _isTransitioning.value = true

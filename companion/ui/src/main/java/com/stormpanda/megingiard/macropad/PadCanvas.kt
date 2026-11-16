@@ -192,13 +192,29 @@ internal data class LayoutLayerBitmaps(
 internal fun rememberLayoutLayerBitmaps(
     context: Context,
     layout: PadLayout?,
+    enabled: Boolean = true,
 ): LayoutLayerBitmaps {
     val mediaRevision by MacroPadMediaRepository.mediaRevision.collectAsStateWithLifecycle()
 
-    var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion, mediaRevision) {
+    var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion, enabled, mediaRevision) {
         val path = layout?.backgroundImagePath
-        if (path != null) {
+        val cached =
+            if (enabled && path != null) {
+                MacroPadMediaRepository.getCachedScaledBitmap(context, path)?.asImageBitmap()
+            } else {
+                null
+            }
+        mutableStateOf(cached)
+    }
+    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion, enabled, mediaRevision) {
+        if (!enabled) {
+            bgBitmap = null
+            return@LaunchedEffect
+        }
+        val path = layout?.backgroundImagePath
+        if (path == null) {
+            bgBitmap = null
+        } else if (bgBitmap == null) {
             try {
                 val decoded = MacroPadMediaRepository.loadScaledBitmap(context, path)
                 bgBitmap = decoded?.asImageBitmap()
@@ -206,15 +222,28 @@ internal fun rememberLayoutLayerBitmaps(
                 AppLog.e(TAG, "Failed to decode background image $path", e)
                 bgBitmap = null
             }
-        } else {
-            bgBitmap = null
         }
     }
 
-    var maskBitmap by remember(layout?.maskImagePath, layout?.maskImageVersion) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(layout?.maskImagePath, layout?.maskImageVersion, mediaRevision) {
+    var maskBitmap by remember(layout?.maskImagePath, layout?.maskImageVersion, enabled, mediaRevision) {
         val path = layout?.maskImagePath
-        if (path != null) {
+        val cached =
+            if (enabled && path != null) {
+                MacroPadMediaRepository.getCachedScaledBitmap(context, path)?.asImageBitmap()
+            } else {
+                null
+            }
+        mutableStateOf(cached)
+    }
+    LaunchedEffect(layout?.maskImagePath, layout?.maskImageVersion, enabled, mediaRevision) {
+        if (!enabled) {
+            maskBitmap = null
+            return@LaunchedEffect
+        }
+        val path = layout?.maskImagePath
+        if (path == null) {
+            maskBitmap = null
+        } else if (maskBitmap == null) {
             try {
                 val decoded = MacroPadMediaRepository.loadScaledBitmap(context, path)
                 maskBitmap = decoded?.asImageBitmap()
@@ -222,8 +251,6 @@ internal fun rememberLayoutLayerBitmaps(
                 AppLog.e(TAG, "Failed to decode mask image $path", e)
                 maskBitmap = null
             }
-        } else {
-            maskBitmap = null
         }
     }
 
@@ -363,11 +390,10 @@ internal fun PadCanvas(
         }
     }
 
-    val layerBitmaps = rememberLayoutLayerBitmaps(context, layout)
+    val isCropping = isCroppingBackground || isCroppingMask
+    val layerBitmaps = rememberLayoutLayerBitmaps(context, layout, enabled = !transparentBackground || isCropping)
     val bgBitmap = layerBitmaps.bgBitmap
     val maskBitmap = layerBitmaps.maskBitmap
-
-    val isCropping = isCroppingBackground || isCroppingMask
     val activeCropBitmap =
         if (isCroppingBackground) {
             bgBitmap
@@ -555,47 +581,78 @@ private fun EditableButtonsCanvas(
     val isAdjustingViaGamepad by MacroPadState.isAdjustingButtonViaGamepad.collectAsStateWithLifecycle()
     var draggingBodyButtonId by remember { mutableStateOf<String?>(null) }
 
+    val targetLayoutId = layout.id
+    val buttonsProvider =
+        remember(targetLayoutId) {
+            {
+                MacroPadState.activeProfile.value
+                    ?.layouts
+                    ?.firstOrNull { it.id == targetLayoutId }
+                    ?.buttons
+                    ?: emptyList()
+            }
+        }
+
     layout.buttons.forEach { btn ->
-        val targetLayoutId = layout.id
-        DraggableButton(
-            btn = btn,
-            layout = layout,
-            designCanvas = designCanvas,
-            viewport = viewport,
-            accentColor = accentColor,
-            gridMode = gridMode,
-            alignmentSnapping = alignmentSnapping,
-            isLocked = isLocked || isCropping,
-            onTouch = {
-                MacroPadState.setSelectedButtonId(btn.id)
-            },
-            onDragActiveChanged = { active ->
-                draggingBodyButtonId = if (active) btn.id else null
-            },
-            onPositionChanged = { nx, ny ->
-                val activeProfile = MacroPadState.activeProfile.value
-                if (activeProfile != null) {
-                    val currentLayout = activeProfile.layouts.firstOrNull { it.id == targetLayoutId }
-                    if (currentLayout != null) {
-                        MacroPadState.updateLayoutLive(
-                            currentLayout.copy(
-                                buttons =
-                                    currentLayout.buttons.map { b ->
-                                        if (b.id == btn.id) b.copy(posX = nx, posY = ny) else b
-                                    },
-                            ),
-                        )
+        key(btn.id) {
+            val buttonId = btn.id
+            val onTouchCallback =
+                remember(buttonId) {
+                    { MacroPadState.setSelectedButtonId(buttonId) }
+                }
+            val onDragActiveCallback =
+                remember(buttonId) {
+                    { active: Boolean ->
+                        draggingBodyButtonId = if (active) buttonId else null
                     }
                 }
-            },
-            onDragFinished = {
-                val activeProfile = MacroPadState.activeProfile.value
-                val currentLayout = activeProfile?.layouts?.firstOrNull { it.id == targetLayoutId }
-                if (currentLayout != null) {
-                    MacroPadState.updateLayout(currentLayout)
+            val onPositionChangedCallback =
+                remember(buttonId, targetLayoutId) {
+                    { nx: Float, ny: Float ->
+                        val activeProfile = MacroPadState.activeProfile.value
+                        if (activeProfile != null) {
+                            val currentLayout = activeProfile.layouts.firstOrNull { it.id == targetLayoutId }
+                            if (currentLayout != null) {
+                                MacroPadState.updateLayoutLive(
+                                    currentLayout.copy(
+                                        buttons =
+                                            currentLayout.buttons.map { b ->
+                                                if (b.id == buttonId) b.copy(posX = nx, posY = ny) else b
+                                            },
+                                    ),
+                                )
+                            }
+                        }
+                    }
                 }
-            },
-        )
+            val onDragFinishedCallback =
+                remember(targetLayoutId) {
+                    {
+                        val activeProfile = MacroPadState.activeProfile.value
+                        val currentLayout = activeProfile?.layouts?.firstOrNull { it.id == targetLayoutId }
+                        if (currentLayout != null) {
+                            MacroPadState.updateLayout(currentLayout)
+                        }
+                    }
+                }
+            DraggableButton(
+                btn = btn,
+                defaultBgColor = layout.buttonBgColor,
+                defaultBorderColor = layout.buttonBorderColor,
+                defaultTextColor = layout.buttonTextColor,
+                buttonsProvider = buttonsProvider,
+                designCanvas = designCanvas,
+                viewport = viewport,
+                accentColor = accentColor,
+                gridMode = gridMode,
+                alignmentSnapping = alignmentSnapping,
+                isLocked = isLocked || isCropping,
+                onTouch = onTouchCallback,
+                onDragActiveChanged = onDragActiveCallback,
+                onPositionChanged = onPositionChangedCallback,
+                onDragFinished = onDragFinishedCallback,
+            )
+        }
     }
 
     // Discover active alignment guides in designCanvas pixel space
@@ -860,7 +917,10 @@ private fun EditableButtonsCanvas(
 @Composable
 private fun DraggableButton(
     btn: PadButton,
-    layout: PadLayout,
+    defaultBgColor: ColorOption,
+    defaultBorderColor: ColorOption,
+    defaultTextColor: ColorOption,
+    buttonsProvider: () -> List<PadButton>,
     designCanvas: LayoutCanvasSpec,
     viewport: DesignViewport,
     accentColor: Color,
@@ -878,16 +938,16 @@ private fun DraggableButton(
         return
     }
 
-    val resolvedBgColorOption = btn.buttonBgColor ?: layout.buttonBgColor
-    val resolvedBorderColorOption = btn.buttonBorderColor ?: layout.buttonBorderColor
-    val resolvedTextColorOption = btn.buttonTextColor ?: layout.buttonTextColor
+    val resolvedBgColorOption = btn.buttonBgColor ?: defaultBgColor
+    val resolvedBorderColorOption = btn.buttonBorderColor ?: defaultBorderColor
+    val resolvedTextColorOption = btn.buttonTextColor ?: defaultTextColor
 
     val effectiveBg = resolveBgColorOption(resolvedBgColorOption, accentColor)
     val effectiveBorder = resolveColorOption(resolvedBorderColorOption, accentColor, MP_AMBIENT_NEUTRAL_BORDER)
     val effectiveTextTint = resolveColorOption(resolvedTextColorOption, accentColor, MP_AMBIENT_NEUTRAL_TEXT)
 
     val currentBtn = rememberUpdatedState(btn)
-    val currentButtons = rememberUpdatedState(layout.buttons)
+    val currentButtonsProvider = rememberUpdatedState(buttonsProvider)
     val currentDesignCanvas = rememberUpdatedState(designCanvas)
     val currentViewport = rememberUpdatedState(viewport)
     val currentOnPositionChanged = rememberUpdatedState(onPositionChanged)
@@ -967,7 +1027,7 @@ private fun DraggableButton(
                                             rawNormX = rawX,
                                             rawNormY = rawY,
                                             movingButtonId = btn.id,
-                                            otherButtons = currentButtons.value,
+                                            otherButtons = currentButtonsProvider.value(),
                                             canvasW = spec.widthPx.toFloat(),
                                             canvasH = spec.heightPx.toFloat(),
                                             alignmentSnappingEnabled = currentAlignmentSnapping.value,

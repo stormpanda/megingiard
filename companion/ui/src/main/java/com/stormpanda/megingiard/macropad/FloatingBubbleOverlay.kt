@@ -48,14 +48,13 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.CompanionAppIconCache
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import com.stormpanda.megingiard.ui.WindowOverlayLifecycleOwner
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 private const val TAG = "FloatingBubbleOverlay"
@@ -65,6 +64,8 @@ private val FBO_OVERSHOOT_MARGIN: Dp = 12.dp
 private val FBO_WINDOW_SIZE: Dp = FBO_BUBBLE_SIZE + FBO_OVERSHOOT_MARGIN * 2
 private val FBO_BORDER_WIDTH: Dp = 2.dp
 private val FBO_ICON_SIZE: Dp = 36.dp
+private val FBO_INNER_PADDING: Dp = 6.dp
+private const val FBO_SURFACE_ALPHA = 0.95f
 private const val FBO_INITIAL_X_DP = 32
 private const val FBO_INITIAL_Y_DP = 200
 
@@ -135,6 +136,7 @@ object FloatingBubbleOverlay {
                     width = windowSizePx
                     height = windowSizePx
                     gravity = Gravity.TOP or Gravity.START
+                    fitInsetsTypes = 0
                     x = if (touchX >= 0f) (touchX - windowSizePx / 2f).coerceAtLeast(0f).toInt() else (FBO_INITIAL_X_DP * density).toInt()
                     y = if (touchY >= 0f) (touchY - windowSizePx / 2f).coerceAtLeast(0f).toInt() else (FBO_INITIAL_Y_DP * density).toInt()
                 }
@@ -172,9 +174,13 @@ object FloatingBubbleOverlay {
                             isDragging = true
                         }
                         if (isDragging) {
-                            params.x = (dragStartX + dx).toInt()
-                            params.y = (dragStartY + dy).toInt()
-                            wm.updateViewLayout(view, params)
+                            val newX = (dragStartX + dx).toInt()
+                            val newY = (dragStartY + dy).toInt()
+                            if (params.x != newX || params.y != newY) {
+                                params.x = newX
+                                params.y = newY
+                                wm.updateViewLayout(view, params)
+                            }
                         }
                         true
                     }
@@ -196,10 +202,11 @@ object FloatingBubbleOverlay {
             view.setContent {
                 val themeMode by SettingsManager.themeMode.collectAsStateWithLifecycle()
                 val userAccentArgb by SettingsManager.accentColor.collectAsStateWithLifecycle()
-                val appColors = paletteFor(themeMode, Color(userAccentArgb))
+                val appColors = remember(themeMode, userAccentArgb) { paletteFor(themeMode, Color(userAccentArgb)) }
+                val colorScheme = remember(appColors) { colorSchemeFor(appColors) }
 
                 MaterialTheme(
-                    colorScheme = colorSchemeFor(appColors),
+                    colorScheme = colorScheme,
                     typography = megingiardTypography,
                 ) {
                     CompositionLocalProvider(
@@ -244,20 +251,15 @@ private fun FloatingBubbleContent() {
     val colors = LocalAppColors.current
     val context = LocalContext.current
     var visible by remember { mutableStateOf(false) }
-    var megingiardIconBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var megingiardIconBitmap by remember(context.packageName) {
+        mutableStateOf(CompanionAppIconCache.getCachedIcon(context.packageName))
+    }
 
     LaunchedEffect(Unit) {
         visible = true
-        megingiardIconBitmap =
-            withContext(Dispatchers.IO) {
-                try {
-                    val iconDrawable = context.packageManager.getApplicationIcon(context.packageName)
-                    iconDrawable.toImageBitmap()
-                } catch (e: Exception) {
-                    AppLog.w(TAG, "Failed to load Megingiard app icon: ${e.message}")
-                    null
-                }
-            }
+        if (megingiardIconBitmap == null) {
+            megingiardIconBitmap = CompanionAppIconCache.loadIcon(context, context.packageName)
+        }
     }
 
     val scale by animateFloatAsState(
@@ -284,9 +286,9 @@ private fun FloatingBubbleContent() {
                         alpha = scale.coerceIn(0f, 1f)
                     }.size(FBO_BUBBLE_SIZE)
                     .clip(CircleShape)
-                    .background(colors.surface.copy(alpha = 0.95f))
+                    .background(colors.surface.copy(alpha = FBO_SURFACE_ALPHA))
                     .border(FBO_BORDER_WIDTH, colors.accent, CircleShape)
-                    .padding(6.dp),
+                    .padding(FBO_INNER_PADDING),
         ) {
             val bitmap = megingiardIconBitmap
             if (bitmap != null) {

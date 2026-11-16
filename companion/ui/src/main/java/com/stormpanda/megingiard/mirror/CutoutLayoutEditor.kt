@@ -6,7 +6,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -17,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,10 +31,12 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
@@ -106,15 +108,18 @@ fun CutoutLayoutEditor() {
     val srcWidth = if (captureSourceWidth > 0) captureSourceWidth.toFloat() else CLE_FALLBACK_SRC_WIDTH
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else CLE_FALLBACK_SRC_HEIGHT
 
-    BoxWithConstraints(
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
+
+    Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(Color.Transparent),
+                .background(Color.Transparent)
+                .onSizeChanged { containerSize = it },
     ) {
-        val containerW = constraints.maxWidth.toFloat()
-        val containerH = constraints.maxHeight.toFloat()
-        if (containerW <= 0f || containerH <= 0f) return@BoxWithConstraints
+        val containerW = containerSize.width.toFloat()
+        val containerH = containerSize.height.toFloat()
+        if (containerW <= 0f || containerH <= 0f) return@Box
 
         val designCanvas = layout.effectiveDesignCanvas
         val screenW = designCanvas.widthPx.toFloat()
@@ -126,7 +131,7 @@ fun CutoutLayoutEditor() {
                 designWidthPx = screenW,
                 designHeightPx = screenH,
             )
-        if (viewport.viewportWidthPx <= 0f || viewport.viewportHeightPx <= 0f) return@BoxWithConstraints
+        if (viewport.viewportWidthPx <= 0f || viewport.viewportHeightPx <= 0f) return@Box
 
         val currentViewportState = rememberUpdatedState(viewport)
         val currentSnapEnabledState = rememberUpdatedState(cutoutAlignmentSnapping)
@@ -151,478 +156,483 @@ fun CutoutLayoutEditor() {
             // ── Multi-Cutout Arrangement Mode ──────────────────────────────────────
             // Draw all active cutout destinations
             for ((cutoutIndex, cutout) in layout.mirrorCutouts.withIndex()) {
-                val currentCutoutState = rememberUpdatedState(cutout)
-                val currentLayoutState = rememberUpdatedState(layout)
-                val destLeft = viewport.normToScreenX(cutout.destX)
-                val destTop = viewport.normToScreenY(cutout.destY)
-                val destW = cutout.destWidth * viewport.viewportWidthPx
-                val destH = cutout.destHeight * viewport.viewportHeightPx
-                val isSelected = cutout.id == selectedCutoutId
+                key(cutout.id) {
+                    val currentCutoutState = rememberUpdatedState(cutout)
+                    val currentLayoutState = rememberUpdatedState(layout)
+                    val destLeft = viewport.normToScreenX(cutout.destX)
+                    val destTop = viewport.normToScreenY(cutout.destY)
+                    val destW = cutout.destWidth * viewport.viewportWidthPx
+                    val destH = cutout.destHeight * viewport.viewportHeightPx
+                    val isSelected = cutout.id == selectedCutoutId
 
-                // Render destination bounding box
-                val isCircle = cutout.shape == CutoutShape.CIRCLE
-                Box(
-                    modifier =
-                        Modifier
-                            .offset { IntOffset(destLeft.roundToInt(), destTop.roundToInt()) }
-                            .size(
-                                width = with(density) { destW.toDp() },
-                                height = with(density) { destH.toDp() },
-                            ).clickable {
-                                AppStateManager.setSelectedCutoutId(cutout.id)
-                            }.pointerInput(cutout.id) {
-                                var dragStartX = 0f
-                                var dragStartY = 0f
-                                var accumulatedX = 0f
-                                var accumulatedY = 0f
-                                detectDragGestures(
-                                    onDragStart = {
-                                        val curCutout = currentCutoutState.value
-                                        dragStartX = curCutout.destX
-                                        dragStartY = curCutout.destY
-                                        accumulatedX = 0f
-                                        accumulatedY = 0f
-                                        AppLog.d(TAG, "Drag start cutout '${curCutout.name}' at (${curCutout.destX}, ${curCutout.destY})")
-                                        AppStateManager.setSelectedCutoutId(curCutout.id)
-                                    },
-                                    onDragEnd = {
-                                        commitCurrentCutoutLayout(currentLayoutState.value.id)
-                                    },
-                                    onDragCancel = {
-                                        commitCurrentCutoutLayout(currentLayoutState.value.id)
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        change.consume()
-                                        val curLayout = currentLayoutState.value
-                                        val curCutout = currentCutoutState.value
-                                        val curViewport = currentViewportState.value
-                                        val curDesignW = curLayout.effectiveDesignCanvas.widthPx.toFloat()
-                                        val curDesignH = curLayout.effectiveDesignCanvas.heightPx.toFloat()
-                                        accumulatedX += dragAmount.x
-                                        accumulatedY += dragAmount.y
-                                        val targetX = dragStartX + accumulatedX / curViewport.viewportWidthPx
-                                        val targetY = dragStartY + accumulatedY / curViewport.viewportHeightPx
-
-                                        val snapResult =
-                                            calculateCutoutAlignmentSnap(
-                                                rawDestX = targetX,
-                                                rawDestY = targetY,
-                                                destWidth = curCutout.destWidth,
-                                                destHeight = curCutout.destHeight,
-                                                movingCutoutId = curCutout.id,
-                                                otherCutouts = curLayout.mirrorCutouts,
-                                                canvasW = curDesignW,
-                                                canvasH = curDesignH,
-                                                alignmentSnappingEnabled = currentSnapEnabledState.value,
-                                                minNormX = curViewport.minNormX,
-                                                maxNormX = curViewport.maxNormX,
-                                                minNormY = curViewport.minNormY,
-                                                maxNormY = curViewport.maxNormY,
+                    // Render destination bounding box
+                    val isCircle = cutout.shape == CutoutShape.CIRCLE
+                    Box(
+                        modifier =
+                            Modifier
+                                .offset { IntOffset(destLeft.roundToInt(), destTop.roundToInt()) }
+                                .size(
+                                    width = with(density) { destW.toDp() },
+                                    height = with(density) { destH.toDp() },
+                                ).clickable {
+                                    AppStateManager.setSelectedCutoutId(cutout.id)
+                                }.pointerInput(cutout.id) {
+                                    var dragStartX = 0f
+                                    var dragStartY = 0f
+                                    var accumulatedX = 0f
+                                    var accumulatedY = 0f
+                                    detectDragGestures(
+                                        onDragStart = {
+                                            val curCutout = currentCutoutState.value
+                                            dragStartX = curCutout.destX
+                                            dragStartY = curCutout.destY
+                                            accumulatedX = 0f
+                                            accumulatedY = 0f
+                                            AppLog.d(
+                                                TAG,
+                                                "Drag start cutout '${curCutout.name}' at (${curCutout.destX}, ${curCutout.destY})",
                                             )
+                                            AppStateManager.setSelectedCutoutId(curCutout.id)
+                                        },
+                                        onDragEnd = {
+                                            commitCurrentCutoutLayout(currentLayoutState.value.id)
+                                        },
+                                        onDragCancel = {
+                                            commitCurrentCutoutLayout(currentLayoutState.value.id)
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            val curLayout = currentLayoutState.value
+                                            val curCutout = currentCutoutState.value
+                                            val curViewport = currentViewportState.value
+                                            val curDesignW = curLayout.effectiveDesignCanvas.widthPx.toFloat()
+                                            val curDesignH = curLayout.effectiveDesignCanvas.heightPx.toFloat()
+                                            accumulatedX += dragAmount.x
+                                            accumulatedY += dragAmount.y
+                                            val targetX = dragStartX + accumulatedX / curViewport.viewportWidthPx
+                                            val targetY = dragStartY + accumulatedY / curViewport.viewportHeightPx
 
-                                        val (clampedX, clampedY) =
-                                            clampCutoutDrag(
-                                                cutoutId = curCutout.id,
-                                                originalX = curCutout.destX,
-                                                originalY = curCutout.destY,
-                                                targetX = snapResult.snappedNormX,
-                                                targetY = snapResult.snappedNormY,
-                                                width = curCutout.destWidth,
-                                                height = curCutout.destHeight,
-                                                allCutouts = curLayout.mirrorCutouts,
-                                                minNormX = curViewport.minNormX,
-                                                maxNormX = curViewport.maxNormX,
-                                                minNormY = curViewport.minNormY,
-                                                maxNormY = curViewport.maxNormY,
-                                            )
+                                            val snapResult =
+                                                calculateCutoutAlignmentSnap(
+                                                    rawDestX = targetX,
+                                                    rawDestY = targetY,
+                                                    destWidth = curCutout.destWidth,
+                                                    destHeight = curCutout.destHeight,
+                                                    movingCutoutId = curCutout.id,
+                                                    otherCutouts = curLayout.mirrorCutouts,
+                                                    canvasW = curDesignW,
+                                                    canvasH = curDesignH,
+                                                    alignmentSnappingEnabled = currentSnapEnabledState.value,
+                                                    minNormX = curViewport.minNormX,
+                                                    maxNormX = curViewport.maxNormX,
+                                                    minNormY = curViewport.minNormY,
+                                                    maxNormY = curViewport.maxNormY,
+                                                )
 
-                                        val updated =
-                                            curLayout.mirrorCutouts.map {
-                                                if (it.id == curCutout.id) it.copy(destX = clampedX, destY = clampedY) else it
-                                            }
-                                        MacroPadState.updateLayoutLive(curLayout.copy(mirrorCutouts = updated))
-                                    },
+                                            val (clampedX, clampedY) =
+                                                clampCutoutDrag(
+                                                    cutoutId = curCutout.id,
+                                                    originalX = curCutout.destX,
+                                                    originalY = curCutout.destY,
+                                                    targetX = snapResult.snappedNormX,
+                                                    targetY = snapResult.snappedNormY,
+                                                    width = curCutout.destWidth,
+                                                    height = curCutout.destHeight,
+                                                    allCutouts = curLayout.mirrorCutouts,
+                                                    minNormX = curViewport.minNormX,
+                                                    maxNormX = curViewport.maxNormX,
+                                                    minNormY = curViewport.minNormY,
+                                                    maxNormY = curViewport.maxNormY,
+                                                )
+
+                                            val updated =
+                                                curLayout.mirrorCutouts.map {
+                                                    if (it.id == curCutout.id) it.copy(destX = clampedX, destY = clampedY) else it
+                                                }
+                                            MacroPadState.updateLayoutLive(curLayout.copy(mirrorCutouts = updated))
+                                        },
+                                    )
+                                },
+                    ) {
+                        val borderWidth = if (isSelected) CLE_SELECTED_BORDER_WIDTH else CLE_BORDER_WIDTH
+                        val borderColor =
+                            if (isSelected) {
+                                colors.accent.copy(alpha = CLE_SELECTED_BORDER_ALPHA)
+                            } else {
+                                Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA)
+                            }
+
+                        if (isCircle) {
+                            val diameterDp = with(density) { min(destW, destH).toDp() }
+                            if (isSelected) {
+                                // Show collision rectangle bounding box in unselected style (outset)
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .offset {
+                                                val bwPx = with(density) { CLE_BORDER_WIDTH.roundToPx() }
+                                                IntOffset(-bwPx, -bwPx)
+                                            }.size(
+                                                width = with(density) { destW.toDp() + CLE_BORDER_WIDTH * 2 },
+                                                height = with(density) { destH.toDp() + CLE_BORDER_WIDTH * 2 },
+                                            ).border(
+                                                width = CLE_BORDER_WIDTH,
+                                                color = Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA),
+                                                shape = CLE_RECT_SHAPE,
+                                            ),
                                 )
-                            },
-                ) {
-                    val borderWidth = if (isSelected) CLE_SELECTED_BORDER_WIDTH else CLE_BORDER_WIDTH
-                    val borderColor =
-                        if (isSelected) {
-                            colors.accent.copy(alpha = CLE_SELECTED_BORDER_ALPHA)
+                            }
+                            // Outset circle border
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.Center)
+                                        .size(diameterDp + borderWidth * 2)
+                                        .border(
+                                            width = borderWidth,
+                                            color = borderColor,
+                                            shape = CircleShape,
+                                        ),
+                            )
                         } else {
-                            Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA)
-                        }
-
-                    if (isCircle) {
-                        val diameterDp = with(density) { min(destW, destH).toDp() }
-                        if (isSelected) {
-                            // Show collision rectangle bounding box in unselected style (outset)
+                            // Outset rectangle border
                             Box(
                                 modifier =
                                     Modifier
                                         .offset {
-                                            val bwPx = with(density) { CLE_BORDER_WIDTH.roundToPx() }
+                                            val bwPx = with(density) { borderWidth.roundToPx() }
                                             IntOffset(-bwPx, -bwPx)
                                         }.size(
-                                            width = with(density) { destW.toDp() + CLE_BORDER_WIDTH * 2 },
-                                            height = with(density) { destH.toDp() + CLE_BORDER_WIDTH * 2 },
+                                            width = with(density) { destW.toDp() + borderWidth * 2 },
+                                            height = with(density) { destH.toDp() + borderWidth * 2 },
                                         ).border(
-                                            width = CLE_BORDER_WIDTH,
-                                            color = Color.White.copy(alpha = CLE_UNSELECTED_BORDER_ALPHA),
+                                            width = borderWidth,
+                                            color = borderColor,
                                             shape = CLE_RECT_SHAPE,
                                         ),
                             )
                         }
-                        // Outset circle border
-                        Box(
-                            modifier =
-                                Modifier
-                                    .align(Alignment.Center)
-                                    .size(diameterDp + borderWidth * 2)
-                                    .border(
-                                        width = borderWidth,
-                                        color = borderColor,
-                                        shape = CircleShape,
-                                    ),
-                        )
-                    } else {
-                        // Outset rectangle border
-                        Box(
-                            modifier =
-                                Modifier
-                                    .offset {
-                                        val bwPx = with(density) { borderWidth.roundToPx() }
-                                        IntOffset(-bwPx, -bwPx)
-                                    }.size(
-                                        width = with(density) { destW.toDp() + borderWidth * 2 },
-                                        height = with(density) { destH.toDp() + borderWidth * 2 },
-                                    ).border(
-                                        width = borderWidth,
-                                        color = borderColor,
-                                        shape = CLE_RECT_SHAPE,
-                                    ),
-                        )
-                    }
-                    if (!isSelected && destH >= with(density) { CLE_MIN_BADGE_HEIGHT.toPx() }) {
-                        Text(
-                            text =
-                                cutout.name.ifBlank {
-                                    stringResource(
-                                        R.string.settings_mirror_cutout_default_name_fmt,
-                                        cutoutIndex + 1,
-                                    )
-                                },
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier =
-                                Modifier
-                                    .align(Alignment.Center)
-                                    .background(Color.Black.copy(alpha = CLE_BADGE_BG_ALPHA), CLE_BADGE_SHAPE)
-                                    .padding(horizontal = CLE_BADGE_PADDING_HORIZONTAL, vertical = CLE_BADGE_PADDING_VERTICAL),
-                        )
-                    }
-                }
-
-                // Show drag handles if selected
-                if (isSelected) {
-                    var dragStartX by remember(cutout.id) { mutableFloatStateOf(0f) }
-                    var dragStartY by remember(cutout.id) { mutableFloatStateOf(0f) }
-                    var dragStartW by remember(cutout.id) { mutableFloatStateOf(0f) }
-                    var dragStartH by remember(cutout.id) { mutableFloatStateOf(0f) }
-                    var dragStartSrcX by remember(cutout.id) { mutableFloatStateOf(0f) }
-                    var dragStartSrcY by remember(cutout.id) { mutableFloatStateOf(0f) }
-                    var dragStartSrcW by remember(cutout.id) { mutableFloatStateOf(0f) }
-                    var dragStartSrcH by remember(cutout.id) { mutableFloatStateOf(0f) }
-
-                    fun captureDragStart() {
-                        val curCutout = currentCutoutState.value
-                        dragStartX = curCutout.destX
-                        dragStartY = curCutout.destY
-                        dragStartW = curCutout.destWidth
-                        dragStartH = curCutout.destHeight
-                        dragStartSrcX = curCutout.srcX
-                        dragStartSrcY = curCutout.srcY
-                        dragStartSrcW = curCutout.srcWidth
-                        dragStartSrcH = curCutout.srcHeight
-                    }
-
-                    fun handleEdgeDrag(
-                        handle: ResizeHandle,
-                        totalDx: Float,
-                        totalDy: Float,
-                    ) {
-                        val curLayout = currentLayoutState.value
-                        val curCutout = currentCutoutState.value
-                        val curViewport = currentViewportState.value
-                        val curDesignW = curLayout.effectiveDesignCanvas.widthPx.toFloat()
-                        val curDesignH = curLayout.effectiveDesignCanvas.heightPx.toFloat()
-                        val normDx = totalDx / curViewport.viewportWidthPx
-                        val normDy = totalDy / curViewport.viewportHeightPx
-                        val targetX =
-                            when (handle) {
-                                ResizeHandle.LEFT -> dragStartX + normDx
-                                else -> dragStartX
-                            }
-                        val targetY =
-                            when (handle) {
-                                ResizeHandle.TOP -> dragStartY + normDy
-                                else -> dragStartY
-                            }
-                        val targetWidth =
-                            when (handle) {
-                                ResizeHandle.LEFT -> dragStartW - normDx
-                                ResizeHandle.RIGHT -> dragStartW + normDx
-                                else -> dragStartW
-                            }
-                        val targetHeight =
-                            when (handle) {
-                                ResizeHandle.TOP -> dragStartH - normDy
-                                ResizeHandle.BOTTOM -> dragStartH + normDy
-                                else -> dragStartH
-                            }
-                        val cropDenom = curCutout.srcHeight * srcHeight
-                        val cropRatio = if (cropDenom > 0f) (curCutout.srcWidth * srcWidth) / cropDenom else 1f
-                        val geom =
-                            clampCutoutResize(
-                                cutoutId = curCutout.id,
-                                handle = handle,
-                                originalX = dragStartX,
-                                originalY = dragStartY,
-                                originalWidth = dragStartW,
-                                originalHeight = dragStartH,
-                                targetX = targetX,
-                                targetY = targetY,
-                                targetWidth = targetWidth,
-                                targetHeight = targetHeight,
-                                allCutouts = curLayout.mirrorCutouts,
-                                keepAspectRatio = false,
-                                cropRatio = cropRatio,
-                                screenW = curDesignW,
-                                screenH = curDesignH,
-                                minNormX = curViewport.minNormX,
-                                maxNormX = curViewport.maxNormX,
-                                minNormY = curViewport.minNormY,
-                                maxNormY = curViewport.maxNormY,
-                            )
-                        val updated =
-                            curLayout.mirrorCutouts.map {
-                                if (it.id == curCutout.id) {
-                                    val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
-                                    if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                        adjustSourceCropToAspectRatio(
-                                            next,
-                                            screenW = curDesignW,
-                                            screenH = curDesignH,
-                                            srcW = srcWidth,
-                                            srcH = srcHeight,
-                                            baseSrcX = dragStartSrcX,
-                                            baseSrcY = dragStartSrcY,
-                                            baseSrcW = dragStartSrcW,
-                                            baseSrcH = dragStartSrcH,
+                        if (!isSelected && destH >= with(density) { CLE_MIN_BADGE_HEIGHT.toPx() }) {
+                            Text(
+                                text =
+                                    cutout.name.ifBlank {
+                                        stringResource(
+                                            R.string.settings_mirror_cutout_default_name_fmt,
+                                            cutoutIndex + 1,
                                         )
-                                    } else {
-                                        next
-                                    }
-                                } else {
-                                    it
-                                }
-                            }
-                        MacroPadState.updateLayoutLive(curLayout.copy(mirrorCutouts = updated))
-                    }
-
-                    fun handleCornerDrag(
-                        handle: ResizeHandle,
-                        totalDx: Float,
-                        totalDy: Float,
-                    ) {
-                        val curLayout = currentLayoutState.value
-                        val curCutout = currentCutoutState.value
-                        val curViewport = currentViewportState.value
-                        val curDesignW = curLayout.effectiveDesignCanvas.widthPx.toFloat()
-                        val curDesignH = curLayout.effectiveDesignCanvas.heightPx.toFloat()
-                        val normDx = totalDx / curViewport.viewportWidthPx
-                        val normDy = totalDy / curViewport.viewportHeightPx
-                        val targetX =
-                            when (handle) {
-                                ResizeHandle.TOP_LEFT, ResizeHandle.BOTTOM_LEFT -> dragStartX + normDx
-                                else -> dragStartX
-                            }
-                        val targetY =
-                            when (handle) {
-                                ResizeHandle.TOP_LEFT, ResizeHandle.TOP_RIGHT -> dragStartY + normDy
-                                else -> dragStartY
-                            }
-                        val targetWidth =
-                            when (handle) {
-                                ResizeHandle.TOP_LEFT, ResizeHandle.BOTTOM_LEFT -> dragStartW - normDx
-                                ResizeHandle.TOP_RIGHT, ResizeHandle.BOTTOM_RIGHT -> dragStartW + normDx
-                                else -> dragStartW
-                            }
-                        val targetHeight =
-                            when (handle) {
-                                ResizeHandle.TOP_LEFT, ResizeHandle.TOP_RIGHT -> dragStartH - normDy
-                                ResizeHandle.BOTTOM_LEFT, ResizeHandle.BOTTOM_RIGHT -> dragStartH + normDy
-                                else -> dragStartH
-                            }
-                        val cropDenom = curCutout.srcHeight * srcHeight
-                        if (cropDenom <= 0f) return
-                        val cropRatio = (curCutout.srcWidth * srcWidth) / cropDenom
-                        val geom =
-                            clampCutoutResize(
-                                cutoutId = curCutout.id,
-                                handle = handle,
-                                originalX = dragStartX,
-                                originalY = dragStartY,
-                                originalWidth = dragStartW,
-                                originalHeight = dragStartH,
-                                targetX = targetX,
-                                targetY = targetY,
-                                targetWidth = targetWidth,
-                                targetHeight = targetHeight,
-                                allCutouts = curLayout.mirrorCutouts,
-                                keepAspectRatio = true,
-                                cropRatio = cropRatio,
-                                screenW = curDesignW,
-                                screenH = curDesignH,
-                                rotation = curCutout.rotation,
-                                minNormX = curViewport.minNormX,
-                                maxNormX = curViewport.maxNormX,
-                                minNormY = curViewport.minNormY,
-                                maxNormY = curViewport.maxNormY,
+                                    },
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelMedium,
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.Center)
+                                        .background(Color.Black.copy(alpha = CLE_BADGE_BG_ALPHA), CLE_BADGE_SHAPE)
+                                        .padding(horizontal = CLE_BADGE_PADDING_HORIZONTAL, vertical = CLE_BADGE_PADDING_VERTICAL),
                             )
-                        val updated =
-                            curLayout.mirrorCutouts.map {
-                                if (it.id == curCutout.id) {
-                                    it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
-                                } else {
-                                    it
-                                }
-                            }
-                        MacroPadState.updateLayoutLive(curLayout.copy(mirrorCutouts = updated))
+                        }
                     }
 
-                    if (cutout.destWidth >= MIN_TOUCH_CUTOUT_SIZE && cutout.destHeight >= MIN_TOUCH_CUTOUT_SIZE) {
-                        if (cutout.aspectRatioMode == AspectRatioMode.TOP) {
-                            // ── CORNER Handles (Aspect ratio locked to TOP) ──────────────────
-                            val cornerMarginPx = with(density) { CLE_CORNER_HANDLE_MARGIN.toPx() }
-                            val handleThicknessPx = with(density) { CLE_EDGE_HANDLE_THICKNESS.toPx() }
-                            val cornerTouchSizePx = with(density) { CLE_CORNER_TOUCH_SIZE.toPx() }
+                    // Show drag handles if selected
+                    if (isSelected) {
+                        var dragStartX by remember(cutout.id) { mutableFloatStateOf(0f) }
+                        var dragStartY by remember(cutout.id) { mutableFloatStateOf(0f) }
+                        var dragStartW by remember(cutout.id) { mutableFloatStateOf(0f) }
+                        var dragStartH by remember(cutout.id) { mutableFloatStateOf(0f) }
+                        var dragStartSrcX by remember(cutout.id) { mutableFloatStateOf(0f) }
+                        var dragStartSrcY by remember(cutout.id) { mutableFloatStateOf(0f) }
+                        var dragStartSrcW by remember(cutout.id) { mutableFloatStateOf(0f) }
+                        var dragStartSrcH by remember(cutout.id) { mutableFloatStateOf(0f) }
 
-                            val corners =
-                                listOf(
-                                    CornerHandleDef(
-                                        destLeft - cornerMarginPx - handleThicknessPx / 2f,
-                                        destTop - cornerMarginPx - handleThicknessPx / 2f,
-                                        CLE_ROTATION_TL,
-                                        ResizeHandle.TOP_LEFT,
-                                    ),
-                                    CornerHandleDef(
-                                        destLeft + destW + cornerMarginPx + handleThicknessPx / 2f,
-                                        destTop - cornerMarginPx - handleThicknessPx / 2f,
-                                        CLE_ROTATION_TR,
-                                        ResizeHandle.TOP_RIGHT,
-                                    ),
-                                    CornerHandleDef(
-                                        destLeft - cornerMarginPx - handleThicknessPx / 2f,
-                                        destTop + destH + cornerMarginPx + handleThicknessPx / 2f,
-                                        CLE_ROTATION_BL,
-                                        ResizeHandle.BOTTOM_LEFT,
-                                    ),
-                                    CornerHandleDef(
-                                        destLeft + destW + cornerMarginPx + handleThicknessPx / 2f,
-                                        destTop + destH + cornerMarginPx + handleThicknessPx / 2f,
-                                        CLE_ROTATION_BR,
-                                        ResizeHandle.BOTTOM_RIGHT,
-                                    ),
+                        fun captureDragStart() {
+                            val curCutout = currentCutoutState.value
+                            dragStartX = curCutout.destX
+                            dragStartY = curCutout.destY
+                            dragStartW = curCutout.destWidth
+                            dragStartH = curCutout.destHeight
+                            dragStartSrcX = curCutout.srcX
+                            dragStartSrcY = curCutout.srcY
+                            dragStartSrcW = curCutout.srcWidth
+                            dragStartSrcH = curCutout.srcHeight
+                        }
+
+                        fun handleEdgeDrag(
+                            handle: ResizeHandle,
+                            totalDx: Float,
+                            totalDy: Float,
+                        ) {
+                            val curLayout = currentLayoutState.value
+                            val curCutout = currentCutoutState.value
+                            val curViewport = currentViewportState.value
+                            val curDesignW = curLayout.effectiveDesignCanvas.widthPx.toFloat()
+                            val curDesignH = curLayout.effectiveDesignCanvas.heightPx.toFloat()
+                            val normDx = totalDx / curViewport.viewportWidthPx
+                            val normDy = totalDy / curViewport.viewportHeightPx
+                            val targetX =
+                                when (handle) {
+                                    ResizeHandle.LEFT -> dragStartX + normDx
+                                    else -> dragStartX
+                                }
+                            val targetY =
+                                when (handle) {
+                                    ResizeHandle.TOP -> dragStartY + normDy
+                                    else -> dragStartY
+                                }
+                            val targetWidth =
+                                when (handle) {
+                                    ResizeHandle.LEFT -> dragStartW - normDx
+                                    ResizeHandle.RIGHT -> dragStartW + normDx
+                                    else -> dragStartW
+                                }
+                            val targetHeight =
+                                when (handle) {
+                                    ResizeHandle.TOP -> dragStartH - normDy
+                                    ResizeHandle.BOTTOM -> dragStartH + normDy
+                                    else -> dragStartH
+                                }
+                            val cropDenom = curCutout.srcHeight * srcHeight
+                            val cropRatio = if (cropDenom > 0f) (curCutout.srcWidth * srcWidth) / cropDenom else 1f
+                            val geom =
+                                clampCutoutResize(
+                                    cutoutId = curCutout.id,
+                                    handle = handle,
+                                    originalX = dragStartX,
+                                    originalY = dragStartY,
+                                    originalWidth = dragStartW,
+                                    originalHeight = dragStartH,
+                                    targetX = targetX,
+                                    targetY = targetY,
+                                    targetWidth = targetWidth,
+                                    targetHeight = targetHeight,
+                                    allCutouts = curLayout.mirrorCutouts,
+                                    keepAspectRatio = false,
+                                    cropRatio = cropRatio,
+                                    screenW = curDesignW,
+                                    screenH = curDesignH,
+                                    minNormX = curViewport.minNormX,
+                                    maxNormX = curViewport.maxNormX,
+                                    minNormY = curViewport.minNormY,
+                                    maxNormY = curViewport.maxNormY,
                                 )
+                            val updated =
+                                curLayout.mirrorCutouts.map {
+                                    if (it.id == curCutout.id) {
+                                        val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+                                        if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                                            adjustSourceCropToAspectRatio(
+                                                next,
+                                                screenW = curDesignW,
+                                                screenH = curDesignH,
+                                                srcW = srcWidth,
+                                                srcH = srcHeight,
+                                                baseSrcX = dragStartSrcX,
+                                                baseSrcY = dragStartSrcY,
+                                                baseSrcW = dragStartSrcW,
+                                                baseSrcH = dragStartSrcH,
+                                            )
+                                        } else {
+                                            next
+                                        }
+                                    } else {
+                                        it
+                                    }
+                                }
+                            MacroPadState.updateLayoutLive(curLayout.copy(mirrorCutouts = updated))
+                        }
 
-                            corners.forEach { def ->
-                                ResizeHandleView(
-                                    offset =
-                                        IntOffset(
-                                            (def.centerX - cornerTouchSizePx / 2f).roundToInt(),
-                                            (def.centerY - cornerTouchSizePx / 2f).roundToInt(),
+                        fun handleCornerDrag(
+                            handle: ResizeHandle,
+                            totalDx: Float,
+                            totalDy: Float,
+                        ) {
+                            val curLayout = currentLayoutState.value
+                            val curCutout = currentCutoutState.value
+                            val curViewport = currentViewportState.value
+                            val curDesignW = curLayout.effectiveDesignCanvas.widthPx.toFloat()
+                            val curDesignH = curLayout.effectiveDesignCanvas.heightPx.toFloat()
+                            val normDx = totalDx / curViewport.viewportWidthPx
+                            val normDy = totalDy / curViewport.viewportHeightPx
+                            val targetX =
+                                when (handle) {
+                                    ResizeHandle.TOP_LEFT, ResizeHandle.BOTTOM_LEFT -> dragStartX + normDx
+                                    else -> dragStartX
+                                }
+                            val targetY =
+                                when (handle) {
+                                    ResizeHandle.TOP_LEFT, ResizeHandle.TOP_RIGHT -> dragStartY + normDy
+                                    else -> dragStartY
+                                }
+                            val targetWidth =
+                                when (handle) {
+                                    ResizeHandle.TOP_LEFT, ResizeHandle.BOTTOM_LEFT -> dragStartW - normDx
+                                    ResizeHandle.TOP_RIGHT, ResizeHandle.BOTTOM_RIGHT -> dragStartW + normDx
+                                    else -> dragStartW
+                                }
+                            val targetHeight =
+                                when (handle) {
+                                    ResizeHandle.TOP_LEFT, ResizeHandle.TOP_RIGHT -> dragStartH - normDy
+                                    ResizeHandle.BOTTOM_LEFT, ResizeHandle.BOTTOM_RIGHT -> dragStartH + normDy
+                                    else -> dragStartH
+                                }
+                            val cropDenom = curCutout.srcHeight * srcHeight
+                            if (cropDenom <= 0f) return
+                            val cropRatio = (curCutout.srcWidth * srcWidth) / cropDenom
+                            val geom =
+                                clampCutoutResize(
+                                    cutoutId = curCutout.id,
+                                    handle = handle,
+                                    originalX = dragStartX,
+                                    originalY = dragStartY,
+                                    originalWidth = dragStartW,
+                                    originalHeight = dragStartH,
+                                    targetX = targetX,
+                                    targetY = targetY,
+                                    targetWidth = targetWidth,
+                                    targetHeight = targetHeight,
+                                    allCutouts = curLayout.mirrorCutouts,
+                                    keepAspectRatio = true,
+                                    cropRatio = cropRatio,
+                                    screenW = curDesignW,
+                                    screenH = curDesignH,
+                                    rotation = curCutout.rotation,
+                                    minNormX = curViewport.minNormX,
+                                    maxNormX = curViewport.maxNormX,
+                                    minNormY = curViewport.minNormY,
+                                    maxNormY = curViewport.maxNormY,
+                                )
+                            val updated =
+                                curLayout.mirrorCutouts.map {
+                                    if (it.id == curCutout.id) {
+                                        it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+                                    } else {
+                                        it
+                                    }
+                                }
+                            MacroPadState.updateLayoutLive(curLayout.copy(mirrorCutouts = updated))
+                        }
+
+                        if (cutout.destWidth >= MIN_TOUCH_CUTOUT_SIZE && cutout.destHeight >= MIN_TOUCH_CUTOUT_SIZE) {
+                            if (cutout.aspectRatioMode == AspectRatioMode.TOP) {
+                                // ── CORNER Handles (Aspect ratio locked to TOP) ──────────────────
+                                val cornerMarginPx = with(density) { CLE_CORNER_HANDLE_MARGIN.toPx() }
+                                val handleThicknessPx = with(density) { CLE_EDGE_HANDLE_THICKNESS.toPx() }
+                                val cornerTouchSizePx = with(density) { CLE_CORNER_TOUCH_SIZE.toPx() }
+
+                                val corners =
+                                    listOf(
+                                        CornerHandleDef(
+                                            destLeft - cornerMarginPx - handleThicknessPx / 2f,
+                                            destTop - cornerMarginPx - handleThicknessPx / 2f,
+                                            CLE_ROTATION_TL,
+                                            ResizeHandle.TOP_LEFT,
                                         ),
-                                    touchWidth = CLE_CORNER_TOUCH_SIZE,
-                                    touchHeight = CLE_CORNER_TOUCH_SIZE,
-                                    handleWidth = CLE_EDGE_HANDLE_LENGTH,
-                                    handleHeight = CLE_EDGE_HANDLE_THICKNESS,
-                                    rotation = def.rotation,
-                                    color = colors.accent,
-                                    onDragStart = { captureDragStart() },
-                                    onDragEnd = { commitCurrentCutoutLayout(currentLayoutState.value.id) },
-                                    onDragCancel = { commitCurrentCutoutLayout(currentLayoutState.value.id) },
-                                    onDrag = { totalDx, totalDy -> handleCornerDrag(def.handle, totalDx, totalDy) },
-                                )
-                            }
-                        } else {
-                            // ── EDGE Handles (FREE or BOTTOM aspect ratio) ───────────────────
-                            val marginPx = with(density) { CLE_EDGE_HANDLE_MARGIN.toPx() }
-                            val handleThicknessPx = with(density) { CLE_EDGE_HANDLE_THICKNESS.toPx() }
-                            val touchLengthPx = with(density) { CLE_EDGE_TOUCH_LENGTH.toPx() }
-                            val touchThicknessPx = with(density) { CLE_EDGE_TOUCH_THICKNESS.toPx() }
+                                        CornerHandleDef(
+                                            destLeft + destW + cornerMarginPx + handleThicknessPx / 2f,
+                                            destTop - cornerMarginPx - handleThicknessPx / 2f,
+                                            CLE_ROTATION_TR,
+                                            ResizeHandle.TOP_RIGHT,
+                                        ),
+                                        CornerHandleDef(
+                                            destLeft - cornerMarginPx - handleThicknessPx / 2f,
+                                            destTop + destH + cornerMarginPx + handleThicknessPx / 2f,
+                                            CLE_ROTATION_BL,
+                                            ResizeHandle.BOTTOM_LEFT,
+                                        ),
+                                        CornerHandleDef(
+                                            destLeft + destW + cornerMarginPx + handleThicknessPx / 2f,
+                                            destTop + destH + cornerMarginPx + handleThicknessPx / 2f,
+                                            CLE_ROTATION_BR,
+                                            ResizeHandle.BOTTOM_RIGHT,
+                                        ),
+                                    )
 
-                            val topCenterY = destTop - marginPx - handleThicknessPx / 2f
-                            val bottomCenterY = destTop + destH + marginPx + handleThicknessPx / 2f
-                            val leftCenterX = destLeft - marginPx - handleThicknessPx / 2f
-                            val rightCenterX = destLeft + destW + marginPx + handleThicknessPx / 2f
+                                corners.forEach { def ->
+                                    ResizeHandleView(
+                                        offset =
+                                            IntOffset(
+                                                (def.centerX - cornerTouchSizePx / 2f).roundToInt(),
+                                                (def.centerY - cornerTouchSizePx / 2f).roundToInt(),
+                                            ),
+                                        touchWidth = CLE_CORNER_TOUCH_SIZE,
+                                        touchHeight = CLE_CORNER_TOUCH_SIZE,
+                                        handleWidth = CLE_EDGE_HANDLE_LENGTH,
+                                        handleHeight = CLE_EDGE_HANDLE_THICKNESS,
+                                        rotation = def.rotation,
+                                        color = colors.accent,
+                                        onDragStart = { captureDragStart() },
+                                        onDragEnd = { commitCurrentCutoutLayout(currentLayoutState.value.id) },
+                                        onDragCancel = { commitCurrentCutoutLayout(currentLayoutState.value.id) },
+                                        onDrag = { totalDx, totalDy -> handleCornerDrag(def.handle, totalDx, totalDy) },
+                                    )
+                                }
+                            } else {
+                                // ── EDGE Handles (FREE or BOTTOM aspect ratio) ───────────────────
+                                val marginPx = with(density) { CLE_EDGE_HANDLE_MARGIN.toPx() }
+                                val handleThicknessPx = with(density) { CLE_EDGE_HANDLE_THICKNESS.toPx() }
+                                val touchLengthPx = with(density) { CLE_EDGE_TOUCH_LENGTH.toPx() }
+                                val touchThicknessPx = with(density) { CLE_EDGE_TOUCH_THICKNESS.toPx() }
 
-                            val horizTouchX = (destLeft + destW / 2f) - touchLengthPx / 2f
-                            val vertTouchY = (destTop + destH / 2f) - touchLengthPx / 2f
+                                val topCenterY = destTop - marginPx - handleThicknessPx / 2f
+                                val bottomCenterY = destTop + destH + marginPx + handleThicknessPx / 2f
+                                val leftCenterX = destLeft - marginPx - handleThicknessPx / 2f
+                                val rightCenterX = destLeft + destW + marginPx + handleThicknessPx / 2f
 
-                            val edges =
-                                listOf(
-                                    EdgeHandleDef(
-                                        horizTouchX,
-                                        topCenterY - touchThicknessPx / 2f,
-                                        CLE_EDGE_TOUCH_LENGTH,
-                                        CLE_EDGE_TOUCH_THICKNESS,
-                                        CLE_EDGE_HANDLE_LENGTH,
-                                        CLE_EDGE_HANDLE_THICKNESS,
-                                        ResizeHandle.TOP,
-                                    ),
-                                    EdgeHandleDef(
-                                        horizTouchX,
-                                        bottomCenterY - touchThicknessPx / 2f,
-                                        CLE_EDGE_TOUCH_LENGTH,
-                                        CLE_EDGE_TOUCH_THICKNESS,
-                                        CLE_EDGE_HANDLE_LENGTH,
-                                        CLE_EDGE_HANDLE_THICKNESS,
-                                        ResizeHandle.BOTTOM,
-                                    ),
-                                    EdgeHandleDef(
-                                        leftCenterX - touchThicknessPx / 2f,
-                                        vertTouchY,
-                                        CLE_EDGE_TOUCH_THICKNESS,
-                                        CLE_EDGE_TOUCH_LENGTH,
-                                        CLE_EDGE_HANDLE_THICKNESS,
-                                        CLE_EDGE_HANDLE_LENGTH,
-                                        ResizeHandle.LEFT,
-                                    ),
-                                    EdgeHandleDef(
-                                        rightCenterX - touchThicknessPx / 2f,
-                                        vertTouchY,
-                                        CLE_EDGE_TOUCH_THICKNESS,
-                                        CLE_EDGE_TOUCH_LENGTH,
-                                        CLE_EDGE_HANDLE_THICKNESS,
-                                        CLE_EDGE_HANDLE_LENGTH,
-                                        ResizeHandle.RIGHT,
-                                    ),
-                                )
+                                val horizTouchX = (destLeft + destW / 2f) - touchLengthPx / 2f
+                                val vertTouchY = (destTop + destH / 2f) - touchLengthPx / 2f
 
-                            edges.forEach { def ->
-                                ResizeHandleView(
-                                    offset = IntOffset(def.touchX.roundToInt(), def.touchY.roundToInt()),
-                                    touchWidth = def.touchWidth,
-                                    touchHeight = def.touchHeight,
-                                    handleWidth = def.handleWidth,
-                                    handleHeight = def.handleHeight,
-                                    color = colors.accent,
-                                    onDragStart = { captureDragStart() },
-                                    onDragEnd = { commitCurrentCutoutLayout(currentLayoutState.value.id) },
-                                    onDragCancel = { commitCurrentCutoutLayout(currentLayoutState.value.id) },
-                                    onDrag = { totalDx, totalDy -> handleEdgeDrag(def.handle, totalDx, totalDy) },
-                                )
+                                val edges =
+                                    listOf(
+                                        EdgeHandleDef(
+                                            horizTouchX,
+                                            topCenterY - touchThicknessPx / 2f,
+                                            CLE_EDGE_TOUCH_LENGTH,
+                                            CLE_EDGE_TOUCH_THICKNESS,
+                                            CLE_EDGE_HANDLE_LENGTH,
+                                            CLE_EDGE_HANDLE_THICKNESS,
+                                            ResizeHandle.TOP,
+                                        ),
+                                        EdgeHandleDef(
+                                            horizTouchX,
+                                            bottomCenterY - touchThicknessPx / 2f,
+                                            CLE_EDGE_TOUCH_LENGTH,
+                                            CLE_EDGE_TOUCH_THICKNESS,
+                                            CLE_EDGE_HANDLE_LENGTH,
+                                            CLE_EDGE_HANDLE_THICKNESS,
+                                            ResizeHandle.BOTTOM,
+                                        ),
+                                        EdgeHandleDef(
+                                            leftCenterX - touchThicknessPx / 2f,
+                                            vertTouchY,
+                                            CLE_EDGE_TOUCH_THICKNESS,
+                                            CLE_EDGE_TOUCH_LENGTH,
+                                            CLE_EDGE_HANDLE_THICKNESS,
+                                            CLE_EDGE_HANDLE_LENGTH,
+                                            ResizeHandle.LEFT,
+                                        ),
+                                        EdgeHandleDef(
+                                            rightCenterX - touchThicknessPx / 2f,
+                                            vertTouchY,
+                                            CLE_EDGE_TOUCH_THICKNESS,
+                                            CLE_EDGE_TOUCH_LENGTH,
+                                            CLE_EDGE_HANDLE_THICKNESS,
+                                            CLE_EDGE_HANDLE_LENGTH,
+                                            ResizeHandle.RIGHT,
+                                        ),
+                                    )
+
+                                edges.forEach { def ->
+                                    ResizeHandleView(
+                                        offset = IntOffset(def.touchX.roundToInt(), def.touchY.roundToInt()),
+                                        touchWidth = def.touchWidth,
+                                        touchHeight = def.touchHeight,
+                                        handleWidth = def.handleWidth,
+                                        handleHeight = def.handleHeight,
+                                        color = colors.accent,
+                                        onDragStart = { captureDragStart() },
+                                        onDragEnd = { commitCurrentCutoutLayout(currentLayoutState.value.id) },
+                                        onDragCancel = { commitCurrentCutoutLayout(currentLayoutState.value.id) },
+                                        onDrag = { totalDx, totalDy -> handleEdgeDrag(def.handle, totalDx, totalDy) },
+                                    )
+                                }
                             }
                         }
                     }

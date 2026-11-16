@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -68,6 +69,31 @@ import kotlin.math.sqrt
 private const val TAG = "PhysGamepadRecordSheet"
 
 private const val PR_TIMER_TICK_MS = 50L
+
+@Composable
+internal fun RecordingElapsedTimerText(
+    startEpoch: Long,
+    color: Color,
+    style: TextStyle,
+) {
+    var currentElapsedMs by remember(startEpoch) { mutableLongStateOf(0L) }
+    LaunchedEffect(startEpoch) {
+        if (startEpoch > 0L) {
+            while (true) {
+                currentElapsedMs = (SystemClock.elapsedRealtime() - startEpoch).coerceAtLeast(0L)
+                delay(PR_TIMER_TICK_MS)
+            }
+        }
+    }
+    Text(
+        text = formatElapsedTime(currentElapsedMs),
+        color = color,
+        style = style,
+        fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.Bold,
+    )
+}
+
 private const val PR_STICK_RADAR_SIZE_DP = 96
 private const val PR_STICK_THUMB_RADIUS_DP = 7f
 private const val PR_RADAR_CROSSHAIR_ALPHA = 0.25f
@@ -119,17 +145,7 @@ internal fun PhysicalGamepadRecordingSheet(
         onDispose { AppLog.i(TAG, "PhysicalGamepadRecordingSheet disposed") }
     }
 
-    var currentElapsedMs by remember { mutableLongStateOf(0L) }
     val startEpoch = recording?.startElapsedRealtime ?: 0L
-
-    LaunchedEffect(startEpoch) {
-        if (startEpoch > 0L) {
-            while (true) {
-                currentElapsedMs = (SystemClock.elapsedRealtime() - startEpoch).coerceAtLeast(0L)
-                delay(PR_TIMER_TICK_MS)
-            }
-        }
-    }
 
     Box(
         modifier =
@@ -183,12 +199,10 @@ internal fun PhysicalGamepadRecordingSheet(
                                 .border(width = PR_BORDER_WIDTH, color = colors.divider, shape = PR_PILL_SHAPE)
                                 .padding(horizontal = PR_SPACING_M, vertical = PR_SPACING_XS),
                     ) {
-                        Text(
-                            text = formatElapsedTime(currentElapsedMs),
+                        RecordingElapsedTimerText(
+                            startEpoch = startEpoch,
                             color = colors.accent,
                             style = MaterialTheme.typography.labelMedium,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
                         )
                     }
 
