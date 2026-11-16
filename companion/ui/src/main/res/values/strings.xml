@@ -547,6 +547,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_type_dpad">D-Pad</string>
     <string name="macropad_macro_step_type_touch">Touch Tap</string>
     <string name="macropad_macro_step_type_touch_path">Touch Gesture</string>
+    <string name="macropad_macro_step_type_trigger">Analog Trigger</string>
+    <string name="macropad_macro_step_type_trigger_path">Trigger Path</string>
     <string name="macropad_macro_create_text_sequence_title">Type Text Sequence</string>
     <string name="macropad_macro_create_text_sequence_desc">Generate timed keystroke steps for a text phrase</string>
     <string name="macropad_macro_text_sequence_title">Text to Type</string>
@@ -1291,6 +1293,15 @@ Open Settings to create a layout.</string>
     <string name="macro_step_target_stick_title">Target Stick</string>
     <string name="macro_step_target_stick_desc">Choose between left and right analog stick</string>
     <string name="macro_step_stick_deflection_desc">Stick tilt deflection percentage</string>
+    <string name="macropad_macro_step_trigger_left">L2 (Left Trigger)</string>
+    <string name="macropad_macro_step_trigger_right">R2 (Right Trigger)</string>
+    <string name="macropad_macro_step_path_summary_trigger">Trigger: %1$s</string>
+    <string name="macro_step_target_trigger_title">Target Trigger</string>
+    <string name="macro_step_target_trigger_desc">Choose between L2 (left) and R2 (right) analog trigger</string>
+    <string name="macro_step_trigger_pressure_title">Trigger Pressure</string>
+    <string name="macro_step_trigger_pressure_desc">Analog trigger pull depth percentage</string>
+    <string name="privd_recording_physical_trigger_l_badge">L2 %1$d%%</string>
+    <string name="privd_recording_physical_trigger_r_badge">R2 %1$d%%</string>
 
     <!-- Dialogs & Overlays -->
     <string name="macropad_cutout_rename_title">Rename Cutout</string>

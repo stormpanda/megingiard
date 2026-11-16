@@ -72,16 +72,23 @@ private const val PR_STICK_RADAR_SIZE_DP = 96
 private const val PR_STICK_THUMB_RADIUS_DP = 7f
 private const val PR_RADAR_CROSSHAIR_ALPHA = 0.25f
 private const val PR_RADAR_BG_ALPHA = 0.12f
+private const val PR_ACTIVE_PILL_BG_ALPHA = 0.2f
+private const val PR_TRIGGER_DISPLAY_THRESHOLD = 0.02f
+private const val PR_PERCENT_SCALE = 100f
 private const val PR_CONTAINER_RADIUS_DP = 20
 private const val PR_BUTTON_RADIUS_DP = 12
 private const val PR_PILL_RADIUS_DP = 8
+private const val PR_BADGE_RADIUS_DP = 6
 
 private val PR_CONTAINER_SHAPE = RoundedCornerShape(PR_CONTAINER_RADIUS_DP.dp)
 private val PR_BUTTON_SHAPE = RoundedCornerShape(PR_BUTTON_RADIUS_DP.dp)
 private val PR_PILL_SHAPE = RoundedCornerShape(PR_PILL_RADIUS_DP.dp)
-private val PR_BADGE_SHAPE = RoundedCornerShape(6.dp)
+private val PR_BADGE_SHAPE = RoundedCornerShape(PR_BADGE_RADIUS_DP.dp)
 
 private val PR_PULSE_DOT_SIZE = 12.dp
+private val PR_BADGE_PAD_H = 8.dp
+private val PR_BADGE_PAD_V = 2.dp
+private val PR_BADGE_MARGIN_H = 2.dp
 private val PR_SPACING_XS = 4.dp
 private val PR_SPACING_S = 8.dp
 private val PR_SPACING_M = 10.dp
@@ -146,10 +153,10 @@ internal fun PhysicalGamepadRecordingSheet(
                     .clip(PR_CONTAINER_SHAPE)
                     .background(colors.surface)
                     .border(
-                        width = 1.dp,
+                        width = PR_BORDER_WIDTH,
                         brush = bezelBrush,
                         shape = PR_CONTAINER_SHAPE,
-                    ).padding(20.dp),
+                    ).padding(PR_CONTAINER_PADDING),
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -258,11 +265,64 @@ internal fun PhysicalGamepadRecordingSheet(
                                 )
                             }
 
+                            // Live Analog Trigger Badges
+                            val showLeftTrigger = recording.leftTrigger > PR_TRIGGER_DISPLAY_THRESHOLD
+                            val showRightTrigger = recording.rightTrigger > PR_TRIGGER_DISPLAY_THRESHOLD
+                            if (showLeftTrigger || showRightTrigger) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(PR_SPACING_XS),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    if (showLeftTrigger) {
+                                        val pct = (recording.leftTrigger * PR_PERCENT_SCALE).roundToInt()
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .clip(PR_BADGE_SHAPE)
+                                                    .background(colors.actionColorGamepad.copy(alpha = PR_ACTIVE_PILL_BG_ALPHA))
+                                                    .border(
+                                                        width = PR_BORDER_WIDTH,
+                                                        color = colors.actionColorGamepad,
+                                                        shape = PR_BADGE_SHAPE,
+                                                    ).padding(horizontal = PR_BADGE_PAD_H, vertical = PR_BADGE_PAD_V),
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.privd_recording_physical_trigger_l_badge, pct),
+                                                color = colors.onSurface,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                            )
+                                        }
+                                    }
+                                    if (showRightTrigger) {
+                                        val pct = (recording.rightTrigger * PR_PERCENT_SCALE).roundToInt()
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .clip(PR_BADGE_SHAPE)
+                                                    .background(colors.actionColorGamepad.copy(alpha = PR_ACTIVE_PILL_BG_ALPHA))
+                                                    .border(
+                                                        width = PR_BORDER_WIDTH,
+                                                        color = colors.actionColorGamepad,
+                                                        shape = PR_BADGE_SHAPE,
+                                                    ).padding(horizontal = PR_BADGE_PAD_H, vertical = PR_BADGE_PAD_V),
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.privd_recording_physical_trigger_r_badge, pct),
+                                                color = colors.onSurface,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
                             // Active Pressed Buttons
                             if (recording.pressedButtons.isNotEmpty()) {
                                 FlowRow(
                                     horizontalArrangement = Arrangement.Center,
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(PR_SPACING_XS),
                                 ) {
                                     recording.pressedButtons.forEach { code ->
                                         val label = gamepadCodeDisplayLabel(code, swapFaceButtons, context)
@@ -270,11 +330,11 @@ internal fun PhysicalGamepadRecordingSheet(
                                             Box(
                                                 modifier =
                                                     Modifier
-                                                        .padding(horizontal = 2.dp)
+                                                        .padding(horizontal = PR_BADGE_MARGIN_H)
                                                         .clip(PR_BADGE_SHAPE)
-                                                        .background(colors.accent.copy(alpha = 0.25f))
-                                                        .border(width = 1.dp, color = colors.accent, shape = PR_BADGE_SHAPE)
-                                                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                                                        .background(colors.accent.copy(alpha = PR_RADAR_CROSSHAIR_ALPHA))
+                                                        .border(width = PR_BORDER_WIDTH, color = colors.accent, shape = PR_BADGE_SHAPE)
+                                                        .padding(horizontal = PR_BADGE_PAD_H, vertical = PR_BADGE_PAD_V),
                                             ) {
                                                 Text(
                                                     text = label,

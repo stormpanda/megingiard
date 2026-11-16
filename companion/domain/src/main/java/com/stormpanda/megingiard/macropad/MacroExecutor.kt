@@ -184,6 +184,7 @@ object MacroExecutor {
         // is stopped or cancelled mid-sequence. Covers all virtual devices that MacroExecutor
         // can drive: gamepad (buttons, axes, hat), keyboard, and touch.
         val pressedButtons = mutableSetOf<Int>()
+        val pressedDigitalButtons = mutableSetOf<Int>()
         val pressedKeys = mutableSetOf<Int>()
         val activeAxes = mutableMapOf<Int, Int>() // axis code → last non-zero value
         var liveHatX = 0
@@ -220,6 +221,16 @@ object MacroExecutor {
                         MacroEventType.BUTTON_UP -> {
                             pressedButtons -= event.code
                             GamepadInjector.buttonUp(event.code)
+                        }
+
+                        MacroEventType.DIGITAL_BUTTON_DOWN -> {
+                            pressedDigitalButtons += event.code
+                            GamepadInjector.digitalButtonDown(event.code)
+                        }
+
+                        MacroEventType.DIGITAL_BUTTON_UP -> {
+                            pressedDigitalButtons -= event.code
+                            GamepadInjector.digitalButtonUp(event.code)
                         }
 
                         MacroEventType.JOYSTICK_SET -> {
@@ -270,11 +281,12 @@ object MacroExecutor {
         } finally {
             AppLog.d(
                 TAG,
-                "macro '${macro.name}' done (buttons=${pressedButtons.size} keys=${pressedKeys.size} axes=${activeAxes.size} hat=$liveHatX,$liveHatY touch=${activeTouchSlots.isNotEmpty()})",
+                "macro '${macro.name}' done (buttons=${pressedButtons.size} digitalButtons=${pressedDigitalButtons.size} keys=${pressedKeys.size} axes=${activeAxes.size} hat=$liveHatX,$liveHatY touch=${activeTouchSlots.isNotEmpty()})",
             )
             // Release all inputs that are still active. This handles early cancellation
             // (user taps stop mid-sequence) in addition to the normal end-of-sequence reset.
             pressedButtons.forEach { GamepadInjector.buttonUp(it) }
+            pressedDigitalButtons.forEach { GamepadInjector.digitalButtonUp(it) }
             pressedKeys.forEach { KeyInjector.keyUp(it) }
             activeAxes.keys.forEach { GamepadInjector.joystick(it, 0) }
             if (liveHatX != 0 || liveHatY != 0) {

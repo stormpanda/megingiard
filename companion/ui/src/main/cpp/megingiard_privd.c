@@ -29,8 +29,10 @@
  *     GD <btn>\n         button DOWN   (Linux BTN_* code, 0x100..0x1FF)
  *     GU <btn>\n         button UP
  *     HD <axis> <val>\n  D-Pad hat     (axis 0=X 1=Y, val -1/0/+1)
- *     JS <axis> <val>\n  joystick      (axis ABS_X=0 ABS_Y=1 ABS_Z=2 ABS_RZ=5,
- *                                       val -32768..+32767)
+ *     JS <axis> <val>\n  joystick/trigger (sticks: ABS_X=0 ABS_Y=1 ABS_Z=2 ABS_RZ=5,
+ *                                       val -32768..+32767;
+ *                                       triggers: ABS_BRAKE=10 [L2] ABS_GAS=9 [R2],
+ *                                       val 0..+32767)
  *   Management:
  *     PING\n             → PONG\n
  *     QUIT\n             → daemon exits cleanly with 0
@@ -65,13 +67,16 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 22
+#define PRIVD_VERSION 24
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
 #define INPUT_PATH_PREFIX "/dev/input/event"
 #define MAX_LINE 512
 #define MAX_SCREENSHOT_PNG_BYTES (16 * 1024 * 1024)
+#define GAMEPAD_REDISCOVER_COOLDOWN_MS 500
+#define GAMEPAD_READER_RETRY_STEPS 5
+#define GAMEPAD_READER_RETRY_STEP_US 50000
 
 #ifndef INPUT_PROP_DIRECT
 #define INPUT_PROP_DIRECT 0x01
@@ -92,6 +97,10 @@ static volatile sig_atomic_t g_should_exit = 0;
  * reader thread can access it without passing it as a parameter.
  */
 static int g_gamepad_fd = -1;
+static char g_gamepad_path[64] = {0};
+static GamepadAxisMap g_gamepad_axes;
+static pthread_mutex_t g_gamepad_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int64_t g_last_gamepad_rediscover_ms = -10000;
 static int g_mouse_fd = -1;
 static int g_keyboard_fd = -1;
 static int g_touch_fd = -1;
@@ -127,25 +136,37 @@ static char g_mirror_socket[64] = {0};
 static const char *g_dex_file_path = NULL;
 #define DIRECT_MIRROR_MAIN_CLASS "com.stormpanda.megingiard.mirrorserver.DirectMirrorServer"
 
+static int discover_gamepad_into(char *out_path, size_t out_path_size, GamepadAxisMap *out_axes);
+static void drain_evdev_fd(int fd);
+
 /*
- * Returns 1 if the evdev event (type, code) should be streamed to the client.
- * We forward:
+ * Translates a physical gamepad evdev event into its canonical protocol tuple.
+ * Returns 1 if the event should be streamed to the client:
  *   EV_KEY  codes >= BTN_MISC (0x100) — physical gamepad buttons
- *   EV_ABS  joystick axes (ABS_X/Y/Z/RZ) and D-Pad hat axes (ABS_HAT0X/Y)
+ *   EV_ABS  canonicalized sticks (ABS_X/Y/Z/RZ), triggers (ABS_BRAKE/ABS_GAS), and hat (ABS_HAT0X/Y)
  */
-static int should_emit_evdev(__u16 type, __u16 code) {
-    if (type == EV_KEY) return code >= BTN_MISC;
-    if (type == EV_ABS) {
-        switch (code) {
-            case ABS_X:      /* 0  — left stick X */
-            case ABS_Y:      /* 1  — left stick Y */
-            case ABS_Z:      /* 2  — right stick X */
-            case ABS_RZ:     /* 5  — right stick Y */
-            case ABS_HAT0X:  /* 16 — D-Pad X */
-            case ABS_HAT0Y:  /* 17 — D-Pad Y */
-                return 1;
-            default:
-                return 0;
+static int translate_gamepad_evdev_event(
+    const struct input_event *ev,
+    const GamepadAxisMap *axis_map,
+    uint16_t *out_type,
+    uint16_t *out_code,
+    int32_t *out_value
+) {
+    if (!ev || !axis_map || !out_type || !out_code || !out_value) return 0;
+    if (ev->type == EV_KEY && ev->code >= BTN_MISC) {
+        *out_type = EV_KEY;
+        *out_code = ev->code;
+        *out_value = ev->value;
+        return 1;
+    }
+    if (ev->type == EV_ABS) {
+        uint16_t mapped_code = 0;
+        int32_t mapped_val = 0;
+        if (translate_gamepad_evdev_abs(axis_map, ev->code, ev->value, &mapped_code, &mapped_val)) {
+            *out_type = EV_ABS;
+            *out_code = mapped_code;
+            *out_value = mapped_val;
+            return 1;
         }
     }
     return 0;
@@ -196,27 +217,104 @@ static int should_emit_touch_evdev(__u16 type, __u16 code) {
  */
 static void *evdev_reader_thread(void *arg) {
     (void)arg;
-    struct pollfd pfd;
-    pfd.fd = g_gamepad_fd;
-    pfd.events = POLLIN;
 
     while (g_reader_active) {
+        pthread_mutex_lock(&g_gamepad_mutex);
+        int cur_fd = g_gamepad_fd;
+        GamepadAxisMap cur_axes = g_gamepad_axes;
+        pthread_mutex_unlock(&g_gamepad_mutex);
+
+        if (cur_fd < 0) {
+            for (int step = 0; step < GAMEPAD_READER_RETRY_STEPS && g_reader_active; step++) {
+                usleep(GAMEPAD_READER_RETRY_STEP_US);
+            }
+            if (!g_reader_active) break;
+
+            char new_path[64] = {0};
+            GamepadAxisMap new_axes;
+            int new_fd = discover_gamepad_into(new_path, sizeof(new_path), &new_axes);
+            if (new_fd >= 0) {
+                drain_evdev_fd(new_fd);
+                pthread_mutex_lock(&g_gamepad_mutex);
+                if (g_gamepad_fd >= 0 && g_gamepad_fd != new_fd) {
+                    close(g_gamepad_fd);
+                }
+                g_gamepad_fd = new_fd;
+                strncpy(g_gamepad_path, new_path, sizeof(g_gamepad_path) - 1);
+                g_gamepad_path[sizeof(g_gamepad_path) - 1] = '\0';
+                g_gamepad_axes = new_axes;
+                pthread_mutex_unlock(&g_gamepad_mutex);
+                fprintf(stderr, "privd: SUB GAMEPAD reconnected to %s\n", new_path);
+            }
+            continue;
+        }
+
+        struct pollfd pfd;
+        pfd.fd = cur_fd;
+        pfd.events = POLLIN;
+        pfd.revents = 0;
+
         int ret = poll(&pfd, 1, 10); /* 10 ms timeout so the exit flag is checked */
-        if (ret <= 0) continue;
+        if (ret < 0) {
+            int poll_err = errno;
+            if (poll_err == EINTR) continue;
+            if (is_evdev_disconnect_errno(poll_err)) {
+                pthread_mutex_lock(&g_gamepad_mutex);
+                if (g_gamepad_fd == cur_fd) {
+                    close(cur_fd);
+                    g_gamepad_fd = -1;
+                    g_gamepad_path[0] = '\0';
+                }
+                pthread_mutex_unlock(&g_gamepad_mutex);
+                fprintf(stderr, "privd: gamepad poll error errno=%d during SUB GAMEPAD, awaiting reconnect\n",
+                        poll_err);
+            }
+            continue;
+        }
+        if (ret == 0) continue;
+
+        if ((pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) && !(pfd.revents & POLLIN)) {
+            pthread_mutex_lock(&g_gamepad_mutex);
+            if (g_gamepad_fd == cur_fd) {
+                close(cur_fd);
+                g_gamepad_fd = -1;
+                g_gamepad_path[0] = '\0';
+            }
+            pthread_mutex_unlock(&g_gamepad_mutex);
+            fprintf(stderr, "privd: gamepad disconnected (revents=0x%x) during SUB GAMEPAD, awaiting reconnect\n",
+                    (unsigned)pfd.revents);
+            continue;
+        }
         if (!(pfd.revents & POLLIN)) continue;
 
         struct input_event ev;
-        ssize_t r = read(g_gamepad_fd, &ev, sizeof(ev));
-        if (r != (ssize_t)sizeof(ev)) break;
+        ssize_t r = read(cur_fd, &ev, sizeof(ev));
+        if (r != (ssize_t)sizeof(ev)) {
+            int read_err = (r < 0) ? errno : 0;
+            if (r < 0 && read_err == EINTR) continue;
+            pthread_mutex_lock(&g_gamepad_mutex);
+            if (g_gamepad_fd == cur_fd) {
+                close(cur_fd);
+                g_gamepad_fd = -1;
+                g_gamepad_path[0] = '\0';
+            }
+            pthread_mutex_unlock(&g_gamepad_mutex);
+            fprintf(stderr, "privd: gamepad read ended (r=%zd errno=%d) during SUB GAMEPAD, awaiting reconnect\n",
+                    r, read_err);
+            continue;
+        }
 
-        if (!should_emit_evdev(ev.type, ev.code)) continue;
+        uint16_t out_type = 0;
+        uint16_t out_code = 0;
+        int32_t out_value = 0;
+        if (!translate_gamepad_evdev_event(&ev, &cur_axes, &out_type, &out_code, &out_value)) continue;
 
         int cfd = g_client_fd_for_reader;
         if (cfd < 0) continue;
 
         char buf[64];
         int len = snprintf(buf, sizeof(buf), "EVT %d %d %d\n",
-                           (int)ev.type, (int)ev.code, (int)ev.value);
+                           (int)out_type, (int)out_code, (int)out_value);
         if (len <= 0 || len >= (int)sizeof(buf)) continue;
 
         pthread_mutex_lock(&g_send_mutex);
@@ -370,11 +468,134 @@ static int init_virtual_keyboard(void) {
  *
  * Returns the open O_RDWR | O_CLOEXEC fd on success, -1 on failure.
  */
-static int discover_gamepad_fd(void) {
+static int64_t monotonic_now_ms(void) {
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) return 0;
+    return (int64_t)ts.tv_sec * 1000LL + (int64_t)(ts.tv_nsec / 1000000L);
+}
+
+static void drain_evdev_fd(int fd) {
+    if (fd < 0) return;
+    int fl = fcntl(fd, F_GETFL);
+    if (fl < 0) return;
+    (void)fcntl(fd, F_SETFL, fl | O_NONBLOCK);
+    struct input_event drain_ev;
+    while (read(fd, &drain_ev, sizeof(drain_ev)) > 0) {}
+    (void)fcntl(fd, F_SETFL, fl);
+}
+
+static int is_gamepad_fd_alive(int fd) {
+    if (fd < 0) return 0;
+    unsigned long key_bits[NBITS(KEY_MAX + 1)];
+    memset(key_bits, 0, sizeof(key_bits));
+    if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key_bits)), key_bits) < 0) {
+        return is_evdev_disconnect_errno(errno) ? 0 : 1;
+    }
+    return 1;
+}
+
+static int query_evdev_abs_binding(int fd, uint16_t axis_code, GamepadAxisBinding *out_binding) {
+    struct input_absinfo info;
+    memset(&info, 0, sizeof(info));
+    if (ioctl(fd, EVIOCGABS(axis_code), &info) < 0) {
+        return 0;
+    }
+    if (info.maximum <= info.minimum) {
+        return 0;
+    }
+    out_binding->supported = 1;
+    out_binding->raw_axis = axis_code;
+    out_binding->raw_min = info.minimum;
+    out_binding->raw_max = info.maximum;
+    return 1;
+}
+
+static void refresh_gamepad_axis_map_into(int fd, const char *gamepad_path, GamepadAxisMap *out_axes) {
+    if (!out_axes) return;
+    init_default_gamepad_axis_map(out_axes);
+    if (fd < 0) return;
+
+    unsigned long abs_bits[NBITS(ABS_MAX + 1)];
+    memset(abs_bits, 0, sizeof(abs_bits));
+    if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(abs_bits)), abs_bits) == 0) {
+        GamepadAxisBinding bx, by, bz, brx, bry, brz, bbrake, bgas, bhat2y, bhat2x;
+        int has_x = test_bit(ABS_X, abs_bits) && query_evdev_abs_binding(fd, ABS_X, &bx);
+        int has_y = test_bit(ABS_Y, abs_bits) && query_evdev_abs_binding(fd, ABS_Y, &by);
+        int has_z = test_bit(ABS_Z, abs_bits) && query_evdev_abs_binding(fd, ABS_Z, &bz);
+        int has_rx = test_bit(ABS_RX, abs_bits) && query_evdev_abs_binding(fd, ABS_RX, &brx);
+        int has_ry = test_bit(ABS_RY, abs_bits) && query_evdev_abs_binding(fd, ABS_RY, &bry);
+        int has_rz = test_bit(ABS_RZ, abs_bits) && query_evdev_abs_binding(fd, ABS_RZ, &brz);
+        int has_brake = test_bit(ABS_BRAKE, abs_bits) && query_evdev_abs_binding(fd, ABS_BRAKE, &bbrake);
+        int has_gas = test_bit(ABS_GAS, abs_bits) && query_evdev_abs_binding(fd, ABS_GAS, &bgas);
+        int has_hat2y = test_bit(ABS_HAT2Y, abs_bits) && query_evdev_abs_binding(fd, ABS_HAT2Y, &bhat2y);
+        int has_hat2x = test_bit(ABS_HAT2X, abs_bits) && query_evdev_abs_binding(fd, ABS_HAT2X, &bhat2x);
+
+        if (has_x) out_axes->left_x = bx;
+        if (has_y) out_axes->left_y = by;
+
+        if (has_rx && has_ry && brx.raw_min < 0 && bry.raw_min < 0 &&
+            has_z && has_rz && bz.raw_min >= 0 && brz.raw_min >= 0) {
+            /* xpad / Xbox 360 descriptor: sticks on RX/RY, unsigned triggers on Z/RZ */
+            out_axes->right_x = brx;
+            out_axes->right_y = bry;
+            out_axes->left_trigger = bz;
+            out_axes->right_trigger = brz;
+            if (has_brake) out_axes->left_trigger_alt = bbrake;
+            if (has_gas) out_axes->right_trigger_alt = bgas;
+        } else {
+            if (has_z) out_axes->right_x = bz;
+            if (has_rz) out_axes->right_y = brz;
+            out_axes->left_trigger.supported = 0;
+            out_axes->right_trigger.supported = 0;
+            if (has_brake) {
+                out_axes->left_trigger = bbrake;
+                if (has_hat2y) out_axes->left_trigger_alt = bhat2y;
+            } else if (has_hat2y) {
+                out_axes->left_trigger = bhat2y;
+            }
+            if (has_gas) {
+                out_axes->right_trigger = bgas;
+                if (has_hat2x) out_axes->right_trigger_alt = bhat2x;
+            } else if (has_hat2x) {
+                out_axes->right_trigger = bhat2x;
+            }
+        }
+    }
+
+    if (gamepad_path && gamepad_path[0] != '\0') {
+        FILE *fp = popen("/system/bin/dumpsys input 2>/dev/null", "r");
+        if (fp) {
+            (void)parse_dumpsys_input_gamepad_axes(fp, gamepad_path, out_axes);
+            pclose(fp);
+        }
+    }
+
+    fprintf(stderr,
+            "privd: gamepad axes LX=%d[%d..%d] LY=%d[%d..%d] RX=%d[%d..%d] RY=%d[%d..%d] LT=%d[%d..%d](supported=%d) RT=%d[%d..%d](supported=%d)\n",
+            (int)out_axes->left_x.raw_axis, out_axes->left_x.raw_min, out_axes->left_x.raw_max,
+            (int)out_axes->left_y.raw_axis, out_axes->left_y.raw_min, out_axes->left_y.raw_max,
+            (int)out_axes->right_x.raw_axis, out_axes->right_x.raw_min, out_axes->right_x.raw_max,
+            (int)out_axes->right_y.raw_axis, out_axes->right_y.raw_min, out_axes->right_y.raw_max,
+            (int)out_axes->left_trigger.raw_axis, out_axes->left_trigger.raw_min, out_axes->left_trigger.raw_max, out_axes->left_trigger.supported,
+            (int)out_axes->right_trigger.raw_axis, out_axes->right_trigger.raw_min, out_axes->right_trigger.raw_max, out_axes->right_trigger.supported);
+}
+
+static void refresh_gamepad_axis_map(int fd, const char *gamepad_path) {
+    GamepadAxisMap refreshed;
+    refresh_gamepad_axis_map_into(fd, gamepad_path, &refreshed);
+    pthread_mutex_lock(&g_gamepad_mutex);
+    g_gamepad_axes = refreshed;
+    pthread_mutex_unlock(&g_gamepad_mutex);
+}
+
+static int discover_gamepad_into(char *out_path, size_t out_path_size, GamepadAxisMap *out_axes) {
     char path[64];
     unsigned long key_bits[NBITS(KEY_MAX + 1)];
     unsigned long abs_bits[NBITS(ABS_MAX + 1)];
     char devname[256];
+
+    if (out_path && out_path_size > 0) out_path[0] = '\0';
+    if (out_axes) init_default_gamepad_axis_map(out_axes);
 
     for (int i = 0; i < SCAN_MAX; i++) {
         snprintf(path, sizeof(path), "%s%d", INPUT_PATH_PREFIX, i);
@@ -403,11 +624,70 @@ static int discover_gamepad_fd(void) {
 
         int rw_fd = open(path, O_RDWR | O_CLOEXEC);
         if (rw_fd >= 0) {
+            if (out_path && out_path_size > 0) {
+                strncpy(out_path, path, out_path_size - 1);
+                out_path[out_path_size - 1] = '\0';
+            }
             fprintf(stderr, "privd: gamepad=%s name=\"%s\"\n", path, devname);
+            if (out_axes) {
+                refresh_gamepad_axis_map_into(rw_fd, path, out_axes);
+            }
             return rw_fd;
         }
     }
     return -1;
+}
+
+static int discover_gamepad_fd(void) {
+    char found_path[64] = {0};
+    GamepadAxisMap found_axes;
+    int rw_fd = discover_gamepad_into(found_path, sizeof(found_path), &found_axes);
+    if (rw_fd >= 0) {
+        pthread_mutex_lock(&g_gamepad_mutex);
+        strncpy(g_gamepad_path, found_path, sizeof(g_gamepad_path) - 1);
+        g_gamepad_path[sizeof(g_gamepad_path) - 1] = '\0';
+        g_gamepad_axes = found_axes;
+        pthread_mutex_unlock(&g_gamepad_mutex);
+    }
+    return rw_fd;
+}
+
+/*
+ * Re-discovers the physical gamepad node on the main `serve_client` thread when
+ * `g_reader_active == 0` (e.g. after the user toggles Controller Style between
+ * Disconnect / Xbox / Odin / Retro, unregistering the old `/dev/input/eventN`).
+ */
+static int reconnect_gamepad_main_thread(int ignore_cooldown) {
+    if (g_reader_active) return g_gamepad_fd;
+
+    int64_t now_ms = monotonic_now_ms();
+    if (!ignore_cooldown &&
+        (now_ms - g_last_gamepad_rediscover_ms) < GAMEPAD_REDISCOVER_COOLDOWN_MS) {
+        return -1;
+    }
+    g_last_gamepad_rediscover_ms = now_ms;
+
+    pthread_mutex_lock(&g_gamepad_mutex);
+    if (g_gamepad_fd >= 0) {
+        close(g_gamepad_fd);
+        g_gamepad_fd = -1;
+        g_gamepad_path[0] = '\0';
+    }
+    pthread_mutex_unlock(&g_gamepad_mutex);
+
+    char new_path[64] = {0};
+    GamepadAxisMap new_axes;
+    int new_fd = discover_gamepad_into(new_path, sizeof(new_path), &new_axes);
+    if (new_fd >= 0) {
+        pthread_mutex_lock(&g_gamepad_mutex);
+        g_gamepad_fd = new_fd;
+        strncpy(g_gamepad_path, new_path, sizeof(g_gamepad_path) - 1);
+        g_gamepad_path[sizeof(g_gamepad_path) - 1] = '\0';
+        g_gamepad_axes = new_axes;
+        pthread_mutex_unlock(&g_gamepad_mutex);
+        fprintf(stderr, "privd: reconnected gamepad=%s\n", new_path);
+    }
+    return new_fd;
 }
 
 static int resolve_primary_touch_path_from_dumpsys(char *out_path, size_t out_size) {
@@ -1485,16 +1765,18 @@ static int serve_client(int client_fd) {
         }
         if (strcmp(line, "SUB GAMEPAD") == 0) {
             if (!g_reader_active) {
-                /* Drain any events that accumulated in the kernel buffer while the
-                 * reader was inactive. These include stale physical presses and
-                 * synthetic events written by previous GD/GU/JS injection sessions;
-                 * delivering them to the app would create spurious steps at the very
-                 * beginning of the recording. */
-                int fl = fcntl(g_gamepad_fd, F_GETFL);
-                fcntl(g_gamepad_fd, F_SETFL, fl | O_NONBLOCK);
-                struct input_event drain_ev;
-                while (read(g_gamepad_fd, &drain_ev, sizeof(drain_ev)) > 0) {}
-                fcntl(g_gamepad_fd, F_SETFL, fl);
+                if (!is_gamepad_fd_alive(g_gamepad_fd)) {
+                    (void)reconnect_gamepad_main_thread(1);
+                    drain_evdev_fd(g_gamepad_fd);
+                } else {
+                    /* Drain any events that accumulated in the kernel buffer BEFORE
+                     * calling refresh_gamepad_axis_map (which runs dumpsys input), so
+                     * stale presses/injections are cleared while any physical press made
+                     * by the user right as the Recording HUD opens stays queued for
+                     * evdev_reader_thread. */
+                    drain_evdev_fd(g_gamepad_fd);
+                    refresh_gamepad_axis_map(g_gamepad_fd, g_gamepad_path);
+                }
 
                 /* Re-publish the client fd. stop_reader_thread() resets it to -1,
                  * so a second SUB GAMEPAD on the same connection would silently
@@ -1605,7 +1887,31 @@ static int serve_client(int client_fd) {
         if (parse_touch_command(line, g_touch_fd, &active_slots_mask)) continue;
         if (parse_mouse_command(line, g_mouse_fd)) continue;
         if (parse_key_command(line, g_keyboard_fd)) continue;
-        if (parse_gamepad_command(line, g_gamepad_fd)) continue;
+        if (is_gamepad_command_line(line)) {
+            if (!g_reader_active && g_gamepad_fd < 0) {
+                (void)reconnect_gamepad_main_thread(0);
+            }
+            pthread_mutex_lock(&g_gamepad_mutex);
+            int gp_fd = g_gamepad_fd;
+            GamepadAxisMap gp_axes = g_gamepad_axes;
+            pthread_mutex_unlock(&g_gamepad_mutex);
+
+            if (gp_fd >= 0) {
+                int write_err = 0;
+                if (!parse_gamepad_command_mapped_ex(line, gp_fd, &gp_axes, &write_err) &&
+                    write_err != 0 && is_evdev_disconnect_errno(write_err) && !g_reader_active) {
+                    fprintf(stderr, "privd: gamepad write failed errno=%d, attempting hot-switch recovery\n", write_err);
+                    if (reconnect_gamepad_main_thread(1) >= 0) {
+                        pthread_mutex_lock(&g_gamepad_mutex);
+                        gp_fd = g_gamepad_fd;
+                        gp_axes = g_gamepad_axes;
+                        pthread_mutex_unlock(&g_gamepad_mutex);
+                        (void)parse_gamepad_command_mapped_ex(line, gp_fd, &gp_axes, NULL);
+                    }
+                }
+            }
+            continue;
+        }
 
         /* Unknown commands are silently ignored — forward-compat for future
          * feature prefixes. */
@@ -1758,6 +2064,8 @@ int main(int argc, char *argv[]) {
         ioctl(g_mouse_fd, UI_DEV_DESTROY);
         close(g_mouse_fd);
     }
-    close(g_gamepad_fd);
+    if (g_gamepad_fd >= 0) {
+        close(g_gamepad_fd);
+    }
     return 0;
 }
