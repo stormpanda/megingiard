@@ -336,6 +336,7 @@ internal fun PadSurface(
 
     // Track which button IDs are currently pressed (from engine)
     val pressedIds by engine.pressedIds.collectAsStateWithLifecycle()
+    val stickDeflectionsState = engine.stickDeflections.collectAsStateWithLifecycle()
     // Track running macro IDs to drive the pulse animation
     val runningMacroIds by MacroExecutor.runningMacroIds.collectAsStateWithLifecycle()
 
@@ -691,6 +692,14 @@ internal fun PadSurface(
                             is PadAction.SingleTouchGesture -> singleTouchGestureExecutionId(btn.id) in runningMacroIds
                             else -> false
                         }
+                    val stickDeflectionProvider =
+                        if (btn.action is PadAction.AnalogStick) {
+                            remember(btn.id, stickDeflectionsState) {
+                                { stickDeflectionsState.value[btn.id] ?: MP_NEUTRAL_STICK_DEFLECTION }
+                            }
+                        } else {
+                            null
+                        }
                     PadButton(
                         btn = btn,
                         defaultBgColor = layout.buttonBgColor,
@@ -700,6 +709,7 @@ internal fun PadSurface(
                         viewport = designViewport,
                         accentColor = accentColor,
                         isRunning = isRunning,
+                        stickDeflectionProvider = stickDeflectionProvider,
                     )
                 }
             }

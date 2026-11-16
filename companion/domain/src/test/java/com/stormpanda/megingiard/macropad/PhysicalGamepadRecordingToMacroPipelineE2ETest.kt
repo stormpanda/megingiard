@@ -168,4 +168,98 @@ class PhysicalGamepadRecordingToMacroPipelineE2ETest {
         val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 3100L)
         assertTrue("Cancelled recording must not leak steps into next session", steps.isEmpty())
     }
+
+    @Test
+    fun testAnalogOnlyTriggerRecordingEmitsTriggerPathE2E() {
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 1000L)
+
+        // Firmware Mode 1 (Analog Only): EV_ABS ABS_BRAKE & ABS_GAS without EV_KEY BTN_TL2/BTN_TR2
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evAbs(GamepadKeycodes.ABS_BRAKE, 16384), 1100L)
+        val midState = PhysicalGamepadRecordingManager.state.value as GamepadRecordingState.Recording
+        assertTrue("HUD should highlight L2 at >= 50% pull", GamepadKeycodes.BTN_TL2 in midState.pressedButtons)
+        assertEquals(0.5f, midState.leftTrigger, 0.01f)
+
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evAbs(GamepadKeycodes.ABS_BRAKE, 32767), 1180L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evAbs(GamepadKeycodes.ABS_BRAKE, 0), 1260L)
+
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 1400L)
+        assertEquals(1, steps.size)
+        val triggerPath = steps[0] as MacroStep.TriggerPath
+        assertEquals(GamepadTrigger.LEFT, triggerPath.trigger)
+        assertEquals(0L, triggerPath.startTimeMs)
+        assertEquals(161L, triggerPath.durationMs)
+        assertEquals(3, triggerPath.samples.size)
+
+        val compiled = buildMacroEventList(Macro(id = "l2-macro", name = "L2", steps = steps))
+        assertTrue(compiled.any { it.type == MacroEventType.JOYSTICK_SET && it.code == GamepadKeycodes.ABS_BRAKE && it.value == 32767 })
+        assertTrue(compiled.any { it.type == MacroEventType.DIGITAL_BUTTON_DOWN && it.code == GamepadKeycodes.BTN_TL2 })
+    }
+
+    @Test
+    fun testDualModeAnalogAndDigitalTriggerDeduplicatesIntoSingleTriggerPathE2E() {
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 2000L)
+
+        // L2 in Mode 2 (normal order: EV_ABS crosses deadzone first, then EV_KEY BTN_TL2 1 at 50%)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evAbs(GamepadKeycodes.ABS_BRAKE, 8000), 2100L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evKey(GamepadKeycodes.BTN_TL2, 1), 2130L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evAbs(GamepadKeycodes.ABS_BRAKE, 32767), 2160L)
+        // Fast release where EV_ABS 0 arrives before EV_KEY 0
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evAbs(GamepadKeycodes.ABS_BRAKE, 0), 2240L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evKey(GamepadKeycodes.BTN_TL2, 0), 2245L)
+
+        // R2 in Mode 2 (reversed intra-frame order: EV_KEY BTN_TR2 1 arrives before first EV_ABS)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evKey(GamepadKeycodes.BTN_TR2, 1), 2400L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evAbs(GamepadKeycodes.ABS_GAS, 28000), 2402L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evKey(GamepadKeycodes.BTN_TR2, 0), 2500L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evAbs(GamepadKeycodes.ABS_GAS, 0), 2510L)
+
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 2600L)
+        assertEquals(
+            "Dual analog+digital triggers must produce exactly two TriggerPath steps with no duplicate GamepadButtonTap",
+            2,
+            steps.size,
+        )
+        assertTrue(steps.all { it is MacroStep.TriggerPath })
+        assertEquals(GamepadTrigger.LEFT, (steps[0] as MacroStep.TriggerPath).trigger)
+        assertEquals(GamepadTrigger.RIGHT, (steps[1] as MacroStep.TriggerPath).trigger)
+    }
+
+    @Test
+    fun testDigitalOnlyTriggerModeStillRecordsGamepadButtonTapE2E() {
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 1000L)
+
+        // Firmware Mode 0 (Digital Only): EV_KEY BTN_TR2 without EV_ABS
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evKey(GamepadKeycodes.BTN_TR2, 1), 1100L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evKey(GamepadKeycodes.BTN_TR2, 0), 1250L)
+
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 1300L)
+        assertEquals(1, steps.size)
+        val tap = steps[0] as MacroStep.GamepadButtonTap
+        assertEquals(GamepadKeycodes.BTN_TR2, tap.btnCode)
+        assertEquals(150L, tap.durationMs)
+    }
+
+    @Test
+    fun testForceClosedTriggerAndStickAtExactLastSampleTimestampPreserveAllSamplesE2E() {
+        PhysicalGamepadRecordingManager.startRecordingForTest(startElapsedMs = 1000L)
+
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evAbs(GamepadKeycodes.ABS_BRAKE, 8000), 1100L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evAbs(GamepadKeycodes.ABS_BRAKE, 32767), 1250L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evAbs(GamepadKeycodes.ABS_X, 16000), 1100L)
+        PhysicalGamepadRecordingManager.recordEvdevEvent(evAbs(GamepadKeycodes.ABS_X, 32767), 1250L)
+
+        // Stop on the exact same millisecond (1250L) as the final trigger and stick samples
+        val steps = PhysicalGamepadRecordingManager.finishRecordingForTest(stopElapsedMs = 1250L)
+        assertEquals(2, steps.size)
+
+        val triggerPath = steps.filterIsInstance<MacroStep.TriggerPath>().single()
+        val stickPath = steps.filterIsInstance<MacroStep.JoystickPath>().single()
+        assertEquals(151L, triggerPath.durationMs)
+        assertEquals(151L, stickPath.durationMs)
+
+        val compiled = buildMacroEventList(Macro(id = "force-close", name = "Force Close", steps = steps))
+        assertTrue(compiled.any { it.type == MacroEventType.JOYSTICK_SET && it.code == GamepadKeycodes.ABS_BRAKE && it.value == 32767 })
+        assertTrue(compiled.any { it.type == MacroEventType.DIGITAL_BUTTON_DOWN && it.code == GamepadKeycodes.BTN_TL2 })
+        assertTrue(compiled.any { it.type == MacroEventType.JOYSTICK_SET && it.code == GamepadKeycodes.ABS_X && it.value == 32767 })
+    }
 }

@@ -45,8 +45,15 @@ internal fun ActionPicker(
             KeyboardKeyPicker(current, onOpenKeyboardPicker, loggedOnChange, isFirstItem = isFirstItem)
         }
 
-        is PadAction.GamepadButton -> {
-            GamepadButtonPicker(current, onOpenGamepadPicker, isFirstItem = isFirstItem)
+        is PadAction.GamepadButton,
+        is PadAction.AnalogStick,
+        -> {
+            GamepadActionPicker(
+                current = current,
+                onOpenPicker = onOpenGamepadPicker,
+                onChange = loggedOnChange,
+                isFirstItem = isFirstItem,
+            )
         }
 
         is PadAction.MouseButton,

@@ -128,11 +128,11 @@ PadProfile
         └── ambientVignetteColor: Long         (ARGB, default 0xFF000000)
         PadButton
         ├── id: String          (UUID)
-        ├── label: String       (empty for TrackpointMove / ScrollWheel)
+        ├── label: String       (hidden on face for TrackpointMove / AnalogStick / ScrollWheel; stored for editor list)
         ├── iconName: String?   (optional Material Symbols snake_case ligature name, e.g. "arrow_back"; shown instead of label in use mode + editor canvas; null = label)
         ├── posX / posY: Float  (normalised to designCanvas: 0.0–1.0 inside designCanvas; < 0.0 / > 1.0 permitted inside host pillarbox/letterbox black bars)
         ├── widthPx: Float      (stepless width in designCanvas pixels; default 136.0 Thor / baseButtonSizePx, min designCanvas.minButtonSizePx: 68 px Thor / 60 px RP Duo)
-        ├── heightPx: Float     (stepless height in designCanvas pixels; default 136.0 Thor / baseButtonSizePx, min designCanvas.minButtonSizePx, or largeControlMinSizePx 272 px Thor / 240 px RP Duo for ScrollWheel / TrackpointMove)
+        ├── heightPx: Float     (stepless height in designCanvas pixels; default 136.0 Thor / baseButtonSizePx, min designCanvas.minButtonSizePx, or largeControlMinSizePx 272 px Thor / 240 px RP Duo on initial assignment for ScrollWheel / TrackpointMove / AnalogStick)
         ├── buttonShape: ButtonShape (SQUARE | ROUNDED_SQUARE | CIRCLE | HEXAGON_1 | HEXAGON_2 | PENTAGON_1 | PENTAGON_2 | OCTAGON | DIAMOND | TRIANGLE_UP | TRIANGLE_DOWN | TRIANGLE_LEFT | TRIANGLE_RIGHT | ICON_ONLY)
         ├── buttonTextColor: ColorOption?  (override, null = layout default)
         ├── buttonBorderColor: ColorOption? (override, null = layout default)
@@ -141,6 +141,7 @@ PadProfile
         ├── action: PadAction   (sealed)
         │     KeyboardKey(keycode, label)
         │     GamepadButton(btnCode, label)
+        │     AnalogStick(stick: JoystickStick = LEFT, sensitivity: Float = 1.0f, floatingCenter: Boolean = false)
         │     MouseButton(button: MouseButton enum)
         │     ScrollWheel
         │     TrackpointMove(size: TrackpointSize = MEDIUM, mode: TrackpointMode) — legacy size deprecated; sized via PadButton.widthPx/heightPx

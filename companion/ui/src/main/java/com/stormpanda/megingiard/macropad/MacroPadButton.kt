@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +44,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -53,6 +55,7 @@ import com.stormpanda.megingiard.math.DesignViewport
 import com.stormpanda.megingiard.ui.AppPalettes
 import com.stormpanda.megingiard.ui.CompanionAppIconCache
 import com.stormpanda.megingiard.ui.MaterialSymbol
+import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -98,6 +101,24 @@ private const val MP_SCROLL_CHEVRON_DIM_ALPHA = 0.5f
 private const val MP_PEEK_ICON_BASE_DP = 24f
 private const val MP_PEEK_ICON_BASE_PX = MP_PEEK_ICON_BASE_DP * THOR_BOTTOM_DENSITY
 
+private const val MP_STICK_GUIDE_RING_RATIO = 0.62f
+private const val MP_STICK_TICK_INNER_RATIO = 0.80f
+private const val MP_STICK_TICK_OUTER_RATIO = 0.92f
+private const val MP_STICK_CAP_RADIUS_RATIO = 0.34f
+private const val MP_STICK_MAX_TRAVEL_RATIO = 0.56f
+private const val MP_STICK_GUIDE_ALPHA = 0.28f
+private const val MP_STICK_STEM_ALPHA = 0.55f
+private const val MP_STICK_CAP_REST_FILL_ALPHA = 0.18f
+private const val MP_STICK_CAP_PRESSED_FILL_ALPHA = 0.36f
+private const val MP_STICK_CAP_REST_BORDER_ALPHA = 0.68f
+private const val MP_STICK_CAP_PRESSED_BORDER_ALPHA = 0.95f
+private const val MP_STICK_STEM_MIN_MAG = 0.02f
+private val MP_STICK_GUIDE_STROKE = 1.25.dp
+private val MP_STICK_STEM_STROKE = 2.dp
+private val MP_STICK_CAP_STROKE = 1.75.dp
+internal val MP_NEUTRAL_STICK_DEFLECTION = NormalizedPoint(0f, 0f)
+internal val MP_NEUTRAL_STICK_DEFLECTION_PROVIDER: () -> NormalizedPoint = { MP_NEUTRAL_STICK_DEFLECTION }
+
 // Outer gradient edge alpha at resting state; intermediate stops follow r² quadratic curve.
 internal const val MP_BTN_GRADIENT_OUTER = 0.7f
 
@@ -122,6 +143,7 @@ internal fun PadButton(
     viewport: DesignViewport,
     accentColor: Color,
     isRunning: Boolean = false,
+    stickDeflectionProvider: (() -> NormalizedPoint)? = null,
 ) {
     if (btn.invisible) {
         return
@@ -187,13 +209,15 @@ internal fun PadButton(
         )
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
+    val isAnalogStick = btn.action is PadAction.AnalogStick
+    val isCircular = btn.action.isCircularControl()
 
     val chipShape =
         resolvePadButtonShape(
             buttonShape = btn.buttonShape,
             widthPx = btn.widthPx,
             heightPx = btn.heightPx,
-            isTrackpoint = isTrackpoint,
+            isTrackpoint = isCircular,
         )
 
     val btnWidthDp = with(density) { renderedWidthPx.toDp() }
@@ -243,7 +267,7 @@ internal fun PadButton(
                 modifier =
                     Modifier.graphicsLayer {
                         val contentScale =
-                            if (isPressed) {
+                            if (isPressed && !isAnalogStick) {
                                 pressedScaleState.value
                             } else if (isRunning) {
                                 runningBreatheState?.value ?: 1.0f
@@ -263,6 +287,8 @@ internal fun PadButton(
                     renderedHeightPx = renderedHeightPx,
                     isTrackpoint = isTrackpoint,
                     effectiveContentAccent = effectiveContentAccent,
+                    isPressed = isPressed,
+                    stickDeflectionProvider = stickDeflectionProvider,
                 )
             }
         }
@@ -278,9 +304,12 @@ internal fun PadButtonContent(
     renderedHeightPx: Float = btn.heightPx,
     isTrackpoint: Boolean = btn.action is PadAction.TrackpointMove,
     effectiveContentAccent: Color = effectiveTextTint,
+    isPressed: Boolean = false,
+    stickDeflectionProvider: (() -> NormalizedPoint)? = null,
 ) {
     val density = LocalDensity.current
-    val contentScale = ButtonShapeGeometry.contentScaleFor(btn.buttonShape, isTrackpoint)
+    val isCircular = isTrackpoint || btn.action.isCircularControl()
+    val contentScale = ButtonShapeGeometry.contentScaleFor(btn.buttonShape, isCircular)
     val scaledIconSize = iconSize * contentScale
 
     if (isTrackpoint) {
@@ -288,6 +317,15 @@ internal fun PadButtonContent(
             "●",
             color = effectiveContentAccent.copy(alpha = MP_TRACKPOINT_DOT_ALPHA * effectiveContentAccent.alpha),
             style = MaterialTheme.typography.titleLarge,
+        )
+    } else if (btn.action is PadAction.AnalogStick) {
+        val stickAction = btn.action as PadAction.AnalogStick
+        AnalogStickFace(
+            stick = stickAction.stick,
+            isPressed = isPressed,
+            contentTint = effectiveContentAccent,
+            renderedDiameterPx = min(renderedWidthPx, renderedHeightPx),
+            deflectionProvider = stickDeflectionProvider ?: MP_NEUTRAL_STICK_DEFLECTION_PROVIDER,
         )
     } else if (btn.action is PadAction.ScrollWheel) {
         ScrollWheelFace(
@@ -437,6 +475,97 @@ private fun tintedGrayscaleFilter(tint: Color): ColorFilter {
             ),
         )
     return ColorFilter.colorMatrix(matrix)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Virtual Analog Stick face — concentric guide ring + movable L/R thumb cap
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+internal fun AnalogStickFace(
+    stick: JoystickStick,
+    isPressed: Boolean,
+    contentTint: Color,
+    renderedDiameterPx: Float,
+    deflectionProvider: () -> NormalizedPoint = MP_NEUTRAL_STICK_DEFLECTION_PROVIDER,
+) {
+    val density = LocalDensity.current
+    val guideStroke = remember(density) { Stroke(width = with(density) { MP_STICK_GUIDE_STROKE.toPx() }) }
+    val capStroke = remember(density) { Stroke(width = with(density) { MP_STICK_CAP_STROKE.toPx() }) }
+    val stemStrokePx = remember(density) { with(density) { MP_STICK_STEM_STROKE.toPx() } }
+
+    val outerRadiusPx = (renderedDiameterPx / 2f).coerceAtLeast(1f)
+    val maxTravelPx = outerRadiusPx * MP_STICK_MAX_TRAVEL_RATIO
+    val stickShortLabel = if (stick == JoystickStick.LEFT) "L" else "R"
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val deflection = deflectionProvider()
+            val dx = deflection.x.coerceIn(-1f, 1f)
+            val dy = deflection.y.coerceIn(-1f, 1f)
+            val radius = size.minDimension / 2f
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val guideColor = contentTint.copy(alpha = MP_STICK_GUIDE_ALPHA * contentTint.alpha)
+
+            drawCircle(
+                color = guideColor,
+                radius = radius * MP_STICK_GUIDE_RING_RATIO,
+                center = center,
+                style = guideStroke,
+            )
+
+            val tickInner = radius * MP_STICK_TICK_INNER_RATIO
+            val tickOuter = radius * MP_STICK_TICK_OUTER_RATIO
+            drawLine(guideColor, Offset(center.x, center.y - tickOuter), Offset(center.x, center.y - tickInner), guideStroke.width)
+            drawLine(guideColor, Offset(center.x, center.y + tickInner), Offset(center.x, center.y + tickOuter), guideStroke.width)
+            drawLine(guideColor, Offset(center.x - tickOuter, center.y), Offset(center.x - tickInner, center.y), guideStroke.width)
+            drawLine(guideColor, Offset(center.x + tickInner, center.y), Offset(center.x + tickOuter, center.y), guideStroke.width)
+
+            val travel = radius * MP_STICK_MAX_TRAVEL_RATIO
+            val capCenter = Offset(center.x + dx * travel, center.y + dy * travel)
+            val mag = hypot(dx, dy)
+            if (mag > MP_STICK_STEM_MIN_MAG) {
+                drawLine(
+                    color = contentTint.copy(alpha = MP_STICK_STEM_ALPHA * contentTint.alpha),
+                    start = center,
+                    end = capCenter,
+                    strokeWidth = stemStrokePx,
+                )
+            }
+
+            val capFillAlpha = if (isPressed) MP_STICK_CAP_PRESSED_FILL_ALPHA else MP_STICK_CAP_REST_FILL_ALPHA
+            val capBorderAlpha = if (isPressed) MP_STICK_CAP_PRESSED_BORDER_ALPHA else MP_STICK_CAP_REST_BORDER_ALPHA
+            val capRadius = radius * MP_STICK_CAP_RADIUS_RATIO
+            drawCircle(
+                color = contentTint.copy(alpha = capFillAlpha * contentTint.alpha),
+                radius = capRadius,
+                center = capCenter,
+            )
+            drawCircle(
+                color = contentTint.copy(alpha = capBorderAlpha * contentTint.alpha),
+                radius = capRadius,
+                center = capCenter,
+                style = capStroke,
+            )
+        }
+
+        Text(
+            text = stickShortLabel,
+            color = contentTint,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            modifier =
+                Modifier.graphicsLayer {
+                    val deflection = deflectionProvider()
+                    translationX = deflection.x.coerceIn(-1f, 1f) * maxTravelPx
+                    translationY = deflection.y.coerceIn(-1f, 1f) * maxTravelPx
+                },
+        )
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

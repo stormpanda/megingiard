@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <errno.h>
 
 #if defined(__linux__) || defined(__ANDROID__)
 #include <linux/uinput.h>
@@ -50,9 +51,16 @@ struct input_event {
 #define ABS_X 0x00
 #define ABS_Y 0x01
 #define ABS_Z 0x02
+#define ABS_RX 0x03
+#define ABS_RY 0x04
 #define ABS_RZ 0x05
+#define ABS_GAS 0x09
+#define ABS_BRAKE 0x0a
 #define ABS_HAT0X 0x10
 #define ABS_HAT0Y 0x11
+#define ABS_HAT2X 0x16
+#define ABS_HAT2Y 0x17
+#define ABS_MAX 0x3f
 
 #define ABS_MT_SLOT 0x2f
 #define ABS_MT_POSITION_X 0x35
@@ -78,23 +86,24 @@ struct uinput_setup {
 #endif
 
 #ifdef TEST_MOCK_WRITE_EVENT
-extern void mock_write_event(uint16_t type, uint16_t code, int32_t value);
+extern int mock_write_event(uint16_t type, uint16_t code, int32_t value);
 #endif
 
 /**
  * Writes a Linux struct input_event to the specified file descriptor.
+ * Returns 0 on success, or -1 on write failure (preserving errno).
  */
-static inline void write_event(int fd, uint16_t type, uint16_t code, int32_t value) {
+static inline int write_event(int fd, uint16_t type, uint16_t code, int32_t value) {
 #ifdef TEST_MOCK_WRITE_EVENT
     (void)fd;
-    mock_write_event(type, code, value);
+    return mock_write_event(type, code, value);
 #else
     struct input_event ev;
     memset(&ev, 0, sizeof(ev));
     ev.type  = type;
     ev.code  = code;
     ev.value = value;
-    (void)write(fd, &ev, sizeof(ev));
+    return (write(fd, &ev, sizeof(ev)) == (ssize_t)sizeof(ev)) ? 0 : -1;
 #endif
 }
 

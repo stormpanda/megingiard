@@ -200,6 +200,15 @@ Open Settings to create a layout.</string>
     <!-- MacroPad action picker labels -->
     <string name="macropad_action_keyboard_key">鍵盤按鍵</string>
     <string name="macropad_action_gamepad_button">手把按鈕</string>
+    <string name="macropad_action_analog_stick_left">左類比搖桿 (模擬)</string>
+    <string name="macropad_action_analog_stick_right">右類比搖桿 (模擬)</string>
+    <string name="macropad_gamepad_control_type_title">手把控制類型</string>
+    <string name="macropad_gamepad_control_type_desc">選擇獨立按鈕組合或連續虛擬類比搖桿</string>
+    <string name="macropad_analog_stick_sensitivity_title">搖桿靈敏度</string>
+    <string name="macropad_analog_stick_sensitivity_desc">達到最大搖桿傾斜的徑向推移乘數</string>
+    <string name="macropad_analog_stick_floating_title">浮動中心點</string>
+    <string name="macropad_analog_stick_floating_desc">以手指按下的位置作為中立原點 (0, 0)，而非搖桿墊正中央</string>
+    <string name="macropad_picker_emulate_stick_pill">模擬搖桿</string>
     <string name="macropad_action_mouse_button">滑鼠按鈕</string>
     <string name="macropad_action_scroll_wheel">滾輪</string>
     <string name="macropad_action_trackpoint">軌跡點 (相對滑鼠)</string>
@@ -546,6 +555,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_step_type_dpad">方向鍵</string>
     <string name="macropad_macro_step_type_touch">觸控輕觸</string>
     <string name="macropad_macro_step_type_touch_path">觸控手勢</string>
+    <string name="macropad_macro_step_type_trigger">類比板機</string>
+    <string name="macropad_macro_step_type_trigger_path">板機路徑</string>
     <string name="macropad_macro_create_text_sequence_title">輸入文字序列</string>
     <string name="macropad_macro_create_text_sequence_desc">為文字短語自動產生定時按鍵步驟</string>
     <string name="macropad_macro_text_sequence_title">要輸入的文字</string>
@@ -631,7 +642,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_keyboard">鍵盤</string>
     <string name="macropad_action_group_keyboard_desc">傳送單個按鍵或組合鍵</string>
     <string name="macropad_action_group_gamepad">手把</string>
-    <string name="macropad_action_group_gamepad_desc">模擬標準手把按鈕與發射鍵</string>
+    <string name="macropad_action_group_gamepad_desc">模擬手把按鈕、板機與類比搖桿</string>
     <string name="macropad_action_group_mouse">滑鼠</string>
     <string name="macropad_action_group_mouse_desc">模擬滑鼠點擊、滾輪或指向點輸入</string>
     <string name="macropad_action_group_macro">巨集</string>
@@ -1286,6 +1297,15 @@ Open Settings to create a layout.</string>
     <string name="macro_step_target_stick_title">目標搖桿</string>
     <string name="macro_step_target_stick_desc">在左類比搖桿與右類比搖桿之間選擇</string>
     <string name="macro_step_stick_deflection_desc">搖桿傾斜推移百分比</string>
+    <string name="macropad_macro_step_trigger_left">L2 (左板機)</string>
+    <string name="macropad_macro_step_trigger_right">R2 (右板機)</string>
+    <string name="macropad_macro_step_path_summary_trigger">板機: %1$s</string>
+    <string name="macro_step_target_trigger_title">目標板機</string>
+    <string name="macro_step_target_trigger_desc">在 L2 (左) 與 R2 (右) 類比板機之間選擇</string>
+    <string name="macro_step_trigger_pressure_title">板機力道</string>
+    <string name="macro_step_trigger_pressure_desc">類比板機按壓深度百分比</string>
+    <string name="privd_recording_physical_trigger_l_badge">L2 %1$d%%</string>
+    <string name="privd_recording_physical_trigger_r_badge">R2 %1$d%%</string>
 
     <!-- Dialogs & Overlays -->
     <string name="macropad_cutout_rename_title">重新命名區塊</string>

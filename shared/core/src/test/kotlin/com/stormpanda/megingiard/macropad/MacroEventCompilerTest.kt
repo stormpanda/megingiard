@@ -1,7 +1,10 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.input.TouchAction
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -337,5 +340,102 @@ class MacroEventCompilerTest {
         assertTrue(ups.all { it.timeMs == 130L })
         assertTrue(ups.any { it.code == 0 })
         assertTrue(ups.any { it.code == 1 })
+    }
+
+    // ── TriggerPress & TriggerPath ────────────────────────────────────────────
+
+    @Test
+    fun `trigger press full pressure emits analog axis and digital button events`() {
+        val events =
+            compile(
+                MacroStep.TriggerPress(
+                    startTimeMs = 50L,
+                    durationMs = 150L,
+                    trigger = GamepadTrigger.LEFT,
+                    pressure = 1.0f,
+                ),
+            )
+        assertEquals(4, events.size)
+        val at50 = events.filter { it.timeMs == 50L }
+        val at200 = events.filter { it.timeMs == 200L }
+        assertEquals(2, at50.size)
+        assertEquals(2, at200.size)
+        assertTrue(at50.any { it.type == MacroEventType.JOYSTICK_SET && it.code == GamepadKeycodes.ABS_BRAKE && it.value == 32767 })
+        assertTrue(at50.any { it.type == MacroEventType.DIGITAL_BUTTON_DOWN && it.code == GamepadKeycodes.BTN_TL2 })
+        assertTrue(at200.any { it.type == MacroEventType.JOYSTICK_SET && it.code == GamepadKeycodes.ABS_BRAKE && it.value == 0 })
+        assertTrue(at200.any { it.type == MacroEventType.DIGITAL_BUTTON_UP && it.code == GamepadKeycodes.BTN_TL2 })
+    }
+
+    @Test
+    fun `trigger press partial pressure below digital threshold omits digital button`() {
+        val events =
+            compile(
+                MacroStep.TriggerPress(
+                    startTimeMs = 0L,
+                    durationMs = 100L,
+                    trigger = GamepadTrigger.RIGHT,
+                    pressure = 0.4f,
+                ),
+            )
+        assertEquals(2, events.size)
+        assertEquals(MacroEventType.JOYSTICK_SET, events[0].type)
+        assertEquals(GamepadKeycodes.ABS_GAS, events[0].code)
+        assertEquals(13107, events[0].value)
+        assertEquals(MacroEventType.JOYSTICK_SET, events[1].type)
+        assertEquals(0, events[1].value)
+        assertFalse(events.any { it.type == MacroEventType.DIGITAL_BUTTON_DOWN })
+    }
+
+    @Test
+    fun `trigger path emits analog ramp with digital button threshold crossings and end reset`() {
+        val step =
+            MacroStep.TriggerPath(
+                startTimeMs = 100L,
+                durationMs = 151L,
+                trigger = GamepadTrigger.RIGHT,
+                samples =
+                    listOf(
+                        TriggerSample(offsetMs = 0L, pressure = 0.25f),
+                        TriggerSample(offsetMs = 50L, pressure = 0.75f),
+                        TriggerSample(offsetMs = 120L, pressure = 0.3f),
+                        TriggerSample(offsetMs = 150L, pressure = 0f),
+                    ),
+            )
+        val events = compile(step)
+        assertTrue(events.any { it.timeMs == 150L && it.type == MacroEventType.DIGITAL_BUTTON_DOWN && it.code == GamepadKeycodes.BTN_TR2 })
+        assertTrue(events.any { it.timeMs == 220L && it.type == MacroEventType.DIGITAL_BUTTON_UP && it.code == GamepadKeycodes.BTN_TR2 })
+        val endReset = events.last { it.code == GamepadKeycodes.ABS_GAS }
+        assertEquals(251L, endReset.timeMs)
+        assertEquals(0, endReset.value)
+    }
+
+    @Test
+    fun `trigger steps serialize and randomize cleanly`() {
+        val json = Json { ignoreUnknownKeys = true }
+        val macro =
+            Macro(
+                id = "trig-1",
+                name = "Trigger Test",
+                steps =
+                    listOf(
+                        MacroStep.TriggerPress(0L, 100L, GamepadTrigger.LEFT, 0.8f),
+                        MacroStep.TriggerPath(
+                            startTimeMs = 120L,
+                            durationMs = 101L,
+                            trigger = GamepadTrigger.RIGHT,
+                            samples = listOf(TriggerSample(0L, 0.5f), TriggerSample(100L, 1.0f)),
+                        ),
+                    ),
+                randomizeTimingEnabled = true,
+                randomizeTimingRangeMs = 10,
+            )
+        val encoded = json.encodeToString(macro)
+        val decoded = json.decodeFromString<Macro>(encoded)
+        assertEquals(macro, decoded)
+
+        val randomized = decoded.randomized()
+        assertEquals(2, randomized.steps.size)
+        assertTrue(randomized.steps[0].durationMs >= 1L)
+        assertTrue(randomized.steps[1].durationMs >= 1L)
     }
 }

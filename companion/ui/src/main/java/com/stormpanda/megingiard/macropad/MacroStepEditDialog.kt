@@ -51,6 +51,10 @@ private const val MSD_MAX_START_TIME_BUFFER_MS = 5000L
 private const val MSD_MAX_DURATION_MS = 5000L
 private const val MSD_TIME_SLIDER_STEP = 25f
 private const val MSD_PERCENT_SLIDER_STEP = 5f
+private const val MSD_FINE_SLIDER_STEP = 1f
+private const val MSD_MIN_TRIGGER_PRESSURE = 0.05f
+private const val MSD_MIN_TRIGGER_PERCENT = 5f
+private const val MSD_MAX_PERCENT = 100f
 private const val MSD_STICK_DEFLECTION_THRESHOLD = 0.35f
 private const val MSD_STICK_EPSILON = 0.001f
 
@@ -59,6 +63,8 @@ private enum class StepType(
 ) {
     KEYBOARD(R.string.macropad_macro_step_type_keyboard),
     GAMEPAD(R.string.macropad_macro_step_type_gamepad),
+    TRIGGER(R.string.macropad_macro_step_type_trigger),
+    TRIGGER_PATH(R.string.macropad_macro_step_type_trigger_path),
     JOYSTICK(R.string.macropad_macro_step_type_joystick),
     JOYSTICK_PATH(R.string.macropad_macro_step_type_joystick_path),
     DPAD(R.string.macropad_macro_step_type_dpad),
@@ -111,6 +117,8 @@ internal fun MacroStepEditSubPageContent(
         when (step) {
             is MacroStep.KeyboardKeyTap -> StepType.KEYBOARD
             is MacroStep.GamepadButtonTap -> StepType.GAMEPAD
+            is MacroStep.TriggerPress -> StepType.TRIGGER
+            is MacroStep.TriggerPath -> StepType.TRIGGER_PATH
             is MacroStep.JoystickMove -> StepType.JOYSTICK
             is MacroStep.DPadTap -> StepType.DPAD
             is MacroStep.TouchTap -> StepType.TOUCH
@@ -154,6 +162,20 @@ internal fun MacroStepEditSubPageContent(
             GamepadKeycodes.PRESETS.first()
         }
     var selectedPreset by remember { mutableStateOf(initPreset) }
+
+    // TriggerPress state
+    var triggerTarget by remember {
+        mutableStateOf(if (step is MacroStep.TriggerPress) step.trigger else GamepadTrigger.LEFT)
+    }
+    var triggerPressure by remember {
+        mutableFloatStateOf(
+            if (step is MacroStep.TriggerPress) {
+                step.pressure.coerceIn(MSD_MIN_TRIGGER_PRESSURE, 1f)
+            } else {
+                1f
+            },
+        )
+    }
 
     // JoystickMove state
     var joyStick by remember {
@@ -240,6 +262,20 @@ internal fun MacroStepEditSubPageContent(
                 )
             }
 
+            StepType.TRIGGER -> {
+                MacroStep.TriggerPress(
+                    startTimeMs = startMs.toLong(),
+                    durationMs = durMs.toLong(),
+                    trigger = triggerTarget,
+                    pressure = triggerPressure,
+                )
+            }
+
+            StepType.TRIGGER_PATH -> {
+                (step as? MacroStep.TriggerPath)?.withTiming(startMs.toLong(), durMs.toLong())
+                    ?: MacroStep.TriggerPress(startMs.toLong(), durMs.toLong(), GamepadTrigger.LEFT, 1f)
+            }
+
             StepType.JOYSTICK -> {
                 val dir = MSD_DIRECTIONS[selectedJoyDirIdx]
                 val unitX = dir.dirX.toFloat()
@@ -309,8 +345,16 @@ internal fun MacroStepEditSubPageContent(
     val availableTypes =
         StepType.entries.filter { type ->
             val initialIsRecorded =
-                initialType == StepType.TOUCH_PATH || initialType == StepType.JOYSTICK_PATH
-            if (initialIsRecorded) type == initialType else type != StepType.TOUCH_PATH && type != StepType.JOYSTICK_PATH
+                initialType == StepType.TOUCH_PATH ||
+                    initialType == StepType.JOYSTICK_PATH ||
+                    initialType == StepType.TRIGGER_PATH
+            if (initialIsRecorded) {
+                type == initialType
+            } else {
+                type != StepType.TOUCH_PATH &&
+                    type != StepType.JOYSTICK_PATH &&
+                    type != StepType.TRIGGER_PATH
+            }
         }
 
     GamepadChoiceCard(
@@ -396,6 +440,58 @@ internal fun MacroStepEditSubPageContent(
                 onPrevious = { selectedPreset = presets.cycle(selectedPreset, BumperDirection.PREV) },
                 onNext = { selectedPreset = presets.cycle(selectedPreset, BumperDirection.NEXT) },
             )
+        }
+
+        StepType.TRIGGER -> {
+            val triggers = GamepadTrigger.entries
+            val triggerLabels =
+                listOf(
+                    stringResource(R.string.macropad_macro_step_trigger_left),
+                    stringResource(R.string.macropad_macro_step_trigger_right),
+                )
+            val triggerIdx = triggers.indexOf(triggerTarget).coerceAtLeast(0)
+            GamepadChoiceCard(
+                title = stringResource(R.string.macro_step_target_trigger_title),
+                description = stringResource(R.string.macro_step_target_trigger_desc),
+                selectedText = triggerLabels[triggerIdx],
+                icon = Icons.Rounded.Tune,
+                onPrevious = { triggerTarget = triggers.cycle(triggerTarget, BumperDirection.PREV) },
+                onNext = { triggerTarget = triggers.cycle(triggerTarget, BumperDirection.NEXT) },
+            )
+
+            val pressurePercent = (triggerPressure * MSD_MAX_PERCENT).roundToInt()
+            GamepadSliderCard(
+                title = stringResource(R.string.macro_step_trigger_pressure_title),
+                description = stringResource(R.string.macro_step_trigger_pressure_desc),
+                value = triggerPressure * MSD_MAX_PERCENT,
+                valueRange = MSD_MIN_TRIGGER_PERCENT..MSD_MAX_PERCENT,
+                step = MSD_PERCENT_SLIDER_STEP,
+                fineStep = MSD_FINE_SLIDER_STEP,
+                valueLabel = "$pressurePercent%",
+                icon = Icons.Rounded.Tune,
+                onValueChange = {
+                    triggerPressure = (it / MSD_MAX_PERCENT).coerceIn(MSD_MIN_TRIGGER_PRESSURE, 1f)
+                },
+            )
+        }
+
+        StepType.TRIGGER_PATH -> {
+            val triggerPathStep = step as? MacroStep.TriggerPath
+            val triggerLabel =
+                stringResource(
+                    if (triggerPathStep?.trigger == GamepadTrigger.RIGHT) {
+                        R.string.macropad_macro_step_trigger_right
+                    } else {
+                        R.string.macropad_macro_step_trigger_left
+                    },
+                )
+            GamepadFocusCard(onClick = {}) {
+                GamepadCardRow(
+                    title = stringResource(R.string.macropad_macro_step_path_summary_trigger, triggerLabel),
+                    description = stringResource(R.string.macropad_macro_step_path_summary_samples, triggerPathStep?.samples?.size ?: 0),
+                    icon = Icons.Rounded.Tune,
+                )
+            }
         }
 
         StepType.JOYSTICK -> {

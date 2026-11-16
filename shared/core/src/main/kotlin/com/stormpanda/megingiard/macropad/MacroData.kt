@@ -14,6 +14,9 @@ private const val TOUCH_PATH_SYNTHETIC_UP_DELAY_MS = 10L
 @Serializable
 enum class JoystickStick { LEFT, RIGHT }
 
+@Serializable
+enum class GamepadTrigger { LEFT, RIGHT }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Macro step — a single timed action within a Macro sequence
 // ─────────────────────────────────────────────────────────────────────────────
@@ -137,7 +140,47 @@ sealed class MacroStep {
         val label: String,
         val modifiers: List<Int> = emptyList(),
     ) : MacroStep()
+
+    /**
+     * Holds analog [trigger] (`L2` / `R2`) at normalised [pressure] in `[0.0, 1.0]` for
+     * [durationMs] milliseconds, beginning [startTimeMs] milliseconds after macro start.
+     * On step end the trigger axis is reset to `0`.
+     */
+    @Serializable
+    @SerialName("trigger_press")
+    data class TriggerPress(
+        override val startTimeMs: Long,
+        override val durationMs: Long,
+        val trigger: GamepadTrigger,
+        val pressure: Float = 1.0f,
+    ) : MacroStep()
+
+    /**
+     * Replays a recorded analog trigger pressure curve on [trigger], beginning [startTimeMs]
+     * milliseconds after macro start. [samples] contains normalised pressure values in `[0.0, 1.0]`
+     * with timing offsets relative to [startTimeMs]. On step end the trigger axis is reset to `0`.
+     */
+    @Serializable
+    @SerialName("trigger_path")
+    data class TriggerPath(
+        override val startTimeMs: Long,
+        override val durationMs: Long,
+        val trigger: GamepadTrigger,
+        val samples: List<TriggerSample>,
+    ) : MacroStep()
 }
+
+/**
+ * A single analog trigger pressure sample within a [MacroStep.TriggerPath].
+ *
+ * [offsetMs] is relative to the parent [MacroStep.TriggerPath.startTimeMs].
+ * [pressure] is normalised in `[0.0, 1.0]`.
+ */
+@Serializable
+data class TriggerSample(
+    val offsetMs: Long,
+    val pressure: Float,
+)
 
 /**
  * A single analog stick position sample within a [MacroStep.JoystickPath].
@@ -207,6 +250,8 @@ fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep =
         is MacroStep.JoystickPath -> copy(startTimeMs = newStartTimeMs)
         is MacroStep.TouchPath -> copy(startTimeMs = newStartTimeMs)
         is MacroStep.KeyboardKeyTap -> copy(startTimeMs = newStartTimeMs)
+        is MacroStep.TriggerPress -> copy(startTimeMs = newStartTimeMs)
+        is MacroStep.TriggerPath -> copy(startTimeMs = newStartTimeMs)
     }
 
 /** Returns a copy of this step with [startTimeMs] and [durationMs] replaced by [newStartTimeMs] and [newDurationMs]. */
@@ -222,6 +267,8 @@ fun MacroStep.withTiming(
         is MacroStep.JoystickPath -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
         is MacroStep.TouchPath -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
         is MacroStep.KeyboardKeyTap -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+        is MacroStep.TriggerPress -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+        is MacroStep.TriggerPath -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
     }
 
 /** Returns a new list where every step's start time is shifted by [offsetMs]. */
@@ -278,7 +325,8 @@ fun Macro.randomized(random: Random = Random): Macro {
         val isExcluded =
             step is MacroStep.JoystickMove ||
                 step is MacroStep.JoystickPath ||
-                step is MacroStep.TouchPath
+                step is MacroStep.TouchPath ||
+                step is MacroStep.TriggerPath
         val offsetDuration =
             if (!isExcluded && maxOffset > 0L) {
                 random.nextLong(0L, maxOffset + 1L)

@@ -297,4 +297,50 @@ class MacroExecutorTest {
             MacroExecutor.stopAll()
             assertTrue(waitUntil(500) { !MacroExecutor.isRunning(execId) })
         }
+
+    @Test
+    fun testTriggerPressMacroInjectsAnalogAndDigitalAndCleansUpOnStop() =
+        runBlocking {
+            val triggerMacro =
+                Macro(
+                    id = "trigger-hold-macro",
+                    name = "Trigger Hold",
+                    steps =
+                        listOf(
+                            MacroStep.TriggerPress(
+                                startTimeMs = 0L,
+                                durationMs = 500L,
+                                trigger = GamepadTrigger.LEFT,
+                                pressure = 0.8f,
+                            ),
+                        ),
+                )
+            PrivdClient.clearQueueForTest()
+
+            MacroExecutor.execute(triggerMacro)
+            assertTrue(waitUntil(500) { MacroExecutor.isRunning(triggerMacro.id) && PrivdClient.queueSizeForTest >= 2 })
+
+            val downCmds =
+                buildList {
+                    while (true) {
+                        val cmd = PrivdClient.pollCommandForTest() ?: break
+                        add(cmd)
+                    }
+                }
+            assertTrue("Expected JS 10 26214, got $downCmds", "JS 10 26214\n" in downCmds)
+            assertTrue("Expected GD 312, got $downCmds", "GD 312\n" in downCmds)
+
+            MacroExecutor.stop(triggerMacro.id)
+            assertTrue(waitUntil(500) { !MacroExecutor.isRunning(triggerMacro.id) })
+
+            val cleanupCmds =
+                buildList {
+                    while (true) {
+                        val cmd = PrivdClient.pollCommandForTest() ?: break
+                        add(cmd)
+                    }
+                }
+            assertTrue("Expected JS 10 0 on stop cleanup, got $cleanupCmds", "JS 10 0\n" in cleanupCmds)
+            assertTrue("Expected GU 312 on stop cleanup, got $cleanupCmds", "GU 312\n" in cleanupCmds)
+        }
 }

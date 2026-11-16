@@ -1255,7 +1255,7 @@ object MacroPadState {
                             widthPx = scaledWidthPx,
                             heightPx = scaledHeightPx,
                         )
-                    if (updatedAction is PadAction.ScrollWheel || updatedAction is PadAction.TrackpointMove) {
+                    if (updatedAction is PadAction.ScrollWheel || updatedAction.isCircularControl()) {
                         baseClone.withActionSizing(updatedAction, targetCanvas)
                     } else {
                         baseClone

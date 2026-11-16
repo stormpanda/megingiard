@@ -7,12 +7,17 @@ import androidx.compose.material.icons.rounded.NearMe
 import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
+
+private const val SLI_FULL_PERCENT = 100
+private const val SLI_PERCENT_SCALE = 100f
 
 internal fun dirArrow(
     dirX: Int,
@@ -96,6 +101,17 @@ internal fun shortStepLabel(
                 step.label
             }
         }
+
+        is MacroStep.TriggerPress -> {
+            val name = if (step.trigger == GamepadTrigger.LEFT) "L2" else "R2"
+            val pct = (step.pressure.coerceIn(0f, 1f) * SLI_PERCENT_SCALE).roundToInt()
+            if (pct < SLI_FULL_PERCENT) "$name ($pct%)" else name
+        }
+
+        is MacroStep.TriggerPath -> {
+            val name = if (step.trigger == GamepadTrigger.LEFT) "L2" else "R2"
+            "$name↻"
+        }
     }
 
 internal fun stepIcon(step: MacroStep): ImageVector =
@@ -105,6 +121,7 @@ internal fun stepIcon(step: MacroStep): ImageVector =
         is MacroStep.DPadTap -> Icons.Rounded.OpenWith
         is MacroStep.TouchTap, is MacroStep.TouchPath -> Icons.Rounded.TouchApp
         is MacroStep.KeyboardKeyTap -> Icons.Rounded.Keyboard
+        is MacroStep.TriggerPress, is MacroStep.TriggerPath -> Icons.Rounded.Tune
     }
 
 internal fun stepTypeLabelRes(step: MacroStep): Int =
@@ -116,6 +133,8 @@ internal fun stepTypeLabelRes(step: MacroStep): Int =
         is MacroStep.JoystickPath -> R.string.macropad_macro_step_type_joystick_path
         is MacroStep.TouchPath -> R.string.macropad_macro_step_type_touch_path
         is MacroStep.KeyboardKeyTap -> R.string.macropad_macro_step_type_keyboard
+        is MacroStep.TriggerPress -> R.string.macropad_macro_step_type_trigger
+        is MacroStep.TriggerPath -> R.string.macropad_macro_step_type_trigger_path
     }
 
 @Composable
@@ -143,7 +162,7 @@ internal fun stepActionDescription(
                 } else {
                     context.getString(R.string.macropad_macro_step_stick_right)
                 }
-            val magPercent = (sqrt(step.x * step.x + step.y * step.y).coerceIn(0f, 1f) * 100).toInt()
+            val magPercent = (sqrt(step.x * step.x + step.y * step.y).coerceIn(0f, 1f) * SLI_PERCENT_SCALE).toInt()
             "$stickLabel ${joyDirArrow(step.x, step.y)} ($magPercent%)"
         }
 
@@ -152,7 +171,7 @@ internal fun stepActionDescription(
         }
 
         is MacroStep.TouchTap -> {
-            "X: ${(step.normX * 100).toInt()}%, Y: ${(step.normY * 100).toInt()}%"
+            "X: ${(step.normX * SLI_PERCENT_SCALE).toInt()}%, Y: ${(step.normY * SLI_PERCENT_SCALE).toInt()}%"
         }
 
         is MacroStep.JoystickPath -> {
@@ -180,6 +199,27 @@ internal fun stepActionDescription(
             } else {
                 step.label
             }
+        }
+
+        is MacroStep.TriggerPress -> {
+            val trigLabel =
+                if (step.trigger == GamepadTrigger.LEFT) {
+                    context.getString(R.string.macropad_macro_step_trigger_left)
+                } else {
+                    context.getString(R.string.macropad_macro_step_trigger_right)
+                }
+            val pct = (step.pressure.coerceIn(0f, 1f) * SLI_PERCENT_SCALE).roundToInt()
+            "$trigLabel ($pct%)"
+        }
+
+        is MacroStep.TriggerPath -> {
+            val trigLabel =
+                if (step.trigger == GamepadTrigger.LEFT) {
+                    context.getString(R.string.macropad_macro_step_trigger_left)
+                } else {
+                    context.getString(R.string.macropad_macro_step_trigger_right)
+                }
+            context.getString(R.string.macropad_macro_step_joystick_path_short, trigLabel, step.samples.size)
         }
     }
 
