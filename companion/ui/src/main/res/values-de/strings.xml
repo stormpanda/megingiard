@@ -200,6 +200,15 @@ Open Settings to create a layout.</string>
     <!-- MacroPad action picker labels -->
     <string name="macropad_action_keyboard_key">Tastaturtaste</string>
     <string name="macropad_action_gamepad_button">Gamepad-Taste</string>
+    <string name="macropad_action_analog_stick_left">Linker Stick (Emuliert)</string>
+    <string name="macropad_action_analog_stick_right">Rechter Stick (Emuliert)</string>
+    <string name="macropad_gamepad_control_type_title">Gamepad-Steuerungstyp</string>
+    <string name="macropad_gamepad_control_type_desc">Diskrete Tastenkombination oder kontinuierlicher virtueller Analogstick</string>
+    <string name="macropad_analog_stick_sensitivity_title">Stick-Empfindlichkeit</string>
+    <string name="macropad_analog_stick_sensitivity_desc">Radialer Neigungsmultiplikator bis zum vollen Ausschlag</string>
+    <string name="macropad_analog_stick_floating_title">Dynamischer Mittelpunkt</string>
+    <string name="macropad_analog_stick_floating_desc">Neutralpunkt (0, 0) beim Aufsetzen des Fingers statt in der Pad-Mitte setzen</string>
+    <string name="macropad_picker_emulate_stick_pill">Stick emulieren</string>
     <string name="macropad_action_mouse_button">Maustaste</string>
     <string name="macropad_action_scroll_wheel">Scrollrad</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative Maus)</string>
@@ -632,7 +641,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_keyboard">Tastatur</string>
     <string name="macropad_action_group_keyboard_desc">Einzelne Tastaturanschläge oder Tastenkombinationen senden</string>
     <string name="macropad_action_group_gamepad">Gamepad</string>
-    <string name="macropad_action_group_gamepad_desc">Standard-Gamepad-Tasten und Trigger simulieren</string>
+    <string name="macropad_action_group_gamepad_desc">Gamepad-Tasten, Trigger und Analogsticks simulieren</string>
     <string name="macropad_action_group_mouse">Maus</string>
     <string name="macropad_action_group_mouse_desc">Mausklicks, Scrollräder oder Trackpoint-Eingaben simulieren</string>
     <string name="macropad_action_group_macro">Makro</string>

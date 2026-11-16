@@ -330,6 +330,7 @@ internal fun PadSurface(
 
     // Track which button IDs are currently pressed (from engine)
     val pressedIds by engine.pressedIds.collectAsStateWithLifecycle()
+    val stickDeflections by engine.stickDeflections.collectAsStateWithLifecycle()
     // Track running macro IDs to drive the pulse animation
     val runningMacroIds by MacroExecutor.runningMacroIds.collectAsStateWithLifecycle()
 
@@ -689,6 +690,7 @@ internal fun PadSurface(
                     viewport = designViewport,
                     accentColor = accentColor,
                     isRunning = isRunning,
+                    stickDeflection = stickDeflections[btn.id],
                 )
             }
         }

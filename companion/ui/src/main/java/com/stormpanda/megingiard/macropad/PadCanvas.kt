@@ -721,7 +721,7 @@ private fun EditableButtonsCanvas(
                     }
                 val safeScale = viewport.scale.coerceAtLeast(PC_MIN_SCALE_EPSILON)
                 val dragDeltaDesignPx = dragDeltaPx / safeScale
-                val isTrackpoint = activeBtn.action is PadAction.TrackpointMove
+                val isCircular = activeBtn.action.isCircularControl()
                 val minWidthPx = designCanvas.minButtonSizePx
                 val minHeightPx =
                     if (activeBtn.action is PadAction.ScrollWheel) {
@@ -742,7 +742,7 @@ private fun EditableButtonsCanvas(
                         minWidthPx = minWidthPx,
                         minHeightPx = minHeightPx,
                         aspectSnapThresholdPx = BUTTON_ASPECT_SNAP_THRESHOLD_PX,
-                        lockAspect = isTrackpoint,
+                        lockAspect = isCircular,
                         minNormX = viewport.minNormX,
                         maxNormX = viewport.maxNormX,
                         minNormY = viewport.minNormY,
@@ -903,7 +903,7 @@ private fun DraggableButton(
     var dragOffsetY by remember(btn.id) { mutableFloatStateOf(0f) }
 
     val density = LocalDensity.current
-    val isTrackpoint = btn.action is PadAction.TrackpointMove
+    val isCircular = btn.action.isCircularControl()
 
     val btnWidthDp = with(density) { chipWidthPx.toDp() }
     val btnHeightDp = with(density) { chipHeightPx.toDp() }
@@ -920,7 +920,7 @@ private fun DraggableButton(
             buttonShape = btn.buttonShape,
             widthPx = btn.widthPx,
             heightPx = btn.heightPx,
-            isTrackpoint = isTrackpoint,
+            isTrackpoint = isCircular,
         )
 
     Box(
@@ -1028,7 +1028,7 @@ private fun DraggableButton(
                 iconSize = iconSizeDp,
                 renderedWidthPx = chipWidthPx,
                 renderedHeightPx = chipHeightPx,
-                isTrackpoint = isTrackpoint,
+                isTrackpoint = btn.action is PadAction.TrackpointMove,
             )
         }
         if (btn.invisible) {

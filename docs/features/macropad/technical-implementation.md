@@ -141,6 +141,7 @@ PadProfile
         ├── action: PadAction   (sealed)
         │     KeyboardKey(keycode, label)
         │     GamepadButton(btnCode, label)
+        │     AnalogStick(stick: JoystickStick = LEFT, sensitivity: Float = 1.0f, floatingCenter: Boolean = false)
         │     MouseButton(button: MouseButton enum)
         │     ScrollWheel
         │     TrackpointMove(size: TrackpointSize = MEDIUM, mode: TrackpointMode) — legacy size deprecated; sized via PadButton.widthPx/heightPx

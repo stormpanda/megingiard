@@ -43,6 +43,19 @@ private const val TP_SENSITIVITY_MIN = 0.1f
 private const val TP_SENSITIVITY_MAX = 5.0f
 private const val TP_SENSITIVITY_STEP = 0.1f
 
+private const val AS_SENSITIVITY_MIN = 0.5f
+private const val AS_SENSITIVITY_MAX = 2.5f
+private const val AS_SENSITIVITY_STEP = 0.1f
+private const val AS_STEP_ROUND_FACTOR = 10f
+
+private enum class GamepadControlType(
+    val labelResId: Int,
+) {
+    BUTTON(R.string.macropad_action_gamepad_button),
+    LEFT_STICK(R.string.macropad_action_analog_stick_left),
+    RIGHT_STICK(R.string.macropad_action_analog_stick_right),
+}
+
 private const val FS_MOUSE_SENSITIVITY_MIN = 0.1f
 private const val FS_MOUSE_SENSITIVITY_MAX = 5.0f
 private const val FS_MOUSE_SENSITIVITY_STEP = 0.1f
@@ -129,9 +142,62 @@ private val EXTRA_SLOT_LABELS =
     )
 
 @Composable
+private fun GamepadControlTypeChoiceCard(
+    currentType: GamepadControlType,
+    swapFaceButtons: Boolean,
+    onChange: (PadAction) -> Unit,
+    isFirstItem: Boolean = false,
+    existingSensitivity: Float = 1.0f,
+    existingFloatingCenter: Boolean = false,
+) {
+    val options = GamepadControlType.entries
+
+    fun applyType(nextType: GamepadControlType) {
+        val nextAction =
+            when (nextType) {
+                GamepadControlType.BUTTON -> {
+                    PadAction.GamepadButton(
+                        btnCode = GamepadKeycodes.BTN_SOUTH,
+                        label = gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_SOUTH, swapFaceButtons),
+                    )
+                }
+
+                GamepadControlType.LEFT_STICK -> {
+                    PadAction.AnalogStick(
+                        stick = JoystickStick.LEFT,
+                        sensitivity = existingSensitivity,
+                        floatingCenter = existingFloatingCenter,
+                    )
+                }
+
+                GamepadControlType.RIGHT_STICK -> {
+                    PadAction.AnalogStick(
+                        stick = JoystickStick.RIGHT,
+                        sensitivity = existingSensitivity,
+                        floatingCenter = existingFloatingCenter,
+                    )
+                }
+            }
+        AppLog.d(TAG, "GamepadControlType changed: $currentType -> $nextType")
+        onChange(nextAction)
+    }
+
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_gamepad_control_type_title),
+        description = stringResource(R.string.macropad_gamepad_control_type_desc),
+        selectedText = stringResource(currentType.labelResId),
+        icon = if (currentType == GamepadControlType.BUTTON) Icons.Rounded.SportsEsports else Icons.Rounded.ControlCamera,
+        onPrevious = { applyType(options.cycle(currentType, BumperDirection.PREV)) },
+        onNext = { applyType(options.cycle(currentType, BumperDirection.NEXT)) },
+        modifier = Modifier.firstDeckItem(isFirstItem),
+    )
+}
+
+@Composable
 internal fun GamepadButtonPicker(
     current: PadAction.GamepadButton,
     onOpenPicker: (slotIndex: Int) -> Unit,
+    onChange: (PadAction) -> Unit,
     isFirstItem: Boolean = false,
 ) {
     val noneLabel = stringResource(R.string.macropad_modifier_none)
@@ -147,13 +213,19 @@ internal fun GamepadButtonPicker(
             GamepadKeycodes.PRESETS.firstOrNull { it.code == c }?.localizedDisplayLabel(swapFaceButtons)
         } ?: noneLabel
 
+    GamepadControlTypeChoiceCard(
+        currentType = GamepadControlType.BUTTON,
+        swapFaceButtons = swapFaceButtons,
+        onChange = onChange,
+        isFirstItem = isFirstItem,
+    )
+
     GamepadActionCard(
         title = stringResource(R.string.macropad_picker_label_button),
         description = stringResource(R.string.macropad_picker_label_button_desc),
         actionText = currentPreset.localizedDisplayLabel(swapFaceButtons),
         icon = Icons.Rounded.SportsEsports,
         onClick = { onOpenPicker(0) },
-        modifier = Modifier.firstDeckItem(isFirstItem),
     )
 
     EXTRA_SLOT_LABELS.forEachIndexed { idx, labelRes ->
@@ -166,6 +238,64 @@ internal fun GamepadButtonPicker(
             onClick = { onOpenPicker(idx + 1) },
         )
     }
+}
+
+@Composable
+internal fun AnalogStickPicker(
+    current: PadAction.AnalogStick,
+    onChange: (PadAction) -> Unit,
+    isFirstItem: Boolean = false,
+) {
+    AppLog.d(
+        TAG,
+        "AnalogStickPicker: stick=${current.stick} sens=${current.sensitivity} floating=${current.floatingCenter}",
+    )
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    val currentType =
+        if (current.stick == JoystickStick.LEFT) {
+            GamepadControlType.LEFT_STICK
+        } else {
+            GamepadControlType.RIGHT_STICK
+        }
+
+    GamepadControlTypeChoiceCard(
+        currentType = currentType,
+        swapFaceButtons = swapFaceButtons,
+        onChange = onChange,
+        isFirstItem = isFirstItem,
+        existingSensitivity = current.sensitivity,
+        existingFloatingCenter = current.floatingCenter,
+    )
+
+    GamepadStepperCard(
+        title = stringResource(R.string.macropad_analog_stick_sensitivity_title),
+        description = stringResource(R.string.macropad_analog_stick_sensitivity_desc),
+        valueText = String.format(Locale.US, "%.1f×", current.sensitivity),
+        icon = Icons.Rounded.Speed,
+        onDecrement = {
+            val stepped =
+                ((current.sensitivity - AS_SENSITIVITY_STEP) * AS_STEP_ROUND_FACTOR).roundToInt() /
+                    AS_STEP_ROUND_FACTOR
+            onChange(current.copy(sensitivity = stepped.coerceIn(AS_SENSITIVITY_MIN, AS_SENSITIVITY_MAX)))
+        },
+        onIncrement = {
+            val stepped =
+                ((current.sensitivity + AS_SENSITIVITY_STEP) * AS_STEP_ROUND_FACTOR).roundToInt() /
+                    AS_STEP_ROUND_FACTOR
+            onChange(current.copy(sensitivity = stepped.coerceIn(AS_SENSITIVITY_MIN, AS_SENSITIVITY_MAX)))
+        },
+    )
+
+    GamepadToggleCard(
+        title = stringResource(R.string.macropad_analog_stick_floating_title),
+        description = stringResource(R.string.macropad_analog_stick_floating_desc),
+        checked = current.floatingCenter,
+        onCheckedChange = { enabled ->
+            AppLog.d(TAG, "AnalogStickPicker: floatingCenter=$enabled")
+            onChange(current.copy(floatingCenter = enabled))
+        },
+        icon = Icons.Rounded.ControlCamera,
+    )
 }
 
 @Composable

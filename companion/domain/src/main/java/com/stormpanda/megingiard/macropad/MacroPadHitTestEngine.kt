@@ -11,6 +11,9 @@ import com.stormpanda.megingiard.math.ViewportMath
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.math.abs
+import kotlin.math.hypot
+import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -19,9 +22,27 @@ private const val TAG = "MacroPadHitTest"
 private const val MP_TRACKPOINT_SENSITIVITY = 3f
 private const val MP_TRACKPOINT_SENSITIVITY_MIN = 0.1f
 private const val MP_TRACKPOINT_SENSITIVITY_MAX = 5.0f
+private const val MP_STICK_SENSITIVITY_MIN = 0.5f
+private const val MP_STICK_SENSITIVITY_MAX = 2.5f
+private const val MP_STICK_AXIS_MAX = 32767
+private const val MP_STICK_MIN_RADIUS_PX = 1f
+private const val MP_STICK_UI_DELTA_EPSILON = 0.002f
+private const val MP_STICK_RIM_HYSTERESIS = 0.85f
 private const val MP_SCROLL_SENSITIVITY_PX = 12f
 private const val LOGICAL_SCREEN_WIDTH = 1920f
 private const val LOGICAL_SCREEN_HEIGHT = 1080f
+
+private class ActiveStickPointerState(
+    val buttonId: String,
+    val stick: JoystickStick,
+    val sensitivity: Float,
+    val originX: Float,
+    val originY: Float,
+    val radiusPx: Float,
+    var lastRawX: Int = Int.MIN_VALUE,
+    var lastRawY: Int = Int.MIN_VALUE,
+    var atRim: Boolean = false,
+)
 
 private data class ActiveTouchRelease(
     val buttonId: String,
@@ -73,10 +94,16 @@ class MacroPadHitTestEngine(
     /** Set of currently pressed button IDs (for visual highlighting). */
     val pressedIds: StateFlow<Set<String>> = _pressedIds.asStateFlow()
 
+    private val _stickDeflections = MutableStateFlow<Map<String, NormalizedPoint>>(emptyMap())
+
+    /** Live normalized unit-circle deflection `[-1..1]` per active [PadAction.AnalogStick] button ID. */
+    val stickDeflections: StateFlow<Map<String, NormalizedPoint>> = _stickDeflections.asStateFlow()
+
     // Per-pointer tracking
     private val pointerMap = mutableMapOf<Long, String>()
     private val pointerButtonMap = mutableMapOf<Long, PadButton>()
     private val pointerTouchSlotMap = mutableMapOf<Long, Int>()
+    private val activeStickPointers = mutableMapOf<Long, ActiveStickPointerState>()
     private val scrollStartY = mutableMapOf<Long, Float>()
     private var virtualCursorX = 0.5f
     private var virtualCursorY = 0.5f
@@ -119,8 +146,72 @@ class MacroPadHitTestEngine(
             ny = ny,
             widthPx = btn.widthPx,
             heightPx = btn.heightPx,
-            isTrackpoint = btn.action is PadAction.TrackpointMove,
+            isTrackpoint = btn.action.isCircularControl(),
         )
+    }
+
+    private fun resetAnalogStickAxes(stick: JoystickStick) {
+        val axisX = if (stick == JoystickStick.LEFT) GamepadKeycodes.ABS_X else GamepadKeycodes.ABS_Z
+        val axisY = if (stick == JoystickStick.LEFT) GamepadKeycodes.ABS_Y else GamepadKeycodes.ABS_RZ
+        GamepadInjector.joystick(axisX, 0)
+        GamepadInjector.joystick(axisY, 0)
+    }
+
+    private fun updateAnalogStickDeflection(
+        pointerId: Long,
+        px: Float,
+        py: Float,
+        btn: PadButton,
+        isInitialPress: Boolean = false,
+    ) {
+        val state = activeStickPointers[pointerId] ?: return
+        val rawNx = ((px - state.originX) / state.radiusPx) * state.sensitivity
+        val rawNy = ((py - state.originY) / state.radiusPx) * state.sensitivity
+        val dist = hypot(rawNx, rawNy)
+        val clampedNx: Float
+        val clampedNy: Float
+        if (dist > 1f) {
+            clampedNx = rawNx / dist
+            clampedNy = rawNy / dist
+        } else {
+            clampedNx = rawNx
+            clampedNy = rawNy
+        }
+
+        val rawX = (clampedNx * MP_STICK_AXIS_MAX).roundToInt().coerceIn(-MP_STICK_AXIS_MAX, MP_STICK_AXIS_MAX)
+        val rawY = (clampedNy * MP_STICK_AXIS_MAX).roundToInt().coerceIn(-MP_STICK_AXIS_MAX, MP_STICK_AXIS_MAX)
+        val axisX = if (state.stick == JoystickStick.LEFT) GamepadKeycodes.ABS_X else GamepadKeycodes.ABS_Z
+        val axisY = if (state.stick == JoystickStick.LEFT) GamepadKeycodes.ABS_Y else GamepadKeycodes.ABS_RZ
+
+        if (rawX != state.lastRawX) {
+            state.lastRawX = rawX
+            GamepadInjector.joystick(axisX, rawX)
+        }
+        if (rawY != state.lastRawY) {
+            state.lastRawY = rawY
+            GamepadInjector.joystick(axisY, rawY)
+        }
+
+        val prevPoint = _stickDeflections.value[state.buttonId]
+        if (
+            prevPoint == null ||
+            abs(prevPoint.x - clampedNx) > MP_STICK_UI_DELTA_EPSILON ||
+            abs(prevPoint.y - clampedNy) > MP_STICK_UI_DELTA_EPSILON
+        ) {
+            _stickDeflections.value =
+                _stickDeflections.value + (state.buttonId to NormalizedPoint(clampedNx, clampedNy))
+        }
+
+        if (!isInitialPress) {
+            if (!state.atRim && dist >= 1f) {
+                state.atRim = true
+                triggerHaptic(btn, 0f, log = false)
+            } else if (state.atRim && dist <= MP_STICK_RIM_HYSTERESIS) {
+                state.atRim = false
+            }
+        } else if (dist >= 1f) {
+            state.atRim = true
+        }
     }
 
     private fun triggerHaptic(
@@ -187,6 +278,33 @@ class MacroPadHitTestEngine(
                     lastDxSign = 0f
                     lastDySign = 0f
                     TouchInjector.injectTouch(TouchAction.DOWN, unclampedCursorX, unclampedCursorY)
+                }
+            }
+
+            hitButton.action is PadAction.AnalogStick -> {
+                val stickAction = hitButton.action as PadAction.AnalogStick
+                _pressedIds.value = _pressedIds.value + hitButton.id
+                if (!wasAlreadyHeldByPointer) {
+                    val diameterPx = min(hitButton.widthPx, hitButton.heightPx) * viewport.scale
+                    val radiusPx = (diameterPx / 2f).coerceAtLeast(MP_STICK_MIN_RADIUS_PX)
+                    val originX = if (stickAction.floatingCenter) px else viewport.normToScreenX(hitButton.posX)
+                    val originY = if (stickAction.floatingCenter) py else viewport.normToScreenY(hitButton.posY)
+                    val sens = stickAction.sensitivity.coerceIn(MP_STICK_SENSITIVITY_MIN, MP_STICK_SENSITIVITY_MAX)
+                    activeStickPointers[pointerId] =
+                        ActiveStickPointerState(
+                            buttonId = hitButton.id,
+                            stick = stickAction.stick,
+                            sensitivity = sens,
+                            originX = originX,
+                            originY = originY,
+                            radiusPx = radiusPx,
+                        )
+                    AppLog.d(
+                        TAG,
+                        "AnalogStick down: button=${hitButton.id} stick=${stickAction.stick} floating=${stickAction.floatingCenter}",
+                    )
+                    updateAnalogStickDeflection(pointerId, px, py, hitButton, isInitialPress = true)
+                    triggerHaptic(hitButton)
                 }
             }
 
@@ -345,6 +463,10 @@ class MacroPadHitTestEngine(
                     triggerHaptic(mappedBtn, 0f)
                 }
             }
+
+            mappedBtn.action is PadAction.AnalogStick -> {
+                updateAnalogStickDeflection(pointerId, px, py, mappedBtn, isInitialPress = false)
+            }
         }
     }
 
@@ -361,6 +483,7 @@ class MacroPadHitTestEngine(
         val mapped = pointerMap.remove(pointerId) ?: return
         val cachedBtn = pointerButtonMap.remove(pointerId)
         val touchSlot = pointerTouchSlotMap.remove(pointerId)
+        val stickState = activeStickPointers.remove(pointerId)
         val btn = buttons.firstOrNull { it.id == mapped } ?: cachedBtn ?: return
 
         val isLastPointerOnButton = pointerMap.values.none { it == mapped }
@@ -370,6 +493,19 @@ class MacroPadHitTestEngine(
                 val tpAction = btn.action as PadAction.TrackpointMove
                 if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH && isLastPointerOnButton) {
                     TouchInjector.injectTouch(TouchAction.UP, unclampedCursorX, unclampedCursorY)
+                }
+            }
+
+            btn.action is PadAction.AnalogStick -> {
+                if (isLastPointerOnButton) {
+                    _pressedIds.value = _pressedIds.value - mapped
+                    _stickDeflections.value = _stickDeflections.value - mapped
+                }
+                val targetStick = stickState?.stick ?: (btn.action as PadAction.AnalogStick).stick
+                val anyOtherSameStickActive = activeStickPointers.values.any { it.stick == targetStick }
+                if (stickState != null && !anyOtherSameStickActive) {
+                    resetAnalogStickAxes(targetStick)
+                    AppLog.d(TAG, "AnalogStick up: button=$mapped stick=$targetStick")
                 }
             }
 
@@ -409,7 +545,9 @@ class MacroPadHitTestEngine(
         pointerMap.clear()
         pointerButtonMap.clear()
         pointerTouchSlotMap.clear()
+        activeStickPointers.clear()
         _pressedIds.value = emptySet()
+        _stickDeflections.value = emptyMap()
         scrollStartY.clear()
         unclampedCursorX = virtualCursorX
         unclampedCursorY = virtualCursorY
@@ -421,6 +559,7 @@ class MacroPadHitTestEngine(
     fun releaseAll(buttons: List<PadButton>) {
         val activeIds = _pressedIds.value
         val pointerMappedIds = pointerMap.values.toSet()
+        val activeSticks = activeStickPointers.values.map { it.stick }.toSet()
         val cachedButtonsById = pointerButtonMap.values.associateBy { it.id }
         val activeTouchReleases =
             pointerTouchSlotMap.entries.mapNotNull { (pid, slot) ->
@@ -450,9 +589,11 @@ class MacroPadHitTestEngine(
         val allActiveIds = activeIds + pointerMappedIds
 
         _pressedIds.value = emptySet()
+        _stickDeflections.value = emptyMap()
         pointerMap.clear()
         pointerButtonMap.clear()
         pointerTouchSlotMap.clear()
+        activeStickPointers.clear()
         scrollStartY.clear()
 
         val upX = unclampedCursorX
@@ -462,6 +603,11 @@ class MacroPadHitTestEngine(
         unclampedCursorY = virtualCursorY
         lastDxSign = 0f
         lastDySign = 0f
+
+        activeSticks.forEach { stick ->
+            AppLog.d(TAG, "Resetting AnalogStick=$stick to neutral due to gesture cancellation")
+            resetAnalogStickAxes(stick)
+        }
 
         activeTouchReleases.forEach { release ->
             AppLog.d(TAG, "Releasing TouchTap button=${release.buttonId} slot=${release.slot} due to gesture cancellation")
@@ -486,9 +632,10 @@ class MacroPadHitTestEngine(
                     }
 
                     btn.action is PadAction.ScrollWheel ||
+                        btn.action is PadAction.AnalogStick ||
                         btn.action is PadAction.TouchTap ||
                         btn.action is PadAction.SwitchToLayout -> {
-                        // ScrollWheel is no-op; TouchTap and SwitchToLayout are released per active pointer above
+                        // ScrollWheel is no-op; AnalogStick, TouchTap, and SwitchToLayout are released above
                     }
 
                     else -> {

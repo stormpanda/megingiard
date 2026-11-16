@@ -134,6 +134,18 @@ internal enum class ActionCategory(
             )
         },
     ),
+    ANALOG_STICK_LEFT(
+        Icons.Rounded.ControlCamera,
+        R.string.macropad_action_analog_stick_left,
+        ActionGroup.GAMEPAD,
+        { PadAction.AnalogStick(stick = JoystickStick.LEFT) },
+    ),
+    ANALOG_STICK_RIGHT(
+        Icons.Rounded.ControlCamera,
+        R.string.macropad_action_analog_stick_right,
+        ActionGroup.GAMEPAD,
+        { PadAction.AnalogStick(stick = JoystickStick.RIGHT) },
+    ),
     MOUSE_BUTTON(
         Icons.Rounded.Mouse,
         R.string.macropad_action_mouse_button,
@@ -348,6 +360,13 @@ internal fun PadAction.toCategory(): ActionCategory =
             ActionCategory.GAMEPAD_BUTTON
         }
 
+        is PadAction.AnalogStick -> {
+            when (stick) {
+                JoystickStick.LEFT -> ActionCategory.ANALOG_STICK_LEFT
+                JoystickStick.RIGHT -> ActionCategory.ANALOG_STICK_RIGHT
+            }
+        }
+
         is PadAction.MouseButton -> {
             ActionCategory.MOUSE_BUTTON
         }
@@ -497,6 +516,13 @@ internal fun PadAction.displayLabel(): String {
                     "$primaryLabel+$extraNames"
                 }
             stringResource(R.string.macropad_display_gamepad_button, comboLabel)
+        }
+
+        is PadAction.AnalogStick -> {
+            when (stick) {
+                JoystickStick.LEFT -> stringResource(R.string.macropad_action_analog_stick_left)
+                JoystickStick.RIGHT -> stringResource(R.string.macropad_action_analog_stick_right)
+            }
         }
 
         is PadAction.MouseButton -> {

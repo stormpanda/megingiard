@@ -838,4 +838,56 @@ class PadButtonSerializationTest {
         assertEquals("l-1", listOf(l1).defaultSwitchTargetId(activeLayoutId = "l-1"))
         assertEquals("", emptyList<PadLayout>().defaultSwitchTargetId(activeLayoutId = "l-1"))
     }
+
+    @Test
+    fun `AnalogStick serializes round-trip and enforces circular 1 to 1 sizing`() {
+        val leftStickAction =
+            PadAction.AnalogStick(
+                stick = JoystickStick.LEFT,
+                sensitivity = 1.4f,
+                floatingCenter = true,
+            )
+        val rightStickAction =
+            PadAction.AnalogStick(
+                stick = JoystickStick.RIGHT,
+                sensitivity = 0.8f,
+                floatingCenter = false,
+            )
+
+        assertTrue(leftStickAction.isCircularControl())
+        assertTrue(rightStickAction.isCircularControl())
+        assertFalse(leftStickAction.supportsCustomIcon())
+        assertNull(leftStickAction.defaultIconName())
+
+        val base =
+            PadButton(
+                id = "btn-stick",
+                label = "LS",
+                iconName = "star",
+                posX = 0.25f,
+                posY = 0.75f,
+                widthPx = 120f,
+                heightPx = 160f,
+                buttonShape = ButtonShape.SQUARE,
+                action = PadAction.LayoutNext,
+            )
+        val sizedThor = base.withActionSizing(leftStickAction, THOR_BOTTOM_CANVAS_SPEC)
+        assertEquals(272f, sizedThor.widthPx, 0.001f)
+        assertEquals(272f, sizedThor.heightPx, 0.001f)
+        assertEquals(ButtonShape.CIRCLE, sizedThor.buttonShape)
+        assertNull(sizedThor.iconName)
+
+        val duoSpec = LayoutCanvasSpec(widthPx = 1280, heightPx = 960)
+        val sizedDuo = base.withActionSizing(rightStickAction, duoSpec)
+        assertEquals(240f, sizedDuo.widthPx, 0.001f)
+        assertEquals(240f, sizedDuo.heightPx, 0.001f)
+        assertEquals(ButtonShape.CIRCLE, sizedDuo.buttonShape)
+
+        val encoded = json.encodeToString(sizedDuo)
+        val decoded = json.decodeFromString<PadButton>(encoded)
+        assertEquals(rightStickAction, decoded.action)
+        assertEquals(ButtonShape.CIRCLE, decoded.buttonShape)
+        assertEquals(240f, decoded.widthPx, 0.001f)
+        assertEquals(240f, decoded.heightPx, 0.001f)
+    }
 }

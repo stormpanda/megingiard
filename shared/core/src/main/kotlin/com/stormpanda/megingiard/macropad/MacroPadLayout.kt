@@ -272,6 +272,24 @@ sealed class PadAction {
     ) : PadAction()
 
     /**
+     * Emulates a physical Left Stick ([JoystickStick.LEFT]: `ABS_X`/`ABS_Y`) or Right Stick
+     * ([JoystickStick.RIGHT]: `ABS_Z`/`ABS_RZ`) via continuous 2D touch deflection inside a
+     * circular pad widget.
+     *
+     * @param stick          Target analog stick ([JoystickStick.LEFT] or [JoystickStick.RIGHT]).
+     * @param sensitivity    Radial deflection multiplier (`0.5f..2.5f`, default `1.0f`).
+     * @param floatingCenter When `true`, touch-down sets the neutral `(0, 0)` origin for that
+     *                       gesture; when `false`, deflection is measured from the button center.
+     */
+    @Serializable
+    @SerialName("analog_stick")
+    data class AnalogStick(
+        val stick: JoystickStick = JoystickStick.LEFT,
+        val sensitivity: Float = 1.0f,
+        val floatingCenter: Boolean = false,
+    ) : PadAction()
+
+    /**
      * Injects a mouse button event via MouseInjector (Megingiard System Service).
      */
     @Serializable
@@ -450,15 +468,24 @@ sealed class PadAction {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Returns `true` for continuous circular 1:1 controls ([PadAction.TrackpointMove] and
+ * [PadAction.AnalogStick]) that enforce circular hit-testing, 1:1 aspect ratio, and
+ * [ButtonShape.CIRCLE].
+ */
+fun PadAction.isCircularControl(): Boolean = this is PadAction.TrackpointMove || this is PadAction.AnalogStick
+
+/**
  * Returns `true` when this action supports assigning a Material Symbols icon via
  * [PadButton.iconName]. Fixed-face actions ([PadAction.ScrollWheel],
- * [PadAction.TrackpointMove], [PadAction.BackgroundPeek], [PadAction.AppLauncher])
- * render dedicated glyphs or package icons and always enforce `iconName = null`.
+ * [PadAction.TrackpointMove], [PadAction.AnalogStick], [PadAction.BackgroundPeek],
+ * [PadAction.AppLauncher]) render dedicated glyphs or package icons and always enforce
+ * `iconName = null`.
  */
 fun PadAction.supportsCustomIcon(): Boolean =
     when (this) {
         is PadAction.ScrollWheel,
         is PadAction.TrackpointMove,
+        is PadAction.AnalogStick,
         is PadAction.BackgroundPeek,
         is PadAction.AppLauncher,
         -> false
@@ -729,21 +756,21 @@ fun PadButton.withActionSizing(
     newAction: PadAction,
     canvas: LayoutCanvasSpec = THOR_BOTTOM_CANVAS_SPEC,
 ): PadButton {
-    val isTrackpoint = newAction is PadAction.TrackpointMove
-    val tpSize = if (isTrackpoint) maxOf(widthPx, heightPx, canvas.largeControlMinSizePx) else widthPx
+    val isCircular = newAction.isCircularControl()
+    val circularSize = if (isCircular) maxOf(widthPx, heightPx, canvas.largeControlMinSizePx) else widthPx
     return copy(
         action = newAction,
         iconName = if (!newAction.supportsCustomIcon()) null else iconName,
-        widthPx = if (isTrackpoint) tpSize else widthPx,
+        widthPx = if (isCircular) circularSize else widthPx,
         heightPx =
             if (newAction is PadAction.ScrollWheel && heightPx < canvas.largeControlMinSizePx) {
                 canvas.largeControlMinSizePx
-            } else if (isTrackpoint) {
-                tpSize
+            } else if (isCircular) {
+                circularSize
             } else {
                 heightPx
             },
-        buttonShape = if (isTrackpoint) ButtonShape.CIRCLE else buttonShape,
+        buttonShape = if (isCircular) ButtonShape.CIRCLE else buttonShape,
     )
 }
 
@@ -1013,15 +1040,15 @@ fun PadLayout.normalizedOnLoad(): PadLayout {
             val baseH = if (btn.heightPx.isFinite()) btn.heightPx else canvas.baseButtonSizePx
             val clampedW = baseW.coerceAtLeast(minBtnPx)
             val clampedH = baseH.coerceAtLeast(minBtnPx)
-            val isTrackpoint = btn.action is PadAction.TrackpointMove
-            val targetW = if (isTrackpoint) maxOf(clampedW, clampedH) else clampedW
+            val isCircular = btn.action.isCircularControl()
+            val targetW = if (isCircular) maxOf(clampedW, clampedH) else clampedW
             val targetH =
                 when {
-                    isTrackpoint -> maxOf(clampedW, clampedH)
+                    isCircular -> maxOf(clampedW, clampedH)
                     btn.action is PadAction.ScrollWheel -> maxOf(clampedH, largeMinPx)
                     else -> clampedH
                 }
-            val targetShape = if (isTrackpoint) ButtonShape.CIRCLE else btn.buttonShape
+            val targetShape = if (isCircular) ButtonShape.CIRCLE else btn.buttonShape
             if (
                 btnMigratedBg != btn.buttonBgColor ||
                 targetW != btn.widthPx ||
@@ -1309,10 +1336,10 @@ object PadButtonSerializer : KSerializer<PadButton> {
                 rawHeightPx.coerceAtLeast(MP_BUTTON_SERIALIZER_FLOOR_PX)
             }
 
-        val isTrackpoint = surrogate.action is PadAction.TrackpointMove
-        val safeWidth = if (isTrackpoint) maxOf(safeRawWidth, safeRawHeight) else safeRawWidth
-        val safeHeight = if (isTrackpoint) maxOf(safeRawWidth, safeRawHeight) else safeRawHeight
-        val safeShape = if (isTrackpoint) ButtonShape.CIRCLE else surrogate.buttonShape
+        val isCircular = surrogate.action.isCircularControl()
+        val safeWidth = if (isCircular) maxOf(safeRawWidth, safeRawHeight) else safeRawWidth
+        val safeHeight = if (isCircular) maxOf(safeRawWidth, safeRawHeight) else safeRawHeight
+        val safeShape = if (isCircular) ButtonShape.CIRCLE else surrogate.buttonShape
 
         return PadButton(
             id = surrogate.id,

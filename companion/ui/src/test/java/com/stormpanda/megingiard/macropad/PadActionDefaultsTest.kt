@@ -302,5 +302,19 @@ class PadActionDefaultsTest {
         assertEquals(240f, trackpoint.widthPx, 0.001f)
         assertEquals(240f, trackpoint.heightPx, 0.001f)
         assertEquals(ButtonShape.CIRCLE, trackpoint.buttonShape)
+
+        val analogStick =
+            initial.copy(iconName = "gamepad").withActionDefaultsResolved(
+                newAction = PadAction.AnalogStick(stick = JoystickStick.RIGHT),
+                newButtonPlaceholder = "New Button",
+                oldDefaultLabel = "Mouse Left",
+                newDefaultLabel = "Right Stick (Emulated)",
+                canvas = rpDuoCanvas,
+            )
+        assertEquals(240f, analogStick.widthPx, 0.001f)
+        assertEquals(240f, analogStick.heightPx, 0.001f)
+        assertEquals(ButtonShape.CIRCLE, analogStick.buttonShape)
+        assertNull(analogStick.iconName)
+        assertEquals("Right Stick (Emulated)", analogStick.label)
     }
 }

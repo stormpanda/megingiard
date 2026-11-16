@@ -528,4 +528,140 @@ class MacroPadHitTestEngineTest {
             }
             engine.onRelease(1L, listOf(launcherBtn))
         }
+
+    @Test
+    fun `fixed-center AnalogStick injects immediate off-center tilt clamps unit circle and resets on release`() {
+        val leftStickBtn =
+            PadButton(
+                id = "btn-ls",
+                label = "Left Stick",
+                posX = 0.25f, // center X = 250
+                posY = 0.5f, // center Y = 500
+                widthPx = 200f, // radius = 100
+                heightPx = 200f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.AnalogStick(stick = JoystickStick.LEFT, sensitivity = 1.0f, floatingCenter = false),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val buttons = listOf(leftStickBtn)
+
+        // Press halfway right of center (x = 300 -> nx = +0.5, ny = 0.0)
+        assertTrue(engine.onPress(1L, 300f, 500f, canvasW, canvasH, buttons, false))
+        val downCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("JS 0 16384\n", "JS 1 0\n"), downCmds)
+        assertEquals(0.5f, engine.stickDeflections.value["btn-ls"]!!.x, 0.01f)
+        assertEquals(0.0f, engine.stickDeflections.value["btn-ls"]!!.y, 0.01f)
+
+        // Drag diagonally far outside outer rim (x = 450, y = 300 -> rawNx = +2.0, rawNy = -2.0)
+        // Must clamp radially to unit circle: (+0.7071, -0.7071) -> ±23170
+        engine.onMove(1L, 450f, 300f, 150f, -200f, buttons)
+        val moveCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("JS 0 23170\n", "JS 1 -23170\n"), moveCmds)
+        val deflect = engine.stickDeflections.value["btn-ls"]!!
+        assertEquals(0.7071f, deflect.x, 0.01f)
+        assertEquals(-0.7071f, deflect.y, 0.01f)
+
+        // Release resets both ABS_X and ABS_Y to 0 and clears live UI deflection
+        engine.onRelease(1L, buttons)
+        val upCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("JS 0 0\n", "JS 1 0\n"), upCmds)
+        assertFalse("btn-ls" in engine.stickDeflections.value)
+        assertTrue(engine.pressedIds.value.isEmpty())
+    }
+
+    @Test
+    fun `floating-center Right Stick and multi-touch simultaneous Left Stick plus button work independently`() {
+        val leftStickBtn =
+            PadButton(
+                id = "btn-ls",
+                label = "LS",
+                posX = 0.2f, // center (200, 500), radius 100
+                posY = 0.5f,
+                widthPx = 200f,
+                heightPx = 200f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.AnalogStick(stick = JoystickStick.LEFT, sensitivity = 2.0f, floatingCenter = false),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val rightStickBtn =
+            PadButton(
+                id = "btn-rs",
+                label = "RS",
+                posX = 0.8f, // center (800, 500), radius 100
+                posY = 0.5f,
+                widthPx = 200f,
+                heightPx = 200f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.AnalogStick(stick = JoystickStick.RIGHT, sensitivity = 1.0f, floatingCenter = true),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val jumpBtn =
+            PadButton(
+                id = "btn-jump",
+                label = "A",
+                posX = 0.5f,
+                posY = 0.5f,
+                widthPx = 100f,
+                heightPx = 100f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.GamepadButton(btnCode = GamepadKeycodes.BTN_SOUTH, label = "A"),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val buttons = listOf(leftStickBtn, rightStickBtn, jumpBtn)
+
+        // Finger 1 touches Right Stick off-center at (840, 520) -> floatingCenter starts at (0, 0)!
+        assertTrue(engine.onPress(1L, 840f, 520f, canvasW, canvasH, buttons, false))
+        // Finger 2 touches Left Stick at (250, 500) -> sensitivity 2.0 * (+50 / 100) = +1.0 full right!
+        assertTrue(engine.onPress(2L, 250f, 500f, canvasW, canvasH, buttons, false))
+        // Finger 3 presses Jump button at (500, 500)
+        assertTrue(engine.onPress(3L, 500f, 500f, canvasW, canvasH, buttons, false))
+
+        val initialCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertTrue("JS 2 0\n" in initialCmds && "JS 5 0\n" in initialCmds)
+        assertTrue("JS 0 32767\n" in initialCmds)
+        assertTrue("GD ${GamepadKeycodes.BTN_SOUTH}\n" in initialCmds)
+
+        // Move Finger 1 (floating Right Stick) left by 50px to (790, 520) -> nx = -0.5 on ABS_Z (2)
+        engine.onMove(1L, 790f, 520f, -50f, 0f, buttons)
+        assertEquals("JS 2 -16383\n", PrivdClient.pollCommandForTest())
+        assertNull(PrivdClient.pollCommandForTest())
+
+        // releaseAll resets Left Stick, Right Stick, and Jump button cleanly
+        engine.releaseAll(buttons)
+        val cleanupCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertTrue("JS 0 0\n" in cleanupCmds && "JS 1 0\n" in cleanupCmds)
+        assertTrue("JS 2 0\n" in cleanupCmds && "JS 5 0\n" in cleanupCmds)
+        assertTrue("GU ${GamepadKeycodes.BTN_SOUTH}\n" in cleanupCmds)
+        assertTrue(engine.stickDeflections.value.isEmpty())
+    }
 }

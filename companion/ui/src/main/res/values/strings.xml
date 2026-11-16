@@ -200,6 +200,15 @@ Open Settings to create a layout.</string>
     <!-- MacroPad action picker labels -->
     <string name="macropad_action_keyboard_key">Keyboard Key</string>
     <string name="macropad_action_gamepad_button">Gamepad Button</string>
+    <string name="macropad_action_analog_stick_left">Left Stick (Emulated)</string>
+    <string name="macropad_action_analog_stick_right">Right Stick (Emulated)</string>
+    <string name="macropad_gamepad_control_type_title">Gamepad Control Type</string>
+    <string name="macropad_gamepad_control_type_desc">Choose discrete button combo or continuous virtual analog stick</string>
+    <string name="macropad_analog_stick_sensitivity_title">Stick Sensitivity</string>
+    <string name="macropad_analog_stick_sensitivity_desc">Radial deflection multiplier for reaching full stick tilt</string>
+    <string name="macropad_analog_stick_floating_title">Floating Center</string>
+    <string name="macropad_analog_stick_floating_desc">Anchor neutral (0, 0) where your finger touches down instead of the pad midpoint</string>
+    <string name="macropad_picker_emulate_stick_pill">Emulate Stick</string>
     <string name="macropad_action_mouse_button">Mouse Button</string>
     <string name="macropad_action_scroll_wheel">Scroll Wheel</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative mouse)</string>
@@ -632,7 +641,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_keyboard">Keyboard</string>
     <string name="macropad_action_group_keyboard_desc">Send single keystrokes or modifier combinations</string>
     <string name="macropad_action_group_gamepad">Gamepad</string>
-    <string name="macropad_action_group_gamepad_desc">Simulate standard gamepad buttons and triggers</string>
+    <string name="macropad_action_group_gamepad_desc">Simulate gamepad buttons, triggers, and analog sticks</string>
     <string name="macropad_action_group_mouse">Mouse</string>
     <string name="macropad_action_group_mouse_desc">Simulate mouse clicks, scroll wheels, or trackpoint input</string>
     <string name="macropad_action_group_macro">Macro</string>

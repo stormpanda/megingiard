@@ -8,14 +8,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -61,6 +65,9 @@ private val VGP_CLEAR_ICON_SIZE = 14.dp
 private val VGP_GRID_BTN_SIZE = 34.dp
 private val VGP_GRID_INNER_SPACING = 3.dp
 private val VGP_GRID_CORNER = 8.dp
+private val VGP_EMULATE_STICK_WIDTH = 108.dp
+private val VGP_EMULATE_STICK_HEIGHT = 28.dp
+private val VGP_EMULATE_STICK_ICON_SIZE = 14.dp
 
 // Spacing & Styling
 private val VGP_SECTION_SPACING = 12.dp
@@ -131,6 +138,7 @@ internal fun VisualGamepadPicker(
     accentColor: Color,
     onSelectButton: (preset: GamepadKeycodes.GamepadButtonPreset) -> Unit,
     modifier: Modifier = Modifier,
+    onSelectAnalogStick: ((JoystickStick) -> Unit)? = null,
     onClear: (() -> Unit)? = null,
 ) {
     AppLog.d(TAG, "VisualGamepadPicker: selectedBtnCode=$selectedBtnCode")
@@ -203,6 +211,7 @@ internal fun VisualGamepadPicker(
                     swapFaceButtons = swapFaceButtons,
                     accentColor = accentColor,
                     onSelectButton = onSelectButton,
+                    onEmulateStick = onSelectAnalogStick?.let { cb -> { cb(JoystickStick.LEFT) } },
                 )
 
                 DPad3x3Grid(
@@ -255,6 +264,7 @@ internal fun VisualGamepadPicker(
                     swapFaceButtons = swapFaceButtons,
                     accentColor = accentColor,
                     onSelectButton = onSelectButton,
+                    onEmulateStick = onSelectAnalogStick?.let { cb -> { cb(JoystickStick.RIGHT) } },
                 )
             }
         }
@@ -296,6 +306,7 @@ private fun AnalogStick3x3Grid(
     accentColor: Color,
     onSelectButton: (preset: GamepadKeycodes.GamepadButtonPreset) -> Unit,
     modifier: Modifier = Modifier,
+    onEmulateStick: (() -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
     val grid =
@@ -335,6 +346,46 @@ private fun AnalogStick3x3Grid(
                 shapeCorner = VGP_GRID_CORNER,
                 onClick = { onSelectButton(preset) },
             )
+        }
+
+        if (onEmulateStick != null) {
+            Box(
+                modifier =
+                    Modifier
+                        .width(VGP_EMULATE_STICK_WIDTH)
+                        .height(VGP_EMULATE_STICK_HEIGHT)
+                        .clip(VGP_CARD_SHAPE)
+                        .background(colors.surface)
+                        .border(
+                            width = VGP_BORDER_WIDTH,
+                            color = accentColor,
+                            shape = VGP_CARD_SHAPE,
+                        ).primaryOverlayFocusable(
+                            onClick = onEmulateStick,
+                            shape = VGP_CARD_SHAPE,
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(VGP_LABEL_SPACING),
+                    modifier = Modifier.padding(horizontal = VGP_LABEL_SPACING),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ControlCamera,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(VGP_EMULATE_STICK_ICON_SIZE),
+                    )
+                    Text(
+                        text = stringResource(R.string.macropad_picker_emulate_stick_pill),
+                        color = accentColor,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                    )
+                }
+            }
         }
     }
 }
