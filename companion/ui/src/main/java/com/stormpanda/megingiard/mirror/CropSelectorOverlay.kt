@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.mirror
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -11,14 +10,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
@@ -156,16 +158,21 @@ fun CropSelectorOverlay(
         return updated
     }
 
-    BoxWithConstraints(
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
+
+    Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(Color.Transparent),
+                .background(Color.Transparent)
+                .onSizeChanged { containerSize = it },
     ) {
-        val screenW = constraints.maxWidth.toFloat()
-        val screenH = constraints.maxHeight.toFloat()
-        if (screenW <= 0f || screenH <= 0f) return@BoxWithConstraints
+        val screenW = containerSize.width.toFloat()
+        val screenH = containerSize.height.toFloat()
+        if (screenW <= 0f || screenH <= 0f) return@Box
 
+        val maxWidthDp = with(density) { screenW.toDp() }
+        val maxHeightDp = with(density) { screenH.toDp() }
         val cropLeft = cutout.srcX * screenW
         val cropTop = cutout.srcY * screenH
         val cropW = cutout.srcWidth * screenW
@@ -178,7 +185,7 @@ fun CropSelectorOverlay(
                 Modifier
                     .offset { IntOffset(0, 0) }
                     .size(
-                        width = this@BoxWithConstraints.maxWidth,
+                        width = maxWidthDp,
                         height = with(density) { cropTop.toDp() },
                     ).background(MaterialTheme.colorScheme.scrim.copy(alpha = CS_SCRIM_ALPHA)),
         )
@@ -198,7 +205,7 @@ fun CropSelectorOverlay(
                 Modifier
                     .offset { IntOffset((cropLeft + cropW).roundToInt(), cropTop.roundToInt()) }
                     .size(
-                        width = this@BoxWithConstraints.maxWidth - with(density) { (cropLeft + cropW).toDp() },
+                        width = maxWidthDp - with(density) { (cropLeft + cropW).toDp() },
                         height = with(density) { cropH.toDp() },
                     ).background(MaterialTheme.colorScheme.scrim.copy(alpha = CS_SCRIM_ALPHA)),
         )
@@ -208,8 +215,8 @@ fun CropSelectorOverlay(
                 Modifier
                     .offset { IntOffset(0, (cropTop + cropH).roundToInt()) }
                     .size(
-                        width = this@BoxWithConstraints.maxWidth,
-                        height = this@BoxWithConstraints.maxHeight - with(density) { (cropTop + cropH).toDp() },
+                        width = maxWidthDp,
+                        height = maxHeightDp - with(density) { (cropTop + cropH).toDp() },
                     ).background(MaterialTheme.colorScheme.scrim.copy(alpha = CS_SCRIM_ALPHA)),
         )
 

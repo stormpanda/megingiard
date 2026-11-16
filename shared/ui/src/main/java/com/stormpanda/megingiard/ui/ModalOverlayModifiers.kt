@@ -11,7 +11,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
@@ -124,11 +124,11 @@ fun Modifier.topAndSideBezelBorder(
     brush: Brush,
     topCornerRadius: Dp,
 ): Modifier =
-    this.drawWithContent {
-        drawContent()
+    this.drawWithCache {
         val sw = strokeWidth.toPx()
         val inset = sw / 2f
         val r = topCornerRadius.toPx()
+        val stroke = Stroke(width = sw)
         val path =
             Path().apply {
                 moveTo(inset, size.height)
@@ -148,9 +148,12 @@ fun Modifier.topAndSideBezelBorder(
                 )
                 lineTo(size.width - inset, size.height)
             }
-        drawPath(
-            path = path,
-            brush = brush,
-            style = Stroke(width = sw),
-        )
+        onDrawWithContent {
+            drawContent()
+            drawPath(
+                path = path,
+                brush = brush,
+                style = stroke,
+            )
+        }
     }

@@ -567,4 +567,52 @@ class MultiCutoutContainerTest {
             output.recycle()
         }
     }
+
+    @Test
+    fun testUnchangedPropertySettersSkipRedundantInvalidation() {
+        val context = RuntimeEnvironment.getApplication()
+        val cutout = ScreenCutout.FULLSCREEN
+        val bmp = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
+        var invalidateCalls = 0
+        val container =
+            object : MultiCutoutContainer(context, 1920, 1080) {
+                override fun invalidate() {
+                    invalidateCalls++
+                    super.invalidate()
+                }
+            }
+
+        try {
+            container.cutouts = listOf(cutout)
+            container.isFrozen = true
+            container.bgBitmap = bmp
+            container.bgImageScale = 1.5f
+            val countAfterFirstAssignments = invalidateCalls
+            assertTrue(countAfterFirstAssignments >= 4)
+
+            // Re-assigning identical values/references must not trigger redundant invalidations
+            container.cutouts = listOf(cutout)
+            container.isFrozen = true
+            container.bgBitmap = bmp
+            container.bgImageScale = 1.5f
+            assertEquals(countAfterFirstAssignments, invalidateCalls)
+        } finally {
+            bmp.recycle()
+        }
+    }
+
+    @Test
+    fun testMirrorFpsCapAndSurfaceVoteFollowNativeDisplayAtDefaultAndThrottleBelow60() {
+        // Default unthrottled (60) follows 120 Hz RP Duo panel without voting Display 2 down to 60 Hz
+        assertEquals(120, resolveEffectiveMirrorFpsCap(configuredMaxFps = 60, displayRefreshRateHz = 120.00001f))
+        assertEquals(0f, resolveSurfaceFrameRateVote(configuredMaxFps = 60), 0.0001f)
+
+        // Default unthrottled (60) stays at 60 FPS on 60 Hz panels (AYN Thor or RP Duo 60 Hz mode)
+        assertEquals(60, resolveEffectiveMirrorFpsCap(configuredMaxFps = 60, displayRefreshRateHz = 60.0f))
+        assertEquals(60, resolveEffectiveMirrorFpsCap(configuredMaxFps = 60, displayRefreshRateHz = 0f))
+
+        // Explicit sub-60 power-saving cap throttles and votes exact FPS
+        assertEquals(30, resolveEffectiveMirrorFpsCap(configuredMaxFps = 30, displayRefreshRateHz = 120.0f))
+        assertEquals(30f, resolveSurfaceFrameRateVote(configuredMaxFps = 30), 0.0001f)
+    }
 }

@@ -1,14 +1,20 @@
 package com.stormpanda.megingiard.macropad
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Color
 import com.stormpanda.megingiard.mirror.CutoutMaskFileStore
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -17,6 +23,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.io.File
+import java.io.FileOutputStream
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -147,4 +154,48 @@ class MacroPadMediaRepositoryTest {
         assertFalse(CutoutMaskManager.hasMask(context, "del-cutout"))
         assertTrue(MacroPadMediaRepository.mediaRevision.value > revBefore)
     }
+
+    @Test
+    fun `loadScaledBitmap caches decoded bitmap across relative and absolute paths and invalidates on delete`() =
+        runTest {
+            val bgDir = File(context.filesDir, "backgrounds").apply { mkdirs() }
+            val bgFile = File(bgDir, "bg_cache-layout")
+            val sourceBmp = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.GREEN) }
+            FileOutputStream(bgFile).use { out ->
+                sourceBmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            sourceBmp.recycle()
+
+            assertNull(MacroPadMediaRepository.getCachedScaledBitmap(context, "backgrounds/bg_cache-layout"))
+
+            val loaded1 = MacroPadMediaRepository.loadScaledBitmap(context, "backgrounds/bg_cache-layout")
+            assertNotNull(loaded1)
+            assertSame(loaded1, MacroPadMediaRepository.getCachedScaledBitmap(context, "backgrounds/bg_cache-layout"))
+            assertSame(loaded1, MacroPadMediaRepository.getCachedScaledBitmap(context, bgFile.absolutePath))
+            assertSame(loaded1, MacroPadMediaRepository.loadScaledBitmap(context, bgFile.absolutePath))
+
+            MacroPadMediaRepository.deleteBackgroundImage(context, "cache-layout")
+            assertNull(MacroPadMediaRepository.getCachedScaledBitmap(context, "backgrounds/bg_cache-layout"))
+        }
+
+    @Test
+    fun `invalidateAllCaches evicts cached bitmaps and increments mediaRevision`() =
+        runTest {
+            val bgDir = File(context.filesDir, "backgrounds").apply { mkdirs() }
+            val bgFile = File(bgDir, "bg_restore-layout")
+            val sourceBmp = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
+            FileOutputStream(bgFile).use { out ->
+                sourceBmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            sourceBmp.recycle()
+
+            assertNotNull(MacroPadMediaRepository.loadScaledBitmap(context, "backgrounds/bg_restore-layout"))
+            assertNotNull(MacroPadMediaRepository.getCachedScaledBitmap(context, "backgrounds/bg_restore-layout"))
+            val revBefore = MacroPadMediaRepository.mediaRevision.value
+
+            MacroPadMediaRepository.invalidateAllCaches()
+
+            assertNull(MacroPadMediaRepository.getCachedScaledBitmap(context, "backgrounds/bg_restore-layout"))
+            assertTrue(MacroPadMediaRepository.mediaRevision.value > revBefore)
+        }
 }

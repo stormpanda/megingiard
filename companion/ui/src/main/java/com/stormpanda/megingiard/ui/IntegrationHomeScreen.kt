@@ -60,7 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -114,7 +114,8 @@ private const val IH_BG_LOGO_WIDTH_FRACTION = 0.65f
 private const val IH_BG_LOGO_ASPECT_RATIO = 2038f / 1076f
 private const val IH_CARD_BG_ALPHA = 0.30f
 private const val IH_COLOR_TRANSITION_DURATION_MS = 800
-private const val IH_CLOCK_UPDATE_INTERVAL_MS = 1000L
+private const val IH_CLOCK_MINUTE_MS = 60_000L
+private const val IH_CLOCK_MIN_DELAY_MS = 1_000L
 private const val IH_BATTERY_MAX = 100
 
 private val IH_BORDER_WIDTH = 1.dp
@@ -131,6 +132,32 @@ private val IH_DIALOG_BUTTON_CORNER_RADIUS = 8.dp
 private val IH_DIALOG_BUTTON_SHAPE = RoundedCornerShape(IH_DIALOG_BUTTON_CORNER_RADIUS)
 
 private val IH_BATTERY_LOW_COLOR = AppPalettes.batteryLow
+
+@Composable
+private fun HubClockText(
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    val formatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
+    var timeText by remember { mutableStateOf(LocalDateTime.now().format(formatter)) }
+
+    LaunchedEffect(formatter) {
+        while (true) {
+            timeText = LocalDateTime.now().format(formatter)
+            val millisIntoMinute = System.currentTimeMillis() % IH_CLOCK_MINUTE_MS
+            val delayToNextMinuteMs = (IH_CLOCK_MINUTE_MS - millisIntoMinute).coerceIn(IH_CLOCK_MIN_DELAY_MS, IH_CLOCK_MINUTE_MS)
+            delay(delayToNextMinuteMs)
+        }
+    }
+
+    Text(
+        text = timeText,
+        style = MaterialTheme.typography.titleLarge,
+        color = color,
+        fontWeight = FontWeight.Bold,
+        modifier = modifier,
+    )
+}
 
 @Composable
 fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
@@ -181,7 +208,6 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     )
 
     val batteryState = rememberBatteryState()
-    var timeText by remember { mutableStateOf("") }
     var showHubHelp by remember { mutableStateOf(false) }
     var profileToRelink by remember { mutableStateOf<PadProfile?>(null) }
 
@@ -225,14 +251,6 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    LaunchedEffect(Unit) {
-        val formatter = DateTimeFormatter.ofPattern("HH:mm")
-        while (true) {
-            timeText = LocalDateTime.now().format(formatter)
-            delay(IH_CLOCK_UPDATE_INTERVAL_MS)
-        }
-    }
-
     DisposableEffect(Unit) {
         AppLog.d(TAG, "IntegrationHomeScreen: ON_START")
         onDispose {
@@ -244,13 +262,14 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
         modifier =
             modifier
                 .fillMaxSize()
-                .drawBehind {
-                    drawRect(
-                        brush =
-                            Brush.verticalGradient(
-                                colors = listOf(colors.appBackground, animatedSecondary, animatedPrimary),
-                            ),
-                    )
+                .drawWithCache {
+                    val gradient =
+                        Brush.verticalGradient(
+                            colors = listOf(colors.appBackground, animatedSecondary, animatedPrimary),
+                        )
+                    onDrawBehind {
+                        drawRect(brush = gradient)
+                    }
                 },
     ) {
         // Background Logo Watermark (sits between ambient background and card boxes)
@@ -281,11 +300,8 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                         ),
             ) {
                 // Clock (Upper Left)
-                Text(
-                    text = timeText,
-                    style = MaterialTheme.typography.titleLarge,
+                HubClockText(
                     color = colors.onSurfaceSecondary,
-                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.align(Alignment.CenterStart),
                 )
 

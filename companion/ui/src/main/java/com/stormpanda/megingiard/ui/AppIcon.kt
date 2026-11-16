@@ -12,47 +12,37 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.macropad.toImageBitmap
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 private const val TAG = "AppIcon"
+private val AI_DEFAULT_FALLBACK_ICON_SIZE = 24.dp
 
 /**
  * Renders an installed application's launcher icon lazily loaded from [packageName].
- * Offloads icon extraction to [Dispatchers.IO] and displays a fallback symbol if unavailable or empty.
+ * Uses [CompanionAppIconCache] for synchronous cache hits and off-thread [android.graphics.Bitmap.prepareToDraw].
  */
 @Composable
 internal fun AppIcon(
     packageName: String,
     modifier: Modifier = Modifier,
     fallbackIconName: String = "apps",
-    fallbackIconSize: Dp = 24.dp,
+    fallbackIconSize: Dp = AI_DEFAULT_FALLBACK_ICON_SIZE,
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
-    var imageBitmap by remember(packageName) { mutableStateOf<ImageBitmap?>(null) }
+    var imageBitmap by remember(packageName) {
+        mutableStateOf(CompanionAppIconCache.getCachedIcon(packageName))
+    }
 
     LaunchedEffect(packageName) {
-        if (packageName.isNotBlank()) {
-            imageBitmap =
-                withContext(Dispatchers.IO) {
-                    try {
-                        val pm = context.packageManager
-                        val iconDrawable = pm.getApplicationIcon(packageName)
-                        iconDrawable.toImageBitmap()
-                    } catch (e: Exception) {
-                        AppLog.d(TAG, "Failed to load app icon for $packageName: ${e.message}")
-                        null
-                    }
-                }
-        } else {
+        if (packageName.isBlank()) {
             imageBitmap = null
+        } else if (imageBitmap == null) {
+            AppLog.d(TAG, "Loading uncached app icon for $packageName")
+            imageBitmap = CompanionAppIconCache.loadIcon(context, packageName)
         }
     }
 

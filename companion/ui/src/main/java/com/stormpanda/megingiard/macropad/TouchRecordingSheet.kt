@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import android.os.SystemClock
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -40,11 +39,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,11 +67,9 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.isBackKeyDown
 import com.stormpanda.megingiard.ui.rememberBezelBrush
-import kotlinx.coroutines.delay
 
 private const val TAG = "TouchRecordingSheet"
 
-private const val TRS_TIMER_TICK_MS = 50L
 private const val TRS_RADAR_ASPECT_RATIO = 16f / 9f
 private const val TRS_RADAR_CROSSHAIR_ALPHA = 0.25f
 private const val TRS_RADAR_BG_ALPHA = 0.12f
@@ -150,18 +144,7 @@ internal fun TouchRecordingSheet(
         onDispose { AppLog.i(TAG, "TouchRecordingSheet unmounted from Display 4") }
     }
 
-    var currentElapsedMs by remember { mutableLongStateOf(0L) }
     val startEpoch = recording?.startElapsedRealtime ?: 0L
-
-    LaunchedEffect(startEpoch) {
-        if (startEpoch > 0L) {
-            while (true) {
-                currentElapsedMs = (SystemClock.elapsedRealtime() - startEpoch).coerceAtLeast(0L)
-                delay(TRS_TIMER_TICK_MS)
-            }
-        }
-    }
-
     val mode = recording?.mode ?: TouchRecordingMode.TAP
 
     Box(
@@ -313,12 +296,10 @@ internal fun TouchRecordingSheet(
                                 .padding(horizontal = TRS_SPACING_L),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = formatElapsedTime(currentElapsedMs),
+                        RecordingElapsedTimerText(
+                            startEpoch = startEpoch,
                             color = colors.accent,
                             style = MaterialTheme.typography.labelSmall,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
                         )
                     }
 

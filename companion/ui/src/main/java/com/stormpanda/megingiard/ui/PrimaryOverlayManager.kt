@@ -185,7 +185,9 @@ internal fun PrimaryOverlayRootContent(
 ) {
     val themeMode by SettingsManager.themeMode.collectAsStateWithLifecycle()
     val userAccentArgb by SettingsManager.accentColor.collectAsStateWithLifecycle()
-    val appColors = paletteFor(themeMode, Color(userAccentArgb))
+    val appColors = remember(themeMode, userAccentArgb) { paletteFor(themeMode, Color(userAccentArgb)) }
+    val colorScheme = remember(appColors) { colorSchemeFor(appColors) }
+    val fullscreenKeyboardRequester = remember { { active: Boolean -> AppStateManager.setFullscreenKeyboardActive(active) } }
     val activeModal by AppStateManager.activePrimaryModal.collectAsStateWithLifecycle()
     val appLanguage by SettingsManager.appLanguage.collectAsStateWithLifecycle()
 
@@ -207,10 +209,10 @@ internal fun PrimaryOverlayRootContent(
         LocalContext provides localeContext,
         LocalOnBackPressedDispatcherOwner provides backDispatcherOwner,
         LocalAppColors provides appColors,
-        LocalFullscreenKeyboardRequester provides { active -> AppStateManager.setFullscreenKeyboardActive(active) },
+        LocalFullscreenKeyboardRequester provides fullscreenKeyboardRequester,
     ) {
         MaterialTheme(
-            colorScheme = colorSchemeFor(appColors),
+            colorScheme = colorScheme,
             typography = megingiardTypography,
         ) {
             Surface(

@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import android.util.LruCache
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
@@ -44,16 +45,22 @@ private const val PBF_ROUNDED_SQUARE_PERCENT = 25
 internal val PBF_ROUNDED_SQUARE_SHAPE = RoundedCornerShape(percent = PBF_ROUNDED_SQUARE_PERCENT)
 private const val PBF_PILL_PERCENT = 50
 internal val PBF_PILL_SHAPE = RoundedCornerShape(percent = PBF_PILL_PERCENT)
+private const val PBF_OUTLINE_CACHE_SIZE = 16
 
 private class PolygonButtonShape(
     private val vertices: List<NormalizedPoint>,
     val contentCenterOffset: NormalizedPoint,
 ) : Shape {
+    private val outlineCache = LruCache<Size, Outline.Generic>(PBF_OUTLINE_CACHE_SIZE)
+
     override fun createOutline(
         size: Size,
         layoutDirection: LayoutDirection,
         density: Density,
     ): Outline {
+        synchronized(outlineCache) {
+            outlineCache.get(size)?.let { return it }
+        }
         val path =
             Path().apply {
                 if (vertices.isNotEmpty()) {
@@ -64,7 +71,11 @@ private class PolygonButtonShape(
                     close()
                 }
             }
-        return Outline.Generic(path)
+        return Outline.Generic(path).also { outline ->
+            synchronized(outlineCache) {
+                outlineCache.put(size, outline)
+            }
+        }
     }
 
     override fun equals(other: Any?): Boolean =
@@ -160,47 +171,49 @@ internal fun PadButtonFace(
     val contentOffset = (shape as? PolygonButtonShape)?.contentCenterOffset ?: PBF_ZERO_OFFSET
 
     val bgBrush =
-        remember(bgColor, width, height, density, contentOffset) {
-            val wPx = with(density) { width.toPx() }
-            val hPx = with(density) { height.toPx() }
-            val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
-            val maxAlpha = bgColor.alpha.coerceIn(0f, 1f)
-            Brush.radialGradient(
-                0.00f to bgColor.copy(alpha = 0f),
-                PBF_GRADIENT_MID_STOP_1 to bgColor.copy(alpha = maxAlpha * PBF_GRADIENT_MID_ALPHA_1),
-                PBF_GRADIENT_MID_STOP_2 to bgColor.copy(alpha = maxAlpha * PBF_GRADIENT_MID_ALPHA_2),
-                1.00f to bgColor.copy(alpha = maxAlpha),
-                center =
-                    Offset(
-                        wPx * (PBF_CENTER_NORM + contentOffset.x),
-                        hPx * (PBF_CENTER_NORM + contentOffset.y),
-                    ),
-                radius = halfDiag,
-            )
+        if (isIconOnly) {
+            null
+        } else {
+            remember(bgColor, width, height, density, contentOffset) {
+                val wPx = with(density) { width.toPx() }
+                val hPx = with(density) { height.toPx() }
+                val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
+                val maxAlpha = bgColor.alpha.coerceIn(0f, 1f)
+                Brush.radialGradient(
+                    0.00f to bgColor.copy(alpha = 0f),
+                    PBF_GRADIENT_MID_STOP_1 to bgColor.copy(alpha = maxAlpha * PBF_GRADIENT_MID_ALPHA_1),
+                    PBF_GRADIENT_MID_STOP_2 to bgColor.copy(alpha = maxAlpha * PBF_GRADIENT_MID_ALPHA_2),
+                    1.00f to bgColor.copy(alpha = maxAlpha),
+                    center =
+                        Offset(
+                            wPx * (PBF_CENTER_NORM + contentOffset.x),
+                            hPx * (PBF_CENTER_NORM + contentOffset.y),
+                        ),
+                    radius = halfDiag,
+                )
+            }
         }
 
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier =
+    val faceModifier =
+        if (isIconOnly) {
+            modifier.size(width, height)
+        } else {
             modifier
                 .size(width, height)
                 .clip(shape)
                 .drawWithContent {
-                    if (isIconOnly) {
-                        drawContent()
-                    } else {
-                        val effectiveBackingColor = PBF_BACKING_COLOR.copy(alpha = PBF_BACKING_COLOR.alpha * bgColor.alpha)
-                        drawRect(color = effectiveBackingColor)
+                    val effectiveBackingColor = PBF_BACKING_COLOR.copy(alpha = PBF_BACKING_COLOR.alpha * bgColor.alpha)
+                    drawRect(color = effectiveBackingColor)
+                    if (bgBrush != null) {
                         drawRect(brush = bgBrush)
-                        drawContent()
                     }
-                }.then(
-                    if (isIconOnly) {
-                        Modifier
-                    } else {
-                        Modifier.border(PBF_BORDER_WIDTH, borderColor, shape)
-                    },
-                ),
+                    drawContent()
+                }.border(PBF_BORDER_WIDTH, borderColor, shape)
+        }
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = faceModifier,
     ) {
         if (contentOffset.x != 0f || contentOffset.y != 0f) {
             Box(

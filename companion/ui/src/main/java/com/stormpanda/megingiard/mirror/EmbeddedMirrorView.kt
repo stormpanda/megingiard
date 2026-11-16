@@ -26,16 +26,36 @@ import com.stormpanda.megingiard.macropad.LayoutCanvasSpec
 import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadState
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.withContext
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 private const val TAG = "EmbeddedMirrorView"
 private const val EMV_DEFAULT_SRC_WIDTH = 1920
 private const val EMV_DEFAULT_SRC_HEIGHT = 1080
 private const val EMV_MIN_FPS = 10
-private const val EMV_MAX_FPS = 60
-private const val EMV_MS_PER_SECOND = 1000L
+private const val EMV_DEFAULT_UNTHROTTLED_FPS = 60
+private const val EMV_MAX_FPS = 120
+private const val EMV_SYSTEM_DEFAULT_FRAME_RATE_VOTE = 0f
+private const val EMV_NS_PER_SECOND = 1_000_000_000L
+
+internal fun resolveEffectiveMirrorFpsCap(
+    configuredMaxFps: Int,
+    displayRefreshRateHz: Float,
+): Int =
+    if (configuredMaxFps < EMV_DEFAULT_UNTHROTTLED_FPS) {
+        configuredMaxFps.coerceIn(EMV_MIN_FPS, EMV_MAX_FPS)
+    } else {
+        val panelHz = if (displayRefreshRateHz > 0f) displayRefreshRateHz.roundToInt() else EMV_DEFAULT_UNTHROTTLED_FPS
+        max(configuredMaxFps, panelHz).coerceIn(EMV_MIN_FPS, EMV_MAX_FPS)
+    }
+
+internal fun resolveSurfaceFrameRateVote(configuredMaxFps: Int): Float =
+    if (configuredMaxFps < EMV_DEFAULT_UNTHROTTLED_FPS) {
+        configuredMaxFps.coerceIn(EMV_MIN_FPS, EMV_MAX_FPS).toFloat()
+    } else {
+        EMV_SYSTEM_DEFAULT_FRAME_RATE_VOTE
+    }
 
 @Composable
 fun EmbeddedMirrorView(
@@ -63,12 +83,26 @@ fun EmbeddedMirrorView(
     val effectiveDesignCanvas: LayoutCanvasSpec? = if (overrideCutouts == null) layout?.effectiveDesignCanvas else null
     val effectiveShowLayoutBackground = showLayoutBackground && !(isViewportEditActive && isMirrorEditorBackgroundHidden)
 
-    var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion, effectiveShowLayoutBackground) {
-        mutableStateOf<Bitmap?>(null)
+    var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion, effectiveShowLayoutBackground, mediaRevision) {
+        val path = layout?.backgroundImagePath
+        val cached =
+            if (effectiveShowLayoutBackground && path != null) {
+                MacroPadMediaRepository.getCachedScaledBitmap(context, path)
+            } else {
+                null
+            }
+        mutableStateOf(cached)
     }
 
-    var maskBitmap by remember(layout?.maskImagePath, layout?.maskImageVersion, effectiveShowLayoutBackground) {
-        mutableStateOf<Bitmap?>(null)
+    var maskBitmap by remember(layout?.maskImagePath, layout?.maskImageVersion, effectiveShowLayoutBackground, mediaRevision) {
+        val path = layout?.maskImagePath
+        val cached =
+            if (effectiveShowLayoutBackground && path != null) {
+                MacroPadMediaRepository.getCachedScaledBitmap(context, path)
+            } else {
+                null
+            }
+        mutableStateOf(cached)
     }
 
     LaunchedEffect(
@@ -82,19 +116,17 @@ fun EmbeddedMirrorView(
             return@LaunchedEffect
         }
         val path = layout?.backgroundImagePath
-        if (path != null) {
-            withContext(Dispatchers.IO) {
-                try {
-                    bgBitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to load background image for EmbeddedMirrorView", e)
-                    bgBitmap = null
-                }
-            }
-        } else {
+        if (path == null) {
             bgBitmap = null
+        } else if (bgBitmap == null) {
+            try {
+                bgBitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to load background image for EmbeddedMirrorView", e)
+                bgBitmap = null
+            }
         }
     }
 
@@ -109,19 +141,17 @@ fun EmbeddedMirrorView(
             return@LaunchedEffect
         }
         val path = layout?.maskImagePath
-        if (path != null) {
-            withContext(Dispatchers.IO) {
-                try {
-                    maskBitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to load mask image for EmbeddedMirrorView", e)
-                    maskBitmap = null
-                }
-            }
-        } else {
+        if (path == null) {
             maskBitmap = null
+        } else if (maskBitmap == null) {
+            try {
+                maskBitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to load mask image for EmbeddedMirrorView", e)
+                maskBitmap = null
+            }
         }
     }
 
@@ -133,6 +163,7 @@ fun EmbeddedMirrorView(
                 var masterSurface: Surface? = null
                 var currentRoutedSurface: Surface? = null
                 var gpuMotionSmoother: GpuMotionSmoother? = null
+                var lastAppliedFrameRateVote: Float = Float.NaN
 
                 fun updateSurfaceRouting(
                     width: Int,
@@ -146,7 +177,7 @@ fun EmbeddedMirrorView(
 
                     val activeLayout = MacroPadState.activeLayout.value
                     val streamDelay =
-                        if (activeLayout?.visualAnchor?.enabled == true) {
+                        if (activeLayout?.visualAnchor?.enabled == true && activeLayout.visualAnchor.isCalibrated) {
                             activeLayout.visualAnchor.streamDelayFrames
                         } else {
                             0
@@ -177,7 +208,6 @@ fun EmbeddedMirrorView(
                     } else if (smoother != null) {
                         smoother.updateStrength(effectiveStrength)
                         smoother.updateStreamDelay(streamDelay)
-                        AnchorPresenceManager.registerGpuMotionSmoother(smoother)
                         val inSurface = smoother.inputSurface
                         if (inSurface != null && inSurface.isValid && currentRoutedSurface != inSurface) {
                             currentRoutedSurface = inSurface
@@ -236,6 +266,7 @@ fun EmbeddedMirrorView(
             containerHolder.gpuMotionSmoother?.release()
             containerHolder.gpuMotionSmoother = null
             containerHolder.currentRoutedSurface = null
+            containerHolder.lastAppliedFrameRateVote = Float.NaN
             MasterSurfaceRegistry.unregisterMasterSurface(surfaceOwner, surfaceToClear)
             containerHolder.masterSurface?.release()
             containerHolder.masterSurface = null
@@ -272,7 +303,7 @@ fun EmbeddedMirrorView(
 
             tv.surfaceTextureListener =
                 object : TextureView.SurfaceTextureListener {
-                    private var lastUpdateTime = 0L
+                    private var lastUpdateTimeNs = 0L
 
                     override fun onSurfaceTextureAvailable(
                         st: SurfaceTexture,
@@ -296,9 +327,10 @@ fun EmbeddedMirrorView(
                         containerHolder.masterSurface = surface
                         MirrorFrameSampler.registerTextureView(tv)
                         try {
-                            val fps = ScreenCaptureManager.maxFps.value
-                            AppLog.i(TAG, "Setting initial surface frame rate to $fps FPS")
-                            surface.setFrameRate(fps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                            val vote = resolveSurfaceFrameRateVote(ScreenCaptureManager.maxFps.value)
+                            AppLog.i(TAG, "Setting initial surface frame rate vote to $vote FPS")
+                            surface.setFrameRate(vote, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                            containerHolder.lastAppliedFrameRateVote = vote
                         } catch (e: Exception) {
                             AppLog.e(TAG, "Error setting initial surface frame rate", e)
                         }
@@ -325,6 +357,7 @@ fun EmbeddedMirrorView(
                         containerHolder.gpuMotionSmoother?.release()
                         containerHolder.gpuMotionSmoother = null
                         containerHolder.currentRoutedSurface = null
+                        containerHolder.lastAppliedFrameRateVote = Float.NaN
                         MasterSurfaceRegistry.unregisterMasterSurface(surfaceOwner, surfaceToClear)
                         containerHolder.masterSurface?.release()
                         containerHolder.masterSurface = null
@@ -332,12 +365,13 @@ fun EmbeddedMirrorView(
                     }
 
                     override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
-                        val now = SystemClock.elapsedRealtime()
-                        val fps = ScreenCaptureManager.maxFps.value.coerceIn(EMV_MIN_FPS, EMV_MAX_FPS)
-                        val interval = EMV_MS_PER_SECOND / fps
-                        if (now - lastUpdateTime >= interval) {
+                        val nowNs = SystemClock.elapsedRealtimeNanos()
+                        val displayHz = mcc.display?.refreshRate ?: 0f
+                        val fps = resolveEffectiveMirrorFpsCap(ScreenCaptureManager.maxFps.value, displayHz)
+                        val intervalNs = EMV_NS_PER_SECOND / fps
+                        if (nowNs - lastUpdateTimeNs >= intervalNs) {
                             mcc.invalidate()
-                            lastUpdateTime = now
+                            lastUpdateTimeNs = nowNs
                         }
                     }
                 }
@@ -367,10 +401,12 @@ fun EmbeddedMirrorView(
                 if (effectiveShowLayoutBackground) layout?.maskScaleMode ?: BackgroundScaleMode.FILL else BackgroundScaleMode.FILL
             mcc.ambientDim = if (overrideCutouts == null) layout?.ambientDim ?: 0f else 0f
 
+            val vote = resolveSurfaceFrameRateVote(maxFps)
             containerHolder.masterSurface?.let { surface ->
-                if (surface.isValid) {
+                if (surface.isValid && containerHolder.lastAppliedFrameRateVote != vote) {
                     try {
-                        surface.setFrameRate(maxFps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                        surface.setFrameRate(vote, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                        containerHolder.lastAppliedFrameRateVote = vote
                     } catch (e: Exception) {
                         AppLog.e(TAG, "Error updating surface frame rate", e)
                     }

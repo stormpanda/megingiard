@@ -32,6 +32,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -76,9 +77,6 @@ import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
 import kotlinx.coroutines.launch
 
 // ─────────────────────────────────────────────────────────────────────────────
-
-private val MP_CORNER_RADIUS = 0.dp
-private val MP_SCREEN_SHAPE = RoundedCornerShape(MP_CORNER_RADIUS)
 
 // Shared with PadCanvas so the editor canvas is pixel-identical to use mode.
 internal val MP_SCREEN_PADDING = 0.dp
@@ -231,10 +229,8 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
 
         LayoutTransitionSnapshotOverlay()
 
-        val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
         if (!isEditorActive && !isViewportEditActive) {
-            DialogToastPill(
-                toast = activeToast,
+            MacroPadToastOverlay(
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
@@ -249,20 +245,29 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
+private fun MacroPadToastOverlay(modifier: Modifier = Modifier) {
+    val activeToast by DialogToastManager.currentToast.collectAsStateWithLifecycle()
+    DialogToastPill(
+        toast = activeToast,
+        modifier = modifier,
+    )
+}
+
+@Composable
 private fun LayoutTransitionSnapshotOverlay() {
     val transitionSnapshot by LayoutTransitionManager.transitionSnapshot.collectAsStateWithLifecycle()
-    val transitionAlpha by LayoutTransitionManager.transitionAlpha.collectAsStateWithLifecycle()
+    val transitionAlphaState = LayoutTransitionManager.transitionAlpha.collectAsStateWithLifecycle()
     val activeSnapshot = transitionSnapshot
-    if (activeSnapshot != null && !activeSnapshot.isRecycled && transitionAlpha > 0f) {
+    if (activeSnapshot != null && !activeSnapshot.isRecycled) {
+        val snapshotImageBitmap = remember(activeSnapshot) { activeSnapshot.asImageBitmap() }
         Image(
-            bitmap = activeSnapshot.asImageBitmap(),
+            bitmap = snapshotImageBitmap,
             contentDescription = null,
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .clip(MP_SCREEN_SHAPE)
                     .graphicsLayer {
-                        alpha = transitionAlpha
+                        alpha = transitionAlphaState.value
                     },
         )
     }
@@ -301,7 +306,7 @@ internal fun PadSurface(
             }
         }
 
-    val layerBitmaps = rememberLayoutLayerBitmaps(context, layout)
+    val layerBitmaps = rememberLayoutLayerBitmaps(context, layout, enabled = !transparentBackground)
 
     // Create hit-test engine with haptic callback
     val engine =
@@ -434,7 +439,7 @@ internal fun PadSurface(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .clip(MP_SCREEN_SHAPE)
+                    .clipToBounds()
                     .background(if (transparentBackground) Color.Transparent else Color.Black)
                     .onSizeChanged { canvasSizeState.value = it }
                     .pointerInput(
@@ -671,10 +676,12 @@ internal fun PadSurface(
 
             // Render buttons (filtered by peek state)
             val visibleButtons =
-                if (isPeekActive) {
-                    layout.buttons.filter { it.action is PadAction.BackgroundPeek }
-                } else {
-                    layout.buttons
+                remember(layout.buttons, isPeekActive) {
+                    if (isPeekActive) {
+                        layout.buttons.filter { it.action is PadAction.BackgroundPeek }
+                    } else {
+                        layout.buttons
+                    }
                 }
             visibleButtons.forEach { btn ->
                 key(btn.id) {
@@ -695,7 +702,9 @@ internal fun PadSurface(
                         }
                     PadButton(
                         btn = btn,
-                        layout = layout,
+                        defaultBgColor = layout.buttonBgColor,
+                        defaultBorderColor = layout.buttonBorderColor,
+                        defaultTextColor = layout.buttonTextColor,
                         isPressed = isPressed,
                         viewport = designViewport,
                         accentColor = accentColor,

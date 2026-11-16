@@ -70,6 +70,7 @@ import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.GamepadRecordingState
 import com.stormpanda.megingiard.macropad.HapticStrength
+import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
@@ -484,6 +485,7 @@ fun MainAppScreen() {
                 onConfirm = {
                     coroutineScope.launch {
                         ConfigManager.applyImport(context, archive.export, archive.images)
+                        MacroPadMediaRepository.invalidateAllCaches()
                     }
                 },
                 onDismiss = { ConfigManager.clearPendingImport() },

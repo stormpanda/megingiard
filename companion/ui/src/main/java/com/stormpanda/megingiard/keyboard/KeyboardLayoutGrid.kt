@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,6 +25,7 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
@@ -45,7 +47,6 @@ private val KB_GRID_PADDING_V = 2.dp
 internal fun KeyboardLayoutGrid(
     activeState: KeyboardLayoutState,
     gestureProcessor: KeyboardGestureProcessor,
-    pressedKeys: Set<String>,
     isShiftActive: Boolean,
     isCapsActive: Boolean,
     isAltGrActive: Boolean,
@@ -58,7 +59,7 @@ internal fun KeyboardLayoutGrid(
     val isFullLayoutMode = activeState.mode == KeyboardMode.FULL
     val gridHeight = if (isFullLayoutMode) KB_GRID_HEIGHT_FULL else KB_GRID_HEIGHT_ERGO
     val boxCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
-    val activePopupState = gestureProcessor.activePopupState.collectAsStateWithLifecycle().value
+    val pressedKeys = gestureProcessor.pressedKeys.collectAsStateWithLifecycle().value
     val density = LocalDensity.current
 
     LaunchedEffect(activeState.mode) {
@@ -70,26 +71,33 @@ internal fun KeyboardLayoutGrid(
         key: KeyDef,
         keyModifier: Modifier,
     ) {
-        KeyboardKey(
-            keyDef = key,
-            isPressed = key.id in pressedKeys,
-            isShiftActive = isShiftActive,
-            isCapsActive = isCapsActive,
-            isAltGrActive = isAltGrActive,
-            isFullLayout = activeState.mode == KeyboardMode.FULL,
-            modifier = keyModifier,
-            onBoundsUpdate = { coords ->
-                val box = boxCoords.value
-                if (box != null && coords.isAttached) {
-                    val localTopLeft = box.localPositionOf(coords, Offset.Zero)
-                    val left = localTopLeft.x
-                    val top = localTopLeft.y
-                    val right = left + coords.size.width
-                    val bottom = top + coords.size.height
-                    gestureProcessor.updateBounds(key.id, left, top, right, bottom)
+        key(key.id) {
+            val keyId = key.id
+            val boundsUpdater =
+                remember(keyId, gestureProcessor) {
+                    { coords: LayoutCoordinates ->
+                        val box = boxCoords.value
+                        if (box != null && coords.isAttached) {
+                            val localTopLeft = box.localPositionOf(coords, Offset.Zero)
+                            val left = localTopLeft.x
+                            val top = localTopLeft.y
+                            val right = left + coords.size.width
+                            val bottom = top + coords.size.height
+                            gestureProcessor.updateBounds(keyId, left, top, right, bottom)
+                        }
+                    }
                 }
-            },
-        )
+            KeyboardKey(
+                keyDef = key,
+                isPressed = keyId in pressedKeys,
+                isShiftActive = isShiftActive,
+                isCapsActive = isCapsActive,
+                isAltGrActive = isAltGrActive,
+                isFullLayout = activeState.mode == KeyboardMode.FULL,
+                modifier = keyModifier,
+                onBoundsUpdate = boundsUpdater,
+            )
+        }
     }
 
     Box(
@@ -258,13 +266,27 @@ internal fun KeyboardLayoutGrid(
             }
         }
 
-        if (activePopupState != null) {
-            CharPopupOverlay(
-                popup = activePopupState,
-                boxWidthPx = boxCoords.value?.size?.width ?: KB_DEFAULT_BOX_WIDTH_PX,
-                density = density,
-            )
-        }
+        KeyboardPopupOverlayHost(
+            gestureProcessor = gestureProcessor,
+            boxCoordsState = boxCoords,
+            density = density,
+        )
+    }
+}
+
+@Composable
+private fun KeyboardPopupOverlayHost(
+    gestureProcessor: KeyboardGestureProcessor,
+    boxCoordsState: State<LayoutCoordinates?>,
+    density: Density,
+) {
+    val activePopupState = gestureProcessor.activePopupState.collectAsStateWithLifecycle().value
+    if (activePopupState != null) {
+        CharPopupOverlay(
+            popup = activePopupState,
+            boxWidthPx = boxCoordsState.value?.size?.width ?: KB_DEFAULT_BOX_WIDTH_PX,
+            density = density,
+        )
     }
 }
 

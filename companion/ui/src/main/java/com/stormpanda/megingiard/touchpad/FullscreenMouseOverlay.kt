@@ -117,6 +117,7 @@ private val TP_MODE_TOGGLE_HEIGHT = 36.dp
 private val TP_MODE_TOGGLE_PADDING = 2.dp
 private val TP_MODE_SEGMENT_ICON_SIZE = 16.dp
 private val TP_MODE_SEGMENT_ICON_SPACING = 6.dp
+private val TP_FULLSCREEN_CUTOUTS = listOf(ScreenCutout.FULLSCREEN)
 
 @Composable
 fun rememberGlobalTouchpadProcessor(forceMouseMode: Boolean = false): TouchpadGestureProcessor {
@@ -263,7 +264,6 @@ fun FullscreenMouseOverlay() {
     val isMirroringActive = !touchpadUseMouse && touchpadMirroringEnabled && isCapturing
 
     val processor = rememberGlobalTouchpadProcessor(forceMouseMode = false)
-    val hasActivePointers by processor.hasActivePointers.collectAsStateWithLifecycle()
 
     val insetBezelBrush = rememberBezelBrush()
 
@@ -379,7 +379,7 @@ fun FullscreenMouseOverlay() {
                             modifier = Modifier.fillMaxSize(),
                             surfaceOwner = MasterSurfaceRegistry.OWNER_TOUCHPAD,
                             surfacePriority = MasterSurfaceRegistry.PRIORITY_TOUCHPAD,
-                            overrideCutouts = listOf(ScreenCutout.FULLSCREEN),
+                            overrideCutouts = TP_FULLSCREEN_CUTOUTS,
                             showLayoutBackground = false,
                         )
                         Box(
@@ -407,12 +407,7 @@ fun FullscreenMouseOverlay() {
                 modifier = Modifier.fillMaxHeight().align(Alignment.CenterStart),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TouchpadToolbarButton(
-                    icon = Icons.Rounded.KeyboardArrowDown,
-                    contentDescription = stringResource(R.string.cd_touchpad_collapse),
-                    enabled = !hasActivePointers,
-                    onClick = { AppStateManager.setFullscreenMouseActive(false) },
-                )
+                CollapseTouchpadButton(processor = processor)
             }
 
             // Center-aligned: ModeToggleButton
@@ -450,6 +445,17 @@ fun FullscreenMouseOverlay() {
             }
         }
     }
+}
+
+@Composable
+private fun CollapseTouchpadButton(processor: TouchpadGestureProcessor) {
+    val hasActivePointers by processor.hasActivePointers.collectAsStateWithLifecycle()
+    TouchpadToolbarButton(
+        icon = Icons.Rounded.KeyboardArrowDown,
+        contentDescription = stringResource(R.string.cd_touchpad_collapse),
+        enabled = !hasActivePointers,
+        onClick = { AppStateManager.setFullscreenMouseActive(false) },
+    )
 }
 
 @Composable

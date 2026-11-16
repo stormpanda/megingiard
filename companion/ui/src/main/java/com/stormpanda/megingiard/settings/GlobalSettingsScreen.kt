@@ -27,6 +27,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.log.LogReportManager
+import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.settings.tabs.AppearanceSettingsTab
@@ -496,6 +497,7 @@ fun GlobalSettingsScreen(
                                                         )
                                                     }
                                                 }
+                                                MacroPadMediaRepository.invalidateAllCaches()
                                             }.onSuccess {
                                                 val msgRes =
                                                     if (mode == ConfigManager.ImportMode.BACKUP_RESTORE) {

@@ -51,7 +51,7 @@ private const val FROZEN_INACTIVE_BRIGHTNESS = 0.65f
 private const val MCC_ROTATION_90 = 90
 private const val MCC_ROTATION_270 = 270
 
-internal class MultiCutoutContainer(
+internal open class MultiCutoutContainer(
     context: Context,
     private val srcWidth: Int,
     private val srcHeight: Int,
@@ -103,53 +103,71 @@ internal class MultiCutoutContainer(
 
     var cutouts: List<ScreenCutout> = emptyList()
         set(value) {
-            field = value
-            val (above, below) = value.partition { it.renderAboveMask }
-            aboveMaskCutouts = above
-            belowMaskCutouts = below
-            pruneStaleCutoutResources(value)
-            CutoutMaskManager.preloadCutoutsAsync(context, value, ::postInvalidateOnAnimation)
-            invalidate()
+            if (field != value) {
+                field = value
+                val (above, below) = value.partition { it.renderAboveMask }
+                aboveMaskCutouts = above
+                belowMaskCutouts = below
+                pruneStaleCutoutResources(value)
+                CutoutMaskManager.preloadCutoutsAsync(context, value, ::postInvalidateOnAnimation)
+                invalidate()
+            }
         }
     var isFrozen: Boolean = false
         set(value) {
-            field = value
-            invalidate()
+            if (field != value) {
+                field = value
+                invalidate()
+            }
         }
     var isViewportEditActive: Boolean = false
         set(value) {
-            field = value
-            invalidate()
+            if (field != value) {
+                field = value
+                invalidate()
+            }
         }
     var frozenBitmap: Bitmap? = null
         set(value) {
-            field = value
-            invalidate()
+            if (field !== value) {
+                field = value
+                invalidate()
+            }
         }
     var bgBitmap: Bitmap? = null
         set(value) {
-            field = value
-            invalidate()
+            if (field !== value) {
+                field = value
+                invalidate()
+            }
         }
     var maskBitmap: Bitmap? = null
         set(value) {
-            field = value
-            invalidate()
+            if (field !== value) {
+                field = value
+                invalidate()
+            }
         }
     var bgImageScale: Float = 1f
         set(value) {
-            field = value
-            invalidate()
+            if (field != value) {
+                field = value
+                invalidate()
+            }
         }
     var bgImageOffsetX: Float = 0f
         set(value) {
-            field = value
-            invalidate()
+            if (field != value) {
+                field = value
+                invalidate()
+            }
         }
     var bgImageOffsetY: Float = 0f
         set(value) {
-            field = value
-            invalidate()
+            if (field != value) {
+                field = value
+                invalidate()
+            }
         }
     var bgImageDim: Float = 0f
         set(value) {
@@ -168,18 +186,24 @@ internal class MultiCutoutContainer(
         }
     var maskImageScale: Float = 1f
         set(value) {
-            field = value
-            invalidate()
+            if (field != value) {
+                field = value
+                invalidate()
+            }
         }
     var maskImageOffsetX: Float = 0f
         set(value) {
-            field = value
-            invalidate()
+            if (field != value) {
+                field = value
+                invalidate()
+            }
         }
     var maskImageOffsetY: Float = 0f
         set(value) {
-            field = value
-            invalidate()
+            if (field != value) {
+                field = value
+                invalidate()
+            }
         }
     var maskImageDim: Float = 0f
         set(value) {
@@ -627,16 +651,16 @@ internal class MultiCutoutContainer(
         masterView: View?,
     ): Boolean {
         var masterViewDrawn = false
-        val effectiveCrop = InteractiveCutoutController.getEffectiveCrop(cutout)
+        val overrideCrop = InteractiveCutoutController.getOverrideCrop(cutout.id)
         val dx = viewport.normToScreenX(cutout.destX).roundToInt().toFloat()
         val dy = viewport.normToScreenY(cutout.destY).roundToInt().toFloat()
         val dw = (cutout.destWidth * viewport.viewportWidthPx).roundToInt().toFloat()
         val dh = (cutout.destHeight * viewport.viewportHeightPx).roundToInt().toFloat()
 
-        val sw = effectiveCrop.srcWidth * srcWidth
-        val sh = effectiveCrop.srcHeight * srcHeight
-        val sx = effectiveCrop.srcX * srcWidth
-        val sy = effectiveCrop.srcY * srcHeight
+        val sw = (overrideCrop?.srcWidth ?: cutout.srcWidth) * srcWidth
+        val sh = (overrideCrop?.srcHeight ?: cutout.srcHeight) * srcHeight
+        val sx = (overrideCrop?.srcX ?: cutout.srcX) * srcWidth
+        val sy = (overrideCrop?.srcY ?: cutout.srcY) * srcHeight
 
         if (dw <= 0f || dh <= 0f || sw <= 0f || sh <= 0f) return false
 

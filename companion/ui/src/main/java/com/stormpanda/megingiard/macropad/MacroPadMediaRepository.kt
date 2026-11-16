@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.macropad
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.LruCache
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.mirror.CutoutMaskFileStore
@@ -24,6 +25,7 @@ private const val BACKGROUNDS_DIR = "backgrounds"
 private const val BG_PREFIX = "bg_"
 private const val MASKS_DIR = "masks"
 private const val MASK_PREFIX = "mask_"
+private const val MAX_BITMAP_CACHE_BYTES = 32 * 1024 * 1024
 
 /**
  * Encapsulates filesystem and bitmap storage operations for MacroPad layout backgrounds and masks.
@@ -37,9 +39,73 @@ object MacroPadMediaRepository {
     private val _mediaRevision = MutableStateFlow(0)
     val mediaRevision: StateFlow<Int> = _mediaRevision.asStateFlow()
 
+    private val bitmapCache =
+        object : LruCache<String, Bitmap>(MAX_BITMAP_CACHE_BYTES) {
+            override fun sizeOf(
+                key: String,
+                value: Bitmap,
+            ): Int = value.allocationByteCount.coerceAtLeast(1)
+        }
+
     fun resetForTesting() {
         ioDispatcher = Dispatchers.IO
+        synchronized(bitmapCache) { bitmapCache.evictAll() }
         _mediaRevision.value = 0
+    }
+
+    /**
+     * Evicts all cached layout background/mask bitmaps and cutout calibration caches (e.g. after a `.mgrd`
+     * backup or profile restore overwrites files under `filesDir`) and increments [mediaRevision].
+     */
+    fun invalidateAllCaches() {
+        synchronized(bitmapCache) { bitmapCache.evictAll() }
+        CutoutMaskManager.invalidateAllCaches()
+        _mediaRevision.update { it + 1 }
+        AppLog.d(TAG, "Invalidated all cached MacroPad media bitmaps and cutout assets")
+    }
+
+    private fun buildCacheKey(
+        context: Context,
+        pathOrUri: String,
+        targetW: Int,
+        targetH: Int,
+    ): String {
+        val normalizedSource =
+            when {
+                pathOrUri.startsWith("content://") || pathOrUri.startsWith("file://") -> pathOrUri
+                pathOrUri.startsWith("/") -> File(pathOrUri).absolutePath
+                else -> File(context.filesDir, pathOrUri).absolutePath
+            }
+        return "$normalizedSource:${targetW}x$targetH"
+    }
+
+    private fun invalidateFileCache(file: File) {
+        val prefix = "${file.absolutePath}:"
+        synchronized(bitmapCache) {
+            val keysToRemove = bitmapCache.snapshot().keys.filter { it.startsWith(prefix) }
+            keysToRemove.forEach { bitmapCache.remove(it) }
+        }
+    }
+
+    /**
+     * Synchronously returns an already-decoded scaled bitmap for [pathOrUri] if present in the in-memory LRU cache.
+     */
+    fun getCachedScaledBitmap(
+        context: Context,
+        pathOrUri: String,
+    ): Bitmap? {
+        if (pathOrUri.isBlank()) return null
+        val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
+        val cacheKey = buildCacheKey(context, pathOrUri, targetW, targetH)
+        return synchronized(bitmapCache) {
+            val cached = bitmapCache.get(cacheKey)
+            if (cached != null && !cached.isRecycled) {
+                cached
+            } else {
+                if (cached != null) bitmapCache.remove(cacheKey)
+                null
+            }
+        }
     }
 
     /**
@@ -109,38 +175,57 @@ object MacroPadMediaRepository {
     suspend fun loadScaledBitmap(
         context: Context,
         pathOrUri: String,
-    ): Bitmap? =
-        withContext(ioDispatcher) {
+    ): Bitmap? {
+        if (pathOrUri.isBlank()) return null
+        getCachedScaledBitmap(context, pathOrUri)?.let { return it }
+
+        return withContext(ioDispatcher) {
             val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
-            when {
-                pathOrUri.startsWith("content://") || pathOrUri.startsWith("file://") -> {
-                    try {
-                        BitmapUtils.decodeScaledBitmapFromUri(context, Uri.parse(pathOrUri), targetW, targetH)
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Failed to decode scaled bitmap from uri $pathOrUri", e)
-                        null
+            val cacheKey = buildCacheKey(context, pathOrUri, targetW, targetH)
+            synchronized(bitmapCache) {
+                val cached = bitmapCache.get(cacheKey)
+                if (cached != null && !cached.isRecycled) return@withContext cached
+            }
+
+            val decoded =
+                when {
+                    pathOrUri.startsWith("content://") || pathOrUri.startsWith("file://") -> {
+                        try {
+                            BitmapUtils.decodeScaledBitmapFromUri(context, Uri.parse(pathOrUri), targetW, targetH)
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "Failed to decode scaled bitmap from uri $pathOrUri", e)
+                            null
+                        }
+                    }
+
+                    pathOrUri.startsWith("/") -> {
+                        val file = File(pathOrUri)
+                        if (!file.exists()) {
+                            null
+                        } else {
+                            BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
+                        }
+                    }
+
+                    else -> {
+                        val file = File(context.filesDir, pathOrUri)
+                        if (!file.exists()) {
+                            null
+                        } else {
+                            BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
+                        }
                     }
                 }
 
-                pathOrUri.startsWith("/") -> {
-                    val file = File(pathOrUri)
-                    if (!file.exists()) {
-                        null
-                    } else {
-                        BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
-                    }
-                }
-
-                else -> {
-                    val file = File(context.filesDir, pathOrUri)
-                    if (!file.exists()) {
-                        null
-                    } else {
-                        BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
-                    }
+            if (decoded != null && !decoded.isRecycled) {
+                decoded.prepareToDraw()
+                synchronized(bitmapCache) {
+                    bitmapCache.put(cacheKey, decoded)
                 }
             }
+            decoded
         }
+    }
 
     /**
      * Saves a background image from [srcUri] to `backgrounds/bg_[layoutId]` as a WebP image.
@@ -223,6 +308,7 @@ object MacroPadMediaRepository {
                     targetH = targetH,
                 )
             if (saved) {
+                invalidateFileCache(destFile)
                 AppLog.d(TAG, "Saved $dirName image for layout $layoutId")
                 "$dirName/$fileName"
             } else {
@@ -239,6 +325,7 @@ object MacroPadMediaRepository {
         withContext(ioDispatcher) {
             val dir = File(context.filesDir, dirName)
             val destFile = File(dir, "$filePrefix$layoutId")
+            invalidateFileCache(destFile)
             if (destFile.exists()) {
                 try {
                     destFile.delete()
@@ -269,6 +356,7 @@ object MacroPadMediaRepository {
                 val destFile = File(dir, destFileName)
                 try {
                     srcFile.copyTo(destFile, overwrite = true)
+                    invalidateFileCache(destFile)
                     "$dirName/$destFileName"
                 } catch (e: Exception) {
                     AppLog.e(TAG, "Failed to copy $dirName file from $originalLayoutId to $newLayoutId", e)

@@ -52,6 +52,22 @@ object CutoutMaskManager {
         _cacheRevision.update { it + 1 }
     }
 
+    /**
+     * Clears all in-memory mask, variance, static-asset, and freeze-frame caches (e.g. after a `.mgrd` backup restore)
+     * and bumps [cacheRevision] so active mirror containers reload fresh disk assets.
+     */
+    fun invalidateAllCaches() {
+        baseMaskCache.clear()
+        tunedMaskCache.clear()
+        varianceCache.clear()
+        freezeFrameCache.clear()
+        staticAssetCache.clear()
+        maskExistenceCache.clear()
+        freezeExistenceCache.clear()
+        _cacheRevision.update { it + 1 }
+        AppLog.d(TAG, "Invalidated all cutout mask and freeze-frame caches")
+    }
+
     @VisibleForTesting
     internal fun tunedMaskCacheSizeForTest(cutoutId: String): Int = tunedMaskCache.keys.count { it.startsWith("$cutoutId:") }
 
@@ -132,6 +148,7 @@ object CutoutMaskManager {
                 }
 
             val tunedBitmap = Bitmap.createBitmap(tunedPixels, width, height, Bitmap.Config.ARGB_8888)
+            tunedBitmap.prepareToDraw()
             evictStaleTunedMasksExcept(cutoutId, cacheKey)
             tunedMaskCache[cacheKey] = tunedBitmap
             AppLog.d(
@@ -194,6 +211,7 @@ object CutoutMaskManager {
 
             val staticPixels = CutoutAutoTuner.buildStaticAsset(basePixels, maskPixels, width, height)
             val staticBitmap = Bitmap.createBitmap(staticPixels, width, height, Bitmap.Config.ARGB_8888)
+            staticBitmap.prepareToDraw()
             evictStaleStaticAssetsExcept(cutoutId, cacheKey)
             staticAssetCache[cacheKey] = staticBitmap
             AppLog.d(
@@ -222,6 +240,7 @@ object CutoutMaskManager {
         return try {
             val bitmap = BitmapFactory.decodeFile(file.absolutePath)
             if (bitmap != null) {
+                bitmap.prepareToDraw()
                 baseMaskCache[cutoutId] = bitmap
                 maskExistenceCache[cutoutId] = true
                 AppLog.d(TAG, "Loaded mask for cutout $cutoutId (${bitmap.width}x${bitmap.height}) from disk")
@@ -325,6 +344,7 @@ object CutoutMaskManager {
         return try {
             val bitmap = BitmapFactory.decodeFile(file.absolutePath)
             if (bitmap != null) {
+                bitmap.prepareToDraw()
                 freezeFrameCache[cutoutId] = bitmap
                 freezeExistenceCache[cutoutId] = true
                 AppLog.d(TAG, "Loaded freeze frame for cutout $cutoutId (${bitmap.width}x${bitmap.height}) from disk")

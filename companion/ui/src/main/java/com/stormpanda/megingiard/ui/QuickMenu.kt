@@ -97,17 +97,8 @@ fun QuickMenu(
     onDismiss: () -> Unit,
 ) {
     val colors = LocalAppColors.current
-    val menuBezelBrush = rememberBezelBrush()
-    val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
-    val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
-    val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
-    val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
-    val isFrozen by ScreenCaptureManager.isFrozen.collectAsStateWithLifecycle()
-    val companionViewMode by AppStateManager.companionViewMode.collectAsStateWithLifecycle()
-    val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsStateWithLifecycle()
     var showQuickMenuHelp by remember { mutableStateOf(false) }
     var showShutOffConfirm by remember { mutableStateOf(false) }
-    var autoShimmerTrigger by remember { mutableIntStateOf(0) }
 
     AnimatedVisibility(
         visible = visible,
@@ -115,6 +106,16 @@ fun QuickMenu(
         exit = fadeOut(),
         modifier = Modifier.fillMaxSize(),
     ) {
+        val menuBezelBrush = rememberBezelBrush()
+        val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
+        val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
+        val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
+        val isCapturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
+        val isFrozen by ScreenCaptureManager.isFrozen.collectAsStateWithLifecycle()
+        val companionViewMode by AppStateManager.companionViewMode.collectAsStateWithLifecycle()
+        val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsStateWithLifecycle()
+        var autoShimmerTrigger by remember { mutableIntStateOf(0) }
+
         Box(
             modifier =
                 Modifier

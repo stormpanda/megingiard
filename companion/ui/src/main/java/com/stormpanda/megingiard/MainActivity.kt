@@ -127,6 +127,12 @@ private const val TAG = "MainActivity"
 private const val SCREENSHOT_EXIT_DELAY_MS = 200L
 private const val SCREENSHOT_COMPRESS_QUALITY = 100
 
+private data class ExportedProfileMetadata(
+    val id: String,
+    val name: String,
+    val associatedPackage: String?,
+)
+
 class MainActivity : ComponentActivity() {
     // ── File picker launchers ─────────────────────────────────────────────────
     // Registered here because ActivityResultLaunchers require an Activity context.
@@ -387,9 +393,19 @@ class MainActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                MacroPadState.profiles.collect {
-                    MegingiardSettingsProvider.notifyProfilesChanged(this@MainActivity)
-                }
+                MacroPadState.profiles
+                    .map { list ->
+                        list.map { profile ->
+                            ExportedProfileMetadata(
+                                id = profile.id,
+                                name = profile.name,
+                                associatedPackage = profile.association?.packageName,
+                            )
+                        }
+                    }.distinctUntilChanged()
+                    .collect {
+                        MegingiardSettingsProvider.notifyProfilesChanged(this@MainActivity)
+                    }
             }
         }
 
@@ -489,7 +505,6 @@ class MainActivity : ComponentActivity() {
         applyImmersiveSystemBars()
         setContent {
             val isOnValidScreen by AppStateManager.isOnValidScreen.collectAsStateWithLifecycle()
-            val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
 
             // Reconcile the running mirror session with the active layout's persisted
             // desired state. PadLayout.mirrorAutoStart is the single source of truth:
@@ -588,18 +603,18 @@ class MainActivity : ComponentActivity() {
                     when (command) {
                         CompanionCommand.StartMirror -> {
                             AppLog.i(TAG, "CompanionCommand.StartMirror → triggering capture flow")
-                            activeLayout?.id?.let { layoutId ->
+                            MacroPadState.activeLayout.value?.id?.let { layoutId ->
                                 MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
                             }
                             // Manual start bypasses the global auto-start gate — launch directly.
-                            if (isOnValidScreen) {
+                            if (AppStateManager.isOnValidScreen.value) {
                                 startMirrorService()
                             }
                         }
 
                         CompanionCommand.StopMirror -> {
                             AppLog.i(TAG, "CompanionCommand.StopMirror → sending STOP to ScreenCaptureService")
-                            activeLayout?.id?.let { layoutId ->
+                            MacroPadState.activeLayout.value?.id?.let { layoutId ->
                                 MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
                             }
                             if (ScreenCaptureManager.isCapturing.value) {
@@ -722,15 +737,17 @@ class MainActivity : ComponentActivity() {
 
             val themeMode by SettingsManager.themeMode.collectAsStateWithLifecycle()
             val userAccentArgb by SettingsManager.accentColor.collectAsStateWithLifecycle()
-            val appColors = paletteFor(themeMode, Color(userAccentArgb))
+            val appColors = remember(themeMode, userAccentArgb) { paletteFor(themeMode, Color(userAccentArgb)) }
+            val colorScheme = remember(appColors) { colorSchemeFor(appColors) }
+            val fullscreenKeyboardRequester = remember { { active: Boolean -> AppStateManager.setFullscreenKeyboardActive(active) } }
 
             MaterialTheme(
-                colorScheme = colorSchemeFor(appColors),
+                colorScheme = colorScheme,
                 typography = megingiardTypography,
             ) {
                 CompositionLocalProvider(
                     LocalAppColors provides appColors,
-                    LocalFullscreenKeyboardRequester provides { active -> AppStateManager.setFullscreenKeyboardActive(active) },
+                    LocalFullscreenKeyboardRequester provides fullscreenKeyboardRequester,
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),

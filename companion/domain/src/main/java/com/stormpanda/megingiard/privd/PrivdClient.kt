@@ -231,6 +231,7 @@ object PrivdClient {
             try {
                 AppLog.d(TAG, "connect(): trying 127.0.0.1:$targetPort")
                 val s = Socket()
+                s.tcpNoDelay = true
                 s.connect(InetSocketAddress("127.0.0.1", targetPort), CONNECT_TIMEOUT_MS)
 
                 val w = BufferedWriter(OutputStreamWriter(s.outputStream))
@@ -538,31 +539,75 @@ object PrivdClient {
                 continue
             }
             if (line.startsWith("EVT ")) {
-                val parts = line.split(' ')
-                if (parts.size == 4) {
-                    val type = parts[1].toIntOrNull()
-                    val code = parts[2].toIntOrNull()
-                    val value = parts[3].toIntOrNull()
-                    if (type != null && code != null && value != null) {
-                        _evdevEvents.tryEmit(EvdevEvent(type, code, value))
-                    }
+                val event = parseEvdevEventLine(line, "EVT ")
+                if (event != null) {
+                    _evdevEvents.tryEmit(event)
                 }
                 continue
             }
             if (line.startsWith("EVT_TOUCH ")) {
-                val parts = line.split(' ')
-                if (parts.size == 4) {
-                    val type = parts[1].toIntOrNull()
-                    val code = parts[2].toIntOrNull()
-                    val value = parts[3].toIntOrNull()
-                    if (type != null && code != null && value != null) {
-                        _touchEvdevEvents.tryEmit(EvdevEvent(type, code, value))
-                    }
+                val event = parseEvdevEventLine(line, "EVT_TOUCH ")
+                if (event != null) {
+                    _touchEvdevEvents.tryEmit(event)
                 }
                 continue
             }
         }
         markBroken()
+    }
+
+    /**
+     * Parses `<prefix><type> <code> <value>` without allocating intermediate split lists or substrings.
+     */
+    internal fun parseEvdevEventLine(
+        line: String,
+        prefix: String,
+    ): EvdevEvent? {
+        if (!line.startsWith(prefix)) return null
+        val tStart = prefix.length
+        val firstSpace = line.indexOf(' ', tStart)
+        if (firstSpace <= tStart) return null
+        val cStart = firstSpace + 1
+        val secondSpace = line.indexOf(' ', cStart)
+        if (secondSpace <= cStart) return null
+        val vStart = secondSpace + 1
+        if (vStart >= line.length || line.indexOf(' ', vStart) != -1) return null
+
+        val type = parseAsciiInt(line, tStart, firstSpace) ?: return null
+        val code = parseAsciiInt(line, cStart, secondSpace) ?: return null
+        val value = parseAsciiInt(line, vStart, line.length) ?: return null
+        return EvdevEvent(type, code, value)
+    }
+
+    private fun parseAsciiInt(
+        text: String,
+        start: Int,
+        endExclusive: Int,
+    ): Int? {
+        if (start >= endExclusive) return null
+        var idx = start
+        var negative = false
+        val firstChar = text[idx]
+        if (firstChar == '-') {
+            negative = true
+            idx++
+        } else if (firstChar == '+') {
+            idx++
+        }
+        if (idx >= endExclusive) return null
+        var acc = 0L
+        while (idx < endExclusive) {
+            val digit = text[idx] - '0'
+            if (digit !in 0..9) return null
+            acc = acc * 10L + digit
+            if (negative) {
+                if (-acc < Int.MIN_VALUE.toLong()) return null
+            } else if (acc > Int.MAX_VALUE.toLong()) {
+                return null
+            }
+            idx++
+        }
+        return if (negative) (-acc).toInt() else acc.toInt()
     }
 
     private fun markBroken() {
