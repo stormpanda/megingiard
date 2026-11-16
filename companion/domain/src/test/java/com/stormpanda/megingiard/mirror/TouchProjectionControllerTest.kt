@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.mirror
 
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.math.ViewportMath
+import com.stormpanda.megingiard.privd.PrivdClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -181,5 +183,88 @@ class TouchProjectionControllerTest {
             )
         assertTrue(centerHandled)
         assertEquals("circle_cutout", controller.getActiveCutoutId(2L))
+    }
+
+    @Test
+    fun testLetterboxedViewportProjectsCutoutAndKeepsPhysicalEdgeSwipeZone() {
+        // RP Duo 1280x960 layout rendered on Thor 1240x1080 host:
+        // scale = 1240/1280 = 0.96875, viewportW = 1240, viewportH = 930, topPx = 75
+        val viewport = ViewportMath.calculateDesignViewport(1240f, 1080f, 1280f, 960f)
+        val fullViewportCutout =
+            ScreenCutout(
+                id = "full_design_cutout",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+                destX = 0f,
+                destY = 0f,
+                destWidth = 1f,
+                destHeight = 1f,
+                touchProjectionEnabled = true,
+            )
+        setActiveCutouts(listOf(fullViewportCutout))
+        PrivdClient.isConnectedForTest = true
+        PrivdClient.clearQueueForTest()
+        try {
+            // 1. Touch inside top letterbox bar (y = 30 < topPx = 75) is outside cutout [75..1005] -> returns false
+            assertFalse(
+                controller.onPress(
+                    pointerId = 1L,
+                    x = 620f,
+                    y = 30f,
+                    boxW = 1240f,
+                    boxH = 1080f,
+                    isConsumed = false,
+                    pointerCount = 1,
+                    viewport = viewport,
+                ),
+            )
+
+            // 2. Touch near viewport bottom (y = 990) is inside viewport [75..1005] AND above physical edge zone (1080 - 48 = 1032)
+            assertTrue(
+                controller.onPress(
+                    pointerId = 2L,
+                    x = 620f,
+                    y = 990f,
+                    boxW = 1240f,
+                    boxH = 1080f,
+                    isConsumed = false,
+                    pointerCount = 1,
+                    viewport = viewport,
+                ),
+            )
+            assertTrue(
+                controller.onMove(
+                    pointerId = 2L,
+                    x = 620f,
+                    y = 540f,
+                    boxW = 1240f,
+                    boxH = 1080f,
+                    isConsumed = false,
+                    viewport = viewport,
+                ),
+            )
+            assertTrue(controller.onRelease(2L, 620f, 540f, 1240f, 1080f))
+
+            // 3. Touch inside physical bottom QuickMenu edge zone (y = 1060 >= 1080 - 48) is rejected even if a bar cutout spans there
+            val barCutout = fullViewportCutout.copy(id = "bar_cutout", destY = 0f, destHeight = 1.08f)
+            setActiveCutouts(listOf(barCutout))
+            assertFalse(
+                controller.onPress(
+                    pointerId = 3L,
+                    x = 620f,
+                    y = 1060f,
+                    boxW = 1240f,
+                    boxH = 1080f,
+                    isConsumed = false,
+                    pointerCount = 1,
+                    viewport = viewport,
+                ),
+            )
+        } finally {
+            PrivdClient.clearQueueForTest()
+            PrivdClient.isConnectedForTest = null
+        }
     }
 }

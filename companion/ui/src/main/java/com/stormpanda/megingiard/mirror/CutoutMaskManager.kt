@@ -3,34 +3,77 @@ package com.stormpanda.megingiard.mirror
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import androidx.annotation.VisibleForTesting
 import com.stormpanda.megingiard.AppLog
-import java.io.File
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentHashMap
 
 private const val TAG = "CutoutMaskManager"
-private const val MASKS_DIR = "cutout_masks"
-private const val MASK_FILE_PREFIX = "mask_"
-private const val PNG_EXTENSION = ".png"
-private const val VARIANCE_EXTENSION = "_var.bin"
-private const val FREEZE_EXTENSION = "_freeze.png"
 private const val PNG_QUALITY = 100
 
 /**
  * Manages in-memory caching and filesystem persistence for auto-tuned cutout transparency masks,
  * raw variance maps for dynamic translucency, and high-resolution freeze frames for freeze frame preservation.
  *
- * Base masks are stored as lossless PNG files under `context.filesDir/cutout_masks/mask_<cutoutId>.png`.
- * Variance maps are stored as binary byte arrays under `context.filesDir/cutout_masks/mask_<cutoutId>_var.bin`.
- * Freeze frames are stored as PNG under `context.filesDir/cutout_masks/mask_<cutoutId>_freeze.png`.
+ * File paths and disk asset deletion are delegated to [CutoutMaskFileStore] under `context.filesDir`:
+ * - Base masks: `cutout_masks/mask_<cutoutId>.png`
+ * - Variance maps: `cutout_masks/mask_<cutoutId>_var.bin`
+ * - Freeze frames: `cutout_masks/mask_<cutoutId>_freeze.png`
  */
 object CutoutMaskManager {
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    @Volatile
+    internal var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
     private val baseMaskCache = ConcurrentHashMap<String, Bitmap>()
     private val tunedMaskCache = ConcurrentHashMap<String, Bitmap>()
     private val varianceCache = ConcurrentHashMap<String, ByteArray>()
     private val freezeFrameCache = ConcurrentHashMap<String, Bitmap>()
     private val staticAssetCache = ConcurrentHashMap<String, Bitmap>()
     private val maskExistenceCache = ConcurrentHashMap<String, Boolean>()
+    private val freezeExistenceCache = ConcurrentHashMap<String, Boolean>()
+    private val inFlightLoads = ConcurrentHashMap.newKeySet<String>()
+
+    private val _cacheRevision = MutableStateFlow(0)
+    val cacheRevision: StateFlow<Int> = _cacheRevision.asStateFlow()
+
+    fun notifyAssetsChanged() {
+        _cacheRevision.update { it + 1 }
+    }
+
+    @VisibleForTesting
+    internal fun tunedMaskCacheSizeForTest(cutoutId: String): Int = tunedMaskCache.keys.count { it.startsWith("$cutoutId:") }
+
+    @VisibleForTesting
+    internal fun staticAssetCacheSizeForTest(cutoutId: String): Int = staticAssetCache.keys.count { it.startsWith("$cutoutId:") }
+
+    internal fun resetDispatcherForTesting() {
+        ioDispatcher = Dispatchers.IO
+    }
+
+    internal fun resetForTesting() {
+        ioDispatcher = Dispatchers.IO
+        baseMaskCache.clear()
+        tunedMaskCache.clear()
+        varianceCache.clear()
+        freezeFrameCache.clear()
+        staticAssetCache.clear()
+        maskExistenceCache.clear()
+        freezeExistenceCache.clear()
+        inFlightLoads.clear()
+        _cacheRevision.value = 0
+    }
 
     /**
      * Retrieves the transparency mask bitmap for [cutoutId] with optional [translucency] (0..100)
@@ -89,6 +132,7 @@ object CutoutMaskManager {
                 }
 
             val tunedBitmap = Bitmap.createBitmap(tunedPixels, width, height, Bitmap.Config.ARGB_8888)
+            evictStaleTunedMasksExcept(cutoutId, cacheKey)
             tunedMaskCache[cacheKey] = tunedBitmap
             AppLog.d(
                 TAG,
@@ -150,6 +194,7 @@ object CutoutMaskManager {
 
             val staticPixels = CutoutAutoTuner.buildStaticAsset(basePixels, maskPixels, width, height)
             val staticBitmap = Bitmap.createBitmap(staticPixels, width, height, Bitmap.Config.ARGB_8888)
+            evictStaleStaticAssetsExcept(cutoutId, cacheKey)
             staticAssetCache[cacheKey] = staticBitmap
             AppLog.d(
                 TAG,
@@ -171,14 +216,14 @@ object CutoutMaskManager {
             baseMaskCache.remove(cutoutId)
         }
 
-        val dir = File(context.filesDir, MASKS_DIR)
-        val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$PNG_EXTENSION")
+        val file = CutoutMaskFileStore.baseMaskFile(context.filesDir, cutoutId)
         if (!file.exists()) return null
 
         return try {
             val bitmap = BitmapFactory.decodeFile(file.absolutePath)
             if (bitmap != null) {
                 baseMaskCache[cutoutId] = bitmap
+                maskExistenceCache[cutoutId] = true
                 AppLog.d(TAG, "Loaded mask for cutout $cutoutId (${bitmap.width}x${bitmap.height}) from disk")
             }
             bitmap
@@ -197,8 +242,7 @@ object CutoutMaskManager {
     ): ByteArray? {
         varianceCache[cutoutId]?.let { return it }
 
-        val dir = File(context.filesDir, MASKS_DIR)
-        val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$VARIANCE_EXTENSION")
+        val file = CutoutMaskFileStore.varianceFile(context.filesDir, cutoutId)
         if (!file.exists()) return null
 
         return try {
@@ -214,7 +258,7 @@ object CutoutMaskManager {
 
     /**
      * Persists [bitmap] to disk as the base mask and updates the in-memory cache for [cutoutId].
-     * Optionally persists the raw [varianceMap], [anchorSignature], and [freezeFrame] alongside the mask.
+     * Optionally persists the raw [varianceMap] and [freezeFrame] alongside the mask.
      */
     fun saveMask(
         context: Context,
@@ -233,17 +277,18 @@ object CutoutMaskManager {
         }
 
         try {
-            val dir = File(context.filesDir, MASKS_DIR)
-            if (!dir.exists()) {
-                dir.mkdirs()
+            val file = CutoutMaskFileStore.baseMaskFile(context.filesDir, cutoutId)
+            file.parentFile?.let { dir ->
+                if (!dir.exists()) {
+                    dir.mkdirs()
+                }
             }
-            val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$PNG_EXTENSION")
             FileOutputStream(file).use { out ->
                 bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, out)
             }
             AppLog.i(TAG, "Saved mask for cutout $cutoutId (${bitmap.width}x${bitmap.height}) to ${file.absolutePath}")
 
-            val varFile = File(dir, "$MASK_FILE_PREFIX$cutoutId$VARIANCE_EXTENSION")
+            val varFile = CutoutMaskFileStore.varianceFile(context.filesDir, cutoutId)
             if (varianceMap != null) {
                 varFile.writeBytes(varianceMap)
                 AppLog.i(TAG, "Saved variance map for cutout $cutoutId (${varianceMap.size} bytes)")
@@ -271,15 +316,20 @@ object CutoutMaskManager {
             freezeFrameCache.remove(cutoutId)
         }
 
-        val dir = File(context.filesDir, MASKS_DIR)
-        val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$FREEZE_EXTENSION")
-        if (!file.exists()) return null
+        val file = CutoutMaskFileStore.freezeFrameFile(context.filesDir, cutoutId)
+        if (!file.exists()) {
+            freezeExistenceCache[cutoutId] = false
+            return null
+        }
 
         return try {
             val bitmap = BitmapFactory.decodeFile(file.absolutePath)
             if (bitmap != null) {
                 freezeFrameCache[cutoutId] = bitmap
+                freezeExistenceCache[cutoutId] = true
                 AppLog.d(TAG, "Loaded freeze frame for cutout $cutoutId (${bitmap.width}x${bitmap.height}) from disk")
+            } else {
+                freezeExistenceCache[cutoutId] = false
             }
             bitmap
         } catch (e: Exception) {
@@ -296,11 +346,16 @@ object CutoutMaskManager {
         cutoutId: String,
         bitmap: Bitmap,
     ) {
+        clearStaticAssetCacheFor(cutoutId)
         freezeFrameCache[cutoutId] = bitmap
+        freezeExistenceCache[cutoutId] = true
         try {
-            val dir = File(context.filesDir, MASKS_DIR)
-            if (!dir.exists()) dir.mkdirs()
-            val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$FREEZE_EXTENSION")
+            val file = CutoutMaskFileStore.freezeFrameFile(context.filesDir, cutoutId)
+            file.parentFile?.let { dir ->
+                if (!dir.exists()) {
+                    dir.mkdirs()
+                }
+            }
             FileOutputStream(file).use { out ->
                 bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, out)
             }
@@ -311,44 +366,82 @@ object CutoutMaskManager {
     }
 
     /**
-     * Deletes the mask and variance files and clears all in-memory caches for [cutoutId].
+     * Evicts all in-memory cached bitmaps and existence flags for [cutoutId] without deleting disk files.
+     *
+     * Evicted bitmaps are intentionally NOT imperatively recycled here so concurrent UI draw passes
+     * holding a local reference never crash with `Canvas: trying to use a recycled bitmap`.
+     */
+    fun invalidateCache(cutoutId: String) {
+        clearTunedCacheFor(cutoutId)
+        varianceCache.remove(cutoutId)
+        maskExistenceCache.remove(cutoutId)
+        freezeExistenceCache.remove(cutoutId)
+        freezeFrameCache.remove(cutoutId)
+        baseMaskCache.remove(cutoutId)
+        AppLog.d(TAG, "Invalidated in-memory mask caches for cutout $cutoutId")
+    }
+
+    /**
+     * Deletes the mask, variance, and freeze frame files via [CutoutMaskFileStore]
+     * and clears all in-memory caches for [cutoutId].
      */
     fun deleteMask(
         context: Context,
         cutoutId: String,
     ) {
-        clearTunedCacheFor(cutoutId)
-        varianceCache.remove(cutoutId)
+        invalidateCache(cutoutId)
         maskExistenceCache[cutoutId] = false
-        freezeFrameCache.remove(cutoutId)?.let { cached ->
-            if (!cached.isRecycled) {
-                cached.recycle()
-            }
-        }
-        baseMaskCache.remove(cutoutId)?.let { cached ->
-            if (!cached.isRecycled) {
-                cached.recycle()
-            }
-        }
+        freezeExistenceCache[cutoutId] = false
         try {
-            val dir = File(context.filesDir, MASKS_DIR)
-            val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$PNG_EXTENSION")
-            if (file.exists()) {
-                file.delete()
-                AppLog.i(TAG, "Deleted mask file for cutout $cutoutId")
-            }
-            val varFile = File(dir, "$MASK_FILE_PREFIX$cutoutId$VARIANCE_EXTENSION")
-            if (varFile.exists()) {
-                varFile.delete()
-                AppLog.i(TAG, "Deleted variance file for cutout $cutoutId")
-            }
-            val freezeFile = File(dir, "$MASK_FILE_PREFIX$cutoutId$FREEZE_EXTENSION")
-            if (freezeFile.exists()) {
-                freezeFile.delete()
-                AppLog.i(TAG, "Deleted freeze file for cutout $cutoutId")
-            }
+            CutoutMaskFileStore.deleteAssetsForId(context.filesDir, cutoutId)
+            AppLog.i(TAG, "Deleted mask assets for cutout $cutoutId")
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to delete mask files for cutout $cutoutId", e)
+        }
+    }
+
+    /**
+     * Evicts in-memory caches immediately and deletes disk mask assets on an application-scoped IO coroutine
+     * so unmounting UI callers cannot cancel file cleanup mid-flight.
+     */
+    fun deleteMaskAsync(
+        context: Context,
+        cutoutId: String,
+    ) {
+        val appContext = context.applicationContext
+        invalidateCache(cutoutId)
+        maskExistenceCache[cutoutId] = false
+        freezeExistenceCache[cutoutId] = false
+        ioScope.launch(ioDispatcher) {
+            try {
+                CutoutMaskFileStore.deleteAssetsForId(appContext.filesDir, cutoutId)
+                AppLog.i(TAG, "Deleted mask assets asynchronously for cutout $cutoutId")
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to delete mask files asynchronously for cutout $cutoutId", e)
+            }
+            _cacheRevision.update { it + 1 }
+        }
+    }
+
+    private fun evictStaleTunedMasksExcept(
+        cutoutId: String,
+        keepKey: String,
+    ) {
+        val prefix = "$cutoutId:"
+        val keysToRemove = tunedMaskCache.keys.filter { it.startsWith(prefix) && it != keepKey }
+        for (key in keysToRemove) {
+            tunedMaskCache.remove(key)
+        }
+    }
+
+    private fun evictStaleStaticAssetsExcept(
+        cutoutId: String,
+        keepKey: String,
+    ) {
+        val prefix = "$cutoutId:"
+        val keysToRemove = staticAssetCache.keys.filter { it.startsWith(prefix) && it != keepKey }
+        for (key in keysToRemove) {
+            staticAssetCache.remove(key)
         }
     }
 
@@ -356,14 +449,245 @@ object CutoutMaskManager {
         val prefix = "$cutoutId:"
         val keysToRemove = tunedMaskCache.keys.filter { it.startsWith(prefix) }
         for (key in keysToRemove) {
-            tunedMaskCache.remove(key)?.let {
-                if (!it.isRecycled) it.recycle()
-            }
+            tunedMaskCache.remove(key)
         }
+        clearStaticAssetCacheFor(cutoutId)
+    }
+
+    private fun clearStaticAssetCacheFor(cutoutId: String) {
+        val prefix = "$cutoutId:"
         val staticKeysToRemove = staticAssetCache.keys.filter { it.startsWith(prefix) }
         for (key in staticKeysToRemove) {
-            staticAssetCache.remove(key)?.let {
-                if (!it.isRecycled) it.recycle()
+            staticAssetCache.remove(key)
+        }
+    }
+
+    /**
+     * Non-blocking UI-thread check for [MultiCutoutContainer.dispatchDraw]: returns cached mask existence
+     * immediately, or schedules an asynchronous disk check/decode and invokes [onLoaded] on Main when ready.
+     */
+    fun hasCachedMaskOrLoadAsync(
+        context: Context,
+        cutoutId: String,
+        onLoaded: () -> Unit = {},
+    ): Boolean {
+        baseMaskCache[cutoutId]?.let { cached ->
+            if (!cached.isRecycled) return true
+            baseMaskCache.remove(cutoutId)
+        }
+        maskExistenceCache[cutoutId]?.let { return it }
+
+        val appContext = context.applicationContext
+        val loadKey = "exists:$cutoutId"
+        if (inFlightLoads.add(loadKey)) {
+            ioScope.launch(ioDispatcher) {
+                try {
+                    val exists = hasMask(appContext, cutoutId)
+                    if (exists) {
+                        getBaseMask(appContext, cutoutId)
+                    }
+                    _cacheRevision.update { it + 1 }
+                    withContext(Dispatchers.Main.immediate) {
+                        onLoaded()
+                    }
+                } finally {
+                    inFlightLoads.remove(loadKey)
+                }
+            }
+        }
+        return false
+    }
+
+    /**
+     * Non-blocking UI-thread mask lookup for [MultiCutoutContainer.dispatchDraw].
+     * Returns an already-cached bitmap immediately, or schedules background decode/generation on [ioScope].
+     */
+    fun getCachedMaskOrLoadAsync(
+        context: Context,
+        cutoutId: String,
+        translucency: Int = MIN_TRANSLUCENCY,
+        sensitivity: Int = DEFAULT_SENSITIVITY,
+        cavityHealing: Boolean = true,
+        onLoaded: () -> Unit = {},
+    ): Bitmap? {
+        val clampedTranslucency = translucency.coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
+        val clampedSensitivity = sensitivity.coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
+        val isDefaultTuning =
+            clampedTranslucency == MIN_TRANSLUCENCY &&
+                clampedSensitivity == DEFAULT_SENSITIVITY &&
+                cavityHealing
+
+        if (isDefaultTuning) {
+            baseMaskCache[cutoutId]?.let { cached ->
+                if (!cached.isRecycled) return cached
+                baseMaskCache.remove(cutoutId)
+            }
+            if (maskExistenceCache[cutoutId] == false) return null
+            val appContext = context.applicationContext
+            val loadKey = "base:$cutoutId"
+            if (inFlightLoads.add(loadKey)) {
+                ioScope.launch(ioDispatcher) {
+                    try {
+                        val loaded = getBaseMask(appContext, cutoutId)
+                        if (loaded != null) {
+                            _cacheRevision.update { it + 1 }
+                            withContext(Dispatchers.Main.immediate) {
+                                onLoaded()
+                            }
+                        } else {
+                            maskExistenceCache[cutoutId] = false
+                        }
+                    } finally {
+                        inFlightLoads.remove(loadKey)
+                    }
+                }
+            }
+            return null
+        }
+
+        val cacheKey = "$cutoutId:$clampedSensitivity:$clampedTranslucency:$cavityHealing"
+        tunedMaskCache[cacheKey]?.let { cached ->
+            if (!cached.isRecycled) return cached
+            tunedMaskCache.remove(cacheKey)
+        }
+        if (maskExistenceCache[cutoutId] == false) return null
+
+        val appContext = context.applicationContext
+        val loadKey = "tuned:$cacheKey"
+        if (inFlightLoads.add(loadKey)) {
+            ioScope.launch(ioDispatcher) {
+                try {
+                    val generated =
+                        getMask(
+                            context = appContext,
+                            cutoutId = cutoutId,
+                            translucency = clampedTranslucency,
+                            sensitivity = clampedSensitivity,
+                            cavityHealing = cavityHealing,
+                        )
+                    if (generated != null) {
+                        _cacheRevision.update { it + 1 }
+                        withContext(Dispatchers.Main.immediate) {
+                            onLoaded()
+                        }
+                    }
+                } finally {
+                    inFlightLoads.remove(loadKey)
+                }
+            }
+        }
+        return baseMaskCache[cutoutId]?.takeIf { !it.isRecycled }
+    }
+
+    /**
+     * Non-blocking UI-thread static asset lookup for [MultiCutoutContainer.dispatchDraw].
+     */
+    fun getCachedStaticAssetOrLoadAsync(
+        context: Context,
+        cutoutId: String,
+        translucency: Int = MIN_TRANSLUCENCY,
+        sensitivity: Int = DEFAULT_SENSITIVITY,
+        cavityHealing: Boolean = true,
+        onLoaded: () -> Unit = {},
+    ): Bitmap? {
+        val clampedTranslucency = translucency.coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
+        val clampedSensitivity = sensitivity.coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
+        val cacheKey = "$cutoutId:static:$clampedSensitivity:$clampedTranslucency:$cavityHealing"
+        staticAssetCache[cacheKey]?.let { cached ->
+            if (!cached.isRecycled) return cached
+            staticAssetCache.remove(cacheKey)
+        }
+        if (maskExistenceCache[cutoutId] == false || freezeExistenceCache[cutoutId] == false) return null
+
+        val appContext = context.applicationContext
+        val loadKey = "static:$cacheKey"
+        if (inFlightLoads.add(loadKey)) {
+            ioScope.launch(ioDispatcher) {
+                try {
+                    val generated =
+                        getStaticAsset(
+                            context = appContext,
+                            cutoutId = cutoutId,
+                            translucency = clampedTranslucency,
+                            sensitivity = clampedSensitivity,
+                            cavityHealing = cavityHealing,
+                        )
+                    if (generated != null) {
+                        _cacheRevision.update { it + 1 }
+                        withContext(Dispatchers.Main.immediate) {
+                            onLoaded()
+                        }
+                    }
+                } finally {
+                    inFlightLoads.remove(loadKey)
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * Non-blocking UI-thread freeze-frame lookup for [AnchorPresenceManager] / [MultiCutoutContainer.dispatchDraw].
+     */
+    fun getCachedFreezeFrameOrLoadAsync(
+        context: Context,
+        cutoutId: String,
+        onLoaded: () -> Unit = {},
+    ): Bitmap? {
+        freezeFrameCache[cutoutId]?.let { cached ->
+            if (!cached.isRecycled) return cached
+            freezeFrameCache.remove(cutoutId)
+        }
+        if (freezeExistenceCache[cutoutId] == false) return null
+
+        val appContext = context.applicationContext
+        val loadKey = "freeze:$cutoutId"
+        if (inFlightLoads.add(loadKey)) {
+            ioScope.launch(ioDispatcher) {
+                try {
+                    val loaded = getFreezeFrame(appContext, cutoutId)
+                    if (loaded != null) {
+                        _cacheRevision.update { it + 1 }
+                        withContext(Dispatchers.Main.immediate) {
+                            onLoaded()
+                        }
+                    }
+                } finally {
+                    inFlightLoads.remove(loadKey)
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * Pre-warms mask and static-asset caches asynchronously when cutouts are assigned to a container.
+     */
+    fun preloadCutoutsAsync(
+        context: Context,
+        cutouts: List<ScreenCutout>,
+        onLoaded: () -> Unit = {},
+    ) {
+        for (cutout in cutouts) {
+            if (!cutout.hasTransparencyMask) continue
+            hasCachedMaskOrLoadAsync(context, cutout.id, onLoaded)
+            getCachedMaskOrLoadAsync(
+                context = context,
+                cutoutId = cutout.id,
+                translucency = cutout.maskTranslucency,
+                sensitivity = cutout.maskSensitivity,
+                cavityHealing = cutout.maskCavityHealing,
+                onLoaded = onLoaded,
+            )
+            if (cutout.renderAsStaticAsset) {
+                getCachedStaticAssetOrLoadAsync(
+                    context = context,
+                    cutoutId = cutout.id,
+                    translucency = cutout.maskTranslucency,
+                    sensitivity = cutout.maskSensitivity,
+                    cavityHealing = cutout.maskCavityHealing,
+                    onLoaded = onLoaded,
+                )
             }
         }
     }
@@ -377,8 +701,7 @@ object CutoutMaskManager {
     ): Boolean {
         if (baseMaskCache.containsKey(cutoutId)) return true
         maskExistenceCache[cutoutId]?.let { return it }
-        val dir = File(context.filesDir, MASKS_DIR)
-        val file = File(dir, "$MASK_FILE_PREFIX$cutoutId$PNG_EXTENSION")
+        val file = CutoutMaskFileStore.baseMaskFile(context.filesDir, cutoutId)
         val exists = file.exists()
         maskExistenceCache[cutoutId] = exists
         return exists

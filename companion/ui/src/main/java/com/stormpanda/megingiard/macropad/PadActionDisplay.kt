@@ -952,6 +952,13 @@ internal fun PadAction.defaultButtonLabel(
     }
 }
 
+private fun PadProfile?.resolveActiveDesignCanvas(): LayoutCanvasSpec =
+    this
+        ?.let { prof ->
+            prof.layouts.firstOrNull { it.id == prof.activeLayoutId } ?: prof.layouts.firstOrNull()
+        }?.effectiveDesignCanvas
+        ?: THOR_BOTTOM_CANVAS_SPEC
+
 /**
  * Pure transition rule applying [newAction] to this [PadButton] while preserving user-customized
  * labels and icons:
@@ -965,6 +972,7 @@ internal fun PadButton.withActionDefaultsResolved(
     newButtonPlaceholder: String,
     oldDefaultLabel: String,
     newDefaultLabel: String,
+    canvas: LayoutCanvasSpec = THOR_BOTTOM_CANVAS_SPEC,
 ): PadButton {
     val shouldUpdateLabel =
         label.isBlank() ||
@@ -987,7 +995,7 @@ internal fun PadButton.withActionDefaultsResolved(
     return copy(
         label = resolvedLabel,
         iconName = resolvedIconName,
-    ).withActionSizing(newAction)
+    ).withActionSizing(newAction, canvas)
 }
 
 internal fun PadButton.withActionDefaults(
@@ -996,6 +1004,7 @@ internal fun PadButton.withActionDefaults(
     allProfiles: List<PadProfile>,
     activeProfile: PadProfile?,
     swapFaceButtons: Boolean,
+    canvas: LayoutCanvasSpec = activeProfile.resolveActiveDesignCanvas(),
 ): PadButton {
     val placeholder = context.getString(R.string.macropad_editor_new_button_default_label)
     val oldDefault = action.defaultButtonLabel(context, allProfiles, activeProfile, swapFaceButtons)
@@ -1006,11 +1015,12 @@ internal fun PadButton.withActionDefaults(
             newButtonPlaceholder = placeholder,
             oldDefaultLabel = oldDefault,
             newDefaultLabel = newDefault,
+            canvas = canvas,
         )
     AppLog.d(
         TAG,
         "withActionDefaults: ${action::class.simpleName} -> ${newAction::class.simpleName} " +
-            "label='${updated.label}' icon=${updated.iconName}",
+            "label='${updated.label}' icon=${updated.iconName} size=${updated.widthPx}x${updated.heightPx}",
     )
     return updated
 }
@@ -1024,6 +1034,7 @@ internal fun createDefaultDraftButton(
     swapFaceButtons: Boolean,
     posX: Float = PAD_DEFAULT_CENTER_POS,
     posY: Float = PAD_DEFAULT_CENTER_POS,
+    canvas: LayoutCanvasSpec = activeProfile.resolveActiveDesignCanvas(),
 ): PadButton {
     val defaultLabel = defaultAction.defaultButtonLabel(context, allProfiles, activeProfile, swapFaceButtons)
     val defaultIcon = if (defaultAction.supportsCustomIcon()) defaultAction.defaultIconName() else null
@@ -1034,11 +1045,14 @@ internal fun createDefaultDraftButton(
             iconName = defaultIcon,
             posX = posX,
             posY = posY,
+            widthPx = canvas.baseButtonSizePx,
+            heightPx = canvas.baseButtonSizePx,
             action = defaultAction,
-        ).withActionSizing(defaultAction)
+        ).withActionSizing(defaultAction, canvas)
     AppLog.d(
         TAG,
-        "createDefaultDraftButton: action=${defaultAction::class.simpleName} label='${created.label}' icon=${created.iconName}",
+        "createDefaultDraftButton: action=${defaultAction::class.simpleName} label='${created.label}' " +
+            "icon=${created.iconName} size=${created.widthPx}x${created.heightPx}",
     )
     return created
 }

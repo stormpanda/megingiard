@@ -1,13 +1,18 @@
 package com.stormpanda.megingiard.catalog
 
 import android.view.Display
+import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.math.DisplayRotationDegrees
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowDisplayManager
 
 private const val TAG = "DisplayDetectorTest"
 private const val PRIMARY_DISPLAY_ID = Display.DEFAULT_DISPLAY
@@ -19,10 +24,42 @@ private const val TERTIARY_DISPLAY_ID = 5
 class DisplayDetectorTest {
     @Test
     fun testFindSecondaryDisplay_withRobolectric() {
+        AppLog.d(TAG, "Testing findSecondaryDisplay default Robolectric state")
         val context = RuntimeEnvironment.getApplication()
         val display = DisplayDetector.findSecondaryDisplay(context)
         // Default Robolectric display manager only has default display
         assertTrue(display == null || display.displayId != PRIMARY_DISPLAY_ID)
+    }
+
+    @Test
+    fun testPrimaryAndSecondaryDisplaySizeAndAspectRatio_whenSecondaryAttached() {
+        AppLog.d(TAG, "Testing secondary display resolution and aspect ratio")
+        val context = RuntimeEnvironment.getApplication()
+        val primary = DisplayDetector.findPrimaryDisplay(context)
+        assertNotNull(primary)
+        val primarySize = DisplayDetector.resolveDisplaySize(primary!!)
+        assertNotNull(primarySize)
+        assertTrue(primarySize!!.widthPx > 0 && primarySize.heightPx > 0)
+
+        // Default Robolectric primary display is ROTATION_0 -> ROT_0
+        assertEquals(DisplayRotationDegrees.ROT_0, DisplayDetector.resolvePrimaryDisplayRotation(context))
+        // Fallback aspect ratio returned before secondary display is attached
+        assertEquals(1.148f, DisplayDetector.resolveSecondaryAspectRatio(context, 1.148f), 0.001f)
+
+        val addedDisplayId = ShadowDisplayManager.addDisplay("w1280dp-h960dp-mdpi")
+        try {
+            val secondary = DisplayDetector.findSecondaryDisplay(context)
+            assertNotNull(secondary)
+            assertEquals(addedDisplayId, secondary!!.displayId)
+
+            val secSize = DisplayDetector.resolveSecondaryDisplaySize(context)
+            assertNotNull(secSize)
+            assertEquals(1280, secSize!!.widthPx)
+            assertEquals(960, secSize.heightPx)
+            assertEquals(4f / 3f, DisplayDetector.resolveSecondaryAspectRatio(context, 1.0f), 0.001f)
+        } finally {
+            ShadowDisplayManager.removeDisplay(addedDisplayId)
+        }
     }
 
     @Test

@@ -5,7 +5,9 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
-import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.math.DesignViewport
+import com.stormpanda.megingiard.math.DisplayRotationDegrees
+import com.stormpanda.megingiard.math.ViewportMath
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,8 +50,6 @@ private fun PadAction.isSingleChannelHoldAction(): Boolean =
  * The UI creates one instance per pointer-input scope restart and
  * dispatches raw pointer events through the `on*` methods.
  *
- * @param buttonUnitDpToPx  conversion function: `(dp: Float) -> Float`
- *                          for calculating button chip sizes from dp units
  * @param onHapticFeedback  optional callback invoked by the engine when haptic
  *                          feedback should be triggered. The UI layer owns the
  *                          [android.os.Vibrator] and performs the actual vibration.
@@ -66,7 +66,6 @@ private fun PadAction.isSingleChannelHoldAction(): Boolean =
  *                            (speed-adaptive rate limiting applied by the UI layer).
  */
 class MacroPadHitTestEngine(
-    private val buttonUnitDpToPx: (Float) -> Float,
     private val onHapticFeedback: ((String, HapticStrength, Int, Int, Float) -> Unit)? = null,
 ) {
     private val _pressedIds = MutableStateFlow(emptySet<String>())
@@ -102,14 +101,13 @@ class MacroPadHitTestEngine(
         btn: PadButton,
         px: Float,
         py: Float,
-        canvasW: Float,
-        canvasH: Float,
+        viewport: DesignViewport,
     ): Boolean {
-        val chipWidthPx = buttonUnitDpToPx(btn.widthDp)
-        val chipHeightPx = buttonUnitDpToPx(btn.heightDp)
+        val chipWidthPx = btn.widthPx * viewport.scale
+        val chipHeightPx = btn.heightPx * viewport.scale
         if (chipWidthPx <= 0f || chipHeightPx <= 0f) return false
-        val left = btn.posX * canvasW - chipWidthPx / 2f
-        val top = btn.posY * canvasH - chipHeightPx / 2f
+        val left = viewport.normToScreenX(btn.posX) - chipWidthPx / 2f
+        val top = viewport.normToScreenY(btn.posY) - chipHeightPx / 2f
         if (px < left || px > left + chipWidthPx || py < top || py > top + chipHeightPx) {
             return false
         }
@@ -119,8 +117,8 @@ class MacroPadHitTestEngine(
             shape = btn.buttonShape,
             nx = nx,
             ny = ny,
-            widthDp = btn.widthDp,
-            heightDp = btn.heightDp,
+            widthPx = btn.widthPx,
+            heightPx = btn.heightPx,
             isTrackpoint = btn.action is PadAction.TrackpointMove,
         )
     }
@@ -128,9 +126,12 @@ class MacroPadHitTestEngine(
     private fun triggerHaptic(
         btn: PadButton,
         magnitude: Float = 0f,
+        log: Boolean = true,
     ) {
         if (btn.hapticStrength != HapticStrength.OFF) {
-            AppLog.d(TAG, "haptic on press: button=${btn.id} strength=${btn.hapticStrength}")
+            if (log) {
+                AppLog.d(TAG, "haptic on press: button=${btn.id} strength=${btn.hapticStrength}")
+            }
             onHapticFeedback?.invoke(
                 btn.id,
                 btn.hapticStrength,
@@ -145,12 +146,13 @@ class MacroPadHitTestEngine(
      * Handle a Press event.
      *
      * @param pointerId     unique pointer ID
-     * @param px            pointer X in canvas pixels
-     * @param py            pointer Y in canvas pixels
-     * @param canvasW       canvas width in pixels
-     * @param canvasH       canvas height in pixels
+     * @param px            pointer X in host canvas pixels
+     * @param py            pointer Y in host canvas pixels
+     * @param canvasW       host canvas width in pixels
+     * @param canvasH       host canvas height in pixels
      * @param buttons       buttons of the currently visible layout
      * @param isPeekActive  true if ambient-peek mode is active
+     * @param viewport      fitted design viewport mapping designCanvas coordinates onto host pixels
      * @return true if a button consumed the press, false otherwise
      */
     fun onPress(
@@ -161,9 +163,10 @@ class MacroPadHitTestEngine(
         canvasH: Float,
         buttons: List<PadButton>,
         isPeekActive: Boolean,
+        viewport: DesignViewport = ViewportMath.calculateDesignViewport(canvasW, canvasH, canvasW, canvasH),
     ): Boolean {
         val hitList = if (isPeekActive) buttons.filter { it.action is PadAction.BackgroundPeek } else buttons
-        val hitButton = hitList.firstOrNull { btn -> isPointInsideButton(btn, px, py, canvasW, canvasH) } ?: return false
+        val hitButton = hitList.firstOrNull { btn -> isPointInsideButton(btn, px, py, viewport) } ?: return false
 
         val wasAlreadyHeldByPointer =
             pointerMap.entries.any { (existingPointerId, buttonId) ->
@@ -191,8 +194,8 @@ class MacroPadHitTestEngine(
                 _pressedIds.value = _pressedIds.value + hitButton.id
                 val act = hitButton.action as PadAction.AppLauncher
                 if (act.packageName.isNotBlank()) {
-                    val bx = hitButton.posX * canvasW
-                    val by = hitButton.posY * canvasH
+                    val bx = viewport.normToScreenX(hitButton.posX)
+                    val by = viewport.normToScreenY(hitButton.posY)
                     AppLog.d(TAG, "AppLauncher button center at ($bx, $by)")
                     AppStateManager.requestAppLaunch(act.packageName, bx, by)
                 }
@@ -257,8 +260,30 @@ class MacroPadHitTestEngine(
                     MP_TRACKPOINT_SENSITIVITY *
                         tpAction.sensitivity.coerceIn(MP_TRACKPOINT_SENSITIVITY_MIN, MP_TRACKPOINT_SENSITIVITY_MAX)
                 if (tpAction.mode == TrackpointMode.VIRTUAL_TOUCH) {
-                    val dxNormalized = (deltaX * effectiveSens) / LOGICAL_SCREEN_WIDTH
-                    val dyNormalized = (deltaY * effectiveSens) / LOGICAL_SCREEN_HEIGHT
+                    val rot = TouchInjector.primaryDisplayRotation
+                    val swapAxes = rot == DisplayRotationDegrees.ROT_90 || rot == DisplayRotationDegrees.ROT_270
+                    val sensorW = TouchInjector.activeSensorWidth
+                    val sensorH = TouchInjector.activeSensorHeight
+                    val rawW = if (swapAxes) sensorH else sensorW
+                    val rawH = if (swapAxes) sensorW else sensorH
+                    val logicalW =
+                        if (rawW > 0) {
+                            rawW.toFloat()
+                        } else if (swapAxes) {
+                            LOGICAL_SCREEN_WIDTH
+                        } else {
+                            LOGICAL_SCREEN_HEIGHT
+                        }
+                    val logicalH =
+                        if (rawH > 0) {
+                            rawH.toFloat()
+                        } else if (swapAxes) {
+                            LOGICAL_SCREEN_HEIGHT
+                        } else {
+                            LOGICAL_SCREEN_WIDTH
+                        }
+                    val dxNormalized = (deltaX * effectiveSens) / logicalW
+                    val dyNormalized = (deltaY * effectiveSens) / logicalH
 
                     val currentDxSign =
                         if (dxNormalized > 0f) {
@@ -298,14 +323,14 @@ class MacroPadHitTestEngine(
                     val dx = (deltaX * effectiveSens).roundToInt()
                     val dy = (deltaY * effectiveSens).roundToInt()
                     val mag = sqrt((dx * dx + dy * dy).toFloat())
-                    if (mag > 0f) triggerHaptic(mappedBtn, mag)
+                    if (mag > 0f) triggerHaptic(mappedBtn, mag, log = false)
                 } else {
                     val dx = (deltaX * effectiveSens).roundToInt()
                     val dy = (deltaY * effectiveSens).roundToInt()
                     if (dx != 0 || dy != 0) {
                         MouseInjector.moveMouse(dx, dy)
                         val mag = sqrt((dx * dx + dy * dy).toFloat())
-                        triggerHaptic(mappedBtn, mag)
+                        triggerHaptic(mappedBtn, mag, log = false)
                     }
                 }
             }

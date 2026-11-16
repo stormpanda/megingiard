@@ -12,6 +12,8 @@ import kotlinx.serialization.Transient
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlin.math.min
+import kotlin.math.round
 import com.stormpanda.megingiard.macropad.MouseButton as MouseBtnEnum
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,12 +38,47 @@ enum class ButtonShape {
     ICON_ONLY,
 }
 
-const val MP_BUTTON_BASE_UNIT_DP = 60f
-const val MP_BUTTON_MIN_SIZE_DP = 30f
-const val MP_TRACKPOINT_DEFAULT_SIZE_DP = 120f
-const val MP_SCROLL_WHEEL_MIN_HEIGHT_DP = 120f
+const val THOR_BOTTOM_WIDTH_PX = 1240
+const val THOR_BOTTOM_HEIGHT_PX = 1080
+const val THOR_BOTTOM_DENSITY = 369f / 160f
+const val MP_BUTTON_MIN_DIVISOR = 16f
+const val MP_THOR_MIN_BUTTON_SIZE_PX = 68f
+const val MP_THOR_DEFAULT_BUTTON_SIZE_PX = 136f
+const val MP_THOR_LARGE_CONTROL_MIN_SIZE_PX = 272f
+const val MP_BUTTON_SERIALIZER_FLOOR_PX = 16f
 const val MP_BUTTON_DEFAULT_HAPTIC_DURATION_MS = 10
 const val MP_BUTTON_DEFAULT_HAPTIC_AMPLITUDE = 25
+
+private const val MP_LEGACY_BUTTON_BASE_UNIT_DP = 60f
+private const val MP_BASE_BUTTON_SIZE_MULTIPLIER = 2f
+private const val MP_LARGE_CONTROL_SIZE_MULTIPLIER = 4f
+private const val MP_MIN_CANVAS_EDGE_PX = 1
+
+/**
+ * Authoring secondary-display pixel dimensions for a [PadLayout], defining its aspect ratio
+ * and derived button-size constraints (`shortEdge / 16`).
+ */
+@Serializable
+data class LayoutCanvasSpec(
+    val widthPx: Int,
+    val heightPx: Int,
+) {
+    val shortEdgePx: Int
+        get() = min(widthPx, heightPx)
+
+    val minButtonSizePx: Float
+        get() =
+            round(shortEdgePx.coerceAtLeast(MP_MIN_CANVAS_EDGE_PX) / MP_BUTTON_MIN_DIVISOR)
+                .coerceAtLeast(MP_BUTTON_SERIALIZER_FLOOR_PX)
+
+    val baseButtonSizePx: Float
+        get() = minButtonSizePx * MP_BASE_BUTTON_SIZE_MULTIPLIER
+
+    val largeControlMinSizePx: Float
+        get() = minButtonSizePx * MP_LARGE_CONTROL_SIZE_MULTIPLIER
+}
+
+val THOR_BOTTOM_CANVAS_SPEC = LayoutCanvasSpec(THOR_BOTTOM_WIDTH_PX, THOR_BOTTOM_HEIGHT_PX)
 
 /**
  * Screen metrics for bottom PadCanvas reported dynamically to guide gamepad adjustment clamps.
@@ -70,7 +107,7 @@ enum class ButtonSize(
 /**
  * Visual size of a legacy trackpoint button.
  * Deprecated: Used only for surrogate deserialization of legacy profiles.
- * Buttons now use stepless [PadButton.widthDp] and [PadButton.heightDp].
+ * Buttons now use stepless [PadButton.widthPx] and [PadButton.heightPx].
  */
 @Deprecated("Used only for surrogate deserialization of legacy profiles")
 enum class TrackpointSize(
@@ -651,9 +688,10 @@ fun List<PadLayout>.defaultSwitchTargetId(activeLayoutId: String?): String =
  *                  When set, the icon is displayed on the button face instead of [label].
  *                  The [label] remains visible in the editor list. Null means no icon — show label.
  * @param iconFilled Whether the icon is rendered filled (`true`, default) or outline (`false`).
- * @param posX      Horizontal centre position, normalised [0.0, 1.0] relative to pad width.
- * @param widthDp   Stepless width in dp (minimum [MP_BUTTON_MIN_SIZE_DP]).
- * @param heightDp  Stepless height in dp (minimum [MP_BUTTON_MIN_SIZE_DP]).
+ * @param posX      Horizontal centre position, normalised [0.0, 1.0] relative to `designCanvas` width (or `< 0` / `> 1` in bars).
+ * @param posY      Vertical centre position, normalised [0.0, 1.0] relative to `designCanvas` height (or `< 0` / `> 1` in bars).
+ * @param widthPx   Stepless width in `designCanvas` pixels (minimum `designCanvas.minButtonSizePx`).
+ * @param heightPx  Stepless height in `designCanvas` pixels (minimum `designCanvas.minButtonSizePx`).
  * @param buttonShape Visual shape — CIRCLE (renders as CircleShape if width == height, else pill) or SQUARE/ICON_ONLY.
  * @param action    What this button injects when pressed / held.
  */
@@ -665,8 +703,8 @@ data class PadButton(
     val iconFilled: Boolean = true,
     val posX: Float,
     val posY: Float,
-    val widthDp: Float = MP_BUTTON_BASE_UNIT_DP,
-    val heightDp: Float = MP_BUTTON_BASE_UNIT_DP,
+    val widthPx: Float = MP_THOR_DEFAULT_BUTTON_SIZE_PX,
+    val heightPx: Float = MP_THOR_DEFAULT_BUTTON_SIZE_PX,
     val buttonShape: ButtonShape = ButtonShape.CIRCLE,
     val action: PadAction,
     val hapticStrength: HapticStrength = HapticStrength.OFF,
@@ -681,25 +719,29 @@ data class PadButton(
 )
 
 /**
- * Returns a copy of this [PadButton] with dimensions, shape, and icon constraints adjusted for [newAction].
- * - [PadAction.TrackpointMove]: Enforces 1:1 aspect ratio, minimum size of [MP_TRACKPOINT_DEFAULT_SIZE_DP], and [ButtonShape.CIRCLE].
- * - [PadAction.ScrollWheel]: Enforces a minimum vertical height of [MP_SCROLL_WHEEL_MIN_HEIGHT_DP].
+ * Returns a copy of this [PadButton] with dimensions, shape, and icon constraints adjusted for [newAction]
+ * relative to [canvas].
+ * - [PadAction.TrackpointMove]: Enforces 1:1 aspect ratio, minimum size of [LayoutCanvasSpec.largeControlMinSizePx], and [ButtonShape.CIRCLE].
+ * - [PadAction.ScrollWheel]: Enforces a minimum vertical height of [LayoutCanvasSpec.largeControlMinSizePx].
  * - Fixed-face actions (`!newAction.supportsCustomIcon()`): Forces [PadButton.iconName] to `null`.
  */
-fun PadButton.withActionSizing(newAction: PadAction): PadButton {
+fun PadButton.withActionSizing(
+    newAction: PadAction,
+    canvas: LayoutCanvasSpec = THOR_BOTTOM_CANVAS_SPEC,
+): PadButton {
     val isTrackpoint = newAction is PadAction.TrackpointMove
-    val tpSize = if (isTrackpoint) maxOf(widthDp, heightDp, MP_TRACKPOINT_DEFAULT_SIZE_DP) else widthDp
+    val tpSize = if (isTrackpoint) maxOf(widthPx, heightPx, canvas.largeControlMinSizePx) else widthPx
     return copy(
         action = newAction,
         iconName = if (!newAction.supportsCustomIcon()) null else iconName,
-        widthDp = if (isTrackpoint) tpSize else widthDp,
-        heightDp =
-            if (newAction is PadAction.ScrollWheel && heightDp < MP_SCROLL_WHEEL_MIN_HEIGHT_DP) {
-                MP_SCROLL_WHEEL_MIN_HEIGHT_DP
+        widthPx = if (isTrackpoint) tpSize else widthPx,
+        heightPx =
+            if (newAction is PadAction.ScrollWheel && heightPx < canvas.largeControlMinSizePx) {
+                canvas.largeControlMinSizePx
             } else if (isTrackpoint) {
                 tpSize
             } else {
-                heightDp
+                heightPx
             },
         buttonShape = if (isTrackpoint) ButtonShape.CIRCLE else buttonShape,
     )
@@ -875,7 +917,16 @@ data class PadLayout(
     val maskScaleMode: BackgroundScaleMode = BackgroundScaleMode.FILL,
     val backgroundTouchpad: BackgroundTouchpadConfig = BackgroundTouchpadConfig(),
     val visualAnchor: LayoutVisualAnchor = LayoutVisualAnchor(),
-)
+    val designCanvas: LayoutCanvasSpec? = null,
+) {
+    /**
+     * Authoring secondary-display canvas specification for this layout.
+     * Defaults deterministically to AYN Thor (`1240 × 1080`) for legacy layouts (`designCanvas == null`)
+     * or invalid non-positive dimensions.
+     */
+    val effectiveDesignCanvas: LayoutCanvasSpec
+        get() = designCanvas?.takeIf { it.widthPx > 0 && it.heightPx > 0 } ?: THOR_BOTTOM_CANVAS_SPEC
+}
 
 /**
  * Returns true if this layout has no buttons, no background image, no mask image, no screen cutouts,
@@ -905,6 +956,9 @@ private fun migrateButtonBgColorOption(option: ColorOption?): ColorOption? {
 
 /**
  * Normalizes legacy layout properties on load:
+ * - Stamps [PadLayout.effectiveDesignCanvas] onto [PadLayout.designCanvas] (defaulting legacy `null` to [THOR_BOTTOM_CANVAS_SPEC]).
+ * - Clamps button `widthPx`/`heightPx` against `designCanvas.minButtonSizePx`, `ScrollWheel` height against
+ *   `designCanvas.largeControlMinSizePx`, and `TrackpointMove` to 1:1 `ButtonShape.CIRCLE`.
  * - Resets deprecated `buttonColorNoMirror` / `buttonColorMirror` to neutral Unified Appearance colors.
  * - Migrates `useBackgroundImageAsMask` into `mask*` properties.
  * - Migrates legacy full-opacity custom `buttonBgColor` (0xFF alpha) on the layout and buttons to 70% opacity (0xB3).
@@ -912,6 +966,10 @@ private fun migrateButtonBgColorOption(option: ColorOption?): ColorOption? {
  */
 fun PadLayout.normalizedOnLoad(): PadLayout {
     var current = this
+    val canvas = current.effectiveDesignCanvas
+    if (current.designCanvas != canvas) {
+        current = current.copy(designCanvas = canvas)
+    }
     @Suppress("DEPRECATION")
     if (current.buttonColorNoMirror != null || current.buttonColorMirror != null) {
         current =
@@ -946,11 +1004,36 @@ fun PadLayout.normalizedOnLoad(): PadLayout {
     if (migratedBg != current.buttonBgColor) {
         current = current.copy(buttonBgColor = migratedBg)
     }
+    val minBtnPx = canvas.minButtonSizePx
+    val largeMinPx = canvas.largeControlMinSizePx
     val migratedButtons =
         current.buttons.map { btn ->
             val btnMigratedBg = migrateButtonBgColorOption(btn.buttonBgColor)
-            if (btnMigratedBg != btn.buttonBgColor) {
-                btn.copy(buttonBgColor = btnMigratedBg)
+            val baseW = if (btn.widthPx.isFinite()) btn.widthPx else canvas.baseButtonSizePx
+            val baseH = if (btn.heightPx.isFinite()) btn.heightPx else canvas.baseButtonSizePx
+            val clampedW = baseW.coerceAtLeast(minBtnPx)
+            val clampedH = baseH.coerceAtLeast(minBtnPx)
+            val isTrackpoint = btn.action is PadAction.TrackpointMove
+            val targetW = if (isTrackpoint) maxOf(clampedW, clampedH) else clampedW
+            val targetH =
+                when {
+                    isTrackpoint -> maxOf(clampedW, clampedH)
+                    btn.action is PadAction.ScrollWheel -> maxOf(clampedH, largeMinPx)
+                    else -> clampedH
+                }
+            val targetShape = if (isTrackpoint) ButtonShape.CIRCLE else btn.buttonShape
+            if (
+                btnMigratedBg != btn.buttonBgColor ||
+                targetW != btn.widthPx ||
+                targetH != btn.heightPx ||
+                targetShape != btn.buttonShape
+            ) {
+                btn.copy(
+                    widthPx = targetW,
+                    heightPx = targetH,
+                    buttonShape = targetShape,
+                    buttonBgColor = btnMigratedBg,
+                )
             } else {
                 btn
             }
@@ -1120,8 +1203,8 @@ private class PadButtonEncodeSurrogate(
     val iconFilled: Boolean = true,
     val posX: Float,
     val posY: Float,
-    val widthDp: Float,
-    val heightDp: Float,
+    val widthPx: Float,
+    val heightPx: Float,
     val buttonShape: ButtonShape = ButtonShape.CIRCLE,
     val action: PadAction,
     val hapticStrength: HapticStrength = HapticStrength.OFF,
@@ -1141,6 +1224,8 @@ private class PadButtonDecodeSurrogate(
     val iconFilled: Boolean = true,
     val posX: Float,
     val posY: Float,
+    val widthPx: Float? = null,
+    val heightPx: Float? = null,
     val widthDp: Float? = null,
     val heightDp: Float? = null,
     @Suppress("DEPRECATION")
@@ -1171,8 +1256,8 @@ object PadButtonSerializer : KSerializer<PadButton> {
                 iconFilled = value.iconFilled,
                 posX = value.posX,
                 posY = value.posY,
-                widthDp = value.widthDp,
-                heightDp = value.heightDp,
+                widthPx = value.widthPx,
+                heightPx = value.heightPx,
                 buttonShape = value.buttonShape,
                 action = value.action,
                 hapticStrength = value.hapticStrength,
@@ -1188,41 +1273,46 @@ object PadButtonSerializer : KSerializer<PadButton> {
 
     override fun deserialize(decoder: Decoder): PadButton {
         val surrogate = decoder.decodeSerializableValue(PadButtonDecodeSurrogate.serializer())
-        val finalWidth: Float
-        val finalHeight: Float
+        val legacyFallbackPx = round(MP_LEGACY_BUTTON_BASE_UNIT_DP * THOR_BOTTOM_DENSITY)
 
+        val legacyWidthDp: Float
+        val legacyHeightDp: Float
         if (surrogate.widthDp != null && surrogate.heightDp != null) {
-            finalWidth = surrogate.widthDp
-            finalHeight = surrogate.heightDp
-        } else if (surrogate.action is PadAction.TrackpointMove) {
+            legacyWidthDp = surrogate.widthDp
+            legacyHeightDp = surrogate.heightDp
+        } else if (surrogate.action is PadAction.TrackpointMove && surrogate.widthDp == null && surrogate.heightDp == null) {
             @Suppress("DEPRECATION")
             val mult = surrogate.action.size.multiplier
-            finalWidth = mult * MP_BUTTON_BASE_UNIT_DP
-            finalHeight = mult * MP_BUTTON_BASE_UNIT_DP
-        } else if (surrogate.buttonSize != null) {
-            finalWidth = surrogate.buttonSize.cols * MP_BUTTON_BASE_UNIT_DP
-            finalHeight = surrogate.buttonSize.rows * MP_BUTTON_BASE_UNIT_DP
+            legacyWidthDp = mult * MP_LEGACY_BUTTON_BASE_UNIT_DP
+            legacyHeightDp = mult * MP_LEGACY_BUTTON_BASE_UNIT_DP
+        } else if (surrogate.buttonSize != null && surrogate.widthDp == null && surrogate.heightDp == null) {
+            legacyWidthDp = surrogate.buttonSize.cols * MP_LEGACY_BUTTON_BASE_UNIT_DP
+            legacyHeightDp = surrogate.buttonSize.rows * MP_LEGACY_BUTTON_BASE_UNIT_DP
         } else {
-            finalWidth = surrogate.widthDp ?: MP_BUTTON_BASE_UNIT_DP
-            finalHeight = surrogate.heightDp ?: MP_BUTTON_BASE_UNIT_DP
+            legacyWidthDp = surrogate.widthDp ?: MP_LEGACY_BUTTON_BASE_UNIT_DP
+            legacyHeightDp = surrogate.heightDp ?: MP_LEGACY_BUTTON_BASE_UNIT_DP
         }
 
+        val rawWidthPx = surrogate.widthPx ?: round(legacyWidthDp * THOR_BOTTOM_DENSITY)
+        val rawHeightPx = surrogate.heightPx ?: round(legacyHeightDp * THOR_BOTTOM_DENSITY)
+
         val safeRawWidth =
-            if (!finalWidth.isFinite() || finalWidth < MP_BUTTON_MIN_SIZE_DP) {
-                if (!finalWidth.isFinite()) MP_BUTTON_BASE_UNIT_DP else MP_BUTTON_MIN_SIZE_DP
+            if (!rawWidthPx.isFinite()) {
+                legacyFallbackPx
             } else {
-                finalWidth
+                rawWidthPx.coerceAtLeast(MP_BUTTON_SERIALIZER_FLOOR_PX)
             }
         val safeRawHeight =
-            if (!finalHeight.isFinite() || finalHeight < MP_BUTTON_MIN_SIZE_DP) {
-                if (!finalHeight.isFinite()) MP_BUTTON_BASE_UNIT_DP else MP_BUTTON_MIN_SIZE_DP
+            if (!rawHeightPx.isFinite()) {
+                legacyFallbackPx
             } else {
-                finalHeight
+                rawHeightPx.coerceAtLeast(MP_BUTTON_SERIALIZER_FLOOR_PX)
             }
 
         val isTrackpoint = surrogate.action is PadAction.TrackpointMove
         val safeWidth = if (isTrackpoint) maxOf(safeRawWidth, safeRawHeight) else safeRawWidth
         val safeHeight = if (isTrackpoint) maxOf(safeRawWidth, safeRawHeight) else safeRawHeight
+        val safeShape = if (isTrackpoint) ButtonShape.CIRCLE else surrogate.buttonShape
 
         return PadButton(
             id = surrogate.id,
@@ -1231,9 +1321,9 @@ object PadButtonSerializer : KSerializer<PadButton> {
             iconFilled = surrogate.iconFilled,
             posX = surrogate.posX,
             posY = surrogate.posY,
-            widthDp = safeWidth,
-            heightDp = safeHeight,
-            buttonShape = surrogate.buttonShape,
+            widthPx = safeWidth,
+            heightPx = safeHeight,
+            buttonShape = safeShape,
             action = surrogate.action,
             hapticStrength = surrogate.hapticStrength,
             hapticCustomDurationMs = surrogate.hapticCustomDurationMs,

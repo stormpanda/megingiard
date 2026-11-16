@@ -315,4 +315,47 @@ class FocusImageCacheTest {
         FocusImageCache.deleteDiskCachedIcon(context, pkg)
         assertTrue(!iconFile.exists())
     }
+
+    @Test
+    fun testCalculateCoverSampleSize_preservesStandardGridsAndDownsamplesHugeCovers() {
+        assertEquals(1, FocusImageCache.calculateCoverSampleSize(0, 0))
+        assertEquals(1, FocusImageCache.calculateCoverSampleSize(-10, 450))
+        assertEquals(1, FocusImageCache.calculateCoverSampleSize(300, 450))
+        assertEquals(1, FocusImageCache.calculateCoverSampleSize(600, 900))
+        assertEquals(2, FocusImageCache.calculateCoverSampleSize(1200, 1800))
+        assertEquals(4, FocusImageCache.calculateCoverSampleSize(2400, 3600))
+    }
+
+    @Test
+    fun testGetCoverBitmapAsync_downsamplesOversizedCoverAndCachesInMemory() {
+        runBlocking {
+            FocusImageCache.clearForTesting()
+            val tempFile = File.createTempFile("huge_cover", ".png")
+            try {
+                val hugeBmp = Bitmap.createBitmap(1600, 2400, Bitmap.Config.ARGB_8888)
+                FileOutputStream(tempFile).use { out ->
+                    hugeBmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+                hugeBmp.recycle()
+
+                val appInfo =
+                    InstalledAppInfo(
+                        packageName = "com.test.hugecover",
+                        activityName = "MainActivity",
+                        label = "Huge Cover Game",
+                        coverPath = tempFile.absolutePath,
+                        coverLastModified = tempFile.lastModified(),
+                    )
+
+                val decoded = FocusImageCache.getCoverBitmapAsync(appInfo)
+                assertNotNull(decoded)
+                assertEquals(800, decoded!!.width)
+                assertEquals(1200, decoded.height)
+                assertNotNull(FocusImageCache.getCoverBitmap(appInfo))
+            } finally {
+                tempFile.delete()
+                FocusImageCache.clearForTesting()
+            }
+        }
+    }
 }

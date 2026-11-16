@@ -23,13 +23,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33])
 class MacroPadActionDispatchTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -177,7 +172,7 @@ class MacroPadActionDispatchTest {
         assertEquals("layout-a", MacroPadState.activeLayout.value?.id)
 
         // End-to-end hit-test engine hold-to-shift across layouts
-        val engine = MacroPadHitTestEngine(buttonUnitDpToPx = { it })
+        val engine = MacroPadHitTestEngine()
         val shiftBtn =
             PadButton(
                 id = "btn-shift",

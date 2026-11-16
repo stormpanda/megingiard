@@ -66,6 +66,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -83,7 +84,8 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
-import com.stormpanda.megingiard.math.formatButtonDimensionDp
+import com.stormpanda.megingiard.math.formatButtonDimensionPx
+import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeSubPageContent
 import com.stormpanda.megingiard.ui.AppDivider
@@ -112,6 +114,7 @@ import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
@@ -164,6 +167,7 @@ private fun applyActionToDraftButton(
     allProfiles: List<PadProfile>,
     activeProfile: PadProfile?,
     swapFaceButtons: Boolean,
+    canvas: LayoutCanvasSpec,
 ): PadButton =
     draftButton.withActionDefaults(
         newAction = newAction,
@@ -171,6 +175,7 @@ private fun applyActionToDraftButton(
         allProfiles = allProfiles,
         activeProfile = activeProfile,
         swapFaceButtons = swapFaceButtons,
+        canvas = canvas,
     )
 
 private fun swapButtons(
@@ -193,7 +198,6 @@ fun MacroPadEditor(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
     val activeId by MacroPadState.activeProfileId.collectAsStateWithLifecycle()
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
@@ -216,6 +220,9 @@ fun MacroPadEditor(
             profile?.layouts?.firstOrNull { it.id == layoutId } ?: profile?.layouts?.firstOrNull()
         }
 
+    val activeDesignCanvas =
+        activeLayout?.effectiveDesignCanvas ?: MacroPadState.newLayoutDesignCanvas()
+
     fun applyDraftAction(
         draftButton: PadButton,
         newAction: PadAction,
@@ -227,6 +234,7 @@ fun MacroPadEditor(
             allProfiles = profiles,
             activeProfile = profile,
             swapFaceButtons = swapFaceButtons,
+            canvas = activeDesignCanvas,
         )
 
     val selectedSection by MacroPadNavState.selectedSection.collectAsStateWithLifecycle()
@@ -256,6 +264,7 @@ fun MacroPadEditor(
                     allProfiles = profiles,
                     activeProfile = profile,
                     swapFaceButtons = swapFaceButtons,
+                    canvas = activeDesignCanvas,
                 )
         return SubPageButtons(
             savedButton = savedButton,
@@ -283,10 +292,13 @@ fun MacroPadEditor(
         MacroPadState.setEditingButtonPositions(isEditingPositionsSubPage)
     }
 
-    LaunchedEffect(buttonDraft) {
-        if (buttonDraft != null) {
-            MacroPadState.setPreviewButton(buttonDraft)
-        }
+    LaunchedEffect(Unit) {
+        snapshotFlow { buttonDraft }
+            .collectLatest { draft ->
+                if (draft != null) {
+                    MacroPadState.setPreviewButton(draft)
+                }
+            }
     }
 
     LaunchedEffect(subPageStack, selectedSection) {
@@ -462,33 +474,26 @@ fun MacroPadEditor(
                                                     val originalLayouts = originalProfile.layouts
                                                     val layoutMapping = MacroPadState.duplicateProfile(originalProfile.id)
                                                     if (layoutMapping != null) {
+                                                        val currentProfiles = MacroPadState.profiles.value
                                                         for (origLayout in originalLayouts) {
-                                                            val originalBgPath = origLayout.backgroundImagePath
-                                                            val originalMaskPath = origLayout.maskImagePath
                                                             val newLayoutId = layoutMapping[origLayout.id]
                                                             if (newLayoutId != null) {
-                                                                if (originalBgPath != null) {
-                                                                    scope.launch {
-                                                                        MacroPadMediaRepository.duplicateBackgroundImage(
-                                                                            context,
-                                                                            origLayout.id,
-                                                                            newLayoutId,
-                                                                        )
-                                                                    }
-                                                                }
-                                                                if (originalMaskPath != null) {
-                                                                    scope.launch {
-                                                                        MacroPadMediaRepository.duplicateMaskImage(
-                                                                            context,
-                                                                            origLayout.id,
-                                                                            newLayoutId,
-                                                                        )
-                                                                    }
+                                                                val newLayout =
+                                                                    currentProfiles
+                                                                        .asSequence()
+                                                                        .flatMap { it.layouts }
+                                                                        .firstOrNull { it.id == newLayoutId }
+                                                                if (newLayout != null) {
+                                                                    MacroPadMediaRepository.duplicateLayoutAssetsAsync(
+                                                                        context = context,
+                                                                        sourceLayout = origLayout,
+                                                                        targetLayout = newLayout,
+                                                                    )
                                                                 }
                                                             }
                                                         }
                                                         val duplicatedName =
-                                                            MacroPadState.profiles.value
+                                                            currentProfiles
                                                                 .lastOrNull()
                                                                 ?.name ?: originalProfile.name
                                                         DialogToastManager.show(
@@ -501,15 +506,10 @@ fun MacroPadEditor(
                                                 },
                                                 onDeleteProfile = {
                                                     val deletedName = profile.name
+                                                    val layoutsToDelete = profile.layouts
                                                     val isDeleted = MacroPadState.deleteProfile(profile.id)
                                                     if (isDeleted) {
-                                                        val layoutsToDelete = profile.layouts
-                                                        scope.launch {
-                                                            layoutsToDelete.forEach { lay ->
-                                                                MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
-                                                                MacroPadMediaRepository.deleteMaskImage(context, lay.id)
-                                                            }
-                                                        }
+                                                        MacroPadMediaRepository.deleteLayoutsAssetsAsync(context, layoutsToDelete)
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_profile_deleted_toast, deletedName),
                                                         )
@@ -540,33 +540,19 @@ fun MacroPadEditor(
                                                 },
                                                 onDuplicateLayout = {
                                                     val originalLayout = activeLayout
-                                                    val originalBgPath = originalLayout?.backgroundImagePath
-                                                    val originalMaskPath = originalLayout?.maskImagePath
                                                     val newLayoutId = originalLayout?.id?.let { MacroPadState.duplicateLayout(it) }
                                                     if (originalLayout != null && newLayoutId != null) {
-                                                        if (originalBgPath != null) {
-                                                            scope.launch {
-                                                                MacroPadMediaRepository.duplicateBackgroundImage(
-                                                                    context,
-                                                                    originalLayout.id,
-                                                                    newLayoutId,
-                                                                )
-                                                            }
-                                                        }
-                                                        if (originalMaskPath != null) {
-                                                            scope.launch {
-                                                                MacroPadMediaRepository.duplicateMaskImage(
-                                                                    context,
-                                                                    originalLayout.id,
-                                                                    newLayoutId,
-                                                                )
-                                                            }
-                                                        }
                                                         val duplicatedLayout =
                                                             MacroPadState.activeProfile.value?.layouts?.firstOrNull {
-                                                                it.id ==
-                                                                    newLayoutId
+                                                                it.id == newLayoutId
                                                             }
+                                                        if (duplicatedLayout != null) {
+                                                            MacroPadMediaRepository.duplicateLayoutAssetsAsync(
+                                                                context = context,
+                                                                sourceLayout = originalLayout,
+                                                                targetLayout = duplicatedLayout,
+                                                            )
+                                                        }
                                                         val duplicatedName = duplicatedLayout?.name ?: originalLayout.name
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_layout_duplicated_toast, duplicatedName),
@@ -582,14 +568,15 @@ fun MacroPadEditor(
                                                     MacroPadNavState.push(MacroPadSubPage.ReorderLayouts)
                                                 },
                                                 onDeleteLayout = {
-                                                    if (activeLayout != null) {
-                                                        val deletedName = activeLayout.name
-                                                        val isDeleted = MacroPadState.deleteLayout(activeLayout.id)
+                                                    val deletedLayout = activeLayout
+                                                    if (deletedLayout != null) {
+                                                        val deletedName = deletedLayout.name
+                                                        val isDeleted = MacroPadState.deleteLayout(deletedLayout.id)
                                                         if (isDeleted) {
-                                                            scope.launch {
-                                                                MacroPadMediaRepository.deleteBackgroundImage(context, activeLayout.id)
-                                                                MacroPadMediaRepository.deleteMaskImage(context, activeLayout.id)
-                                                            }
+                                                            MacroPadMediaRepository.deleteLayoutsAssetsAsync(
+                                                                context,
+                                                                listOf(deletedLayout),
+                                                            )
                                                             DialogToastManager.show(
                                                                 context.getString(R.string.macropad_layout_deleted_toast, deletedName),
                                                             )
@@ -805,6 +792,7 @@ fun MacroPadEditor(
                                                                     PadLayout(
                                                                         id = defaultLayoutId,
                                                                         name = context.getString(R.string.integration_home_default_layout),
+                                                                        designCanvas = MacroPadState.newLayoutDesignCanvas(),
                                                                     ),
                                                                 ),
                                                             activeLayoutId = defaultLayoutId,
@@ -847,15 +835,10 @@ fun MacroPadEditor(
                                                 },
                                                 onDeleteProfile = {
                                                     val deletedName = prof.name
+                                                    val layoutsToDelete = prof.layouts
                                                     val isDeleted = MacroPadState.deleteProfile(prof.id)
                                                     if (isDeleted) {
-                                                        val layoutsToDelete = prof.layouts
-                                                        scope.launch {
-                                                            layoutsToDelete.forEach { lay ->
-                                                                MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
-                                                                MacroPadMediaRepository.deleteMaskImage(context, lay.id)
-                                                            }
-                                                        }
+                                                        MacroPadMediaRepository.deleteLayoutsAssetsAsync(context, layoutsToDelete)
                                                         MacroPadNavState.pop()
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_profile_deleted_toast, deletedName),
@@ -901,6 +884,7 @@ fun MacroPadEditor(
                                                                 allProfiles = profiles,
                                                                 activeProfile = profile,
                                                                 swapFaceButtons = swapFaceButtons,
+                                                                canvas = activeDesignCanvas,
                                                             )
                                                         }
                                                     MacroPadNavState.setButtonDraft(newBtn)
@@ -934,6 +918,7 @@ fun MacroPadEditor(
                                                         PadLayout(
                                                             id = newId,
                                                             name = name,
+                                                            designCanvas = MacroPadState.newLayoutDesignCanvas(),
                                                         )
                                                     MacroPadState.addLayout(newLayout)
                                                     MacroPadNavState.setStack(listOf(MacroPadSubPage.EditLayout(newId)))
@@ -985,13 +970,14 @@ fun MacroPadEditor(
                                                         MacroPadNavState.push(MacroPadSubPage.LayoutTouchpad(lay.id))
                                                     },
                                                     onDeleteLayout = {
-                                                        val deletedName = lay.name
-                                                        val isDeleted = MacroPadState.deleteLayout(lay.id)
+                                                        val deletedLayout = lay
+                                                        val deletedName = deletedLayout.name
+                                                        val isDeleted = MacroPadState.deleteLayout(deletedLayout.id)
                                                         if (isDeleted) {
-                                                            scope.launch {
-                                                                MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
-                                                                MacroPadMediaRepository.deleteMaskImage(context, lay.id)
-                                                            }
+                                                            MacroPadMediaRepository.deleteLayoutsAssetsAsync(
+                                                                context,
+                                                                listOf(deletedLayout),
+                                                            )
                                                             appearanceDraft = null
                                                             MacroPadNavState.pop()
                                                             DialogToastManager.show(
@@ -1128,6 +1114,7 @@ fun MacroPadEditor(
                                                         val deletedName = cutout.name.ifBlank { cutoutTitle }
                                                         val updatedList = layout.mirrorCutouts.filter { it.id != cutoutIdToDelete }
                                                         MacroPadState.updateLayout(layout.copy(mirrorCutouts = updatedList))
+                                                        CutoutMaskManager.deleteMaskAsync(context, cutoutIdToDelete)
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_cutout_deleted_toast, deletedName),
                                                         )
@@ -1282,23 +1269,17 @@ fun MacroPadEditor(
                                                         val newLayoutId =
                                                             MacroPadState.copyLayoutToProfile(lay, profile.id, targetProfileId)
                                                         if (newLayoutId != null) {
-                                                            if (lay.backgroundImagePath != null) {
-                                                                scope.launch {
-                                                                    MacroPadMediaRepository.duplicateBackgroundImage(
-                                                                        context,
-                                                                        lay.id,
-                                                                        newLayoutId,
-                                                                    )
-                                                                }
-                                                            }
-                                                            if (lay.maskImagePath != null) {
-                                                                scope.launch {
-                                                                    MacroPadMediaRepository.duplicateMaskImage(
-                                                                        context,
-                                                                        lay.id,
-                                                                        newLayoutId,
-                                                                    )
-                                                                }
+                                                            val copiedLayout =
+                                                                MacroPadState.profiles.value
+                                                                    .firstOrNull { it.id == targetProfileId }
+                                                                    ?.layouts
+                                                                    ?.firstOrNull { it.id == newLayoutId }
+                                                            if (copiedLayout != null) {
+                                                                MacroPadMediaRepository.duplicateLayoutAssetsAsync(
+                                                                    context = context,
+                                                                    sourceLayout = lay,
+                                                                    targetLayout = copiedLayout,
+                                                                )
                                                             }
                                                         }
                                                         MacroPadNavState.pop()
@@ -1356,6 +1337,7 @@ fun MacroPadEditor(
                                                             allProfiles = profiles,
                                                             activeProfile = profile,
                                                             swapFaceButtons = swapFaceButtons,
+                                                            canvas = activeDesignCanvas,
                                                         )
                                                     MacroPadNavState.setButtonDraft(newDraft)
                                                     MacroPadNavState.setStack(
@@ -1915,10 +1897,11 @@ fun MacroPadEditor(
                                                 excludeLayoutId = activeLayout?.id,
                                                 onSelect = { targetProfileId, targetLayoutId ->
                                                     MacroPadState.copyButtonToLayout(
-                                                        currentSubPage.button,
-                                                        profile.id,
-                                                        targetProfileId,
-                                                        targetLayoutId,
+                                                        button = currentSubPage.button,
+                                                        sourceProfileId = profile.id,
+                                                        targetProfileId = targetProfileId,
+                                                        targetLayoutId = targetLayoutId,
+                                                        sourceLayoutId = activeLayout?.id,
                                                     )
                                                     MacroPadNavState.pop()
                                                     DialogToastManager.show(
@@ -2587,8 +2570,8 @@ private fun describePadButton(
     val sizeLabel =
         stringResource(
             R.string.macropad_button_dimension_format,
-            formatButtonDimensionDp(btn.widthDp),
-            formatButtonDimensionDp(btn.heightDp),
+            formatButtonDimensionPx(btn.widthPx),
+            formatButtonDimensionPx(btn.heightPx),
         )
     return listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
 }
@@ -2832,7 +2815,12 @@ private fun EditButtonPositionsSubPageContent(
                     currentLayout.buttons.map {
                         if (it.id == updatedBtn.id) updatedBtn else it
                     }
-                MacroPadState.updateLayout(currentLayout.copy(buttons = updated))
+                MacroPadState.updateLayoutLive(currentLayout.copy(buttons = updated))
+            },
+            onButtonCommit = {
+                MacroPadState.activeLayout.value?.let { committed ->
+                    MacroPadState.updateLayout(committed)
+                }
             },
         )
 

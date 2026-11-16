@@ -4,6 +4,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.catalog.SystemRoleClassifier
+import com.stormpanda.megingiard.device.KnownDeviceProfiles
 import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,13 +26,13 @@ private val IGNORED_PACKAGES =
 
 private val IGNORED_PACKAGE_PREFIXES =
     listOf(
-        "com.odin.",
         "com.google.android.gms",
         "com.google.android.play.games",
     )
 
 private fun isIgnoredPackage(packageName: String): Boolean {
     if (packageName in IGNORED_PACKAGES) return true
+    if (KnownDeviceProfiles.isVendorOverlayPackage(packageName)) return true
     return IGNORED_PACKAGE_PREFIXES.any { packageName.startsWith(it) }
 }
 

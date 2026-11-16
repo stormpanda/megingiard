@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.mirrorserver;
 
-import android.graphics.Rect;
 import android.net.LocalServerSocket;
 import android.os.Binder;
 import android.os.IBinder;
@@ -13,31 +12,168 @@ import java.util.concurrent.TimeUnit;
 
 public final class DirectMirrorServer {
     private static final String DIRECT_SURFACE_SERVICE_NAME = "megingiard.direct.surface";
-    private static final String DIRECT_SURFACE_DESCRIPTOR = "com.stormpanda.megingiard.mirrorserver.IDirectSurfaceReceiver";
-    private static final int TRANSACTION_SET_SURFACE = IBinder.FIRST_CALL_TRANSACTION;
+    private static final String DIRECT_SURFACE_DESCRIPTOR =
+            "com.stormpanda.megingiard.mirrorserver.IDirectSurfaceReceiver";
+    private static final String MIRROR_DISPLAY_NAME = "megingiard-direct-0";
+    private static final int PRIMARY_DISPLAY_ID = 0;
+    private static final int MIN_ARGS_COUNT = 3;
+    private static final int EXIT_CODE_USAGE = 2;
+    private static final int EXIT_CODE_FAILURE = 1;
     private static final long SURFACE_DELIVERY_TIMEOUT_MS = 5_000L;
+
+    interface SurfaceHandle {
+        boolean isValid();
+
+        void release();
+    }
+
+    static final class SurfacePayload<S extends SurfaceHandle> {
+        final int width;
+        final int height;
+        final S surface;
+
+        SurfacePayload(int width, int height, S surface) {
+            this.width = width;
+            this.height = height;
+            this.surface = surface;
+        }
+    }
+
+    interface SurfacePayloadReader<S extends SurfaceHandle> {
+        SurfacePayload<S> read();
+    }
+
+    interface SessionOpener<S extends SurfaceHandle> {
+        SurfaceControlReflect.MirrorSession open(
+                String name,
+                int width,
+                int height,
+                int displayIdToMirror,
+                S surface);
+    }
+
+    static final class SessionCoordinator<S extends SurfaceHandle> {
+        static final int HAS_SURFACE_CLEAR = 0;
+        static final int HAS_SURFACE_PRESENT = 1;
+        /** Returned when no mirror surface is active (both on successful clear and on setSurface failure). */
+        static final int REPLY_NO_ACTIVE_SURFACE = 0;
+        /** Returned when an active mirror surface has been bound and configured. */
+        static final int REPLY_SURFACE_ACTIVE = 1;
+
+        private final SessionOpener<S> sessionOpener;
+        private SurfaceControlReflect.MirrorSession currentSession;
+        private S currentSurface;
+
+        SessionCoordinator(SessionOpener<S> sessionOpener) {
+            this.sessionOpener = sessionOpener;
+        }
+
+        synchronized int handleSurfaceCommand(
+                CountDownLatch surfaceDelivered,
+                int hasSurface,
+                SurfacePayloadReader<S> payloadReader) {
+            if (hasSurface == HAS_SURFACE_CLEAR) {
+                release();
+                System.err.println("DirectMirrorServer: app cleared surface");
+                return REPLY_NO_ACTIVE_SURFACE;
+            }
+            if (hasSurface != HAS_SURFACE_PRESENT) {
+                release();
+                System.err.println("[DirectMirror] Invalid hasSurface flag: " + hasSurface);
+                return REPLY_NO_ACTIVE_SURFACE;
+            }
+            SurfacePayload<S> payload = payloadReader.read();
+            if (!applySurface(payload.surface, payload.width, payload.height)) {
+                return REPLY_NO_ACTIVE_SURFACE;
+            }
+            surfaceDelivered.countDown();
+            System.err.println("DirectMirrorServer: surface parsed & configured");
+            return REPLY_SURFACE_ACTIVE;
+        }
+
+        synchronized void release() {
+            if (currentSession != null) {
+                try {
+                    currentSession.close();
+                } catch (Throwable ignored) {
+                }
+                currentSession = null;
+            }
+            if (currentSurface != null) {
+                try {
+                    currentSurface.release();
+                } catch (Throwable ignored) {
+                }
+                currentSurface = null;
+            }
+        }
+
+        synchronized boolean applySurface(S surface, int width, int height) {
+            release();
+            if (surface == null || !surface.isValid() || width <= 0 || height <= 0) {
+                System.err.println(
+                        "DirectMirrorServer: invalid surface or dimensions: " + width + "x" + height);
+                if (surface != null) {
+                    try {
+                        surface.release();
+                    } catch (Throwable ignored) {
+                    }
+                }
+                return false;
+            }
+
+            SurfaceControlReflect.MirrorSession session = null;
+            try {
+                session = sessionOpener.open(
+                        MIRROR_DISPLAY_NAME, width, height, PRIMARY_DISPLAY_ID, surface);
+                currentSession = session;
+                currentSurface = surface;
+                return true;
+            } catch (Throwable t) {
+                System.err.println("DirectMirrorServer: failed to configure display: " + t);
+                if (session != null) {
+                    try {
+                        session.close();
+                    } catch (Throwable ignored) {
+                    }
+                }
+                try {
+                    surface.release();
+                } catch (Throwable ignored) {
+                }
+                return false;
+            }
+        }
+    }
 
     private DirectMirrorServer() {}
 
     public static void main(String[] args) {
         bypassHiddenApiEnforcement();
 
-        if (args.length < 3) {
+        if (args.length < MIN_ARGS_COUNT) {
             System.err.println("usage: DirectMirrorServer <socket> <w> <h>");
-            System.exit(2);
+            System.exit(EXIT_CODE_USAGE);
             return;
         }
 
         String socketName = args[0];
         int width = Integer.parseInt(args[1]);
         int height = Integer.parseInt(args[2]);
-        System.err.println("DirectMirrorServer: starting socket=" + socketName + " size=" + width + "x" + height);
+        System.err.println(
+                "DirectMirrorServer: starting socket=" + socketName + " size=" + width + "x" + height);
 
         CountDownLatch surfaceDelivered = new CountDownLatch(1);
         LocalServerSocket readinessSocket = null;
         SurfaceReceiverBinder binder = null;
+        Thread shutdownHook = null;
+        int exitCode = 0;
         try {
             binder = new SurfaceReceiverBinder(surfaceDelivered);
+            final SurfaceReceiverBinder registeredBinder = binder;
+            shutdownHook =
+                    new Thread(registeredBinder::release, "DirectMirrorServer-ShutdownHook");
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
             addService(DIRECT_SURFACE_SERVICE_NAME, binder);
             System.err.println("DirectMirrorServer: registered " + DIRECT_SURFACE_SERVICE_NAME);
 
@@ -45,31 +181,45 @@ public final class DirectMirrorServer {
             System.err.println("DirectMirrorServer: readiness socket bound, waiting for surface");
             if (!surfaceDelivered.await(SURFACE_DELIVERY_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
                 System.err.println("DirectMirrorServer: timed out waiting for app surface");
-                System.exit(1);
-                return;
-            }
-            System.err.println("DirectMirrorServer: surface configured, entering wait loop");
+                exitCode = EXIT_CODE_FAILURE;
+            } else {
+                System.err.println("DirectMirrorServer: surface configured, entering wait loop");
 
-            synchronized (DirectMirrorServer.class) {
-                DirectMirrorServer.class.wait();
+                synchronized (DirectMirrorServer.class) {
+                    DirectMirrorServer.class.wait();
+                }
             }
         } catch (Throwable t) {
             System.err.println("direct mirror ended: " + t);
             t.printStackTrace();
-            System.exit(1);
+            exitCode = EXIT_CODE_FAILURE;
         } finally {
+            if (shutdownHook != null) {
+                try {
+                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                } catch (IllegalStateException ignored) {
+                    // JVM is already shutting down; hook is executing or has completed.
+                }
+            }
             if (binder != null) {
                 binder.release();
             }
             if (readinessSocket != null) {
-                try { readinessSocket.close(); } catch (Throwable ignored) {}
+                try {
+                    readinessSocket.close();
+                } catch (Throwable ignored) {
+                }
             }
+        }
+        if (exitCode != 0) {
+            System.exit(exitCode);
         }
     }
 
     private static void addService(String name, IBinder binder) throws Exception {
         Class<?> serviceManager = Class.forName("android.os.ServiceManager");
-        Method addService = serviceManager.getDeclaredMethod("addService", String.class, IBinder.class);
+        Method addService =
+                serviceManager.getDeclaredMethod("addService", String.class, IBinder.class);
         addService.setAccessible(true);
         addService.invoke(null, name, binder);
     }
@@ -80,8 +230,8 @@ public final class DirectMirrorServer {
             Method getRuntime = vmRuntimeClass.getDeclaredMethod("getRuntime");
             getRuntime.setAccessible(true);
             Object vmRuntime = getRuntime.invoke(null);
-            Method setHiddenApiExemptions = vmRuntimeClass.getDeclaredMethod(
-                    "setHiddenApiExemptions", String[].class);
+            Method setHiddenApiExemptions =
+                    vmRuntimeClass.getDeclaredMethod("setHiddenApiExemptions", String[].class);
             setHiddenApiExemptions.setAccessible(true);
             setHiddenApiExemptions.invoke(vmRuntime, new Object[]{new String[]{""}});
         } catch (Exception e) {
@@ -89,96 +239,82 @@ public final class DirectMirrorServer {
         }
     }
 
+    private static final class AndroidSurfaceHandle implements SurfaceHandle {
+        final Surface surface;
+
+        AndroidSurfaceHandle(Surface surface) {
+            this.surface = surface;
+        }
+
+        @Override
+        public boolean isValid() {
+            return surface != null && surface.isValid();
+        }
+
+        @Override
+        public void release() {
+            if (surface != null) {
+                surface.release();
+            }
+        }
+    }
+
     private static final class SurfaceReceiverBinder extends Binder {
+        private static final int TRANSACTION_SET_SURFACE = IBinder.FIRST_CALL_TRANSACTION;
         private final CountDownLatch surfaceDelivered;
-        private Surface currentSurface;
-        private IBinder currentDisplay;
+        private final SessionCoordinator<AndroidSurfaceHandle> coordinator =
+                new SessionCoordinator<>(
+                        (name, w, h, displayId, handle) ->
+                                SurfaceControlReflect.openMirrorSession(
+                                        name, w, h, displayId, handle.surface));
 
         SurfaceReceiverBinder(CountDownLatch surfaceDelivered) {
             this.surfaceDelivered = surfaceDelivered;
         }
 
         public synchronized void release() {
-            if (currentDisplay != null) {
-                System.err.println("DirectMirrorServer: releasing display");
-                try { SurfaceControlReflect.destroyDisplay(currentDisplay); } catch (Throwable ignored) {}
-                currentDisplay = null;
-            }
-            if (currentSurface != null) {
-                try { currentSurface.release(); } catch (Throwable ignored) {}
-                currentSurface = null;
-            }
+            System.err.println("DirectMirrorServer: releasing display session");
+            coordinator.release();
         }
 
         @Override
         protected synchronized boolean onTransact(int code, Parcel data, Parcel reply, int flags) {
             if (code == INTERFACE_TRANSACTION) {
-                reply.writeString(DIRECT_SURFACE_DESCRIPTOR);
+                if (reply != null) {
+                    reply.writeString(DIRECT_SURFACE_DESCRIPTOR);
+                }
                 return true;
             }
             if (code != TRANSACTION_SET_SURFACE) return false;
             try {
                 data.enforceInterface(DIRECT_SURFACE_DESCRIPTOR);
-                release();
-
                 int hasSurface = data.readInt();
-                if (hasSurface == 0) {
-                    System.err.println("DirectMirrorServer: app cleared surface");
-                    reply.writeNoException();
-                    reply.writeInt(0);
-                    return true;
-                }
-                if (hasSurface != 1) {
-                    System.err.println("[DirectMirror] Invalid hasSurface flag: " + hasSurface);
-                    if (reply != null) {
-                        reply.writeNoException();
-                        reply.writeInt(0);
-                    }
-                    return true;
-                }
-
-                int w = data.readInt();
-                int h = data.readInt();
-                Surface surface = Surface.CREATOR.createFromParcel(data);
-                if (surface == null || !surface.isValid() || w <= 0 || h <= 0) {
-                    System.err.println("DirectMirrorServer: invalid surface or dimensions: " + w + "x" + h);
-                    if (surface != null) {
-                        try { surface.release(); } catch (Throwable ignored) {}
-                    }
-                    reply.writeNoException();
-                    reply.writeInt(0);
-                    return true;
-                }
-
-                IBinder displayToken = null;
-                try {
-                    displayToken = SurfaceControlReflect.createDisplay("megingiard-direct-0", false);
-                    Rect rect = new Rect(0, 0, w, h);
-                    SurfaceControlReflect.configureDisplay(displayToken, surface, 0, rect, rect);
-                    currentDisplay = displayToken;
-                    currentSurface = surface;
-                } catch (Throwable t) {
-                    System.err.println("DirectMirrorServer: failed to configure display: " + t);
-                    if (displayToken != null) {
-                        try { SurfaceControlReflect.destroyDisplay(displayToken); } catch (Throwable ignored) {}
-                    }
-                    try { surface.release(); } catch (Throwable ignored) {}
-                    reply.writeNoException();
-                    reply.writeInt(0);
-                    return true;
-                }
-
-                surfaceDelivered.countDown();
-                System.err.println("DirectMirrorServer: surface parsed & configured");
-                reply.writeNoException();
-                reply.writeInt(1);
+                int status =
+                        coordinator.handleSurfaceCommand(
+                                surfaceDelivered,
+                                hasSurface,
+                                () -> {
+                                    int w = data.readInt();
+                                    int h = data.readInt();
+                                    Surface surface = Surface.CREATOR.createFromParcel(data);
+                                    AndroidSurfaceHandle handle =
+                                            surface != null ? new AndroidSurfaceHandle(surface) : null;
+                                    return new SurfacePayload<>(w, h, handle);
+                                });
+                writeReplyStatus(reply, status);
                 return true;
             } catch (Throwable t) {
                 System.err.println("DirectMirrorServer: setSurface failed: " + t);
                 t.printStackTrace();
-                reply.writeNoException();
-                reply.writeInt(0);
+                writeReplyStatus(reply, SessionCoordinator.REPLY_NO_ACTIVE_SURFACE);
                 return true;
+            }
+        }
+
+        private static void writeReplyStatus(Parcel reply, int status) {
+            if (reply != null) {
+                reply.writeNoException();
+                reply.writeInt(status);
             }
         }
     }

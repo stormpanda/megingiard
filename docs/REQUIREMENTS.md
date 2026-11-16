@@ -16,7 +16,7 @@ Detailed functional requirements (including acceptance criteria and edge cases) 
 
 ### Hardware Environment & Multi-Display Architecture
 
-Megingiard is strictly designed for **dual-screen Android gaming handhelds** (specifically the AYN Thor). Single-screen hardware (phones, tablets, and single-screen emulators) is **permanently unsupported**. The system requires concurrent physical multi-display topology where the companion UI runs exclusively on the secondary display and configuration overlays project to the primary display. Single-screen fallbacks are intentionally excluded from the architecture.
+Megingiard is strictly designed for **dual-screen Android gaming handhelds** (including the AYN Thor and Retroid Pocket Duo; see [docs/devices/](devices/)). Single-screen hardware (phones, tablets, and single-screen emulators) is **permanently unsupported**. The system requires concurrent physical multi-display topology where the companion UI runs exclusively on the secondary display and configuration overlays project to the primary display. Single-screen fallbacks are intentionally excluded from the architecture.
 
 ### Battery Efficiency
 
@@ -30,11 +30,11 @@ Megingiard MUST maintain the layered security model described in [SECURITY_CONCE
 - Release builds MUST keep R8 minification and resource shrinking enabled to raise the reverse-engineering cost while preserving Android components and serialization paths through explicit keep rules.
 - Native helper binaries and privileged mirror DEX assets MUST have generated SHA-256 pins and MUST be verified before they are executed, pushed over ADB, or loaded by the privileged path.
 - Runtime native binary deployment MUST verify bytes before writing to app-private storage and MUST re-read and re-verify the written file before setting the executable bit.
-- Privileged Mode connections MUST complete mutual HMAC-SHA256 authentication before accepting or sending feature commands over `@megingiard.privd`.
-- The Privileged Mode HMAC key MUST be configurable through `local.properties`; release builds and daemon rebuilds MUST reject the public source default unless the developer supplies an explicit local non-distribution override.
+- Privileged Mode connections MUST complete mutual HMAC-SHA256 authentication and protocol version verification (`PRIVD_VERSION`) before accepting or sending feature commands over the local TCP loopback socket (`127.0.0.1:51234` / `51244`).
+- The Privileged Mode HMAC key MUST be generated per install via `SecureRandom`, encrypted at rest under an Android Keystore AES-256-GCM key (`noBackupFilesDir/privd_pair_key.enc`), and never embedded in the APK or `BuildConfig`.
 - Security-relevant failures MUST be logged through `AppLog` at warning or error level so a standard diagnostic logcat captures the failure reason.
 
-Pure SHA-256 and HMAC-SHA256 logic MUST remain covered by local JVM tests in `:domain:test`. Android runtime checks such as signature verification and full LocalSocket handshake behavior require manual device validation or future instrumentation / Robolectric coverage.
+Pure SHA-256, HMAC-SHA256, and loopback handshake framing logic MUST remain covered by local JVM tests in `:companion:domain:test`. Android runtime checks such as signature verification and Keystore hardware backing require manual device validation or future instrumentation / Robolectric coverage.
 
 ### Code Quality
 

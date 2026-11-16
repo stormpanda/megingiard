@@ -9,6 +9,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
+import android.hardware.display.DisplayManager
 import android.media.MediaScannerConnection
 import android.os.Bundle
 import android.os.Environment
@@ -58,6 +59,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -69,6 +73,7 @@ import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.input.InjectorLifecycleManager
+import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.AppLauncherManager
 import com.stormpanda.megingiard.macropad.BackgroundPickerManager
@@ -208,6 +213,25 @@ class MainActivity : ComponentActivity() {
             BackgroundPickerManager.setPickedUri(uri)
         }
 
+    private val primaryDisplayListener =
+        object : DisplayManager.DisplayListener {
+            override fun onDisplayAdded(displayId: Int) = Unit
+
+            override fun onDisplayRemoved(displayId: Int) = Unit
+
+            override fun onDisplayChanged(displayId: Int) {
+                if (displayId == Display.DEFAULT_DISPLAY) {
+                    TouchInjector.updatePrimaryDisplayRotation(
+                        DisplayDetector.resolvePrimaryDisplayRotation(this@MainActivity),
+                    )
+                }
+                val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
+                if (displayId == currentDisplayId) {
+                    AppStateManager.setOnValidScreen(DisplayDetector.isValidScreen(currentDisplayId))
+                }
+            }
+        }
+
     // The manifest declares configChanges that prevent activity recreation when the app
     // is moved between displays. Without this override, Compose never recomposes and
     // context.display retains the old display ID — the wrong-screen overlay would stay
@@ -218,6 +242,8 @@ class MainActivity : ComponentActivity() {
         val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
         val isValid = DisplayDetector.isValidScreen(currentDisplayId)
         AppStateManager.setOnValidScreen(isValid)
+        TouchInjector.updatePrimaryDisplayRotation(DisplayDetector.resolvePrimaryDisplayRotation(this))
+        applyImmersiveSystemBars()
     }
 
     override fun onResume() {
@@ -226,7 +252,22 @@ class MainActivity : ComponentActivity() {
         val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
         val isValid = DisplayDetector.isValidScreen(currentDisplayId)
         AppStateManager.setOnValidScreen(isValid)
+        TouchInjector.updatePrimaryDisplayRotation(DisplayDetector.resolvePrimaryDisplayRotation(this))
+        applyImmersiveSystemBars()
         AppStateManager.setActivityResumed(true)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            applyImmersiveSystemBars()
+        }
+    }
+
+    private fun applyImmersiveSystemBars() {
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.hide(WindowInsetsCompat.Type.systemBars())
     }
 
     override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
@@ -256,6 +297,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy")
+        getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(primaryDisplayListener)
         LayoutTransitionManager.unregisterWindowProvider()
         InjectorLifecycleManager.stopAll()
     }
@@ -264,6 +306,10 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.onCreate(savedInstanceState)
         LayoutTransitionManager.registerWindowProvider { window }
+        getSystemService(DisplayManager::class.java)?.registerDisplayListener(
+            primaryDisplayListener,
+            Handler(Looper.getMainLooper()),
+        )
 
         // Init settings first so the persisted log level is active before anything
         // else runs (including SignatureGuard below). SettingsManager.init() reads
@@ -438,7 +484,9 @@ class MainActivity : ComponentActivity() {
         }
         val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
         AppStateManager.setOnValidScreen(DisplayDetector.isValidScreen(currentDisplayId))
+        TouchInjector.updatePrimaryDisplayRotation(DisplayDetector.resolvePrimaryDisplayRotation(this))
         enableEdgeToEdge()
+        applyImmersiveSystemBars()
         setContent {
             val isOnValidScreen by AppStateManager.isOnValidScreen.collectAsStateWithLifecycle()
             val activeLayout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
@@ -601,14 +649,12 @@ class MainActivity : ComponentActivity() {
                         try {
                             when (target) {
                                 ScreenshotTarget.TOP -> {
-                                    val timestamp = System.currentTimeMillis()
-                                    val filepath = File(getScreenshotsDir(), "Megingiard_Screenshot_Top_$timestamp.png").absolutePath
-                                    val ok = PrivdClient.takeScreenshot(filepath)
-                                    if (ok) {
-                                        MediaScannerConnection.scanFile(this@MainActivity, arrayOf(filepath), null, null)
-                                        val bitmap = BitmapFactory.decodeFile(filepath)
-                                        if (bitmap == null) AppLog.e(TAG, "Failed to decode top screenshot file $filepath")
-                                        notifyScreenshotResult(bitmap != null, bitmap)
+                                    val pngBytes = PrivdClient.captureScreenshotPng()
+                                    val bitmap = pngBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+                                    if (bitmap != null) {
+                                        val saved = saveBitmapToPictures(bitmap, "Top") != null
+                                        if (!saved) bitmap.recycle()
+                                        notifyScreenshotResult(saved, if (saved) bitmap else null)
                                     } else {
                                         AppLog.e(TAG, "Privileged screenshot failed via privd client")
                                         notifyScreenshotResult(false)
@@ -624,7 +670,8 @@ class MainActivity : ComponentActivity() {
                                     delay(SCREENSHOT_EXIT_DELAY_MS)
                                     val bottomBitmap = withContext(Dispatchers.Main) { captureWindowBitmap(window) }
                                     val saved = bottomBitmap?.let { saveBitmapToPictures(it, "Bottom") != null } ?: false
-                                    notifyScreenshotResult(saved, bottomBitmap)
+                                    if (!saved) bottomBitmap?.recycle()
+                                    notifyScreenshotResult(saved, if (saved) bottomBitmap else null)
                                 }
 
                                 ScreenshotTarget.BOTH -> {
@@ -636,10 +683,9 @@ class MainActivity : ComponentActivity() {
                                     delay(SCREENSHOT_EXIT_DELAY_MS)
                                     var topBitmap: Bitmap? = null
                                     if (PrivdClient.isConnected) {
-                                        val tempFile = File(getScreenshotsDir(), ".temp_top_${System.currentTimeMillis()}.png")
-                                        if (PrivdClient.takeScreenshot(tempFile.absolutePath) && tempFile.exists()) {
-                                            topBitmap = BitmapFactory.decodeFile(tempFile.absolutePath)
-                                            tempFile.delete()
+                                        val pngBytes = PrivdClient.captureScreenshotPng()
+                                        if (pngBytes != null) {
+                                            topBitmap = BitmapFactory.decodeByteArray(pngBytes, 0, pngBytes.size)
                                         }
                                     }
                                     if (topBitmap == null && ScreenCaptureManager.isFrozen.value) {

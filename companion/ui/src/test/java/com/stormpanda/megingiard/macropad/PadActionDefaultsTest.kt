@@ -263,4 +263,44 @@ class PadActionDefaultsTest {
         assertEquals("My Tunes", toPeek.label)
         assertNull(toPeek.iconName)
     }
+
+    @Test
+    fun `withActionDefaultsResolved applies design-canvas pixel sizing for ScrollWheel and TrackpointMove`() {
+        val rpDuoCanvas = LayoutCanvasSpec(widthPx = 1280, heightPx = 960)
+        val initial =
+            PadButton(
+                id = "btn-rp",
+                label = "New Button",
+                posX = 0.5f,
+                posY = 0.5f,
+                widthPx = rpDuoCanvas.baseButtonSizePx,
+                heightPx = rpDuoCanvas.baseButtonSizePx,
+                action = PadAction.MouseButton(MouseButton.LEFT),
+            )
+        assertEquals(120f, initial.widthPx, 0.001f)
+        assertEquals(120f, initial.heightPx, 0.001f)
+
+        val scrollWheel =
+            initial.withActionDefaultsResolved(
+                newAction = PadAction.ScrollWheel,
+                newButtonPlaceholder = "New Button",
+                oldDefaultLabel = "Mouse Left",
+                newDefaultLabel = "Scroll Wheel",
+                canvas = rpDuoCanvas,
+            )
+        assertEquals(120f, scrollWheel.widthPx, 0.001f)
+        assertEquals(240f, scrollWheel.heightPx, 0.001f)
+
+        val trackpoint =
+            initial.withActionDefaultsResolved(
+                newAction = PadAction.TrackpointMove(),
+                newButtonPlaceholder = "New Button",
+                oldDefaultLabel = "Mouse Left",
+                newDefaultLabel = "TrackPoint",
+                canvas = rpDuoCanvas,
+            )
+        assertEquals(240f, trackpoint.widthPx, 0.001f)
+        assertEquals(240f, trackpoint.heightPx, 0.001f)
+        assertEquals(ButtonShape.CIRCLE, trackpoint.buttonShape)
+    }
 }

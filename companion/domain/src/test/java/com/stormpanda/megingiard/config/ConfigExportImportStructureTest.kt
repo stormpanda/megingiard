@@ -4,9 +4,15 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.stormpanda.megingiard.macropad.LayoutCanvasSpec
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadAction
+import com.stormpanda.megingiard.macropad.PadButton
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.THOR_BOTTOM_CANVAS_SPEC
+import com.stormpanda.megingiard.mirror.CutoutMaskFileStore
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.security.HmacUtil
 import com.stormpanda.megingiard.settings.KEY_ACCENT_COLOR
 import com.stormpanda.megingiard.settings.KEY_GAMEPAD_SWAP_FACE_BUTTONS
@@ -25,11 +31,16 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -121,7 +132,10 @@ class ConfigExportImportStructureTest {
             while (entry != null) {
                 if (entry.name == "config.json") {
                     extractedJson = zis.readBytes().toString(Charsets.UTF_8)
-                } else if (entry.name.startsWith("backgrounds/") || entry.name.startsWith("masks/")) {
+                } else if (entry.name.startsWith("backgrounds/") ||
+                    entry.name.startsWith("masks/") ||
+                    entry.name.startsWith("cutout_masks/")
+                ) {
                     extractedImages[entry.name] = zis.readBytes()
                 }
                 zis.closeEntry()
@@ -291,14 +305,14 @@ class ConfigExportImportStructureTest {
                     mapOf(
                         "global" to
                             mapOf(
-                                "accent_color" to kotlinx.serialization.json.JsonPrimitive(-6087623),
-                                "overlay_at_bottom" to kotlinx.serialization.json.JsonPrimitive(false),
-                                "theme_mode" to kotlinx.serialization.json.JsonPrimitive("DARK"),
+                                "accent_color" to JsonPrimitive(-6087623),
+                                "overlay_at_bottom" to JsonPrimitive(false),
+                                "theme_mode" to JsonPrimitive("DARK"),
                             ),
                         "macropad_settings" to
                             mapOf(
-                                "gamepad_swap_face_buttons" to kotlinx.serialization.json.JsonPrimitive(true),
-                                "privd_deadzone_left" to kotlinx.serialization.json.JsonPrimitive(0.15),
+                                "gamepad_swap_face_buttons" to JsonPrimitive(true),
+                                "privd_deadzone_left" to JsonPrimitive(0.15),
                             ),
                     )
 
@@ -334,8 +348,8 @@ class ConfigExportImportStructureTest {
                     mapOf(
                         "global" to
                             mapOf(
-                                "accent_color" to kotlinx.serialization.json.JsonPrimitive(-16743169),
-                                "overlay_at_bottom" to kotlinx.serialization.json.JsonPrimitive(true),
+                                "accent_color" to JsonPrimitive(-16743169),
+                                "overlay_at_bottom" to JsonPrimitive(true),
                             ),
                     )
                 SettingsManager.importGroupedSettingsAwait(initialSettings)
@@ -366,7 +380,7 @@ class ConfigExportImportStructureTest {
         val layoutId = "layout-full-bg-1"
         val bgLayout = PadLayout(id = layoutId, name = "LayoutWithBg", backgroundImagePath = "backgrounds/bg_$layoutId")
         val bgProfile = PadProfile(id = "profile-full-bg", name = "FullBackupProfile", layouts = listOf(bgLayout))
-        val settingsMap = mapOf("global" to mapOf("accent_color" to kotlinx.serialization.json.JsonPrimitive(-16743169)))
+        val settingsMap = mapOf("global" to mapOf("accent_color" to JsonPrimitive(-16743169)))
         val imageHashes = mapOf("bg_$layoutId" to HmacUtil.sha256Hex(mockImageBytes).lowercase())
 
         val validChecksum = invokeComputeChecksum(settingsMap, listOf(bgProfile), imageHashes)
@@ -409,7 +423,7 @@ class ConfigExportImportStructureTest {
                 maskImagePath = "masks/mask_$layoutId",
             )
         val profile = PadProfile(id = "profile-full-mask-bg", name = "FullBackupMaskProfile", layouts = listOf(bgAndMaskLayout))
-        val settingsMap = mapOf("global" to mapOf("accent_color" to kotlinx.serialization.json.JsonPrimitive(-16743169)))
+        val settingsMap = mapOf("global" to mapOf("accent_color" to JsonPrimitive(-16743169)))
         val imageHashes =
             mapOf(
                 "bg_$layoutId" to HmacUtil.sha256Hex(mockBgBytes).lowercase(),
@@ -525,8 +539,23 @@ class ConfigExportImportStructureTest {
                 profiles = listOf(testProfile),
             )
 
-        ConfigManager.setInAppParsedImport(testExport)
+        ConfigManager.setInAppParsedImport(
+            testExport,
+            images =
+                mapOf(
+                    "bg_l1" to byteArrayOf(1),
+                    "mask_l1" to byteArrayOf(2),
+                    "cutout_masks/mask_c1.png" to byteArrayOf(3),
+                    "cutout_masks/mask_c1_var.bin" to byteArrayOf(4),
+                    "cutout_masks/mask_c1_freeze.png" to byteArrayOf(5),
+                ),
+        )
         assertEquals(testExport, ConfigManager.pendingInAppParsedImport.value?.export)
+        assertEquals(
+            "Only user-facing background/mask images should be counted, excluding cutout calibration sidecars",
+            2,
+            ConfigManager.getPendingInAppImageCount(),
+        )
 
         ConfigManager.setInAppImportError("Corrupted archive")
         assertEquals("Corrupted archive", ConfigManager.inAppImportError.value)
@@ -635,5 +664,264 @@ class ConfigExportImportStructureTest {
             val savedFile = File(context.filesDir, importedLayout.maskImagePath!!)
             assertTrue(savedFile.exists())
             assertTrue(savedFile.readBytes().contentEquals(mockImageBytes))
+        }
+
+    // ── 6. Cutout Mask Bundling & Cross-Device DesignCanvas Preservation ──────
+
+    @Test
+    fun testCutoutMasksZipChecksumVerificationAndTamperDetection() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            val layoutId = "layout-cutout-checksum-1"
+            val cutoutId = "cutout-checksum-1"
+            val layoutFreezeBytes = "layout_anchor_freeze".toByteArray(Charsets.UTF_8)
+            val maskBytes = "cutout_alpha_png".toByteArray(Charsets.UTF_8)
+            val varBytes = "cutout_variance_bin".toByteArray(Charsets.UTF_8)
+            val cutoutFreezeBytes = "cutout_ref_freeze".toByteArray(Charsets.UTF_8)
+
+            try {
+                File(context.filesDir, CutoutMaskFileStore.MASKS_DIR).mkdirs()
+                CutoutMaskFileStore.freezeFrameFile(context.filesDir, layoutId).writeBytes(layoutFreezeBytes)
+                CutoutMaskFileStore.baseMaskFile(context.filesDir, cutoutId).writeBytes(maskBytes)
+                CutoutMaskFileStore.varianceFile(context.filesDir, cutoutId).writeBytes(varBytes)
+                CutoutMaskFileStore.freezeFrameFile(context.filesDir, cutoutId).writeBytes(cutoutFreezeBytes)
+
+                val cutout =
+                    ScreenCutout(
+                        id = cutoutId,
+                        name = "Minimap",
+                        srcX = 0.1f,
+                        srcY = 0.1f,
+                        srcWidth = 0.25f,
+                        srcHeight = 0.25f,
+                        destX = 0.6f,
+                        destY = 0.6f,
+                        destWidth = 0.3f,
+                        destHeight = 0.3f,
+                        hasTransparencyMask = true,
+                    )
+                val layout = PadLayout(id = layoutId, name = "HUD", mirrorCutouts = listOf(cutout))
+                val profile = PadProfile(id = "p-cutout-checksum", name = "CutoutChecksumProfile", layouts = listOf(layout))
+
+                val export =
+                    ConfigManager.buildProfileExport(
+                        metadata = testMetadata,
+                        profile = profile,
+                        context = context,
+                        includeBackgrounds = true,
+                    )
+                val jsonStr = testJson.encodeToString(MegingiardExport.serializer(), export)
+                val zipEntries =
+                    mapOf(
+                        "cutout_masks/mask_${layoutId}_freeze.png" to layoutFreezeBytes,
+                        "cutout_masks/mask_$cutoutId.png" to maskBytes,
+                        "cutout_masks/mask_${cutoutId}_var.bin" to varBytes,
+                        "cutout_masks/mask_${cutoutId}_freeze.png" to cutoutFreezeBytes,
+                    )
+                val zipBytes = zipArchive(jsonStr, zipEntries)
+                val (extractedJson, extractedImages) = unzipArchive(zipBytes)
+
+                val parsed = ConfigManager.parseAndVerify(extractedJson!!, extractedImages)
+                assertEquals(export.checksum, parsed.checksum)
+
+                val tamperedImages =
+                    extractedImages.toMutableMap().apply {
+                        put("cutout_masks/mask_${cutoutId}_var.bin", "tampered_variance".toByteArray(Charsets.UTF_8))
+                    }
+                val ex =
+                    assertThrows(IllegalStateException::class.java) {
+                        ConfigManager.parseAndVerify(extractedJson, tamperedImages)
+                    }
+                assertTrue(ex.message?.contains("Checksum mismatch") == true)
+            } finally {
+                File(context.filesDir, CutoutMaskFileStore.MASKS_DIR).deleteRecursively()
+            }
+        }
+
+    @Test
+    fun testApplyProfileImportRemapsCutoutUuidsAndExtractsCutoutMaskAssets() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            val oldLayoutId = "layout-cutout-import-src"
+            val oldCutoutId = "cutout-import-src"
+            val profileName = "ImportedCutoutAssetsProfile"
+            val layoutFreezeBytes = "anchor_bytes".toByteArray(Charsets.UTF_8)
+            val maskBytes = "mask_png_bytes".toByteArray(Charsets.UTF_8)
+            val varBytes = "var_bin_bytes".toByteArray(Charsets.UTF_8)
+            val cutoutFreezeBytes = "cutout_freeze_bytes".toByteArray(Charsets.UTF_8)
+
+            try {
+                val cutout =
+                    ScreenCutout(
+                        id = oldCutoutId,
+                        name = "Radar",
+                        srcX = 0.05f,
+                        srcY = 0.05f,
+                        srcWidth = 0.2f,
+                        srcHeight = 0.2f,
+                        destX = 0.5f,
+                        destY = 0.5f,
+                        destWidth = 0.35f,
+                        destHeight = 0.35f,
+                        hasTransparencyMask = true,
+                    )
+                val layout = PadLayout(id = oldLayoutId, name = "Main", mirrorCutouts = listOf(cutout))
+                val profile = PadProfile(id = "p-cutout-import", name = profileName, layouts = listOf(layout))
+                val export =
+                    MegingiardExport(
+                        schemaVersion = SCHEMA_VERSION,
+                        metadata = testMetadata,
+                        checksum = "dummy",
+                        settings = emptyMap(),
+                        profiles = listOf(profile),
+                    )
+                val imagesMap =
+                    mapOf(
+                        "cutout_masks/mask_${oldLayoutId}_freeze.png" to layoutFreezeBytes,
+                        "cutout_masks/mask_$oldCutoutId.png" to maskBytes,
+                        "cutout_masks/mask_${oldCutoutId}_var.bin" to varBytes,
+                        "cutout_masks/mask_${oldCutoutId}_freeze.png" to cutoutFreezeBytes,
+                    )
+
+                ConfigManager.applyProfileImport(context, export, imagesMap)
+
+                val importedProfile = MacroPadState.profiles.value.first { it.name == profileName }
+                val importedLayout = importedProfile.layouts.single()
+                val importedCutout = importedLayout.mirrorCutouts.single()
+
+                assertNotEquals(oldLayoutId, importedLayout.id)
+                assertNotEquals(oldCutoutId, importedCutout.id)
+                assertArrayEquals(
+                    layoutFreezeBytes,
+                    CutoutMaskFileStore.freezeFrameFile(context.filesDir, importedLayout.id).readBytes(),
+                )
+                assertArrayEquals(
+                    maskBytes,
+                    CutoutMaskFileStore.baseMaskFile(context.filesDir, importedCutout.id).readBytes(),
+                )
+                assertArrayEquals(
+                    varBytes,
+                    CutoutMaskFileStore.varianceFile(context.filesDir, importedCutout.id).readBytes(),
+                )
+                assertArrayEquals(
+                    cutoutFreezeBytes,
+                    CutoutMaskFileStore.freezeFrameFile(context.filesDir, importedCutout.id).readBytes(),
+                )
+            } finally {
+                File(context.filesDir, CutoutMaskFileStore.MASKS_DIR).deleteRecursively()
+            }
+        }
+
+    @Test
+    fun testApplyProfileImportPreservesDesignCanvasAndStampsThorDefaultOnNull() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            MacroPadState.setHostSecondaryCanvas(THOR_BOTTOM_CANVAS_SPEC)
+            val rpDuoCanvas = LayoutCanvasSpec(widthPx = 1280, heightPx = 960)
+            val minRpDuoBtn =
+                PadButton(
+                    id = "btn-rpduo-60",
+                    label = "M1",
+                    posX = 0.25f,
+                    posY = 0.25f,
+                    widthPx = 60f,
+                    heightPx = 60f,
+                    action = PadAction.KeyboardKey(keycode = 30, label = "A"),
+                )
+            val rpDuoLayout =
+                PadLayout(
+                    id = "layout-rpduo",
+                    name = "RP Duo Layout",
+                    designCanvas = rpDuoCanvas,
+                    buttons = listOf(minRpDuoBtn),
+                )
+            val legacyNullCanvasLayout =
+                PadLayout(
+                    id = "layout-legacy-null",
+                    name = "Legacy Layout",
+                    designCanvas = null,
+                )
+            val profileName = "CrossDeviceImportedProfile"
+            val export =
+                MegingiardExport(
+                    schemaVersion = SCHEMA_VERSION,
+                    metadata = testMetadata,
+                    checksum = "dummy",
+                    settings = emptyMap(),
+                    profiles =
+                        listOf(
+                            PadProfile(
+                                id = "p-cross-device",
+                                name = profileName,
+                                layouts = listOf(rpDuoLayout, legacyNullCanvasLayout),
+                            ),
+                        ),
+                )
+
+            ConfigManager.applyProfileImport(context, export, emptyMap())
+
+            val imported = MacroPadState.profiles.value.first { it.name == profileName }
+            val importedRpDuo = imported.layouts.first { it.name == "RP Duo Layout" }
+            val importedLegacy = imported.layouts.first { it.name == "Legacy Layout" }
+
+            assertEquals(rpDuoCanvas, importedRpDuo.designCanvas)
+            assertEquals(60f, importedRpDuo.buttons.single().widthPx, 0.001f)
+            assertEquals(60f, importedRpDuo.buttons.single().heightPx, 0.001f)
+            assertEquals(THOR_BOTTOM_CANVAS_SPEC, importedLegacy.designCanvas)
+        }
+
+    @Test
+    fun testApplyProfileImportWithoutMediaClearsMissingHasTransparencyMask() =
+        runBlocking {
+            val context: Context = RuntimeEnvironment.getApplication()
+            File(context.filesDir, CutoutMaskFileStore.MASKS_DIR).deleteRecursively()
+            try {
+                val cutout =
+                    ScreenCutout(
+                        id = "cutout-no-media-src",
+                        name = "Masked HUD",
+                        srcX = 0.1f,
+                        srcY = 0.1f,
+                        srcWidth = 0.3f,
+                        srcHeight = 0.3f,
+                        destX = 0.1f,
+                        destY = 0.1f,
+                        destWidth = 0.3f,
+                        destHeight = 0.3f,
+                        hasTransparencyMask = true,
+                    )
+                val layout = PadLayout(id = "layout-no-media-src", name = "Main", mirrorCutouts = listOf(cutout))
+                val profileName = "ProfileImportedWithoutMaskMedia"
+                val export =
+                    MegingiardExport(
+                        schemaVersion = SCHEMA_VERSION,
+                        metadata = testMetadata,
+                        checksum = "dummy",
+                        settings = emptyMap(),
+                        profiles =
+                            listOf(
+                                PadProfile(
+                                    id = "p-no-media-src",
+                                    name = profileName,
+                                    layouts = listOf(layout),
+                                ),
+                            ),
+                    )
+
+                ConfigManager.applyProfileImport(context, export, emptyMap())
+
+                val importedProfile = MacroPadState.profiles.value.first { it.name == profileName }
+                val importedCutout =
+                    importedProfile.layouts
+                        .single()
+                        .mirrorCutouts
+                        .single()
+                assertFalse(
+                    "hasTransparencyMask must be cleared when .mgrd was exported without media",
+                    importedCutout.hasTransparencyMask,
+                )
+            } finally {
+                File(context.filesDir, CutoutMaskFileStore.MASKS_DIR).deleteRecursively()
+            }
         }
 }

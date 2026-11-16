@@ -57,8 +57,30 @@ class LogReportManagerTest {
             )
         assertTrue(header.contains("0.2.0-SNAPSHOT"))
         assertTrue(header.contains("AYN Thor 2"))
+        assertTrue(header.contains("profile: ayn_thor"))
         assertTrue(header.contains("14"))
         assertTrue(header.contains("2026-05-18 14:32:00"))
+    }
+
+    @Test
+    fun `buildReportHeader tags Retroid Pocket Duo and generic device profiles`() {
+        val duoHeader =
+            LogReportManager.buildReportHeader(
+                appVersion = "1.0",
+                deviceModel = "Retroid Pocket Duo",
+                androidVersion = "16",
+                timestamp = "2026-11-12 10:00:00",
+            )
+        assertTrue(duoHeader.contains("Retroid Pocket Duo (profile: retroid_pocket_duo)"))
+
+        val genericHeader =
+            LogReportManager.buildReportHeader(
+                appVersion = "1.0",
+                deviceModel = "TestDevice",
+                androidVersion = "15",
+                timestamp = "2026-11-12 10:00:00",
+            )
+        assertTrue(genericHeader.contains("TestDevice (profile: generic)"))
     }
 
     @Test

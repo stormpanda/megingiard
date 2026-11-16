@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,8 +26,12 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.stormpanda.megingiard.AppLog
 
+private const val TAG = "KeyboardLayoutGrid"
 private const val KB_NUMERIC_GRID_ROW_COUNT = 3
+
+// Pre-layout initial width fallback before onGloballyPositioned delivers the live secondary screen width.
 private const val KB_DEFAULT_BOX_WIDTH_PX = 1240
 private const val KB_NUMERIC_TOP_ROW_WEIGHT = 3f
 private const val KB_NUMERIC_OPS_COL_WEIGHT = 1.3f
@@ -55,6 +60,10 @@ internal fun KeyboardLayoutGrid(
     val boxCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
     val activePopupState = gestureProcessor.activePopupState.collectAsStateWithLifecycle().value
     val density = LocalDensity.current
+
+    LaunchedEffect(activeState.mode) {
+        AppLog.d(TAG, "Keyboard layout grid mode=${activeState.mode} rows=${activeState.grid.size}")
+    }
 
     @Composable
     fun renderKey(
@@ -100,6 +109,7 @@ internal fun KeyboardLayoutGrid(
                                 if (isQuickMenuOpenState.value) {
                                     if (event.type == PointerEventType.Press) {
                                         if (event.changes.none { it.isConsumed }) {
+                                            AppLog.d(TAG, "Pointer press while quick menu open -> closing quick menu")
                                             onCloseQuickMenu()
                                         }
                                     }

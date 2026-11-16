@@ -21,6 +21,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowDisplayManager
 import java.io.ByteArrayOutputStream
 import java.io.File
 
@@ -347,12 +348,22 @@ class InstalledAppsManagerTest {
                     activityName = "com.test.launchable.MainActivity",
                     label = "Launchable App",
                 )
-            // In Robolectric, startActivity succeeds
+            // In Robolectric, startActivity succeeds on Display 0
             val primarySuccess = InstalledAppsManager.launchAppOnPrimaryDisplay(context, appInfo)
             assertTrue(primarySuccess)
 
-            val secondarySuccess = InstalledAppsManager.launchAppOnSecondaryDisplay(context, appInfo)
-            assertTrue(secondarySuccess)
+            // Without an attached secondary display, launchAppOnSecondaryDisplay must no-op cleanly
+            val secondaryWithoutDisplay = InstalledAppsManager.launchAppOnSecondaryDisplay(context, appInfo)
+            assertFalse(secondaryWithoutDisplay)
+
+            // With a secondary display attached (e.g. 1280x960 4:3 panel), secondary launch succeeds
+            val secondaryDisplayId = ShadowDisplayManager.addDisplay("w640dp-h480dp-xhdpi")
+            try {
+                val secondarySuccess = InstalledAppsManager.launchAppOnSecondaryDisplay(context, appInfo)
+                assertTrue(secondarySuccess)
+            } finally {
+                ShadowDisplayManager.removeDisplay(secondaryDisplayId)
+            }
         }
 
     @Test

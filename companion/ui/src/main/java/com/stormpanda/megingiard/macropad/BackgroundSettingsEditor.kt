@@ -88,7 +88,6 @@ private val BSE_PREVIEW_IMAGE_ROUNDING = 8.dp
 private val BSE_PREVIEW_SHAPE = RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING)
 private val BSE_ICON_SIZE_48 = 48.dp
 
-private const val BSE_BOTTOM_SCREEN_ASPECT_RATIO = 31f / 27f // 1240 x 1080
 private const val BSE_PREVIEW_WIDTH_FRACTION = 0.5f
 
 @Composable
@@ -261,6 +260,11 @@ internal fun LayerImageSettingsEditor(
         BackgroundPickerManager.clearPickedUri()
     }
 
+    val designCanvas = layout.effectiveDesignCanvas
+    val bottomScreenAspectRatio =
+        designCanvas.widthPx.toFloat().coerceAtLeast(1f) /
+            designCanvas.heightPx.toFloat().coerceAtLeast(1f)
+
     // 1. Preview Frame
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -273,7 +277,7 @@ internal fun LayerImageSettingsEditor(
                 onClick = null,
                 modifier =
                     Modifier
-                        .aspectRatio(BSE_BOTTOM_SCREEN_ASPECT_RATIO)
+                        .aspectRatio(bottomScreenAspectRatio)
                         .firstDeckItem(),
             ) {
                 Box(

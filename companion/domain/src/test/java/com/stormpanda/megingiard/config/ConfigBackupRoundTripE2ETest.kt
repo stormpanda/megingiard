@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.config
 
 import android.content.Context
 import android.net.Uri
+import com.stormpanda.megingiard.macropad.LayoutCanvasSpec
 import com.stormpanda.megingiard.macropad.Macro
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.MacroStep
@@ -10,6 +11,9 @@ import com.stormpanda.megingiard.macropad.PadButton
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
+import com.stormpanda.megingiard.macropad.THOR_BOTTOM_CANVAS_SPEC
+import com.stormpanda.megingiard.mirror.CutoutMaskFileStore
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ThemeMode
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +25,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -74,6 +79,7 @@ class ConfigBackupRoundTripE2ETest {
     @After
     fun tearDown() {
         if (tempFile.exists()) tempFile.delete()
+        File(context.filesDir, CutoutMaskFileStore.MASKS_DIR).deleteRecursively()
         ConfigManager.clearPendingImport()
         ConfigManager.clearInAppPendingImport()
         Dispatchers.resetMain()
@@ -384,5 +390,135 @@ class ConfigBackupRoundTripE2ETest {
             val importedLayout = imported.layouts.single()
             assertEquals(null, importedLayout.backgroundImagePath)
             assertEquals(null, importedLayout.maskImagePath)
+        }
+
+    @Test
+    fun testProfileExportImportBundlesCutoutMasksPreservesDesignCanvasAndIsolatesRepeatedImportsE2E() =
+        runTest(testDispatcher) {
+            MacroPadState.setHostSecondaryCanvas(THOR_BOTTOM_CANVAS_SPEC)
+
+            val rpDuoCanvas = LayoutCanvasSpec(widthPx = 1280, heightPx = 960)
+            val srcLayoutId = "layout-rpduo-cutout-e2e"
+            val srcCutoutId = "cutout-rpduo-hud-e2e"
+            val layoutFreezeBytes = byteArrayOf(10, 20, 30, 40)
+            val maskPngBytes = byteArrayOf(1, 2, 3, 4, 5)
+            val varianceBytes = byteArrayOf(6, 7, 8, 9)
+            val cutoutFreezeBytes = byteArrayOf(11, 12, 13)
+
+            File(context.filesDir, CutoutMaskFileStore.MASKS_DIR).mkdirs()
+            CutoutMaskFileStore.freezeFrameFile(context.filesDir, srcLayoutId).writeBytes(layoutFreezeBytes)
+            CutoutMaskFileStore.baseMaskFile(context.filesDir, srcCutoutId).writeBytes(maskPngBytes)
+            CutoutMaskFileStore.varianceFile(context.filesDir, srcCutoutId).writeBytes(varianceBytes)
+            CutoutMaskFileStore.freezeFrameFile(context.filesDir, srcCutoutId).writeBytes(cutoutFreezeBytes)
+
+            val minButton =
+                PadButton(
+                    id = "btn-rpduo-min",
+                    label = "HUD",
+                    posX = 0.15f,
+                    posY = 0.85f,
+                    widthPx = 60f,
+                    heightPx = 60f,
+                    action = PadAction.KeyboardKey(keycode = 30, label = "A"),
+                )
+            val cutout =
+                ScreenCutout(
+                    id = srcCutoutId,
+                    name = "Speedometer",
+                    srcX = 0.7f,
+                    srcY = 0.75f,
+                    srcWidth = 0.25f,
+                    srcHeight = 0.2f,
+                    destX = 0.6f,
+                    destY = 0.1f,
+                    destWidth = 0.35f,
+                    destHeight = 0.3f,
+                    hasTransparencyMask = true,
+                )
+            val sourceProfile =
+                PadProfile(
+                    id = "profile-rpduo-share-e2e",
+                    name = "RP Duo Racing HUD",
+                    layouts =
+                        listOf(
+                            PadLayout(
+                                id = srcLayoutId,
+                                name = "Cockpit",
+                                designCanvas = rpDuoCanvas,
+                                buttons = listOf(minButton),
+                                mirrorCutouts = listOf(cutout),
+                            ),
+                        ),
+                    activeLayoutId = srcLayoutId,
+                )
+
+            val export =
+                ConfigManager.buildProfileExport(
+                    metadata = testMetadata,
+                    profile = sourceProfile,
+                    context = context,
+                    includeBackgrounds = true,
+                )
+            val exportUri = Uri.fromFile(tempFile)
+            ConfigManager.writeToUri(context, exportUri, export, includeBackgrounds = true)
+
+            // Wipe source cutout_masks so import relies purely on extracted .mgrd ZIP entries
+            File(context.filesDir, CutoutMaskFileStore.MASKS_DIR).deleteRecursively()
+
+            val readResult = ConfigManager.readFromUri(context, exportUri)
+            assertTrue("Expected valid .mgrd archive: ${readResult.exceptionOrNull()}", readResult.isSuccess)
+            val parsed = readResult.getOrThrow()
+            assertEquals(4, parsed.images.count { it.key.startsWith("cutout_masks/") })
+
+            // Import twice to verify fresh UUID isolation across repeated imports
+            ConfigManager.applyProfileImport(context, parsed.export, parsed.images)
+            ConfigManager.applyProfileImport(context, parsed.export, parsed.images)
+            testScheduler.advanceUntilIdle()
+
+            val importedProfiles = MacroPadState.profiles.value.filter { it.name.startsWith("RP Duo Racing HUD") }
+            assertEquals(2, importedProfiles.size)
+            assertEquals("RP Duo Racing HUD", importedProfiles[0].name)
+            assertEquals("RP Duo Racing HUD (2)", importedProfiles[1].name)
+
+            val firstLayout = importedProfiles[0].layouts.single()
+            val secondLayout = importedProfiles[1].layouts.single()
+            val firstCutout = firstLayout.mirrorCutouts.single()
+            val secondCutout = secondLayout.mirrorCutouts.single()
+
+            assertEquals(rpDuoCanvas, firstLayout.designCanvas)
+            assertEquals(rpDuoCanvas, secondLayout.designCanvas)
+            assertEquals(60f, firstLayout.buttons.single().widthPx, 0.001f)
+            assertEquals(60f, secondLayout.buttons.single().widthPx, 0.001f)
+
+            assertNotEquals(srcLayoutId, firstLayout.id)
+            assertNotEquals(firstLayout.id, secondLayout.id)
+            assertNotEquals(srcCutoutId, firstCutout.id)
+            assertNotEquals(firstCutout.id, secondCutout.id)
+
+            for ((layout, importedCutout) in listOf(firstLayout to firstCutout, secondLayout to secondCutout)) {
+                assertArrayEquals(
+                    layoutFreezeBytes,
+                    CutoutMaskFileStore.freezeFrameFile(context.filesDir, layout.id).readBytes(),
+                )
+                assertArrayEquals(
+                    maskPngBytes,
+                    CutoutMaskFileStore.baseMaskFile(context.filesDir, importedCutout.id).readBytes(),
+                )
+                assertArrayEquals(
+                    varianceBytes,
+                    CutoutMaskFileStore.varianceFile(context.filesDir, importedCutout.id).readBytes(),
+                )
+                assertArrayEquals(
+                    cutoutFreezeBytes,
+                    CutoutMaskFileStore.freezeFrameFile(context.filesDir, importedCutout.id).readBytes(),
+                )
+            }
+
+            // Deleting the first imported layout's cutout files must leave the second import untouched
+            CutoutMaskFileStore.deleteLayoutCutoutAssets(context.filesDir, firstLayout)
+            assertTrue(CutoutMaskFileStore.freezeFrameFile(context.filesDir, secondLayout.id).exists())
+            assertTrue(CutoutMaskFileStore.baseMaskFile(context.filesDir, secondCutout.id).exists())
+            assertTrue(CutoutMaskFileStore.varianceFile(context.filesDir, secondCutout.id).exists())
+            assertTrue(CutoutMaskFileStore.freezeFrameFile(context.filesDir, secondCutout.id).exists())
         }
 }

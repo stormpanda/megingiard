@@ -1,6 +1,6 @@
 # Building Native Binaries & Asset Integrity
 
-Megingiard uses native and DEX assets to achieve zero-latency input injection, system control, and privileged display mirroring on the AYN Thor handheld.
+Megingiard uses native and DEX assets to achieve zero-latency input injection, system control, and privileged display mirroring on dual-screen Android gaming handhelds (such as the AYN Thor and Retroid Pocket Duo).
 
 The pre-built binaries live in `companion/ui/src/main/assets/`. They are checked into the repository so that a normal Gradle build requires **no NDK installation**. Rebuild only when modifying native C sources or protocol specifications.
 
@@ -16,13 +16,13 @@ The checked-in asset binaries are part of the trusted runtime surface. Whenever 
 
 The agent workflow in [AGENTS.md](../AGENTS.md#3-checklist-for-every-change) mirrors this policy. If a script fails, fix the source error before proceeding.
 
-> **Daemon Versioning Mandatory Requirement:** Whenever `megingiard_privd.c` or any daemon protocol behavior is modified, you **must** increment `PRIVD_VERSION` in both `companion/ui/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then run `./scripts/build_megingiard_privd.sh`. This guarantees that the app detects version mismatches on already-running daemons after updates, failing the socket handshake and initiating an automatic binary update/re-push sequence.
+> **Daemon Versioning Mandatory Requirement:** Whenever `megingiard_privd.c`, `:mirrorserver` (`megingiard_mirror.dex`), or any daemon protocol behavior is modified, you **must** increment `PRIVD_VERSION` in both `companion/ui/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then run `./scripts/build_megingiard_privd.sh`. This guarantees that the app detects version mismatches on already-running daemons after updates, failing the socket handshake and initiating an automatic binary + DEX update/re-push sequence.
 
 ---
 
 ## Native Asset Integrity
 
-Megingiard treats native helpers and the privileged mirror DEX as pinned assets. A normal Gradle build generates `NativeBinaryHashes.kt` from the bytes in `companion/ui/src/main/assets/` through the `:domain:generateNativeBinaryHashes` task. The generated map contains SHA-256 values for:
+Megingiard treats native helpers and the privileged mirror DEX as pinned assets. A normal Gradle build generates `NativeBinaryHashes.kt` from the bytes in `companion/ui/src/main/assets/` through the `:companion:domain:generateNativeBinaryHashes` task. The generated map contains SHA-256 values for:
 
 - `megingiard_privd_arm64`
 - `megingiard_mirror.dex`
@@ -41,12 +41,12 @@ The `megingiard_privd` daemon uses a per-install HMAC key generated on the devic
 
 `companion/ui/src/main/cpp/megingiard_privd.c`
 
-The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug; current protocol `PRIVD_VERSION = 18`). It provides:
-1. Multi-touch injection (`D`/`M`/`U`) and touchscreen event observation (`SUB TOUCH`) via `/dev/input/event6` (AYN Thor touchscreen).
+The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug; current protocol `PRIVD_VERSION = 22`). It provides:
+1. Multi-touch injection (`D`/`M`/`U`) and touchscreen event observation (`SUB TOUCH`) via the dynamically discovered primary touchscreen `evdev` node (`dumpsys input` `Viewport INTERNAL: displayId=0` resolution with exact `"fts_ts"` fallback, `INPUT_PROP_DIRECT` + `ABS_MT_POSITION_X/Y` + `EVIOCGABS`, excluding `"fts_ts_sec"` and `"Megingiard*"`; sensor dimensions reported in `VERSION_OK 22 <touchW> <touchH>`).
 2. Mouse event injection (`MM`/`MB`/`MW`/`MH`) via `/dev/uinput`.
 3. Keyboard key injection (`KB_START`/`KB_STOP`/`KD`/`KU`) via `/dev/uinput`.
 4. Gamepad input injection (`GD`/`GU`/`HD`/`JS`) and physical gamepad observation (`SUB GAMEPAD`) via `/dev/input/event*`.
-5. Display screenshot capture (`SCREENSHOT [<display_id>] <path>`) via `/system/bin/screencap`.
+5. Display screenshot capture via in-memory pipe-streamed loopback base64 (`SCREENSHOT_B64 [<display_id>]`) backed by `/system/bin/screencap -p`, resolving the 64-bit SurfaceFlinger `(HWC display 0)` physical ID automatically on Android 14+.
 6. Privileged text file reading (`READ_FILE <path>`) and process listing (`LIST_PROCESSES`) from `/proc` for active game detection.
 7. Low-latency lifecycle control (`PING`/`VERSION`/`QUIT`) and privileged DEX spawning (`MIRROR START_DIRECT`/`MIRROR STOP`).
 
@@ -92,7 +92,7 @@ mirrorserver/src/main/java/com/stormpanda/megingiard/mirrorserver/
 
 ### Runtime deployment
 
-`PServerBootstrapper` (Tier-1 root bridge) and `PrivdBootstrapper` (Tier-2 ADB-Wireless) deploy the DEX to `/data/local/tmp/megingiard_mirror.dex` (or `/data/local/tmp/megingiard_mirror_debug.dex` for debug builds, mode `0100644`). For direct-Surface privileged mirroring, the daemon spawns:
+`PServerBootstrapper` (Tier-1 root bridge) and `PrivdBootstrapper` (Tier-2 ADB-Wireless) remove any prior `/data/local/tmp/megingiard_mirror*.dex` file and deploy the verified DEX to `/data/local/tmp/megingiard_mirror.dex` (or `/data/local/tmp/megingiard_mirror_debug.dex` for debug builds) with read-only permissions (`chmod 0444`, mode `0100444`) as required by Android 14+ dynamic code loading, passing `--dexfile <path>` to `megingiard_privd` (if `megingiard_mirror.dex` fails `BinaryIntegrity.verify()` during Tier-1 bootstrap, `PServerBootstrapper` removes any remote DEX and omits `--dexfile` so the daemon runs in input-only mode and rejects `MIRROR START_DIRECT`). For direct-Surface privileged mirroring, the daemon spawns:
 
 ```bash
 CLASSPATH=/data/local/tmp/megingiard_mirror.dex \
@@ -101,4 +101,4 @@ CLASSPATH=/data/local/tmp/megingiard_mirror.dex \
    <socket> <w> <h>
 ```
 
-`DirectMirrorServer` registers a temporary `ServiceManager` Binder named `megingiard.direct.surface`, binds its readiness socket, then waits for the app to send the currently published `MasterSurfaceRegistry` `Surface` over Binder. Once received, it configures a hidden `SurfaceControl` virtual display directly onto that Surface.
+`DirectMirrorServer` registers a temporary `ServiceManager` Binder named `megingiard.direct.surface`, binds its readiness socket, then waits for the app to send the currently published `MasterSurfaceRegistry` `Surface` over Binder. Once received, `SurfaceControlReflect` creates a virtual display (`SurfaceControl.createDisplay` on `SDK < 34`, or `android.hardware.display.DisplayManager.createVirtualDisplay` with `VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR` mirroring Display `0` on `SDK >= 34`) and binds it directly onto that `Surface`.

@@ -11,7 +11,6 @@ import com.stormpanda.megingiard.catalog.InstalledAppsManager
 private const val TAG = "GameFocusSessionTracker"
 private const val PRIMARY_DISPLAY_ID = 0
 private const val INVALID_DISPLAY_ID = -1
-private const val THOR_SECONDARY_DISPLAY_FALLBACK = 4
 
 private const val RETROARCH_PACKAGE_PREFIX = "com.retroarch"
 
@@ -37,7 +36,7 @@ private sealed interface SessionEntry {
 }
 
 /**
- * Tracks the most recently active applications across both screens (Display 0 and Display 4)
+ * Tracks the most recently active applications across both screens (primary and secondary displays)
  * and restores them when the user presses Back on the home gallery.
  */
 object GameFocusSessionTracker {
@@ -75,7 +74,7 @@ object GameFocusSessionTracker {
     }
 
     /**
-     * Records a launch initiated by Game Focus on the secondary bottom display (Display 4).
+     * Records a launch initiated by Game Focus on the secondary bottom display.
      */
     fun recordBottomLaunch(appInfo: InstalledAppInfo) {
         bottomSession = SessionEntry.LaunchedApp(appInfo)
@@ -90,7 +89,7 @@ object GameFocusSessionTracker {
         packageName: String,
         secondaryDisplayId: Int?,
     ) {
-        val targetSecondaryId = secondaryDisplayId ?: THOR_SECONDARY_DISPLAY_FALLBACK
+        val targetSecondaryId = overrideSecondaryDisplayIdForTesting ?: secondaryDisplayId
         if (displayId == PRIMARY_DISPLAY_ID || displayId == INVALID_DISPLAY_ID) {
             val currentTop = (topSession as? SessionEntry.LaunchedApp)?.appInfo
             if (currentTop != null && currentTop.isRom) {
@@ -104,9 +103,11 @@ object GameFocusSessionTracker {
             }
             topSession = SessionEntry.DetectedPackage(packageName)
             AppLog.d(TAG, "Window changed on top screen ($displayId): package=$packageName")
-        } else if (displayId == targetSecondaryId) {
+        } else if (targetSecondaryId != null && displayId == targetSecondaryId) {
             bottomSession = SessionEntry.DetectedPackage(packageName)
             AppLog.d(TAG, "Window changed on bottom screen ($displayId): package=$packageName")
+        } else {
+            AppLog.d(TAG, "Ignoring window change on untracked displayId=$displayId (secondaryDisplayId=$targetSecondaryId)")
         }
     }
 
@@ -153,23 +154,31 @@ object GameFocusSessionTracker {
         }
 
         val secondaryDisplay = DisplayDetector.findSecondaryDisplay(context)
-        val secondaryDisplayId = overrideSecondaryDisplayIdForTesting ?: secondaryDisplay?.displayId ?: THOR_SECONDARY_DISPLAY_FALLBACK
+        val secondaryDisplayId = overrideSecondaryDisplayIdForTesting ?: secondaryDisplay?.displayId
 
         val bottomApp = lastBottomApp
         val bottomPkg = lastBottomPackage
         if (bottomApp != null) {
-            AppLog.i(TAG, "Restoring bottom app from InstalledAppInfo: ${bottomApp.label}")
-            bottomRestored = InstalledAppsManager.launchAppOnSecondaryDisplay(context, bottomApp)
-            if (!bottomRestored && !bottomApp.isRom) {
+            if (secondaryDisplay != null) {
+                AppLog.i(TAG, "Restoring bottom app from InstalledAppInfo: ${bottomApp.label}")
+                bottomRestored = InstalledAppsManager.launchAppOnSecondaryDisplay(context, bottomApp)
+            }
+            if (!bottomRestored && !bottomApp.isRom && secondaryDisplayId != null) {
                 AppLog.w(
                     TAG,
                     "Secondary display launch via InstalledAppInfo failed; falling back to package launch: ${bottomApp.packageName}",
                 )
                 bottomRestored = launchPackageOnDisplay(context, bottomApp.packageName, secondaryDisplayId)
+            } else if (secondaryDisplayId == null) {
+                AppLog.w(TAG, "Skipping bottom app restore (${bottomApp.packageName}): no secondary display attached")
             }
         } else if (bottomPkg != null) {
-            AppLog.i(TAG, "Restoring bottom app from package: $bottomPkg on display $secondaryDisplayId")
-            bottomRestored = launchPackageOnDisplay(context, bottomPkg, secondaryDisplayId)
+            if (secondaryDisplayId != null) {
+                AppLog.i(TAG, "Restoring bottom app from package: $bottomPkg on display $secondaryDisplayId")
+                bottomRestored = launchPackageOnDisplay(context, bottomPkg, secondaryDisplayId)
+            } else {
+                AppLog.w(TAG, "Skipping bottom package restore ($bottomPkg): no secondary display attached")
+            }
         }
 
         AppLog.i(TAG, "Restored previous session: topRestored=$topRestored, bottomRestored=$bottomRestored")

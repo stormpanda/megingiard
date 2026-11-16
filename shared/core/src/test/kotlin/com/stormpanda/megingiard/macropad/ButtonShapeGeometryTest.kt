@@ -117,11 +117,47 @@ class ButtonShapeGeometryTest {
                     shape = shape,
                     nx = 0.5f,
                     ny = 0.5f,
-                    widthDp = 60f,
-                    heightDp = 60f,
+                    widthPx = 136f,
+                    heightPx = 136f,
                 ),
             )
         }
+    }
+
+    @Test
+    fun `pill and trackpoint hit-testing use widthPx and heightPx accurately`() {
+        // Wide 272x136 CIRCLE pill: left cap center is at x = 68 / 272 = 0.25, radius = 68 px.
+        // At (0.05, 0.5) -> x = 13.6 px, y = 68 px -> inside left semicircular cap!
+        assertTrue(
+            ButtonShapeGeometry.isNormalizedPointInside(
+                shape = ButtonShape.CIRCLE,
+                nx = 0.05f,
+                ny = 0.5f,
+                widthPx = 272f,
+                heightPx = 136f,
+            ),
+        )
+        // Top-left corner of pill (0.02, 0.05) -> outside rounded cap
+        assertFalse(
+            ButtonShapeGeometry.isNormalizedPointInside(
+                shape = ButtonShape.CIRCLE,
+                nx = 0.02f,
+                ny = 0.05f,
+                widthPx = 272f,
+                heightPx = 136f,
+            ),
+        )
+        // isTrackpoint = true overrides SQUARE to circular hit-testing
+        assertFalse(
+            ButtonShapeGeometry.isNormalizedPointInside(
+                shape = ButtonShape.SQUARE,
+                nx = 0.02f,
+                ny = 0.02f,
+                widthPx = 272f,
+                heightPx = 272f,
+                isTrackpoint = true,
+            ),
+        )
     }
 
     @Test
@@ -282,6 +318,18 @@ class ButtonShapeGeometryTest {
                     ButtonShapeGeometry.isNormalizedPointInside(shape, px, py, 60f, 60f),
                 )
             }
+        }
+    }
+
+    @Test
+    fun `isNormalizedPointInside rejects NaN and infinite coordinates and sanitizes non-finite dimensions`() {
+        for (shape in ButtonShape.entries) {
+            assertFalse(ButtonShapeGeometry.isNormalizedPointInside(shape, Float.NaN, 0.5f, 60f, 60f))
+            assertFalse(ButtonShapeGeometry.isNormalizedPointInside(shape, 0.5f, Float.NaN, 60f, 60f))
+            assertFalse(ButtonShapeGeometry.isNormalizedPointInside(shape, Float.POSITIVE_INFINITY, 0.5f, 60f, 60f))
+            assertFalse(ButtonShapeGeometry.isNormalizedPointInside(shape, 0.5f, Float.NEGATIVE_INFINITY, 60f, 60f))
+            // Center (0.5, 0.5) remains valid even if widthPx/heightPx are NaN/Infinite
+            assertTrue(ButtonShapeGeometry.isNormalizedPointInside(shape, 0.5f, 0.5f, Float.NaN, Float.POSITIVE_INFINITY))
         }
     }
 }

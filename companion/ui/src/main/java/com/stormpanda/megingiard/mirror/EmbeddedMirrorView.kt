@@ -14,7 +14,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -23,13 +22,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.BackgroundScaleMode
+import com.stormpanda.megingiard.macropad.LayoutCanvasSpec
 import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.privd.PrivdClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 
 private const val TAG = "EmbeddedMirrorView"
+private const val EMV_DEFAULT_SRC_WIDTH = 1920
+private const val EMV_DEFAULT_SRC_HEIGHT = 1080
+private const val EMV_MIN_FPS = 10
+private const val EMV_MAX_FPS = 60
+private const val EMV_MS_PER_SECOND = 1000L
 
 @Composable
 fun EmbeddedMirrorView(
@@ -40,9 +46,7 @@ fun EmbeddedMirrorView(
     showLayoutBackground: Boolean = true,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
-    val capturing by ScreenCaptureManager.isCapturing.collectAsStateWithLifecycle()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsStateWithLifecycle()
     val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsStateWithLifecycle()
     val cutouts by ScreenCaptureManager.cutouts.collectAsStateWithLifecycle()
@@ -53,8 +57,10 @@ fun EmbeddedMirrorView(
     val isMirrorEditorBackgroundHidden by AppStateManager.isMirrorEditorBackgroundHidden.collectAsStateWithLifecycle()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsStateWithLifecycle()
     val layout by MacroPadState.activeLayout.collectAsStateWithLifecycle()
+    val mediaRevision by MacroPadMediaRepository.mediaRevision.collectAsStateWithLifecycle()
 
     val effectiveCutouts = overrideCutouts ?: cutouts
+    val effectiveDesignCanvas: LayoutCanvasSpec? = if (overrideCutouts == null) layout?.effectiveDesignCanvas else null
     val effectiveShowLayoutBackground = showLayoutBackground && !(isViewportEditActive && isMirrorEditorBackgroundHidden)
 
     var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion, effectiveShowLayoutBackground) {
@@ -65,7 +71,12 @@ fun EmbeddedMirrorView(
         mutableStateOf<Bitmap?>(null)
     }
 
-    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion, effectiveShowLayoutBackground) {
+    LaunchedEffect(
+        layout?.backgroundImagePath,
+        layout?.backgroundImageVersion,
+        effectiveShowLayoutBackground,
+        mediaRevision,
+    ) {
         if (!effectiveShowLayoutBackground) {
             bgBitmap = null
             return@LaunchedEffect
@@ -75,6 +86,8 @@ fun EmbeddedMirrorView(
             withContext(Dispatchers.IO) {
                 try {
                     bgBitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLog.e(TAG, "Failed to load background image for EmbeddedMirrorView", e)
                     bgBitmap = null
@@ -85,7 +98,12 @@ fun EmbeddedMirrorView(
         }
     }
 
-    LaunchedEffect(layout?.maskImagePath, layout?.maskImageVersion, effectiveShowLayoutBackground) {
+    LaunchedEffect(
+        layout?.maskImagePath,
+        layout?.maskImageVersion,
+        effectiveShowLayoutBackground,
+        mediaRevision,
+    ) {
         if (!effectiveShowLayoutBackground) {
             maskBitmap = null
             return@LaunchedEffect
@@ -95,6 +113,8 @@ fun EmbeddedMirrorView(
             withContext(Dispatchers.IO) {
                 try {
                     maskBitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     AppLog.e(TAG, "Failed to load mask image for EmbeddedMirrorView", e)
                     maskBitmap = null
@@ -193,9 +213,14 @@ fun EmbeddedMirrorView(
         }
     }
 
-    // React to visual anchor presence state changes (instant freeze / unfreeze transition)
+    // React to visual anchor presence and async cutout mask/asset cache updates
     LaunchedEffect(Unit) {
-        AnchorPresenceManager.presenceRevision.collect {
+        combine(
+            AnchorPresenceManager.presenceRevision,
+            CutoutMaskManager.cacheRevision,
+        ) { presenceRev, cacheRev ->
+            presenceRev to cacheRev
+        }.collect {
             containerHolder.container?.postInvalidateOnAnimation()
         }
     }
@@ -221,8 +246,8 @@ fun EmbeddedMirrorView(
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { ctx ->
-            val w = if (srcWidth > 0) srcWidth else 1920
-            val h = if (srcHeight > 0) srcHeight else 1080
+            val w = if (srcWidth > 0) srcWidth else EMV_DEFAULT_SRC_WIDTH
+            val h = if (srcHeight > 0) srcHeight else EMV_DEFAULT_SRC_HEIGHT
             val mcc =
                 MultiCutoutContainer(ctx, w, h).apply {
                     layoutParams =
@@ -230,6 +255,7 @@ fun EmbeddedMirrorView(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT,
                         )
+                    setDesignCanvas(effectiveDesignCanvas)
                 }
             containerHolder.container = mcc
 
@@ -254,20 +280,16 @@ fun EmbeddedMirrorView(
                         height: Int,
                     ) {
                         val currentSrcW =
-                            if (ScreenCaptureManager.captureSourceWidth.value >
-                                0
-                            ) {
+                            if (ScreenCaptureManager.captureSourceWidth.value > 0) {
                                 ScreenCaptureManager.captureSourceWidth.value
                             } else {
-                                1920
+                                EMV_DEFAULT_SRC_WIDTH
                             }
                         val currentSrcH =
-                            if (ScreenCaptureManager.captureSourceHeight.value >
-                                0
-                            ) {
+                            if (ScreenCaptureManager.captureSourceHeight.value > 0) {
                                 ScreenCaptureManager.captureSourceHeight.value
                             } else {
-                                1080
+                                EMV_DEFAULT_SRC_HEIGHT
                             }
                         st.setDefaultBufferSize(currentSrcW, currentSrcH)
                         val surface = Surface(st)
@@ -311,8 +333,8 @@ fun EmbeddedMirrorView(
 
                     override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
                         val now = SystemClock.elapsedRealtime()
-                        val fps = ScreenCaptureManager.maxFps.value.coerceIn(10, 60)
-                        val interval = 1000L / fps
+                        val fps = ScreenCaptureManager.maxFps.value.coerceIn(EMV_MIN_FPS, EMV_MAX_FPS)
+                        val interval = EMV_MS_PER_SECOND / fps
                         if (now - lastUpdateTime >= interval) {
                             mcc.invalidate()
                             lastUpdateTime = now
@@ -323,6 +345,7 @@ fun EmbeddedMirrorView(
             mcc
         },
         update = { mcc ->
+            mcc.setDesignCanvas(effectiveDesignCanvas)
             mcc.cutouts = effectiveCutouts
             mcc.isFrozen = isFrozen
             mcc.isViewportEditActive = isViewportEditActive
@@ -354,8 +377,8 @@ fun EmbeddedMirrorView(
                 }
             }
 
-            val currentSrcW = if (srcWidth > 0) srcWidth else 1920
-            val currentSrcH = if (srcHeight > 0) srcHeight else 1080
+            val currentSrcW = if (srcWidth > 0) srcWidth else EMV_DEFAULT_SRC_WIDTH
+            val currentSrcH = if (srcHeight > 0) srcHeight else EMV_DEFAULT_SRC_HEIGHT
             containerHolder.updateSurfaceRouting(
                 currentSrcW,
                 currentSrcH,

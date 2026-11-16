@@ -50,6 +50,8 @@ val androidJarFile: File = resolveAndroidJar(resolveSdkRoot())
 
 dependencies {
     compileOnly(files(androidJarFile))
+    testCompileOnly(files(androidJarFile))
+    testImplementation(libs.junit)
 }
 
 val dexOutputDir: File = rootProject.projectDir.resolve("companion/ui/src/main/assets")

@@ -2,8 +2,8 @@ package com.stormpanda.megingiard.mirror
 
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.math.DisplayRotationDegrees
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TouchEventParserTest {
@@ -47,8 +47,8 @@ class TouchEventParserTest {
         assertEquals(1, events.size)
         assertEquals(0, events[0].slot)
         assertEquals(TouchAction.DOWN, events[0].action)
-        assertEquals(960f / TouchInjector.THOR_SENSOR_H, events[0].normX, 0.001f)
-        assertEquals(1f - (540f / TouchInjector.THOR_SENSOR_W), events[0].normY, 0.001f)
+        assertEquals(960f / TouchInjector.DEFAULT_SENSOR_H, events[0].normX, 0.001f)
+        assertEquals(1f - (540f / TouchInjector.DEFAULT_SENSOR_W), events[0].normY, 0.001f)
 
         // 2. Touch MOVE on Slot 0
         val newRawX = 270
@@ -60,8 +60,8 @@ class TouchEventParserTest {
         assertEquals(2, events.size)
         assertEquals(0, events[1].slot)
         assertEquals(TouchAction.MOVE, events[1].action)
-        assertEquals(1440f / TouchInjector.THOR_SENSOR_H, events[1].normX, 0.001f)
-        assertEquals(1f - (270f / TouchInjector.THOR_SENSOR_W), events[1].normY, 0.001f)
+        assertEquals(1440f / TouchInjector.DEFAULT_SENSOR_H, events[1].normX, 0.001f)
+        assertEquals(1f - (270f / TouchInjector.DEFAULT_SENSOR_W), events[1].normY, 0.001f)
 
         // 3. Touch UP on Slot 0
         parser.processEvent(EV_ABS, ABS_MT_TRACKING_ID, -1)
@@ -70,8 +70,32 @@ class TouchEventParserTest {
         assertEquals(3, events.size)
         assertEquals(0, events[2].slot)
         assertEquals(TouchAction.UP, events[2].action)
-        assertEquals(1440f / TouchInjector.THOR_SENSOR_H, events[2].normX, 0.001f)
-        assertEquals(1f - (270f / TouchInjector.THOR_SENSOR_W), events[2].normY, 0.001f)
+        assertEquals(1440f / TouchInjector.DEFAULT_SENSOR_H, events[2].normX, 0.001f)
+        assertEquals(1f - (270f / TouchInjector.DEFAULT_SENSOR_W), events[2].normY, 0.001f)
+    }
+
+    @Test
+    fun `parses native landscape ROT_0 sensor coordinates accurately`() {
+        val events = mutableListOf<RecordedEvent>()
+        val parser =
+            TouchEventParser(
+                onDown = { slot, nx, ny -> events.add(RecordedEvent(slot, TouchAction.DOWN, nx, ny)) },
+                onMove = { slot, nx, ny -> events.add(RecordedEvent(slot, TouchAction.MOVE, nx, ny)) },
+                onUp = { slot, nx, ny -> events.add(RecordedEvent(slot, TouchAction.UP, nx, ny)) },
+                sensorWidthProvider = { 1920 },
+                sensorHeightProvider = { 1080 },
+                rotationProvider = { DisplayRotationDegrees.ROT_0 },
+            )
+
+        parser.processEvent(EV_ABS, ABS_MT_SLOT, 0)
+        parser.processEvent(EV_ABS, ABS_MT_TRACKING_ID, 7)
+        parser.processEvent(EV_ABS, ABS_MT_POSITION_X, 480)
+        parser.processEvent(EV_ABS, ABS_MT_POSITION_Y, 270)
+        parser.processEvent(EV_SYN, SYN_REPORT, 0)
+
+        assertEquals(1, events.size)
+        assertEquals(0.25f, events[0].normX, 0.001f)
+        assertEquals(0.25f, events[0].normY, 0.001f)
     }
 
     @Test

@@ -618,6 +618,7 @@ fun AdjustCoordinatesCard(
     onMove: (dx: Int, dy: Int) -> Unit,
     onResize: (dx: Int, dy: Int) -> Unit,
     modifier: Modifier = Modifier,
+    onCommit: () -> Unit = {},
     enabled: Boolean = true,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
     onFocusChanged: ((Boolean) -> Unit)? = null,
@@ -629,6 +630,7 @@ fun AdjustCoordinatesCard(
     val coroutineScope = rememberCoroutineScope()
     val currentOnMove by rememberUpdatedState(onMove)
     val currentOnResize by rememberUpdatedState(onResize)
+    val currentOnCommit by rememberUpdatedState(onCommit)
     var isAdjusting by remember { mutableStateOf(false) }
     var isR2Held by remember { mutableStateOf(false) }
     var isL2Held by remember { mutableStateOf(false) }
@@ -637,6 +639,14 @@ fun AdjustCoordinatesCard(
 
     var activeDirectionKey by remember { mutableIntStateOf(0) }
     var activeRepeatJob by remember { mutableStateOf<Job?>(null) }
+    val hasUncommittedAdjustment = remember { booleanArrayOf(false) }
+
+    fun flushPendingCommit() {
+        if (hasUncommittedAdjustment[0]) {
+            hasUncommittedAdjustment[0] = false
+            currentOnCommit()
+        }
+    }
 
     fun stopAdjustingImmediate() {
         activeRepeatJob?.cancel()
@@ -644,12 +654,14 @@ fun AdjustCoordinatesCard(
         activeDirectionKey = 0
         isR2Held = false
         isL2Held = false
+        flushPendingCommit()
     }
 
     fun dispatchAction(
         dirX: Int,
         dirY: Int,
     ) {
+        hasUncommittedAdjustment[0] = true
         val stepSize = if (isL2HeldState.value) TOOLBOX_FINE_STEP_PX else TOOLBOX_NORMAL_STEP_PX
         val dx = dirX * stepSize
         val dy = dirY * stepSize
@@ -683,6 +695,7 @@ fun AdjustCoordinatesCard(
             activeRepeatJob?.cancel()
             activeRepeatJob = null
             activeDirectionKey = 0
+            flushPendingCommit()
         }
     }
 

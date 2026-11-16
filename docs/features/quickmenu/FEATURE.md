@@ -76,7 +76,7 @@ the universal "go back" mechanism throughout the app.
       with `colors.accent` when frozen. Disabled when not capturing or when in Companion Hub.
   - **Take Screenshot Card (Right Card):**
     - Headline: "TAKE SCREENSHOT" (`R.string.quick_menu_take_screenshot`). All three screenshot buttons are unconditionally enabled.
-    - **Top Screenshot** icon button: captures Display 0 (Top Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP)`. Uses Material Symbol `splitscreen_bottom` (inverted per layout orientation convention) with label "Top". Automatically triggers a one-shot capture prompt if neither mirroring nor Privileged Mode is active.
+    - **Top Screenshot** icon button: captures Display 0 (Top Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.TOP)` (streaming PNG bytes over loopback via `PrivdClient.captureScreenshotPng()` when Privileged Mode is active and saving via `MediaStore`). Uses Material Symbol `splitscreen_bottom` (inverted per layout orientation convention) with label "Top".
     - **Bottom Screenshot** icon button: captures the secondary display (Bottom Screen) via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTTOM)`. Uses Material Symbol `splitscreen_top` with label "Bottom". Auto-dismisses the Quick Menu overlay to capture a clean MacroPad/companion screen.
     - **Both Screenshot** icon button: captures both screens simultaneously via `ScreenCaptureManager.requestScreenshot(ScreenshotTarget.BOTH)` and composites them into a vertical dual-screen image. Uses Material Symbol `splitscreen` with label "Both".
 - All icon buttons in these cards have compact vertical spacing with clear text labels rendered directly beneath each icon.
@@ -84,7 +84,7 @@ the universal "go back" mechanism throughout the app.
 ### FR-PM6: Centralized Injector Lifecycle
 
 - Input injectors (`KeyInjector`, `MouseInjector`, `TouchInjector`) are centrally managed by `InjectorLifecycleManager.watch()`, which is started once in `MainActivity.onCreate()`.
-- Standard injectors remain active whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), keeping the virtual keyboard attached while the Quick Menu is open to avoid OEM launcher focus-steal behavior on AYN Thor firmware when keyboard availability toggles (`qwerty` ↔ `-keyb`).
+- Standard injectors remain active whenever Megingiard is in the foreground (`AppStateManager.isActivityResumed`), keeping the virtual keyboard attached while the Quick Menu is open to avoid OEM launcher focus-steal behavior on dual-screen handheld firmware when keyboard availability toggles (`qwerty` ↔ `-keyb`).
 - `KeyInjector` is paused only when Megingiard is backgrounded or when Android's software IME is required (`AppStateManager.isPrivdSetupWizardActive`). Neither `QuickMenu` nor `MacroPadScreen` directly starts or stops injector processes.
 
 ---
@@ -180,7 +180,7 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
 - **Button A & Enter Activation:** `Modifier.primaryOverlayFocusable` ensures that physical controller `KEYCODE_BUTTON_A` (96) and `KEYCODE_DPAD_CENTER` trigger item clicks across rows, buttons, and selectable chips.
 - **Bumper Tab Switching:** Pressing `[L1]` (102) or `[R1]` (103) dispatches `BumperDirection.PREV` / `NEXT` events via `PrimaryOverlayInputBridge.bumperEvents`, cycling active tabs and category sidebar filters.
 - **Button B / Back Dismissal:** Pressing `[B]` (97) or `BACK` triggers `onPreviewKeyEvent` / back-press dispatcher to close active dialogs and modals immediately.
-- **Gamepad-First Control Cards (`GamepadComponents.kt`):**
+- **Gamepad-First Control Cards (`GamepadCards.kt` & `GamepadColorPickers.kt`):**
   - `GamepadFocusCard`: Base elevated card container with high-contrast animated accent border, subtle background tint elevation on focus, and D-pad click/stepper key interceptors.
   - `GamepadToggleCard`: Binary toggle switch card with illuminated `[ ON ● ]` / `[ OFF ○ ]` status pill.
   - `GamepadStepperCard`: Stepper card with `◀ Value ▶` adjustment controls navigable with D-pad Left/Right.
@@ -206,10 +206,12 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
 | [QuickMenuDialogs.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuDialogs.kt) | `ShutOffConfirmDialog` modal confirmation dialog for app shutdown |
 | [QuickMenuMirrorCard.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuMirrorCard.kt) | Slide-in MirrorControlCard and MirrorControlIconButton composables |
 | [PrimaryOverlayContainer.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayContainer.kt) | Top-screen bottom-anchored modal sheet container with 3-sided bezel border, slide/fade animation, bumper badges, footer action prompt bar, and auto-focus initialization |
-| [PrimaryOverlayHost.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayHost.kt) | Shared mirror freeze state machine, gamepad key/motion routing, and modal Compose host shared by `PrimaryOverlayManager` and `PrimaryOverlayActivity` |
+| [PrimaryModalHost.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryModalHost.kt) | Shared mirror freeze state machine, gamepad key/motion routing, and modal Compose host shared by `PrimaryOverlayManager` and `PrimaryOverlayActivity` |
 | [PrimaryOverlayManager.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) | WindowManager overlay coordinator on Display 0; routes gamepad key and motion events |
 | [PrimaryOverlayInputBridge.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayInputBridge.kt) | Gamepad bumper event dispatcher, joystick-to-Dpad motion translator, and `primaryOverlayFocusable` modifier |
-| [GamepadComponents.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadComponents.kt) | Gamepad-First UI component library: `GamepadFocusCard`, `GamepadToggleCard`, `GamepadStepperCard`, `GamepadChoiceCard`, `GamepadActionCard`, `GamepadColorPaletteCard`, `GamepadColorPaletteGrid`, and `PrimaryOverlayFooter` |
+| [GamepadCards.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadCards.kt) | Gamepad-First UI card library: `GamepadFocusCard`, `GamepadToggleCard`, `GamepadStepperCard`, `GamepadChoiceCard`, and `GamepadActionCard` |
+| [GamepadColorPickers.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadColorPickers.kt) | Gamepad color controls: `GamepadColorPaletteCard` and `GamepadColorPaletteGrid` |
+| [GamepadScaffold.kt](../../../shared/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadScaffold.kt) | Two-pane console layout scaffold (`GamepadTwoPaneScaffold`) and `PrimaryOverlayFooter` |
 | [AppStateManager.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | `isQuickMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers; holds active swipe state |
 | [SwipeGestureProcessor.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProcessor.kt) | Edge-swipe detection (`pointerInput`); evaluates threshold, triggers haptics, and coordinates release actions |
 | [SwipeGestureProgress.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProgress.kt) | Data model defining the current active swipe type, delta, threshold, and past-threshold flag |

@@ -415,9 +415,11 @@ internal fun CutoutAdvancedSettingsSubPageContent(
             onClick = { VisualAutoTuneCoordinator.cancelCalibration() },
         )
     } else {
+        val maskCacheRevision by CutoutMaskManager.cacheRevision.collectAsStateWithLifecycle()
         val isCalibrated =
-            remember(cutout.id, cutout.hasTransparencyMask, calibrationRevision) {
-                CutoutMaskManager.hasMask(context, cutout.id) || cutout.hasTransparencyMask
+            remember(cutout.id, cutout.hasTransparencyMask, calibrationRevision, maskCacheRevision) {
+                cutout.hasTransparencyMask ||
+                    CutoutMaskManager.hasCachedMaskOrLoadAsync(context, cutout.id)
             }
 
         if (isCalibrated) {
@@ -555,7 +557,7 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                 isDestructive = true,
                 itemKey = "cutout_${cutout.id}_remove_smart",
                 onConfirm = {
-                    CutoutMaskManager.deleteMask(context, cutout.id)
+                    CutoutMaskManager.deleteMaskAsync(context, cutout.id)
                     calibrationRevision++
                     onUpdateCutout(
                         cutout.copy(

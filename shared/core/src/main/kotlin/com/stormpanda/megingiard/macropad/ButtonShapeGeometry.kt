@@ -41,6 +41,7 @@ private const val BSG_OCT_INSET = 0.2928932f
 private const val BSG_OCT_FAR = 0.7071068f
 
 private const val BSG_EDGE_EPSILON = 1e-5f
+private const val BSG_MIN_DIMENSION_PX = 1f
 private val BSG_ZERO_OFFSET = NormalizedPoint(0f, 0f)
 
 /**
@@ -254,19 +255,21 @@ object ButtonShapeGeometry {
      * @param shape        configured [ButtonShape] of the button
      * @param nx           normalized X coordinate relative to the button's bounding box (`0f` = left, `1f` = right)
      * @param ny           normalized Y coordinate relative to the button's bounding box (`0f` = top, `1f` = bottom)
-     * @param widthDp      button width in dp
-     * @param heightDp     button height in dp
+     * @param widthPx      button width in pixels
+     * @param heightPx     button height in pixels
      * @param isTrackpoint true when the button action is [PadAction.TrackpointMove] (always circular)
      */
     fun isNormalizedPointInside(
         shape: ButtonShape,
         nx: Float,
         ny: Float,
-        widthDp: Float,
-        heightDp: Float,
+        widthPx: Float,
+        heightPx: Float,
         isTrackpoint: Boolean = false,
     ): Boolean {
-        if (nx < 0f || nx > 1f || ny < 0f || ny > 1f) return false
+        if (!nx.isFinite() || !ny.isFinite() || nx < 0f || nx > 1f || ny < 0f || ny > 1f) {
+            return false
+        }
         val effectiveShape = if (isTrackpoint) ButtonShape.CIRCLE else shape
         return when (effectiveShape) {
             ButtonShape.SQUARE,
@@ -279,8 +282,8 @@ object ButtonShapeGeometry {
                 isInsideRoundedRect(
                     nx = nx,
                     ny = ny,
-                    widthDp = widthDp,
-                    heightDp = heightDp,
+                    widthPx = widthPx,
+                    heightPx = heightPx,
                     cornerFraction = BSG_ROUNDED_SQUARE_CORNER_FRACTION,
                 )
             }
@@ -289,8 +292,8 @@ object ButtonShapeGeometry {
                 isInsideRoundedRect(
                     nx = nx,
                     ny = ny,
-                    widthDp = widthDp,
-                    heightDp = heightDp,
+                    widthPx = widthPx,
+                    heightPx = heightPx,
                     cornerFraction = BSG_CIRCLE_CORNER_FRACTION,
                 )
             }
@@ -315,12 +318,12 @@ object ButtonShapeGeometry {
     private fun isInsideRoundedRect(
         nx: Float,
         ny: Float,
-        widthDp: Float,
-        heightDp: Float,
+        widthPx: Float,
+        heightPx: Float,
         cornerFraction: Float,
     ): Boolean {
-        val w = max(1f, widthDp)
-        val h = max(1f, heightDp)
+        val w = if (widthPx.isFinite()) max(BSG_MIN_DIMENSION_PX, widthPx) else BSG_MIN_DIMENSION_PX
+        val h = if (heightPx.isFinite()) max(BSG_MIN_DIMENSION_PX, heightPx) else BSG_MIN_DIMENSION_PX
         val x = nx * w
         val y = ny * h
         val radius = cornerFraction * min(w, h)

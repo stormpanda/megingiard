@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Process
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.device.KnownDeviceProfiles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -116,17 +117,19 @@ object LogReportManager {
         deviceModel: String,
         androidVersion: String,
         timestamp: String,
-    ): String =
-        buildString {
+    ): String {
+        val profileId = KnownDeviceProfiles.resolveByModel(deviceModel)?.id ?: "generic"
+        return buildString {
             appendLine("=== Megingiard Log Report ===")
             appendLine("App version  : $appVersion")
-            appendLine("Device       : $deviceModel")
+            appendLine("Device       : $deviceModel (profile: $profileId)")
             appendLine("Android      : $androidVersion")
             appendLine("Generated at : $timestamp")
             appendLine("Log lines    : last $LOG_REPORT_MAX_LINES")
             appendLine("=".repeat(30))
             appendLine()
         }
+    }
 
     /**
      * Reads recent logcat output for the current process and returns it as a

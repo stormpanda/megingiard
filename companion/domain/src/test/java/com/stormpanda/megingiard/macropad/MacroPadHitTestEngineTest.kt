@@ -1,11 +1,16 @@
 package com.stormpanda.megingiard.macropad
 
+import app.cash.turbine.test
+import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.CompanionCommand
 import com.stormpanda.megingiard.input.TouchAction
+import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.privd.PrivdClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -19,7 +24,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class MacroPadHitTestEngineTest {
     private val testDispatcher = UnconfinedTestDispatcher()
-    private val engine = MacroPadHitTestEngine(buttonUnitDpToPx = { it })
+    private val engine = MacroPadHitTestEngine()
     private val canvasW = 1000f
     private val canvasH = 1000f
 
@@ -29,6 +34,8 @@ class MacroPadHitTestEngineTest {
             label = "T",
             posX = 0.5f,
             posY = 0.5f,
+            widthPx = 60f,
+            heightPx = 60f,
             action = action,
             hapticStrength = HapticStrength.OFF,
             hapticCustomDurationMs = 0,
@@ -207,7 +214,6 @@ class MacroPadHitTestEngineTest {
         var hapticTriggered = false
         val engineWithHaptic =
             MacroPadHitTestEngine(
-                buttonUnitDpToPx = { it },
                 onHapticFeedback = { id, strength, duration, amplitude, magnitude ->
                     hapticTriggered = true
                     assertEquals("btn-haptic", id)
@@ -428,4 +434,98 @@ class MacroPadHitTestEngineTest {
         assertNull(PrivdClient.pollCommandForTest())
         assertTrue(engine.pressedIds.value.isEmpty())
     }
+
+    @Test
+    fun `default PadButton 136x136 pixel footprint hits inside and rejects outside`() {
+        val defaultBtn =
+            PadButton(
+                id = "btn-default-px",
+                label = "Def",
+                posX = 0.5f,
+                posY = 0.5f,
+                buttonShape = ButtonShape.SQUARE,
+                action = PadAction.KeyboardKey(keycode = 30, label = "A"),
+                hapticStrength = HapticStrength.OFF,
+            )
+        // Centered at (500, 500) with 136x136 -> [432, 568] x [432, 568]
+        assertTrue(engine.onPress(1L, 435f, 565f, canvasW, canvasH, listOf(defaultBtn), false))
+        engine.onRelease(1L, listOf(defaultBtn))
+        assertFalse(engine.onPress(2L, 420f, 500f, canvasW, canvasH, listOf(defaultBtn), false))
+        assertFalse(engine.onPress(3L, 580f, 500f, canvasW, canvasH, listOf(defaultBtn), false))
+    }
+
+    @Test
+    fun `onPress maps button hit box through pillarboxed DesignViewport and leaves uncovered bars active`() {
+        // Thor 1240x1080 layout rendered on RP Duo 1280x960 host:
+        // scale = 960/1080 = 8/9, viewportW = 1102.2222, leftPx = 88.8889
+        val viewport = ViewportMath.calculateDesignViewport(1280f, 960f, 1240f, 1080f)
+        val leftEdgeBtn =
+            PadButton(
+                id = "btn-left-edge",
+                label = "L",
+                posX = 0.1f,
+                posY = 0.5f,
+                widthPx = 136f,
+                heightPx = 136f,
+                buttonShape = ButtonShape.SQUARE,
+                action = PadAction.KeyboardKey(keycode = 30, label = "A"),
+                hapticStrength = HapticStrength.OFF,
+            )
+        // Button center is at leftPx + 0.1 * viewportW = 88.8889 + 110.2222 = 199.1111, halfWidth = 60.4444 -> [138.67..259.56]
+        // Tapping uncovered left pillarbox bar at x = 40 returns false so BackgroundTouchpad receives the touch
+        assertFalse(engine.onPress(1L, 40f, 480f, 1280f, 960f, listOf(leftEdgeBtn), false, viewport))
+        // Tapping at x = 200 hits the scaled button
+        assertTrue(engine.onPress(2L, 200f, 480f, 1280f, 960f, listOf(leftEdgeBtn), false, viewport))
+        engine.onRelease(2L, listOf(leftEdgeBtn))
+    }
+
+    @Test
+    fun `onPress hits button placed at negative normalized X inside pillarbox black bar`() {
+        val viewport = ViewportMath.calculateDesignViewport(1280f, 960f, 1240f, 1080f)
+        val barBtn =
+            PadButton(
+                id = "btn-in-bar",
+                label = "Bar",
+                posX = -0.05f,
+                posY = 0.5f,
+                widthPx = 68f,
+                heightPx = 68f,
+                buttonShape = ButtonShape.SQUARE,
+                action = PadAction.KeyboardKey(keycode = 31, label = "S"),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val expectedCenterX = viewport.normToScreenX(-0.05f)
+        assertTrue(expectedCenterX < viewport.leftPx)
+        assertTrue(engine.onPress(1L, expectedCenterX, 480f, 1280f, 960f, listOf(barBtn), false, viewport))
+        assertEquals("KD 31\n", PrivdClient.pollCommandForTest())
+        engine.onRelease(1L, listOf(barBtn))
+    }
+
+    @Test
+    fun `AppLauncher button dispatches viewport-mapped screen center coordinates`() =
+        runTest {
+            val viewport = ViewportMath.calculateDesignViewport(1240f, 1080f, 1280f, 960f)
+            val launcherBtn =
+                PadButton(
+                    id = "btn-launch",
+                    label = "App",
+                    posX = 0.25f,
+                    posY = 0.5f,
+                    widthPx = 120f,
+                    heightPx = 120f,
+                    action = PadAction.AppLauncher(packageName = "com.example.game"),
+                    hapticStrength = HapticStrength.OFF,
+                )
+            val expectedX = viewport.normToScreenX(0.25f)
+            val expectedY = viewport.normToScreenY(0.5f)
+
+            AppStateManager.commands.test {
+                assertTrue(engine.onPress(1L, expectedX, expectedY, 1240f, 1080f, listOf(launcherBtn), false, viewport))
+                val cmd = awaitItem() as CompanionCommand.LaunchApp
+                assertEquals("com.example.game", cmd.packageName)
+                assertEquals(expectedX, cmd.touchX, 0.01f)
+                assertEquals(expectedY, cmd.touchY, 0.01f)
+            }
+            engine.onRelease(1L, listOf(launcherBtn))
+        }
 }

@@ -42,9 +42,10 @@ the same device or share individual profiles with other Megingiard users.
 
 ### FR-CF3: Conflict-Free Side-by-Side Import
 
-- Imported MacroPad profiles (with embedded macros) MUST be added alongside existing items
+- Imported MacroPad profiles (with embedded macros, layouts, and `mirrorCutouts`) MUST be added alongside existing items
   with new UUIDs — never merging or overwriting existing data.
-- Imported profiles and macros retain their original names.
+- Imported profiles and macros retain their original names, and each imported `PadLayout` preserves its original authoring `designCanvas` (`LayoutCanvasSpec(widthPx, heightPx)`, normalized via `PadLayout.normalizedOnLoad()`, stamping AYN Thor `1240 × 1080` only when `designCanvas == null`) across cross-device export, import, editing, and re-export without destructive coordinate rewriting.
+- Every imported `ScreenCutout` is remapped to a fresh UUID so calibrated cutout masks extracted to `filesDir/cutout_masks/` remain completely isolated across repeated imports of the same `.mgrd` archive.
 - For **backup restore** imports: tool settings (Global, Mirror, Touchpad, Keyboard) present in
   the file ARE applied directly, overwriting current values.
 - For **profile-share** imports: settings in the file are always ignored.
@@ -167,7 +168,7 @@ IncomingImportDialog  ─── user confirms → ConfigManager.applyImport()
 `.mgrd` files are UTF-8 JSON with the schema defined in `ConfigSchema.kt`:
 
 > [!NOTE]
-> Custom background image binaries (stored locally in `filesDir/backgrounds/`) can be optionally bundled within `.mgrd` ZIP container files when exporting (controlled by an "Include background images" checkbox, checked by default, in the export metadata dialogs). When enabled, image files are archived alongside `config.json` and automatically unpacked to `filesDir/backgrounds/bg_<newLayoutId>` with remapped UUIDs on import. Daily internal backups stored locally in DataStore exclude background images to conserve disk space. For plain JSON `.mgrd` files (or when images are excluded), layout `backgroundImagePath` references are safely handled with fallback to a solid black background.
+> Custom background images (`filesDir/backgrounds/`), layout mask overlay images (`filesDir/masks/`), and calibrated cutout/anchor mask assets (`filesDir/cutout_masks/`: `mask_<cutoutId>.png`, `mask_<cutoutId>_var.bin`, `mask_<cutoutId>_freeze.png`, and per-layout reference anchor freeze frames `mask_<layoutId>_freeze.png`, collected via `CutoutMaskFileStore.collectExportFiles`) can be bundled within `.mgrd` ZIP container files when exporting (`includeBackgrounds = true`, controlled by the "Include background images" checkbox, checked by default, in the export metadata dialogs). When enabled, binary assets are archived alongside `config.json` and automatically unpacked to `filesDir/backgrounds/bg_<newLayoutId>`, `filesDir/masks/mask_<newLayoutId>`, and `filesDir/cutout_masks/mask_<newCutoutId|newLayoutId>*` with remapped UUIDs on import. Daily internal backups stored locally in DataStore exclude binary assets to conserve disk space (falling back to copying local files on same-device restore when present). For plain JSON `.mgrd` files (or when images are excluded), missing background/mask references safely fall back to a solid pitch-black background.
 
 **Schema v4 (current):**
 
@@ -213,12 +214,12 @@ Adding a new setting requires assigning the key to a section in `SECTION_MAP` or
   Macros are embedded inside each `PadProfile.macros`.
 
 - **Checksum scope (v4):** SHA-256 of the minified kotlinx.serialization JSON encoding (with
-  `encodeDefaults = true`) of `settings`, `profiles`, and (when bundled images are present) sorted
-  `imageHashes` (`bg_<layoutId>` / `mask_<layoutId>` → SHA-256 hex of raw image bytes).
+  `encodeDefaults = true`) of `settings`, `profiles`, and (when bundled binary assets are present) sorted
+  `imageHashes` (`bg_<layoutId>` and `mask_<layoutId>` for layout background/mask images — kept unchanged for backward compatibility — plus `cutout_masks/<filename>` for bundled `mask_<cutoutId>.png`, `mask_<cutoutId>_var.bin`, `mask_<cutoutId>_freeze.png`, and `mask_<layoutId>_freeze.png` entries → SHA-256 hex of raw file bytes).
   Key order is determined by the declaration order of the `@Serializable` data class fields
   (with `imageHashes` sorted lexicographically by key) — no additional sorting or canonicalization is
   applied to `settings` or `profiles`. Metadata changes do not invalidate the checksum. On import,
-  verification first attempts raw JSON element payload evaluation (including `imageHashes` when present)
+  verification first attempts raw JSON element payload evaluation (including `imageHashes` when present, preserving `"cutout_masks/..."` keys as-is so both legacy `.mgrd` archives without `cutout_masks/` and new archives pass verification)
   to preserve hash fidelity for legacy/older exports created before new default fields were introduced,
   falling back to re-encoded object graph verification.
 
@@ -229,7 +230,8 @@ Adding a new setting requires assigning the key to a section in `SECTION_MAP` or
 | `:shared:core` `config/ConfigSchema.kt`                    | `@Serializable` data classes (`MegingiardExport`, `ExportMetadata`, `InternalBackup`) + `SCHEMA_VERSION` + `MGRD_MIME_TYPE`                                                                                         |
 | `:shared:core` `config/FilenameBuilder.kt`                 | Suggested `.mgrd` filename generation and sanitization (`buildFilename`, `buildProfileFilename`, `sanitizeSegment`)                                                                                                 |
 | `:shared:core` `settings/SettingsEnums.kt`                 | `SettingsCategory` and `SettingsSubPage` enums                                                                                                                                                                      |
-| `:companion:domain` `config/ConfigManager.kt`              | Unified export/import manager: `ExportKind` / `ImportMode` discriminators, coordinator StateFlows, export (`buildExport`, `buildProfileExport`), import (`applyImport`, `applyProfileImport`), UUID remap, checksum |
+| `:companion:domain` `config/ConfigManager.kt`              | Unified export/import manager: `ExportKind` / `ImportMode` discriminators, coordinator StateFlows, export (`buildExport`, `buildProfileExport`), import (`applyImport`, `applyProfileImport`), profile/macro/layout/cutout UUID remap, `cutout_masks/` bundling & SHA-256 checksum, `PadLayout.normalizedOnLoad()` & `designCanvas` preservation |
+| `:companion:domain` `mirror/CutoutMaskFileStore.kt`        | Centralizes `filesDir/cutout_masks/` file resolution, canonical-path-validated export file collection (`collectExportFiles`), and local fallback duplication during import                                          |
 | `:companion:domain` `settings/SettingsManager.kt`          | `exportGroupedSettings()` + `importGroupedSettingsAwait()` — bulk DataStore I/O                                                                                                                                     |
 | `:companion:domain` `settings/SettingsKeys.kt`             | Preference keys, section key groups (`GLOBAL_KEYS`, etc.), `SECTION_MAP`, and `EXCLUDED_KEYS`                                                                                                                       |
 | `:companion:domain` `settings/SettingsKeysTest.kt`         | Reflection-based unit test guard asserting 100% coverage of declared preference keys across `SECTION_MAP`, `EXCLUDED_KEYS`, and import type sets                                                                    |
@@ -248,9 +250,12 @@ When MacroPad data is imported, `ConfigManager.importMacroPadData()`:
 
 1. Pre-assigns a new UUID for each imported `PadProfile` (building `profileIdMap` from old → new across the batch) and clears device-specific transient flags (`skipAutoRestoration`, `assignedRomId`, `assignedRomTitle`).
 2. For each macro inside the profile, assigns a new UUID and builds `macroIdMap` (old → new).
-3. For each layout inside the profile, pre-assigns a new UUID and builds `layoutIdMap` (old → new), preserving the profile's `activeLayoutId` via `layoutIdMap`.
+3. For each layout inside the profile, pre-assigns a new UUID (`layoutIdMap`: old → new), preserves the profile's `activeLayoutId` via `layoutIdMap`, and assigns a fresh UUID (`oldCutoutId → newCutoutId`) to every `ScreenCutout` in `layout.mirrorCutouts`.
 4. Remaps every `PadButton` action via `PadAction.remapTargetIds` (`:shared:core`): `PadAction.Macro` via `macroIdMap` (falls back to original ID if not mapped), `PadAction.SwitchToLayout` via `layoutIdMap` (falls back to the imported profile's first layout UUID if the referenced layout was absent), and `PadAction.SwitchToProfile` via `profileIdMap` (falls back to original `profileId` if not mapped, e.g. external profile references in single-profile shares).
-5. For each layout containing custom background images or mask overlay images (stored in the ZIP archive under `backgrounds/bg_<layoutId>` and `backgrounds/mask_<layoutId>`, normalized in-memory to keys `bg_<layoutId>` and `mask_<layoutId>`), extracts or copies the media files into the target directories (`filesDir/backgrounds/bg_<newLayoutId>` and `filesDir/masks/mask_<newLayoutId>`) under new UUID paths. For legacy archives with `useBackgroundImageAsMask = true`, automatically migrates the background image and adjustment properties into `filesDir/masks/mask_<newLayoutId>` and clears `useBackgroundImageAsMask`.
+5. Extracts or copies bundled media and cutout mask assets under the new UUIDs:
+   - Layout background and mask overlay images (`backgrounds/bg_<layoutId>` and `backgrounds/mask_<layoutId>`, normalized in-memory to keys `bg_<layoutId>` and `mask_<layoutId>`) unpack into `filesDir/backgrounds/bg_<newLayoutId>` and `filesDir/masks/mask_<newLayoutId>` (migrating legacy `useBackgroundImageAsMask = true` archives into `filesDir/masks/mask_<newLayoutId>`).
+   - Cutout and layout anchor mask files (`cutout_masks/mask_<oldCutoutId>.png`, `cutout_masks/mask_<oldCutoutId>_var.bin`, `cutout_masks/mask_<oldCutoutId>_freeze.png`, and `cutout_masks/mask_<oldLayoutId>_freeze.png`) unpack from `images` into `filesDir/cutout_masks/` under `newCutoutId` and `newLayoutId` (or copy from local files via `CutoutMaskFileStore` when restoring an internal backup without bundled ZIP bytes).
+6. Normalizes every imported `PadLayout` via `PadLayout.normalizedOnLoad()`, migrating legacy `widthDp`/`heightDp` button fields via `THOR_BOTTOM_DENSITY` (`2.30625x`), stamping `THOR_BOTTOM_CANVAS_SPEC` (`1240 × 1080`) when `designCanvas == null`, and preserving explicit `PadLayout.designCanvas` dimensions unchanged across cross-device exports and imports.
 
 This guarantees imported data never collides with existing data even when re-importing the same
 file multiple times.

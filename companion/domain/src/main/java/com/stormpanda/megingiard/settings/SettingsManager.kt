@@ -8,8 +8,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.InternalBackup
+import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.macropad.LayoutCanvasSpec
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -138,6 +142,7 @@ object SettingsManager {
         isInternalBackupsLoaded = false
         TouchpadSettings.resetForTesting()
         MirrorSettings.resetForTesting()
+        MacroPadState.resetForTesting()
         MacroPadSettings.resetForTesting()
         KeyboardSettings.resetForTesting()
         UpdateManager.resetForTesting()
@@ -158,7 +163,15 @@ object SettingsManager {
     fun init(context: Context) {
         if (initialized) return
         initialized = true
-        dataStore = context.applicationContext.settingsDataStore
+        val appContext = context.applicationContext
+        dataStore = appContext.settingsDataStore
+
+        DisplayDetector.resolveSecondaryDisplaySize(appContext)?.let { size ->
+            if (size.widthPx > 0 && size.heightPx > 0) {
+                MacroPadState.setHostSecondaryCanvas(LayoutCanvasSpec(size.widthPx, size.heightPx))
+            }
+        }
+        TouchInjector.updatePrimaryDisplayRotation(DisplayDetector.resolvePrimaryDisplayRotation(appContext))
 
         // Apply bootstrap settings (log level, theme, accent, SteamGridDB token,
         // and MacroPad profiles) synchronously before returning so that code

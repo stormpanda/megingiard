@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.gamefocus
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Bundle
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
@@ -10,6 +11,7 @@ import com.stormpanda.megingiard.media.SteamGridDbClient
 import com.stormpanda.megingiard.media.SteamGridDbGame
 import com.stormpanda.megingiard.media.SteamGridDbImage
 import com.stormpanda.megingiard.media.SteamGridDbResponse
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.After
@@ -27,6 +29,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
+import android.graphics.Color as AndroidColor
 
 /**
  * End-to-End integration test suite verifying the SteamGridDB artwork scraping,
@@ -48,6 +51,7 @@ class SteamGridDbToPaletteSyncPipelineE2ETest {
     @Before
     fun setUp() {
         context = RuntimeEnvironment.getApplication()
+        FocusImageCache.clearForTesting()
         AppPaletteExtractor.resetForTesting()
         AppPaletteExtractor.init(context)
         tempDir = File(context.cacheDir, "e2e_steamgriddb_${UUID.randomUUID()}").apply { mkdirs() }
@@ -55,6 +59,7 @@ class SteamGridDbToPaletteSyncPipelineE2ETest {
 
     @After
     fun tearDown() {
+        FocusImageCache.clearForTesting()
         AppPaletteExtractor.resetForTesting()
         tempDir.deleteRecursively()
     }
@@ -124,9 +129,9 @@ class SteamGridDbToPaletteSyncPipelineE2ETest {
         for (x in 0 until 128) {
             for (y in 0 until 128) {
                 if (y < 64) {
-                    testBitmap.setPixel(x, y, android.graphics.Color.rgb(220, 20, 60)) // Crimson Red
+                    testBitmap.setPixel(x, y, AndroidColor.rgb(220, 20, 60)) // Crimson Red
                 } else {
-                    testBitmap.setPixel(x, y, android.graphics.Color.rgb(30, 144, 255)) // Dodger Blue
+                    testBitmap.setPixel(x, y, AndroidColor.rgb(30, 144, 255)) // Dodger Blue
                 }
             }
         }
@@ -148,10 +153,10 @@ class SteamGridDbToPaletteSyncPipelineE2ETest {
             )
 
         // 2. Verify FocusImageCache loads cover from disk asynchronously and caches in memory
-        val loadedCover = kotlinx.coroutines.runBlocking { FocusImageCache.getCoverBitmapAsync(appInfo) }
+        val loadedCover = runBlocking { FocusImageCache.getCoverBitmapAsync(appInfo) }
         assertNotNull("Expected FocusImageCache to load cover bitmap from file", loadedCover)
-        assertEquals(64, loadedCover?.width) // Downsampled 2x from 128 to 64 for optimal poster display
-        assertEquals(64, loadedCover?.height)
+        assertEquals(128, loadedCover?.width) // Small covers (<= 480x720) retain full crispness without blurring
+        assertEquals(128, loadedCover?.height)
 
         val cachedInMemory = FocusImageCache.getCoverBitmap(appInfo)
         assertNotNull("Expected in-memory hit from FocusImageCache", cachedInMemory)
@@ -180,7 +185,7 @@ class SteamGridDbToPaletteSyncPipelineE2ETest {
         val secondaryArgb = palette.secondaryColor.toArgb()
 
         val ipcBundle =
-            android.os.Bundle().apply {
+            Bundle().apply {
                 putString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE, appInfo.packageName)
                 putString(MegingiardIpcContract.COLUMN_HOVERED_LABEL, appInfo.label)
                 putInt(MegingiardIpcContract.COLUMN_HOVERED_PRIMARY_COLOR, primaryArgb)

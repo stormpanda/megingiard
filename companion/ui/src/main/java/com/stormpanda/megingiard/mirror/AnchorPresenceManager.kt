@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
@@ -150,7 +151,7 @@ object AnchorPresenceManager {
                 lostStateStartMs = 0L
                 activeSmoother?.get()?.setFrozen(false)
             }
-            _presenceRevision.value++
+            _presenceRevision.update { it + 1 }
         }
         layoutStates[layoutId] = newState
         layoutConsecutiveCounts[layoutId] = newCount
@@ -177,7 +178,7 @@ object AnchorPresenceManager {
                                 old.recycle()
                             }
                         }
-                        _presenceRevision.value++
+                        _presenceRevision.update { it + 1 }
                     }
                 }
             } catch (e: Exception) {
@@ -513,6 +514,22 @@ object AnchorPresenceManager {
             lastValidFrameBitmaps.remove(cutoutId)
         }
         return CutoutMaskManager.getFreezeFrame(context, cutoutId)
+    }
+
+    /**
+     * Non-blocking UI-thread frozen-frame lookup for [MultiCutoutContainer.dispatchDraw].
+     * Prefers the in-memory live frozen crop, falling back asynchronously to the persisted reference freeze frame.
+     */
+    fun getCachedFrozenFrameOrLoadAsync(
+        context: Context,
+        cutoutId: String,
+        onLoaded: () -> Unit = {},
+    ): Bitmap? {
+        lastValidFrameBitmaps[cutoutId]?.let { bmp ->
+            if (!bmp.isRecycled) return bmp
+            lastValidFrameBitmaps.remove(cutoutId)
+        }
+        return CutoutMaskManager.getCachedFreezeFrameOrLoadAsync(context, cutoutId, onLoaded)
     }
 
     @VisibleForTesting

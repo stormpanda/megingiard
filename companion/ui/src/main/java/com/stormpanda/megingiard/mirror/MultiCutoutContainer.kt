@@ -28,8 +28,9 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.BackgroundScaleMode
 import com.stormpanda.megingiard.macropad.CutoutLostAnchorEffect
+import com.stormpanda.megingiard.macropad.LayoutCanvasSpec
 import com.stormpanda.megingiard.macropad.MacroPadState
-import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.math.DesignViewport
 import com.stormpanda.megingiard.math.ViewportMath
 import kotlin.math.abs
 import kotlin.math.max
@@ -67,6 +68,39 @@ internal class MultiCutoutContainer(
     private val overlayMaskDestRect = RectF()
     private var aboveMaskCutouts: List<ScreenCutout> = emptyList()
     private var belowMaskCutouts: List<ScreenCutout> = emptyList()
+    private var designCanvasSpec: LayoutCanvasSpec? = null
+
+    fun setDesignCanvas(spec: LayoutCanvasSpec?) {
+        if (designCanvasSpec != spec) {
+            AppLog.d(TAG, "setDesignCanvas: $designCanvasSpec -> $spec")
+            designCanvasSpec = spec
+            requestLayout()
+            invalidate()
+        }
+    }
+
+    internal fun resolveViewport(
+        hostW: Float = width.toFloat(),
+        hostH: Float = height.toFloat(),
+    ): DesignViewport {
+        val spec = designCanvasSpec
+        return if (spec != null) {
+            ViewportMath.calculateDesignViewport(
+                hostWidthPx = hostW,
+                hostHeightPx = hostH,
+                designWidthPx = spec.widthPx.toFloat(),
+                designHeightPx = spec.heightPx.toFloat(),
+            )
+        } else {
+            ViewportMath.calculateDesignViewport(
+                hostWidthPx = hostW,
+                hostHeightPx = hostH,
+                designWidthPx = hostW,
+                designHeightPx = hostH,
+            )
+        }
+    }
+
     var cutouts: List<ScreenCutout> = emptyList()
         set(value) {
             field = value
@@ -74,6 +108,7 @@ internal class MultiCutoutContainer(
             aboveMaskCutouts = above
             belowMaskCutouts = below
             pruneStaleCutoutResources(value)
+            CutoutMaskManager.preloadCutoutsAsync(context, value, ::postInvalidateOnAnimation)
             invalidate()
         }
     var isFrozen: Boolean = false
@@ -193,68 +228,102 @@ internal class MultiCutoutContainer(
     private fun drawBackgroundBitmap(
         canvas: Canvas,
         bitmap: Bitmap,
-        parentW: Float,
-        parentH: Float,
+        viewport: DesignViewport,
     ) {
-        val paint = if (bgImageDim > 0f) bgDimPaint else null
-        if (bgScaleMode == BackgroundScaleMode.STRETCH) {
-            bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
-            bgDestRect.set(0f, 0f, parentW, parentH)
-            canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
-        } else {
-            canvas.save()
-            val iw = bitmap.width.toFloat()
-            val ih = bitmap.height.toFloat()
-            val scaleBase =
-                if (bgScaleMode == BackgroundScaleMode.FIT) {
-                    ViewportMath.calculateAspectFitScale(parentW, parentH, iw, ih)
-                } else {
-                    ViewportMath.calculateAspectFillScale(parentW, parentH, iw, ih)
-                }
-            val ws = iw * scaleBase
-            val hs = ih * scaleBase
+        val viewportW = viewport.viewportWidthPx
+        val viewportH = viewport.viewportHeightPx
+        if (viewportW <= 0f || viewportH <= 0f) return
 
-            canvas.translate(parentW / 2f + bgImageOffsetX * parentW, parentH / 2f + bgImageOffsetY * parentH)
-            canvas.scale(bgImageScale, bgImageScale)
+        val saveCount = canvas.save()
+        try {
+            canvas.clipRect(
+                viewport.leftPx,
+                viewport.topPx,
+                viewport.leftPx + viewportW,
+                viewport.topPx + viewportH,
+            )
+            canvas.translate(viewport.leftPx, viewport.topPx)
 
-            bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
-            bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
-            canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
-            canvas.restore()
+            val paint = if (bgImageDim > 0f) bgDimPaint else null
+            if (bgScaleMode == BackgroundScaleMode.STRETCH) {
+                bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
+                bgDestRect.set(0f, 0f, viewportW, viewportH)
+                canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
+            } else {
+                val iw = bitmap.width.toFloat()
+                val ih = bitmap.height.toFloat()
+                val scaleBase =
+                    if (bgScaleMode == BackgroundScaleMode.FIT) {
+                        ViewportMath.calculateAspectFitScale(viewportW, viewportH, iw, ih)
+                    } else {
+                        ViewportMath.calculateAspectFillScale(viewportW, viewportH, iw, ih)
+                    }
+                val ws = iw * scaleBase
+                val hs = ih * scaleBase
+
+                canvas.translate(
+                    viewportW / 2f + bgImageOffsetX * viewportW,
+                    viewportH / 2f + bgImageOffsetY * viewportH,
+                )
+                canvas.scale(bgImageScale, bgImageScale)
+
+                bgSrcRect.set(0, 0, bitmap.width, bitmap.height)
+                bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
+                canvas.drawBitmap(bitmap, bgSrcRect, bgDestRect, paint)
+            }
+        } finally {
+            canvas.restoreToCount(saveCount)
         }
     }
 
     private fun drawMaskBitmap(
         canvas: Canvas,
         bitmap: Bitmap,
-        parentW: Float,
-        parentH: Float,
+        viewport: DesignViewport,
     ) {
-        val paint = if (maskImageDim > 0f) maskDimPaint else null
-        if (maskScaleMode == BackgroundScaleMode.STRETCH) {
-            overlayMaskSrcRect.set(0, 0, bitmap.width, bitmap.height)
-            overlayMaskDestRect.set(0f, 0f, parentW, parentH)
-            canvas.drawBitmap(bitmap, overlayMaskSrcRect, overlayMaskDestRect, paint)
-        } else {
-            canvas.save()
-            val iw = bitmap.width.toFloat()
-            val ih = bitmap.height.toFloat()
-            val scaleBase =
-                if (maskScaleMode == BackgroundScaleMode.FIT) {
-                    ViewportMath.calculateAspectFitScale(parentW, parentH, iw, ih)
-                } else {
-                    ViewportMath.calculateAspectFillScale(parentW, parentH, iw, ih)
-                }
-            val ws = iw * scaleBase
-            val hs = ih * scaleBase
+        val viewportW = viewport.viewportWidthPx
+        val viewportH = viewport.viewportHeightPx
+        if (viewportW <= 0f || viewportH <= 0f) return
 
-            canvas.translate(parentW / 2f + maskImageOffsetX * parentW, parentH / 2f + maskImageOffsetY * parentH)
-            canvas.scale(maskImageScale, maskImageScale)
+        val saveCount = canvas.save()
+        try {
+            canvas.clipRect(
+                viewport.leftPx,
+                viewport.topPx,
+                viewport.leftPx + viewportW,
+                viewport.topPx + viewportH,
+            )
+            canvas.translate(viewport.leftPx, viewport.topPx)
 
-            overlayMaskSrcRect.set(0, 0, bitmap.width, bitmap.height)
-            overlayMaskDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
-            canvas.drawBitmap(bitmap, overlayMaskSrcRect, overlayMaskDestRect, paint)
-            canvas.restore()
+            val paint = if (maskImageDim > 0f) maskDimPaint else null
+            if (maskScaleMode == BackgroundScaleMode.STRETCH) {
+                overlayMaskSrcRect.set(0, 0, bitmap.width, bitmap.height)
+                overlayMaskDestRect.set(0f, 0f, viewportW, viewportH)
+                canvas.drawBitmap(bitmap, overlayMaskSrcRect, overlayMaskDestRect, paint)
+            } else {
+                val iw = bitmap.width.toFloat()
+                val ih = bitmap.height.toFloat()
+                val scaleBase =
+                    if (maskScaleMode == BackgroundScaleMode.FIT) {
+                        ViewportMath.calculateAspectFitScale(viewportW, viewportH, iw, ih)
+                    } else {
+                        ViewportMath.calculateAspectFillScale(viewportW, viewportH, iw, ih)
+                    }
+                val ws = iw * scaleBase
+                val hs = ih * scaleBase
+
+                canvas.translate(
+                    viewportW / 2f + maskImageOffsetX * viewportW,
+                    viewportH / 2f + maskImageOffsetY * viewportH,
+                )
+                canvas.scale(maskImageScale, maskImageScale)
+
+                overlayMaskSrcRect.set(0, 0, bitmap.width, bitmap.height)
+                overlayMaskDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
+                canvas.drawBitmap(bitmap, overlayMaskSrcRect, overlayMaskDestRect, paint)
+            }
+        } finally {
+            canvas.restoreToCount(saveCount)
         }
     }
 
@@ -368,6 +437,7 @@ internal class MultiCutoutContainer(
 
     private fun computeCutoutsBounds(
         cutouts: List<ScreenCutout>,
+        viewport: DesignViewport,
         parentW: Float,
         parentH: Float,
         blendW: Float,
@@ -379,21 +449,20 @@ internal class MultiCutoutContainer(
         var maxY = 0f
         for (i in cutouts.indices) {
             val c = cutouts[i]
-            val dx = (c.destX * parentW).roundToInt().toFloat()
-            val dy = (c.destY * parentH).roundToInt().toFloat()
-            val dw = (c.destWidth * parentW).roundToInt().toFloat()
-            val dh = (c.destHeight * parentH).roundToInt().toFloat()
+            val dx = viewport.normToScreenX(c.destX).roundToInt().toFloat()
+            val dy = viewport.normToScreenY(c.destY).roundToInt().toFloat()
+            val dw = (c.destWidth * viewport.viewportWidthPx).roundToInt().toFloat()
+            val dh = (c.destHeight * viewport.viewportHeightPx).roundToInt().toFloat()
             if (dx - blendW < minX) minX = dx - blendW
             if (dy - blendW < minY) minY = dy - blendW
             if (dx + dw + blendW > maxX) maxX = dx + dw + blendW
             if (dy + dh + blendW > maxY) maxY = dy + dh + blendW
         }
-        outRect.set(
-            minX.coerceIn(0f, parentW),
-            minY.coerceIn(0f, parentH),
-            maxX.coerceIn(0f, parentW),
-            maxY.coerceIn(0f, parentH),
-        )
+        val left = minX.coerceIn(0f, parentW)
+        val top = minY.coerceIn(0f, parentH)
+        val right = maxX.coerceIn(left, parentW)
+        val bottom = maxY.coerceIn(top, parentH)
+        outRect.set(left, top, right, bottom)
     }
 
     private fun updateCutoutTransitions() {
@@ -547,8 +616,7 @@ internal class MultiCutoutContainer(
     private fun drawSingleCutout(
         canvas: Canvas,
         cutout: ScreenCutout,
-        parentW: Float,
-        parentH: Float,
+        viewport: DesignViewport,
         edgeBlending: Boolean,
         tolerance: Float,
         blendW: Float,
@@ -560,10 +628,10 @@ internal class MultiCutoutContainer(
     ): Boolean {
         var masterViewDrawn = false
         val effectiveCrop = InteractiveCutoutController.getEffectiveCrop(cutout)
-        val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
-        val dh = (cutout.destHeight * parentH).roundToInt().toFloat()
-        val dx = (cutout.destX * parentW).roundToInt().toFloat()
-        val dy = (cutout.destY * parentH).roundToInt().toFloat()
+        val dx = viewport.normToScreenX(cutout.destX).roundToInt().toFloat()
+        val dy = viewport.normToScreenY(cutout.destY).roundToInt().toFloat()
+        val dw = (cutout.destWidth * viewport.viewportWidthPx).roundToInt().toFloat()
+        val dh = (cutout.destHeight * viewport.viewportHeightPx).roundToInt().toFloat()
 
         val sw = effectiveCrop.srcWidth * srcWidth
         val sh = effectiveCrop.srcHeight * srcHeight
@@ -582,7 +650,9 @@ internal class MultiCutoutContainer(
         val topExt = if (touchesTop) (blendW / 2f).roundToInt().toFloat() else 0f
         val bottomExt = if (touchesBottom) (blendW / 2f).roundToInt().toFloat() else 0f
         val hasTouching = leftExt > 0f || rightExt > 0f || topExt > 0f || bottomExt > 0f
-        val hasTransparencyMask = cutout.hasTransparencyMask && CutoutMaskManager.hasMask(context, cutout.id)
+        val hasTransparencyMask =
+            cutout.hasTransparencyMask &&
+                CutoutMaskManager.hasCachedMaskOrLoadAsync(context, cutout.id, ::postInvalidateOnAnimation)
 
         val saveCount =
             if (cutout.opacity < 1f || hasTouching || hasTransparencyMask) {
@@ -617,7 +687,11 @@ internal class MultiCutoutContainer(
 
             val cachedFrozenFrame =
                 if (isTargetFrozen && !effectiveManualFrozen) {
-                    AnchorPresenceManager.getFrozenFrame(context, cutout.id)
+                    AnchorPresenceManager.getCachedFrozenFrameOrLoadAsync(
+                        context = context,
+                        cutoutId = cutout.id,
+                        onLoaded = ::postInvalidateOnAnimation,
+                    )
                 } else {
                     null
                 }
@@ -628,12 +702,13 @@ internal class MultiCutoutContainer(
 
             val staticAssetBitmap =
                 if (cutout.renderAsStaticAsset && hasTransparencyMask) {
-                    CutoutMaskManager.getStaticAsset(
+                    CutoutMaskManager.getCachedStaticAssetOrLoadAsync(
                         context = context,
                         cutoutId = cutout.id,
                         translucency = cutout.maskTranslucency,
                         sensitivity = cutout.maskSensitivity,
                         cavityHealing = cutout.maskCavityHealing,
+                        onLoaded = ::postInvalidateOnAnimation,
                     )
                 } else {
                     null
@@ -662,8 +737,8 @@ internal class MultiCutoutContainer(
                 // 1. Base Layer
                 if (isStaticAssetDrawn) {
                     cutoutDestRect.set(0f, 0f, contentW, contentH)
-                    canvas.drawBitmap(staticAssetBitmap!!, null, cutoutDestRect, frozenFramePaint)
-                } else if (isTargetFrozen && hasFrozenBitmap && frozenBitmapToDraw != null) {
+                    canvas.drawBitmap(staticAssetBitmap, null, cutoutDestRect, frozenFramePaint)
+                } else if (isTargetFrozen && hasFrozenBitmap) {
                     // Frozen state (anchor lost or manual freeze): render sharp frozen frame base layer
                     if (blurAlpha < FULL_ALPHA_FLOAT) {
                         frozenFramePaint.alpha = MCC_MAX_ALPHA_INT
@@ -801,12 +876,13 @@ internal class MultiCutoutContainer(
                 // 3. Transparency Mask
                 if (hasTransparencyMask && !isStaticAssetDrawn) {
                     val maskBitmap =
-                        CutoutMaskManager.getMask(
+                        CutoutMaskManager.getCachedMaskOrLoadAsync(
                             context = context,
                             cutoutId = cutout.id,
                             translucency = cutout.maskTranslucency,
                             sensitivity = cutout.maskSensitivity,
                             cavityHealing = cutout.maskCavityHealing,
+                            onLoaded = ::postInvalidateOnAnimation,
                         )
                     if (maskBitmap != null && !maskBitmap.isRecycled) {
                         maskDestRect.set(0f, 0f, contentW, contentH)
@@ -922,6 +998,8 @@ internal class MultiCutoutContainer(
         val parentH = height.toFloat()
         if (parentW <= 0f || parentH <= 0f) return
 
+        val viewport = resolveViewport(parentW, parentH)
+
         updateCutoutTransitions()
 
         val drawTime = this.drawingTime
@@ -936,7 +1014,7 @@ internal class MultiCutoutContainer(
         try {
             val bg = bgBitmap
             if (bg != null) {
-                drawBackgroundBitmap(canvas, bg, parentW, parentH)
+                drawBackgroundBitmap(canvas, bg, viewport)
             }
 
             val isEditing =
@@ -975,7 +1053,7 @@ internal class MultiCutoutContainer(
 
             val belowLayerSaveCount =
                 if (hasAnyBelowTouchingEdge) {
-                    computeCutoutsBounds(belowMaskCutouts, parentW, parentH, blendW, layerBoundsRect)
+                    computeCutoutsBounds(belowMaskCutouts, viewport, parentW, parentH, blendW, layerBoundsRect)
                     canvas.saveLayer(layerBoundsRect, null)
                 } else {
                     canvas.save()
@@ -987,8 +1065,7 @@ internal class MultiCutoutContainer(
                         drawSingleCutout(
                             canvas = canvas,
                             cutout = cutout,
-                            parentW = parentW,
-                            parentH = parentH,
+                            viewport = viewport,
                             edgeBlending = edgeBlending,
                             tolerance = tolerance,
                             blendW = blendW,
@@ -1009,7 +1086,7 @@ internal class MultiCutoutContainer(
             // Overlay mask pass: if maskBitmap is present, draw mask image above Pass 1 cutouts
             val mask = maskBitmap
             if (mask != null) {
-                drawMaskBitmap(canvas, mask, parentW, parentH)
+                drawMaskBitmap(canvas, mask, viewport)
             }
 
             // Pass 2: Cutouts rendered above background mask (below Compose MacroPad buttons)
@@ -1029,7 +1106,7 @@ internal class MultiCutoutContainer(
 
                 val aboveLayerSaveCount =
                     if (hasAnyAboveTouchingEdge) {
-                        computeCutoutsBounds(aboveMaskCutouts, parentW, parentH, blendW, layerBoundsRect)
+                        computeCutoutsBounds(aboveMaskCutouts, viewport, parentW, parentH, blendW, layerBoundsRect)
                         canvas.saveLayer(layerBoundsRect, null)
                     } else {
                         canvas.save()
@@ -1041,8 +1118,7 @@ internal class MultiCutoutContainer(
                             drawSingleCutout(
                                 canvas = canvas,
                                 cutout = cutout,
-                                parentW = parentW,
-                                parentH = parentH,
+                                viewport = viewport,
                                 edgeBlending = edgeBlending,
                                 tolerance = tolerance,
                                 blendW = blendW,

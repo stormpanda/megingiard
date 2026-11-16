@@ -2,9 +2,13 @@ package com.stormpanda.megingiard.privd
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.math.TouchSensorMath
 import com.stormpanda.megingiard.security.HmacUtil
 import com.stormpanda.megingiard.session.ProcessCmdlineProvider
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +16,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -22,6 +27,7 @@ import java.io.OutputStreamWriter
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.security.SecureRandom
+import java.util.Base64
 import java.util.concurrent.LinkedBlockingQueue
 
 private const val TAG = "PrivdClient"
@@ -34,7 +40,7 @@ private const val PING_TIMEOUT_MS = 1_500L
 // Daemon polls ServiceManager up to 6s for Binder registration; timeout must exceed that.
 private const val MIRROR_DIRECT_START_TIMEOUT_MS = 7_500L
 private const val MIRROR_STOP_TIMEOUT_MS = 3_000L
-private const val SCREENSHOT_TIMEOUT_MS = 4_000L
+private const val SCREENSHOT_TIMEOUT_MS = 6_000L
 private const val READ_FILE_TIMEOUT_MS = 5_000L
 private const val WRITER_THREAD_NAME = "PrivdClientWriter"
 private const val READER_THREAD_NAME = "PrivdClientReader"
@@ -42,6 +48,11 @@ private const val HANDSHAKE_TIMEOUT_MS = 5_000
 private const val VERSION_CHECK_TIMEOUT_MS = 1_000
 private const val NONCE_HEX_LEN = 32 // 16 nonce bytes → 32 hex chars
 private const val HMAC_HEX_LEN = 64 // SHA-256 digest → 64 hex chars
+private const val VERSION_OK_MIN_SENSOR_TOKENS = 4
+private const val VERSION_OK_WIDTH_INDEX = 2
+private const val VERSION_OK_HEIGHT_INDEX = 3
+internal const val MAX_MULTILINE_RPC_CHARS = 24 * 1024 * 1024
+internal const val MAX_READ_FILE_RPC_CHARS = 262_144
 
 /**
  * Async loopback TCP transport to the `megingiard_privd` daemon.
@@ -73,12 +84,29 @@ object PrivdClient {
     private val _state = MutableStateFlow(PrivdConnectionState.DISCONNECTED)
     val state: StateFlow<PrivdConnectionState> = _state.asStateFlow()
 
+    @Volatile
+    var touchSensorWidth: Int = TouchSensorMath.DEFAULT_SENSOR_WIDTH
+        private set
+
+    @Volatile
+    var touchSensorHeight: Int = TouchSensorMath.DEFAULT_SENSOR_HEIGHT
+        private set
+
+    internal fun setTouchSensorDimensionsForTesting(
+        width: Int = TouchSensorMath.DEFAULT_SENSOR_WIDTH,
+        height: Int = TouchSensorMath.DEFAULT_SENSOR_HEIGHT,
+    ) {
+        touchSensorWidth = width
+        touchSensorHeight = height
+    }
+
     internal fun setStateForTesting(newState: PrivdConnectionState?) {
         isConnectedForTest = if (newState == null) null else (newState == PrivdConnectionState.CONNECTED)
         _state.value = newState ?: PrivdConnectionState.DISCONNECTED
     }
 
     private val commandMutex = Mutex()
+    private val teardownScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
      * Raw evdev events streamed from the daemon while a `SUB GAMEPAD` subscription is active.
@@ -301,7 +329,17 @@ object PrivdClient {
             pendingRpc = rpc
             try {
                 send(command)
-                withTimeoutOrNull(timeoutMs) { rpc.deferred.await() }
+                val result = withTimeoutOrNull(timeoutMs) { rpc.deferred.await() }
+                if (result == null && (!rpc.deferred.isCompleted || rpc.overflowed)) {
+                    AppLog.w(
+                        TAG,
+                        "executeMultiLineRpc failed (timeout=${!rpc.deferred.isCompleted}, " +
+                            "overflow=${rpc.overflowed}); resetting connection",
+                    )
+                    rpc.cancel()
+                    markBroken()
+                }
+                result
             } finally {
                 pendingRpc = null
             }
@@ -361,23 +399,58 @@ object PrivdClient {
         return ok
     }
 
-    suspend fun takeScreenshot(
-        path: String,
-        displayId: Int? = null,
-    ): Boolean {
-        val cmd = if (displayId != null) "SCREENSHOT $displayId $path\n" else "SCREENSHOT $path\n"
-        val ok =
-            executeBooleanRpc(
+    /**
+     * Dispatches [stopMirror] asynchronously on [teardownScope] (serialized through [commandMutex])
+     * so foreground services can cancel their own lifecycle scope first (`AGENTS.md` §12.1) without
+     * racing a subsequent service restart.
+     */
+    fun requestStopMirrorAsync() {
+        if (!isConnected) return
+        AppLog.d(TAG, "requestStopMirrorAsync()")
+        teardownScope.launch {
+            stopMirror()
+        }
+    }
+
+    /**
+     * Captures a PNG screenshot via `megingiard_privd` (`SCREENSHOT_B64`), streaming
+     * `screencap -p` stdout over an anonymous pipe inside the daemon and base64-encoding
+     * over loopback TCP so no temporary files are written to `/data/local/tmp` and the app UID
+     * can decode or persist the image without cross-UID FUSE issues.
+     *
+     * @param displayUniqueId Optional numeric SurfaceFlinger physical display ID (`screencap -d`).
+     *                        When `null`, `privd` resolves `(HWC display 0)` automatically.
+     */
+    suspend fun captureScreenshotPng(displayUniqueId: String? = null): ByteArray? {
+        val sanitizedId = displayUniqueId?.trim()?.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
+        val cmd = if (sanitizedId != null) "SCREENSHOT_B64 $sanitizedId\n" else "SCREENSHOT_B64\n"
+        val encoded =
+            executeMultiLineRpc(
                 command = cmd,
                 timeoutMs = SCREENSHOT_TIMEOUT_MS,
                 rpc =
-                    PendingRpc.SingleLine(
-                        successPrefix = "SCREENSHOT_OK",
+                    PendingRpc.MultiLine(
+                        beginMarker = "SCREENSHOT_BEGIN",
+                        endMarker = "SCREENSHOT_END",
                         errorPrefix = "SCREENSHOT_ERR",
                     ),
-            )
-        AppLog.i(TAG, "takeScreenshot($path, displayId=$displayId) -> $ok")
-        return ok
+            ) ?: run {
+                AppLog.w(TAG, "captureScreenshotPng(displayUniqueId=$sanitizedId) returned null")
+                return null
+            }
+        return try {
+            val bytes = Base64.getMimeDecoder().decode(encoded.trim())
+            if (bytes.isEmpty()) {
+                AppLog.w(TAG, "captureScreenshotPng: decoded empty payload")
+                null
+            } else {
+                AppLog.i(TAG, "captureScreenshotPng(displayUniqueId=$sanitizedId) -> ${bytes.size} bytes")
+                bytes
+            }
+        } catch (e: IllegalArgumentException) {
+            AppLog.w(TAG, "captureScreenshotPng: invalid base64 payload: ${e.message}")
+            null
+        }
     }
 
     suspend fun readTextFile(path: String): String? {
@@ -390,6 +463,7 @@ object PrivdClient {
                         beginMarker = "READ_BEGIN",
                         endMarker = "READ_END",
                         errorPrefix = "READ_ERR",
+                        maxChars = MAX_READ_FILE_RPC_CHARS,
                     ),
             )
         AppLog.i(TAG, "readTextFile($path) fetched ${result?.length ?: 0} bytes")
@@ -630,14 +704,30 @@ object PrivdClient {
                     AppLog.w(TAG, "handshake: version response missing / timed out (legacy pre-versioning daemon)")
                     return false
                 }
-            if (!versionLine.startsWith("VERSION_OK ")) {
+            val versionTokens = versionLine.trim().split(' ')
+            if (versionTokens.firstOrNull() != "VERSION_OK") {
                 AppLog.w(TAG, "handshake: version check failed, got: $versionLine (expected VERSION_OK ${PrivdConstants.PRIVD_VERSION})")
                 return false
             }
-            val daemonVersion = versionLine.substring(11).toIntOrNull()
+            val daemonVersion = versionTokens.getOrNull(1)?.toIntOrNull()
             if (daemonVersion != PrivdConstants.PRIVD_VERSION) {
                 AppLog.w(TAG, "handshake: version mismatch — daemon version $daemonVersion != app version ${PrivdConstants.PRIVD_VERSION}")
                 return false
+            }
+            if (versionTokens.size >= VERSION_OK_MIN_SENSOR_TOKENS) {
+                val reportedW = versionTokens[VERSION_OK_WIDTH_INDEX].toIntOrNull() ?: 0
+                val reportedH = versionTokens[VERSION_OK_HEIGHT_INDEX].toIntOrNull() ?: 0
+                if (reportedW > 0 && reportedH > 0) {
+                    touchSensorWidth = reportedW
+                    touchSensorHeight = reportedH
+                    AppLog.i(TAG, "handshake: primary touch sensor dimensions = ${reportedW}x$reportedH")
+                } else {
+                    AppLog.w(
+                        TAG,
+                        "handshake: daemon reported unavailable touch sensor (${reportedW}x$reportedH); " +
+                            "keeping ${touchSensorWidth}x$touchSensorHeight",
+                    )
+                }
             }
 
             s.soTimeout = 0 // reset to blocking — full mutual handshake and version check complete
@@ -685,11 +775,20 @@ internal sealed class PendingRpc {
         private val beginMarker: String,
         private val endMarker: String,
         private val errorPrefix: String,
+        private val maxChars: Int = MAX_MULTILINE_RPC_CHARS,
     ) : PendingRpc() {
         val deferred = CompletableDeferred<String?>()
         private var capturing = false
         private val buffer = StringBuilder()
 
+        @Volatile
+        var overflowed: Boolean = false
+            private set
+
+        internal val bufferedLengthForTest: Int
+            @Synchronized get() = buffer.length
+
+        @Synchronized
         override fun onLine(line: String): Boolean {
             if (line == beginMarker) {
                 capturing = true
@@ -698,25 +797,40 @@ internal sealed class PendingRpc {
             }
             if (line == endMarker) {
                 capturing = false
-                deferred.complete(buffer.toString())
+                val payload = buffer.toString()
                 buffer.clear()
+                buffer.trimToSize()
+                deferred.complete(payload)
                 return true
             }
             if (line.startsWith(errorPrefix)) {
                 capturing = false
                 buffer.clear()
+                buffer.trimToSize()
                 deferred.complete(null)
                 return true
             }
             if (capturing) {
+                if (buffer.length + line.length + 1 > maxChars) {
+                    AppLog.w(TAG, "PendingRpc.MultiLine exceeded max capacity ($maxChars chars) before '$endMarker'")
+                    capturing = false
+                    overflowed = true
+                    buffer.clear()
+                    buffer.trimToSize()
+                    deferred.complete(null)
+                    return true
+                }
                 buffer.append(line).append('\n')
                 return true
             }
             return false
         }
 
+        @Synchronized
         override fun cancel() {
             capturing = false
+            buffer.clear()
+            buffer.trimToSize()
             deferred.complete(null)
         }
     }

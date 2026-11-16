@@ -134,11 +134,16 @@ fun AnchorSelectorOverlay(
         val anchorW = effectiveCrop.width * screenW
         val anchorH = effectiveCrop.height * screenH
 
+        fun commitAnchorCrop() {
+            MacroPadState.updateLayout(currentLayoutState.value)
+        }
+
         fun updateAnchorCrop(
             newX: Float,
             newY: Float,
             newW: Float,
             newH: Float,
+            live: Boolean = false,
         ) {
             val clampedW = newW.coerceIn(MIN_ANCHOR_SIZE, (1f - newX).coerceAtLeast(MIN_ANCHOR_SIZE))
             val clampedH = newH.coerceIn(MIN_ANCHOR_SIZE, (1f - newY).coerceAtLeast(MIN_ANCHOR_SIZE))
@@ -154,7 +159,12 @@ fun AnchorSelectorOverlay(
                     srcWidth = clampedW,
                     srcHeight = clampedH,
                 )
-            MacroPadState.updateLayout(curLayout.copy(visualAnchor = updatedAnchor))
+            val updatedLayout = curLayout.copy(visualAnchor = updatedAnchor)
+            if (live) {
+                MacroPadState.updateLayoutLive(updatedLayout)
+            } else {
+                MacroPadState.updateLayout(updatedLayout)
+            }
         }
 
         // 1. Semi-transparent scrim rects surrounding the anchor region
@@ -230,8 +240,10 @@ fun AnchorSelectorOverlay(
                                 accumulatedY += dragAmount.y
                                 val newX = (boxDragStartX + accumulatedX / screenW).coerceIn(0f, (1f - boxDragStartW).coerceAtLeast(0f))
                                 val newY = (boxDragStartY + accumulatedY / screenH).coerceIn(0f, (1f - boxDragStartH).coerceAtLeast(0f))
-                                updateAnchorCrop(newX, newY, boxDragStartW, boxDragStartH)
+                                updateAnchorCrop(newX, newY, boxDragStartW, boxDragStartH, live = true)
                             },
+                            onDragEnd = { commitAnchorCrop() },
+                            onDragCancel = { commitAnchorCrop() },
                         )
                     },
         )
@@ -274,8 +286,10 @@ fun AnchorSelectorOverlay(
                 onDrag = { _, totalDy ->
                     val bottom = dragStartY + dragStartH
                     val newY = (dragStartY + totalDy / screenH).coerceIn(0f, bottom - MIN_ANCHOR_SIZE)
-                    updateAnchorCrop(dragStartX, newY, dragStartW, bottom - newY)
+                    updateAnchorCrop(dragStartX, newY, dragStartW, bottom - newY, live = true)
                 },
+                onDragEnd = { commitAnchorCrop() },
+                onDragCancel = { commitAnchorCrop() },
             )
 
             // Bottom Edge Handle (Horizontal pill)
@@ -292,8 +306,10 @@ fun AnchorSelectorOverlay(
                 onDragStart = { captureDragStart() },
                 onDrag = { _, totalDy ->
                     val newH = ((dragStartY + dragStartH + totalDy / screenH).coerceIn(dragStartY + MIN_ANCHOR_SIZE, 1f)) - dragStartY
-                    updateAnchorCrop(dragStartX, dragStartY, dragStartW, newH)
+                    updateAnchorCrop(dragStartX, dragStartY, dragStartW, newH, live = true)
                 },
+                onDragEnd = { commitAnchorCrop() },
+                onDragCancel = { commitAnchorCrop() },
             )
 
             // Left Edge Handle (Vertical pill)
@@ -311,8 +327,10 @@ fun AnchorSelectorOverlay(
                 onDrag = { totalDx, _ ->
                     val right = dragStartX + dragStartW
                     val newX = (dragStartX + totalDx / screenW).coerceIn(0f, right - MIN_ANCHOR_SIZE)
-                    updateAnchorCrop(newX, dragStartY, right - newX, dragStartH)
+                    updateAnchorCrop(newX, dragStartY, right - newX, dragStartH, live = true)
                 },
+                onDragEnd = { commitAnchorCrop() },
+                onDragCancel = { commitAnchorCrop() },
             )
 
             // Right Edge Handle (Vertical pill)
@@ -329,8 +347,10 @@ fun AnchorSelectorOverlay(
                 onDragStart = { captureDragStart() },
                 onDrag = { totalDx, _ ->
                     val newW = ((dragStartX + dragStartW + totalDx / screenW).coerceIn(dragStartX + MIN_ANCHOR_SIZE, 1f)) - dragStartX
-                    updateAnchorCrop(dragStartX, dragStartY, newW, dragStartH)
+                    updateAnchorCrop(dragStartX, dragStartY, newW, dragStartH, live = true)
                 },
+                onDragEnd = { commitAnchorCrop() },
+                onDragCancel = { commitAnchorCrop() },
             )
         }
 
@@ -349,7 +369,7 @@ fun AnchorSelectorOverlay(
                     val cur = getCurrentCrop()
                     val newX = (cur.x + dx.toFloat() / screenW).coerceIn(0f, (1f - cur.width).coerceAtLeast(0f))
                     val newY = (cur.y + dy.toFloat() / screenH).coerceIn(0f, (1f - cur.height).coerceAtLeast(0f))
-                    updateAnchorCrop(newX, newY, cur.width, cur.height)
+                    updateAnchorCrop(newX, newY, cur.width, cur.height, live = true)
                 },
                 onResize = { dx, dy ->
                     val cur = getCurrentCrop()
@@ -369,8 +389,9 @@ fun AnchorSelectorOverlay(
                         )
                     anchorHToggle = resized.hToggle
                     anchorVToggle = resized.vToggle
-                    updateAnchorCrop(resized.x, resized.y, resized.width, resized.height)
+                    updateAnchorCrop(resized.x, resized.y, resized.width, resized.height, live = true)
                 },
+                onCommit = ::commitAnchorCrop,
                 resetKey = layout.id,
                 cardFocusRequester = firstItemFocusRequester,
                 modifier =

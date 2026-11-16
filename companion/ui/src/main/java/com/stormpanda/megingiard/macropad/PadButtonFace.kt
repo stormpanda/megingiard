@@ -24,12 +24,18 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.ui.AppPalettes
 import kotlin.math.sqrt
 
+private const val TAG = "PadButtonFace"
 private val PBF_BACKING_COLOR = AppPalettes.padButtonBacking
 private val PBF_BORDER_WIDTH = 1.dp
 private const val PBF_CENTER_NORM = 0.5f
+private const val PBF_GRADIENT_MID_STOP_1 = 0.50f
+private const val PBF_GRADIENT_MID_ALPHA_1 = 0.25f
+private const val PBF_GRADIENT_MID_STOP_2 = 0.75f
+private const val PBF_GRADIENT_MID_ALPHA_2 = 0.5625f
 private val PBF_ZERO_OFFSET = NormalizedPoint(0f, 0f)
 
 internal val PBF_SQUARE_RADIUS = 4.dp
@@ -85,23 +91,29 @@ private val PBF_POLYGON_SHAPES: Map<ButtonShape, Shape> =
         }.toMap()
 
 /**
- * Resolves the Compose [Shape] for a [PadButton] given its [buttonShape], dimensions, and trackpoint state.
+ * Resolves the Compose [Shape] for a [PadButton] given its [buttonShape], pixel dimensions, and trackpoint state.
  */
 internal fun resolvePadButtonShape(
     buttonShape: ButtonShape,
-    widthDp: Float,
-    heightDp: Float,
+    widthPx: Float,
+    heightPx: Float,
     isTrackpoint: Boolean = false,
 ): Shape {
     if (isTrackpoint) return CircleShape
     return when (buttonShape) {
         ButtonShape.SQUARE,
         ButtonShape.ICON_ONLY,
-        -> PBF_SQUARE_SHAPE
+        -> {
+            PBF_SQUARE_SHAPE
+        }
 
-        ButtonShape.ROUNDED_SQUARE -> PBF_ROUNDED_SQUARE_SHAPE
+        ButtonShape.ROUNDED_SQUARE -> {
+            PBF_ROUNDED_SQUARE_SHAPE
+        }
 
-        ButtonShape.CIRCLE -> if (widthDp == heightDp) CircleShape else PBF_PILL_SHAPE
+        ButtonShape.CIRCLE -> {
+            if (widthPx == heightPx) CircleShape else PBF_PILL_SHAPE
+        }
 
         ButtonShape.HEXAGON_1,
         ButtonShape.HEXAGON_2,
@@ -113,7 +125,12 @@ internal fun resolvePadButtonShape(
         ButtonShape.TRIANGLE_DOWN,
         ButtonShape.TRIANGLE_LEFT,
         ButtonShape.TRIANGLE_RIGHT,
-        -> PBF_POLYGON_SHAPES[buttonShape] ?: PBF_SQUARE_SHAPE
+        -> {
+            PBF_POLYGON_SHAPES[buttonShape] ?: run {
+                AppLog.w(TAG, "Missing polygon vertices for shape=$buttonShape; falling back to square")
+                PBF_SQUARE_SHAPE
+            }
+        }
     }
 }
 
@@ -123,8 +140,8 @@ internal fun resolvePadButtonShape(
 internal fun resolvePadButtonPreviewShape(buttonShape: ButtonShape): Shape =
     resolvePadButtonShape(
         buttonShape = buttonShape,
-        widthDp = MP_BUTTON_BASE_UNIT_DP,
-        heightDp = MP_BUTTON_BASE_UNIT_DP,
+        widthPx = MP_THOR_DEFAULT_BUTTON_SIZE_PX,
+        heightPx = MP_THOR_DEFAULT_BUTTON_SIZE_PX,
         isTrackpoint = false,
     )
 
@@ -150,8 +167,8 @@ internal fun PadButtonFace(
             val maxAlpha = bgColor.alpha.coerceIn(0f, 1f)
             Brush.radialGradient(
                 0.00f to bgColor.copy(alpha = 0f),
-                0.50f to bgColor.copy(alpha = maxAlpha * 0.25f),
-                0.75f to bgColor.copy(alpha = maxAlpha * 0.5625f),
+                PBF_GRADIENT_MID_STOP_1 to bgColor.copy(alpha = maxAlpha * PBF_GRADIENT_MID_ALPHA_1),
+                PBF_GRADIENT_MID_STOP_2 to bgColor.copy(alpha = maxAlpha * PBF_GRADIENT_MID_ALPHA_2),
                 1.00f to bgColor.copy(alpha = maxAlpha),
                 center =
                     Offset(

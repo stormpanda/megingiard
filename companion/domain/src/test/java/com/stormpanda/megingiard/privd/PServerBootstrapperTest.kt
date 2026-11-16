@@ -33,10 +33,17 @@ class PServerBootstrapperTest {
 
         // 3. Mirror DEX copy and permission setup
         assertTrue(
+            "Must unlink existing binary and read-only DEX before copying",
+            script.contains("rm -f /data/local/tmp/megingiard_privd /data/local/tmp/megingiard_mirror.dex"),
+        )
+        assertTrue(
             "Must copy staged DEX when valid",
             script.contains("cp /data/user/0/com.stormpanda.megingiard/cache/privd_dex /data/local/tmp/megingiard_mirror.dex"),
         )
-        assertTrue("Must set DEX permissions", script.contains("chmod 644 /data/local/tmp/megingiard_mirror.dex"))
+        assertTrue(
+            "Must set read-only 0444 DEX permissions required on Android 14+",
+            script.contains("chmod 0444 /data/local/tmp/megingiard_mirror.dex"),
+        )
         assertTrue("Must chown DEX to shell:shell", script.contains("chown 2000:2000 /data/local/tmp/megingiard_mirror.dex"))
 
         // 4. Key provisioning
@@ -77,10 +84,21 @@ class PServerBootstrapperTest {
                 keyHex = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
             )
 
-        // Must not contain DEX copy commands
+        // Must unconditionally unlink stale remote DEX and omit DEX copy / --dexfile flag
+        assertTrue(
+            "Must still unlink stale remote DEX when DEX verification fails",
+            script.contains("rm -f /data/local/tmp/megingiard_privd_debug /data/local/tmp/megingiard_mirror_debug.dex"),
+        )
         assertFalse("Must not copy DEX when invalid", script.contains("cp /cache/privd_dex"))
+        assertFalse("Must not pass --dexfile when DEX is absent or invalid", script.contains("--dexfile"))
         assertTrue("Must kill debug process name", script.contains("kill -9 \$(pidof megingiard_privd_debug 2>/dev/null)"))
         assertTrue("Must provision with debug port", script.contains("--port 51244"))
+        assertTrue(
+            "Must spawn input-only daemon without --dexfile",
+            script.contains(
+                "/data/local/tmp/megingiard_privd_debug --keyfile /data/local/tmp/megingiard_privd_debug.key --port 51244 </dev/null >/dev/null 2>&1 &",
+            ),
+        )
         assertTrue("Must echo completion marker", script.contains("echo \"MGRD_SPAWN_OK\""))
     }
 }

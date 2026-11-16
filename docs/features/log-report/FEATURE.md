@@ -22,7 +22,7 @@ to be sent to the developer without requiring USB or ADB access.
 
 - A **Log Level** picker and a **Save log report** row MUST be present together in a dedicated **Settings → Diagnostics** category (`SettingsCategory.DIAGNOSTICS`, located after **Updates** in the two-pane settings category deck).
 - Tapping the row MUST open the SAF "Create Document" picker with a pre-filled filename of the form `megingiard_log_<timestamp>.txt`.
-- The saved file MUST contain a plain-text header (app version, device model, Android version, generation timestamp) followed by up to 3 000 recent logcat lines from the app's own process.
+- The saved file MUST contain a plain-text header (app version, device model + resolved `KnownDeviceProfiles` ID, Android version, generation timestamp) followed by up to 3 000 recent logcat lines from the app's own process.
 - On success or failure, an in-overlay toast notification MUST be shown to the user.
 
 ### FR-LR2: Scope and Size

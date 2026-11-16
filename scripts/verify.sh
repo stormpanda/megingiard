@@ -37,6 +37,17 @@ echo "==> [2/3] Architecture rules"
 ./gradlew verifyArchitectureRules --continue --quiet
 
 echo "==> [3/3] Unit tests"
+if command -v cc >/dev/null 2>&1; then
+  native_test_bin=$(mktemp "${TMPDIR:-/tmp}/megingiard_native_test.XXXXXX")
+  trap 'rm -f "$native_test_bin"' EXIT
+  cc -Wall -Wextra -Werror -I companion/ui/src/main/cpp \
+    companion/ui/src/main/cpp/test_native_injectors.c \
+    -o "$native_test_bin"
+  "$native_test_bin" >/dev/null
+  rm -f "$native_test_bin"
+  trap - EXIT
+  echo "OK: native C unit tests passed"
+fi
 ./scripts/run_unit_tests.sh --quiet
 
 echo "==> verify.sh: all checks passed"
