@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -330,6 +331,7 @@ internal fun PadSurface(
 
     // Track which button IDs are currently pressed (from engine)
     val pressedIds by engine.pressedIds.collectAsStateWithLifecycle()
+    val stickDeflectionsState = engine.stickDeflections.collectAsStateWithLifecycle()
     // Track running macro IDs to drive the pulse animation
     val runningMacroIds by MacroExecutor.runningMacroIds.collectAsStateWithLifecycle()
 
@@ -675,21 +677,32 @@ internal fun PadSurface(
                     layout.buttons
                 }
             visibleButtons.forEach { btn ->
-                val isPressed = btn.id in pressedIds
-                val isRunning =
-                    when (val act = btn.action) {
-                        is PadAction.Macro -> act.macroId in runningMacroIds
-                        is PadAction.SingleTouchGesture -> singleTouchGestureExecutionId(btn.id) in runningMacroIds
-                        else -> false
-                    }
-                PadButton(
-                    btn = btn,
-                    layout = layout,
-                    isPressed = isPressed,
-                    viewport = designViewport,
-                    accentColor = accentColor,
-                    isRunning = isRunning,
-                )
+                key(btn.id) {
+                    val isPressed = btn.id in pressedIds
+                    val isRunning =
+                        when (val act = btn.action) {
+                            is PadAction.Macro -> act.macroId in runningMacroIds
+                            is PadAction.SingleTouchGesture -> singleTouchGestureExecutionId(btn.id) in runningMacroIds
+                            else -> false
+                        }
+                    val stickDeflectionProvider =
+                        if (btn.action is PadAction.AnalogStick) {
+                            remember(btn.id, stickDeflectionsState) {
+                                { stickDeflectionsState.value[btn.id] ?: MP_NEUTRAL_STICK_DEFLECTION }
+                            }
+                        } else {
+                            null
+                        }
+                    PadButton(
+                        btn = btn,
+                        layout = layout,
+                        isPressed = isPressed,
+                        viewport = designViewport,
+                        accentColor = accentColor,
+                        isRunning = isRunning,
+                        stickDeflectionProvider = stickDeflectionProvider,
+                    )
+                }
             }
         }
     }

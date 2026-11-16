@@ -200,6 +200,15 @@ Open Settings to create a layout.</string>
     <!-- MacroPad action picker labels -->
     <string name="macropad_action_keyboard_key">鍵盤按鍵</string>
     <string name="macropad_action_gamepad_button">手把按鈕</string>
+    <string name="macropad_action_analog_stick_left">左類比搖桿 (模擬)</string>
+    <string name="macropad_action_analog_stick_right">右類比搖桿 (模擬)</string>
+    <string name="macropad_gamepad_control_type_title">手把控制類型</string>
+    <string name="macropad_gamepad_control_type_desc">選擇獨立按鈕組合或連續虛擬類比搖桿</string>
+    <string name="macropad_analog_stick_sensitivity_title">搖桿靈敏度</string>
+    <string name="macropad_analog_stick_sensitivity_desc">達到最大搖桿傾斜的徑向推移乘數</string>
+    <string name="macropad_analog_stick_floating_title">浮動中心點</string>
+    <string name="macropad_analog_stick_floating_desc">以手指按下的位置作為中立原點 (0, 0)，而非搖桿墊正中央</string>
+    <string name="macropad_picker_emulate_stick_pill">模擬搖桿</string>
     <string name="macropad_action_mouse_button">滑鼠按鈕</string>
     <string name="macropad_action_scroll_wheel">滾輪</string>
     <string name="macropad_action_trackpoint">軌跡點 (相對滑鼠)</string>
@@ -633,7 +642,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_keyboard">鍵盤</string>
     <string name="macropad_action_group_keyboard_desc">傳送單個按鍵或組合鍵</string>
     <string name="macropad_action_group_gamepad">手把</string>
-    <string name="macropad_action_group_gamepad_desc">模擬標準手把按鈕與發射鍵</string>
+    <string name="macropad_action_group_gamepad_desc">模擬手把按鈕、板機與類比搖桿</string>
     <string name="macropad_action_group_mouse">滑鼠</string>
     <string name="macropad_action_group_mouse_desc">模擬滑鼠點擊、滾輪或指向點輸入</string>
     <string name="macropad_action_group_macro">巨集</string>

@@ -189,7 +189,7 @@ internal class Button2DAdjusterState(
         val minNormY = hostViewport?.minNormY ?: 0f
         val maxNormY = hostViewport?.maxNormY ?: 1f
         val stepPx = if (isL2Held) MPE_RESIZE_FINE_STEP_PX else MPE_RESIZE_NORMAL_STEP_PX
-        val isTrackpoint = targetBtn.action is PadAction.TrackpointMove
+        val isCircular = targetBtn.action.isCircularControl()
         val minWidthPx = designCanvas.minButtonSizePx
         val minHeightPx =
             if (targetBtn.action is PadAction.ScrollWheel) {
@@ -210,7 +210,7 @@ internal class Button2DAdjusterState(
                 designCanvasH = designCanvas.heightPx.toFloat(),
                 minWidthPx = minWidthPx,
                 minHeightPx = minHeightPx,
-                lockAspect = isTrackpoint,
+                lockAspect = isCircular,
                 minNormX = minNormX,
                 maxNormX = maxNormX,
                 minNormY = minNormY,
@@ -697,7 +697,7 @@ internal fun EditButtonSubPageContent(
 
     val isConfirmEnabled =
         when {
-            action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> {
+            action is PadAction.ScrollWheel || action.isCircularControl() -> {
                 true
             }
 
@@ -756,7 +756,7 @@ internal fun EditButtonSubPageContent(
     val currentBorder = resolveColorOption(effectiveBorderOpt, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
     val currentBg = resolveBgColorOption(effectiveBgOpt, globalAccentColor)
 
-    val showLabel = action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove
+    val showLabel = action !is PadAction.ScrollWheel && !action.isCircularControl()
     val showIconPicker = action.supportsCustomIcon()
 
     val promptState =
@@ -858,7 +858,7 @@ internal fun EditButtonSubPageContent(
         color = accentColor,
     )
 
-    if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
+    if (action !is PadAction.ScrollWheel && !action.isCircularControl()) {
         GamepadChoiceCard(
             title = stringResource(R.string.macropad_editor_button_shape),
             description = stringResource(R.string.macropad_btn_shape_desc),

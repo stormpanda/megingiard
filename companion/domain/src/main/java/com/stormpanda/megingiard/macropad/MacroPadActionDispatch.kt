@@ -61,6 +61,8 @@ fun injectActionDown(
 
         is PadAction.TrackpointMove -> { /* handled via drag events */ }
 
+        is PadAction.AnalogStick -> { /* handled via pointer events in MacroPadHitTestEngine */ }
+
         is PadAction.Macro -> {
             val macro =
                 MacroPadState.activeProfile.value

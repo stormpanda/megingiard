@@ -30,7 +30,7 @@
   - In **use mode** (`MacroPadButton`) and the **editor canvas** (`PadCanvas`, via shared `PadButtonFace`): the icon is rendered centred inside the button face instead of the label text, sized directly from the rendered pixel footprint (`min(renderedWidthPx, renderedHeightPx) * MP_BTN_ICON_RATIO * contentScale`, where `MP_BTN_ICON_RATIO = (44f * THOR_BOTTOM_DENSITY) / 136f ≈ 0.746f`, `renderedWidthPx = widthPx * viewport.scale`, `renderedHeightPx = heightPx * viewport.scale`, converted via `with(density) { iconPx.toDp() }`) so icon proportions remain invariant to display DPI and OS Display Size zoom.
   - In the **button list** (`MacroPadEditor`, `ButtonsDeck`): the icon is shown at 18 dp in the indicator box instead of the two-character label abbreviation.
 - When `iconName` is `null`, the existing label rendering is used unchanged; the label field is still stored and used in the editor button list.
-- When `PadAction.supportsCustomIcon()` is `false` (`ScrollWheel`, `TrackpointMove`, `BackgroundPeek`, and `AppLauncher`), `iconName` is forced to `null` via `PadButton.withActionSizing(newAction, canvas)` (which also enforces `canvas.largeControlMinSizePx` minimums on `TrackpointMove` and `ScrollWheel`) and the Icon Picker card is hidden in `EditButtonSubPageContent` (these action types render fixed glyphs or real APK icons).
+- When `PadAction.supportsCustomIcon()` is `false` (`ScrollWheel`, `TrackpointMove`, `AnalogStick`, `BackgroundPeek`, and `AppLauncher`), `iconName` is forced to `null` via `PadButton.withActionSizing(newAction, canvas)` (which also enforces `canvas.largeControlMinSizePx` minimums on `TrackpointMove`, `AnalogStick`, and `ScrollWheel`) and the Icon Picker card is hidden in `EditButtonSubPageContent` (these action types render fixed glyphs or real APK icons).
 - Icon selection opens `ChooseIconSubPageContent` (`IconPickerDialog.kt`), an in-deck sub-page with a search field, a current-selection two-step clear card (when an icon is selected), and a 5-column `LazyVerticalGrid` of all available icons (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`).
 - The `iconName` field defaults to `null`, so existing saved profiles load without any migration.
 - No runtime reflection or Proguard keep-rules are required.
@@ -63,7 +63,7 @@
   | `TouchTap` / `SingleTouchGesture` | Localized category label | _(null)_ |
   | `MediaControl(PLAY_PAUSE / NEXT_TRACK / PREVIOUS_TRACK / STOP / MUTE)` | Localized category label | `play_pause` / `skip_next` / `skip_previous` / `stop` / `volume_off` |
   | `AppLauncher` | Resolved app label (or category fallback) | _(null — uses real APK icon)_ |
-  | `ScrollWheel` / `TrackpointMove` / `BackgroundPeek` | Localized display label (for editor list) | _(null — fixed custom face)_ |
+  | `ScrollWheel` / `TrackpointMove` / `AnalogStick` / `BackgroundPeek` | Localized display label (for editor list) | _(null — fixed custom face)_ |
 
 ### FR-P12: Grouped Action Selection in Button Editor
 
@@ -108,6 +108,7 @@
   - `CUSTOM` — user-configured duration (1–200 ms) and amplitude (5–100 user scale, mapped linearly to 1–255), clamped in `triggerHaptic()`.
 - **TrackpointMove:** Vibration fires continuously while the finger moves, with a **speed-adaptive rate**: the faster the trackpoint moves, the shorter the interval between pulses. The engine passes `sqrt(dx² + dy²)` as a magnitude to the callback; `PadSurface` computes `interval = clamp(2000 / magnitude, 50 ms, 333 ms)`. Slow movement (magnitude ≈ 6) → ~333 ms interval; fast movement (magnitude ≥ 40) → 50 ms minimum.
 - **ScrollWheel:** One tick fires per discrete scroll batch (no speed-adaptive throttle). Each batch represents a fixed number of scroll units dispatched in one gesture step.
+- **AnalogStick:** Fires a discrete pulse on initial touch-down plus a single discrete rim-bump pulse (`magnitude = 0f`) whenever drag deflection crosses onto the outer unit circle (`dist >= 1.0`), resetting the rim trigger only after deflection retreats inside `MP_STICK_RIM_HYSTERESIS = 0.85` to prevent boundary chatter.
 - **Discrete button press:** magnitude is always `0f`; the interval guard evaluates to 0 ms so the pulse fires immediately regardless of prior activity.
 - **Implementation:** `MacroPadHitTestEngine` receives an `onHapticFeedback: ((String, HapticStrength, Int, Int, Float) -> Unit)?` constructor parameter (args: buttonId, strength, customDurationMs, customAmplitude, magnitude). The `PadSurface` composable in `MacroPadScreen.kt` resolves a `Vibrator` from the system service and passes a per-button rate-limiting closure that computes the dynamic interval. `triggerHaptic()` in `HapticFeedback.kt` (`:companion:ui`) performs the `VibrationEffect.createOneShot()` call, clamping custom params to safe ranges. The `:companion:domain` module remains Android-UI-free; only `HapticStrength` (an enum in `:shared:core`) crosses the boundary.
 

@@ -528,4 +528,245 @@ class MacroPadHitTestEngineTest {
             }
             engine.onRelease(1L, listOf(launcherBtn))
         }
+
+    @Test
+    fun `fixed-center AnalogStick injects immediate off-center tilt clamps unit circle and resets on release`() {
+        val leftStickBtn =
+            PadButton(
+                id = "btn-ls",
+                label = "Left Stick",
+                posX = 0.25f, // center X = 250
+                posY = 0.5f, // center Y = 500
+                widthPx = 200f, // radius = 100
+                heightPx = 200f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.AnalogStick(stick = JoystickStick.LEFT, sensitivity = 1.0f, floatingCenter = false),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val buttons = listOf(leftStickBtn)
+
+        // Press halfway right of center (x = 300 -> nx = +0.5, ny = 0.0)
+        assertTrue(engine.onPress(1L, 300f, 500f, canvasW, canvasH, buttons, false))
+        val downCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("JS 0 16384\n", "JS 1 0\n"), downCmds)
+        assertEquals(0.5f, engine.stickDeflections.value["btn-ls"]!!.x, 0.01f)
+        assertEquals(0.0f, engine.stickDeflections.value["btn-ls"]!!.y, 0.01f)
+
+        // Drag diagonally far outside outer rim (x = 450, y = 300 -> rawNx = +2.0, rawNy = -2.0)
+        // Must clamp radially to unit circle: (+0.7071, -0.7071) -> ±23170
+        engine.onMove(1L, 450f, 300f, 150f, -200f, buttons)
+        val moveCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("JS 0 23170\n", "JS 1 -23170\n"), moveCmds)
+        val deflect = engine.stickDeflections.value["btn-ls"]!!
+        assertEquals(0.7071f, deflect.x, 0.01f)
+        assertEquals(-0.7071f, deflect.y, 0.01f)
+
+        // Release resets both ABS_X and ABS_Y to 0 and clears live UI deflection
+        engine.onRelease(1L, buttons)
+        val upCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("JS 0 0\n", "JS 1 0\n"), upCmds)
+        assertFalse("btn-ls" in engine.stickDeflections.value)
+        assertTrue(engine.pressedIds.value.isEmpty())
+    }
+
+    @Test
+    fun `floating-center Right Stick and multi-touch simultaneous Left Stick plus button work independently`() {
+        val leftStickBtn =
+            PadButton(
+                id = "btn-ls",
+                label = "LS",
+                posX = 0.2f, // center (200, 500), radius 100
+                posY = 0.5f,
+                widthPx = 200f,
+                heightPx = 200f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.AnalogStick(stick = JoystickStick.LEFT, sensitivity = 2.0f, floatingCenter = false),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val rightStickBtn =
+            PadButton(
+                id = "btn-rs",
+                label = "RS",
+                posX = 0.8f, // center (800, 500), radius 100
+                posY = 0.5f,
+                widthPx = 200f,
+                heightPx = 200f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.AnalogStick(stick = JoystickStick.RIGHT, sensitivity = 1.0f, floatingCenter = true),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val jumpBtn =
+            PadButton(
+                id = "btn-jump",
+                label = "A",
+                posX = 0.5f,
+                posY = 0.5f,
+                widthPx = 100f,
+                heightPx = 100f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.GamepadButton(btnCode = GamepadKeycodes.BTN_SOUTH, label = "A"),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val buttons = listOf(leftStickBtn, rightStickBtn, jumpBtn)
+
+        // Finger 1 touches Right Stick off-center at (840, 520) -> floatingCenter starts at (0, 0)!
+        assertTrue(engine.onPress(1L, 840f, 520f, canvasW, canvasH, buttons, false))
+        // Finger 2 touches Left Stick at (250, 500) -> sensitivity 2.0 * (+50 / 100) = +1.0 full right!
+        assertTrue(engine.onPress(2L, 250f, 500f, canvasW, canvasH, buttons, false))
+        // Finger 3 presses Jump button at (500, 500)
+        assertTrue(engine.onPress(3L, 500f, 500f, canvasW, canvasH, buttons, false))
+
+        val initialCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertTrue("JS 2 0\n" in initialCmds && "JS 5 0\n" in initialCmds)
+        assertTrue("JS 0 32767\n" in initialCmds)
+        assertTrue("GD ${GamepadKeycodes.BTN_SOUTH}\n" in initialCmds)
+
+        // Move Finger 1 (floating Right Stick) left by 50px to (790, 520) -> nx = -0.5 on ABS_Z (2)
+        engine.onMove(1L, 790f, 520f, -50f, 0f, buttons)
+        assertEquals("JS 2 -16383\n", PrivdClient.pollCommandForTest())
+        assertNull(PrivdClient.pollCommandForTest())
+
+        // releaseAll resets Left Stick, Right Stick, and Jump button cleanly
+        engine.releaseAll(buttons)
+        val cleanupCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertTrue("JS 0 0\n" in cleanupCmds && "JS 1 0\n" in cleanupCmds)
+        assertTrue("JS 2 0\n" in cleanupCmds && "JS 5 0\n" in cleanupCmds)
+        assertTrue("GU ${GamepadKeycodes.BTN_SOUTH}\n" in cleanupCmds)
+        assertTrue(engine.stickDeflections.value.isEmpty())
+    }
+
+    @Test
+    fun `second finger on same AnalogStick clears deflection when controlling finger lifts`() {
+        val leftStickBtn =
+            PadButton(
+                id = "btn-ls",
+                label = "LS",
+                posX = 0.25f, // center (250, 500), radius 100
+                posY = 0.5f,
+                widthPx = 200f,
+                heightPx = 200f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.AnalogStick(stick = JoystickStick.LEFT, sensitivity = 1.0f, floatingCenter = false),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val buttons = listOf(leftStickBtn)
+
+        // Finger 1 tilts stick halfway right (+0.5, 0.0)
+        assertTrue(engine.onPress(1L, 300f, 500f, canvasW, canvasH, buttons, false))
+        while (PrivdClient.pollCommandForTest() != null) {
+            // drain initial press commands
+        }
+        assertEquals(0.5f, engine.stickDeflections.value["btn-ls"]!!.x, 0.01f)
+
+        // Finger 2 touches inside the same stick button while Finger 1 is held
+        assertTrue(engine.onPress(2L, 220f, 500f, canvasW, canvasH, buttons, false))
+        assertNull(PrivdClient.pollCommandForTest())
+
+        // Finger 1 lifts first: hardware axes must reset to (0, 0) and live UI deflection must clear immediately
+        engine.onRelease(1L, buttons)
+        val releaseFirstCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("JS 0 0\n", "JS 1 0\n"), releaseFirstCmds)
+        assertFalse("btn-ls" in engine.stickDeflections.value)
+        assertTrue("btn-ls" in engine.pressedIds.value)
+
+        // Finger 2 lifts: pressed highlight clears with no duplicate neutral sends
+        engine.onRelease(2L, buttons)
+        assertNull(PrivdClient.pollCommandForTest())
+        assertTrue(engine.pressedIds.value.isEmpty())
+    }
+
+    @Test
+    fun `releasing secondary button targeting same JoystickStick restores still-held stick tilt`() {
+        val primaryLeftStick =
+            PadButton(
+                id = "btn-ls-1",
+                label = "LS 1",
+                posX = 0.2f, // center (200, 500), radius 100
+                posY = 0.5f,
+                widthPx = 200f,
+                heightPx = 200f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.AnalogStick(stick = JoystickStick.LEFT, sensitivity = 1.0f, floatingCenter = false),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val secondaryLeftStick =
+            PadButton(
+                id = "btn-ls-2",
+                label = "LS 2",
+                posX = 0.8f, // center (800, 500), radius 100
+                posY = 0.5f,
+                widthPx = 200f,
+                heightPx = 200f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.AnalogStick(stick = JoystickStick.LEFT, sensitivity = 1.0f, floatingCenter = false),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val buttons = listOf(primaryLeftStick, secondaryLeftStick)
+
+        // Finger 1 holds primary Left Stick at (+0.5, 0.0) -> rawX = 16384, rawY = 0
+        assertTrue(engine.onPress(1L, 250f, 500f, canvasW, canvasH, buttons, false))
+        while (PrivdClient.pollCommandForTest() != null) {
+            // drain initial press commands
+        }
+
+        // Finger 2 briefly taps secondary Left Stick at its exact center (800, 500) -> sends JS 0 0
+        assertTrue(engine.onPress(2L, 800f, 500f, canvasW, canvasH, buttons, false))
+        val tapCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("JS 0 0\n"), tapCmds)
+
+        // Finger 2 lifts: primary Left Stick's (+16384, 0) must be immediately restored on hardware
+        engine.onRelease(2L, buttons)
+        val restoreCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("JS 0 16384\n"), restoreCmds)
+        assertEquals(0.5f, engine.stickDeflections.value["btn-ls-1"]!!.x, 0.01f)
+        assertFalse("btn-ls-2" in engine.stickDeflections.value)
+    }
 }
