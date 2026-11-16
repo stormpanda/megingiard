@@ -118,7 +118,8 @@ private const val MP_STICK_STEM_MIN_MAG = 0.02f
 private val MP_STICK_GUIDE_STROKE = 1.25.dp
 private val MP_STICK_STEM_STROKE = 2.dp
 private val MP_STICK_CAP_STROKE = 1.75.dp
-private val MP_NEUTRAL_STICK_DEFLECTION = NormalizedPoint(0f, 0f)
+internal val MP_NEUTRAL_STICK_DEFLECTION = NormalizedPoint(0f, 0f)
+internal val MP_NEUTRAL_STICK_DEFLECTION_PROVIDER: () -> NormalizedPoint = { MP_NEUTRAL_STICK_DEFLECTION }
 
 // Outer gradient edge alpha at resting state; intermediate stops follow r² quadratic curve.
 internal const val MP_BTN_GRADIENT_OUTER = 0.7f
@@ -142,7 +143,7 @@ internal fun PadButton(
     viewport: DesignViewport,
     accentColor: Color,
     isRunning: Boolean = false,
-    stickDeflection: NormalizedPoint? = null,
+    stickDeflectionProvider: (() -> NormalizedPoint)? = null,
 ) {
     if (btn.invisible) {
         return
@@ -287,7 +288,7 @@ internal fun PadButton(
                     isTrackpoint = isTrackpoint,
                     effectiveContentAccent = effectiveContentAccent,
                     isPressed = isPressed,
-                    stickDeflection = stickDeflection,
+                    stickDeflectionProvider = stickDeflectionProvider,
                 )
             }
         }
@@ -304,7 +305,7 @@ internal fun PadButtonContent(
     isTrackpoint: Boolean = btn.action is PadAction.TrackpointMove,
     effectiveContentAccent: Color = effectiveTextTint,
     isPressed: Boolean = false,
-    stickDeflection: NormalizedPoint? = null,
+    stickDeflectionProvider: (() -> NormalizedPoint)? = null,
 ) {
     val density = LocalDensity.current
     val isCircular = isTrackpoint || btn.action.isCircularControl()
@@ -321,10 +322,10 @@ internal fun PadButtonContent(
         val stickAction = btn.action as PadAction.AnalogStick
         AnalogStickFace(
             stick = stickAction.stick,
-            deflection = stickDeflection ?: MP_NEUTRAL_STICK_DEFLECTION,
             isPressed = isPressed,
-            accentColor = effectiveContentAccent,
+            contentTint = effectiveContentAccent,
             renderedDiameterPx = min(renderedWidthPx, renderedHeightPx),
+            deflectionProvider = stickDeflectionProvider ?: MP_NEUTRAL_STICK_DEFLECTION_PROVIDER,
         )
     } else if (btn.action is PadAction.ScrollWheel) {
         ScrollWheelFace(
@@ -483,10 +484,10 @@ private fun tintedGrayscaleFilter(tint: Color): ColorFilter {
 @Composable
 internal fun AnalogStickFace(
     stick: JoystickStick,
-    deflection: NormalizedPoint,
     isPressed: Boolean,
-    accentColor: Color,
+    contentTint: Color,
     renderedDiameterPx: Float,
+    deflectionProvider: () -> NormalizedPoint = MP_NEUTRAL_STICK_DEFLECTION_PROVIDER,
 ) {
     val density = LocalDensity.current
     val guideStroke = remember(density) { Stroke(width = with(density) { MP_STICK_GUIDE_STROKE.toPx() }) }
@@ -495,8 +496,6 @@ internal fun AnalogStickFace(
 
     val outerRadiusPx = (renderedDiameterPx / 2f).coerceAtLeast(1f)
     val maxTravelPx = outerRadiusPx * MP_STICK_MAX_TRAVEL_RATIO
-    val dx = deflection.x.coerceIn(-1f, 1f)
-    val dy = deflection.y.coerceIn(-1f, 1f)
     val stickShortLabel = if (stick == JoystickStick.LEFT) "L" else "R"
 
     Box(
@@ -504,9 +503,12 @@ internal fun AnalogStickFace(
         modifier = Modifier.fillMaxSize(),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
+            val deflection = deflectionProvider()
+            val dx = deflection.x.coerceIn(-1f, 1f)
+            val dy = deflection.y.coerceIn(-1f, 1f)
             val radius = size.minDimension / 2f
             val center = Offset(size.width / 2f, size.height / 2f)
-            val guideColor = accentColor.copy(alpha = MP_STICK_GUIDE_ALPHA * accentColor.alpha)
+            val guideColor = contentTint.copy(alpha = MP_STICK_GUIDE_ALPHA * contentTint.alpha)
 
             drawCircle(
                 color = guideColor,
@@ -527,7 +529,7 @@ internal fun AnalogStickFace(
             val mag = hypot(dx, dy)
             if (mag > MP_STICK_STEM_MIN_MAG) {
                 drawLine(
-                    color = accentColor.copy(alpha = MP_STICK_STEM_ALPHA * accentColor.alpha),
+                    color = contentTint.copy(alpha = MP_STICK_STEM_ALPHA * contentTint.alpha),
                     start = center,
                     end = capCenter,
                     strokeWidth = stemStrokePx,
@@ -538,12 +540,12 @@ internal fun AnalogStickFace(
             val capBorderAlpha = if (isPressed) MP_STICK_CAP_PRESSED_BORDER_ALPHA else MP_STICK_CAP_REST_BORDER_ALPHA
             val capRadius = radius * MP_STICK_CAP_RADIUS_RATIO
             drawCircle(
-                color = accentColor.copy(alpha = capFillAlpha * accentColor.alpha),
+                color = contentTint.copy(alpha = capFillAlpha * contentTint.alpha),
                 radius = capRadius,
                 center = capCenter,
             )
             drawCircle(
-                color = accentColor.copy(alpha = capBorderAlpha * accentColor.alpha),
+                color = contentTint.copy(alpha = capBorderAlpha * contentTint.alpha),
                 radius = capRadius,
                 center = capCenter,
                 style = capStroke,
@@ -552,14 +554,15 @@ internal fun AnalogStickFace(
 
         Text(
             text = stickShortLabel,
-            color = accentColor,
+            color = contentTint,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             modifier =
                 Modifier.graphicsLayer {
-                    translationX = dx * maxTravelPx
-                    translationY = dy * maxTravelPx
+                    val deflection = deflectionProvider()
+                    translationX = deflection.x.coerceIn(-1f, 1f) * maxTravelPx
+                    translationY = deflection.y.coerceIn(-1f, 1f) * maxTravelPx
                 },
         )
     }

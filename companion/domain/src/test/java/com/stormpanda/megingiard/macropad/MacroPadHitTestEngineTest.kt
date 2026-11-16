@@ -664,4 +664,109 @@ class MacroPadHitTestEngineTest {
         assertTrue("GU ${GamepadKeycodes.BTN_SOUTH}\n" in cleanupCmds)
         assertTrue(engine.stickDeflections.value.isEmpty())
     }
+
+    @Test
+    fun `second finger on same AnalogStick clears deflection when controlling finger lifts`() {
+        val leftStickBtn =
+            PadButton(
+                id = "btn-ls",
+                label = "LS",
+                posX = 0.25f, // center (250, 500), radius 100
+                posY = 0.5f,
+                widthPx = 200f,
+                heightPx = 200f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.AnalogStick(stick = JoystickStick.LEFT, sensitivity = 1.0f, floatingCenter = false),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val buttons = listOf(leftStickBtn)
+
+        // Finger 1 tilts stick halfway right (+0.5, 0.0)
+        assertTrue(engine.onPress(1L, 300f, 500f, canvasW, canvasH, buttons, false))
+        while (PrivdClient.pollCommandForTest() != null) {
+            // drain initial press commands
+        }
+        assertEquals(0.5f, engine.stickDeflections.value["btn-ls"]!!.x, 0.01f)
+
+        // Finger 2 touches inside the same stick button while Finger 1 is held
+        assertTrue(engine.onPress(2L, 220f, 500f, canvasW, canvasH, buttons, false))
+        assertNull(PrivdClient.pollCommandForTest())
+
+        // Finger 1 lifts first: hardware axes must reset to (0, 0) and live UI deflection must clear immediately
+        engine.onRelease(1L, buttons)
+        val releaseFirstCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("JS 0 0\n", "JS 1 0\n"), releaseFirstCmds)
+        assertFalse("btn-ls" in engine.stickDeflections.value)
+        assertTrue("btn-ls" in engine.pressedIds.value)
+
+        // Finger 2 lifts: pressed highlight clears with no duplicate neutral sends
+        engine.onRelease(2L, buttons)
+        assertNull(PrivdClient.pollCommandForTest())
+        assertTrue(engine.pressedIds.value.isEmpty())
+    }
+
+    @Test
+    fun `releasing secondary button targeting same JoystickStick restores still-held stick tilt`() {
+        val primaryLeftStick =
+            PadButton(
+                id = "btn-ls-1",
+                label = "LS 1",
+                posX = 0.2f, // center (200, 500), radius 100
+                posY = 0.5f,
+                widthPx = 200f,
+                heightPx = 200f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.AnalogStick(stick = JoystickStick.LEFT, sensitivity = 1.0f, floatingCenter = false),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val secondaryLeftStick =
+            PadButton(
+                id = "btn-ls-2",
+                label = "LS 2",
+                posX = 0.8f, // center (800, 500), radius 100
+                posY = 0.5f,
+                widthPx = 200f,
+                heightPx = 200f,
+                buttonShape = ButtonShape.CIRCLE,
+                action = PadAction.AnalogStick(stick = JoystickStick.LEFT, sensitivity = 1.0f, floatingCenter = false),
+                hapticStrength = HapticStrength.OFF,
+            )
+        val buttons = listOf(primaryLeftStick, secondaryLeftStick)
+
+        // Finger 1 holds primary Left Stick at (+0.5, 0.0) -> rawX = 16384, rawY = 0
+        assertTrue(engine.onPress(1L, 250f, 500f, canvasW, canvasH, buttons, false))
+        while (PrivdClient.pollCommandForTest() != null) {
+            // drain initial press commands
+        }
+
+        // Finger 2 briefly taps secondary Left Stick at its exact center (800, 500) -> sends JS 0 0
+        assertTrue(engine.onPress(2L, 800f, 500f, canvasW, canvasH, buttons, false))
+        val tapCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("JS 0 0\n"), tapCmds)
+
+        // Finger 2 lifts: primary Left Stick's (+16384, 0) must be immediately restored on hardware
+        engine.onRelease(2L, buttons)
+        val restoreCmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("JS 0 16384\n"), restoreCmds)
+        assertEquals(0.5f, engine.stickDeflections.value["btn-ls-1"]!!.x, 0.01f)
+        assertFalse("btn-ls-2" in engine.stickDeflections.value)
+    }
 }

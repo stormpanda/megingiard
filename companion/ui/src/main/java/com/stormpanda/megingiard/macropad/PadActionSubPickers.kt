@@ -43,6 +43,7 @@ private const val TP_SENSITIVITY_MIN = 0.1f
 private const val TP_SENSITIVITY_MAX = 5.0f
 private const val TP_SENSITIVITY_STEP = 0.1f
 
+private const val AS_DEFAULT_SENSITIVITY = 1.0f
 private const val AS_SENSITIVITY_MIN = 0.5f
 private const val AS_SENSITIVITY_MAX = 2.5f
 private const val AS_SENSITIVITY_STEP = 0.1f
@@ -147,7 +148,8 @@ private fun GamepadControlTypeChoiceCard(
     swapFaceButtons: Boolean,
     onChange: (PadAction) -> Unit,
     isFirstItem: Boolean = false,
-    existingSensitivity: Float = 1.0f,
+    rememberedButton: PadAction.GamepadButton? = null,
+    existingSensitivity: Float = AS_DEFAULT_SENSITIVITY,
     existingFloatingCenter: Boolean = false,
 ) {
     val options = GamepadControlType.entries
@@ -156,10 +158,11 @@ private fun GamepadControlTypeChoiceCard(
         val nextAction =
             when (nextType) {
                 GamepadControlType.BUTTON -> {
-                    PadAction.GamepadButton(
-                        btnCode = GamepadKeycodes.BTN_SOUTH,
-                        label = gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_SOUTH, swapFaceButtons),
-                    )
+                    rememberedButton
+                        ?: PadAction.GamepadButton(
+                            btnCode = GamepadKeycodes.BTN_SOUTH,
+                            label = gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_SOUTH, swapFaceButtons),
+                        )
                 }
 
                 GamepadControlType.LEFT_STICK -> {
@@ -194,14 +197,76 @@ private fun GamepadControlTypeChoiceCard(
 }
 
 @Composable
-internal fun GamepadButtonPicker(
-    current: PadAction.GamepadButton,
+internal fun GamepadActionPicker(
+    current: PadAction,
     onOpenPicker: (slotIndex: Int) -> Unit,
     onChange: (PadAction) -> Unit,
     isFirstItem: Boolean = false,
 ) {
-    val noneLabel = stringResource(R.string.macropad_modifier_none)
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
+    var rememberedButton by remember { mutableStateOf(current as? PadAction.GamepadButton) }
+    var rememberedStick by remember { mutableStateOf(current as? PadAction.AnalogStick) }
+
+    if (current is PadAction.GamepadButton && rememberedButton != current) {
+        rememberedButton = current
+    } else if (current is PadAction.AnalogStick && rememberedStick != current) {
+        rememberedStick = current
+    }
+
+    val currentType =
+        when (current) {
+            is PadAction.AnalogStick -> {
+                if (current.stick == JoystickStick.LEFT) {
+                    GamepadControlType.LEFT_STICK
+                } else {
+                    GamepadControlType.RIGHT_STICK
+                }
+            }
+
+            else -> {
+                GamepadControlType.BUTTON
+            }
+        }
+
+    GamepadControlTypeChoiceCard(
+        currentType = currentType,
+        swapFaceButtons = swapFaceButtons,
+        onChange = onChange,
+        isFirstItem = isFirstItem,
+        rememberedButton = rememberedButton,
+        existingSensitivity = rememberedStick?.sensitivity ?: AS_DEFAULT_SENSITIVITY,
+        existingFloatingCenter = rememberedStick?.floatingCenter ?: false,
+    )
+
+    when (current) {
+        is PadAction.GamepadButton -> {
+            GamepadButtonSlots(
+                current = current,
+                swapFaceButtons = swapFaceButtons,
+                onOpenPicker = onOpenPicker,
+            )
+        }
+
+        is PadAction.AnalogStick -> {
+            AnalogStickParameters(
+                current = current,
+                onChange = onChange,
+            )
+        }
+
+        else -> {
+            Unit
+        }
+    }
+}
+
+@Composable
+private fun GamepadButtonSlots(
+    current: PadAction.GamepadButton,
+    swapFaceButtons: Boolean,
+    onOpenPicker: (slotIndex: Int) -> Unit,
+) {
+    val noneLabel = stringResource(R.string.macropad_modifier_none)
 
     val currentPreset =
         GamepadKeycodes.PRESETS.firstOrNull { it.code == current.btnCode }
@@ -212,13 +277,6 @@ internal fun GamepadButtonPicker(
         code?.let { c ->
             GamepadKeycodes.PRESETS.firstOrNull { it.code == c }?.localizedDisplayLabel(swapFaceButtons)
         } ?: noneLabel
-
-    GamepadControlTypeChoiceCard(
-        currentType = GamepadControlType.BUTTON,
-        swapFaceButtons = swapFaceButtons,
-        onChange = onChange,
-        isFirstItem = isFirstItem,
-    )
 
     GamepadActionCard(
         title = stringResource(R.string.macropad_picker_label_button),
@@ -241,30 +299,13 @@ internal fun GamepadButtonPicker(
 }
 
 @Composable
-internal fun AnalogStickPicker(
+private fun AnalogStickParameters(
     current: PadAction.AnalogStick,
     onChange: (PadAction) -> Unit,
-    isFirstItem: Boolean = false,
 ) {
     AppLog.d(
         TAG,
-        "AnalogStickPicker: stick=${current.stick} sens=${current.sensitivity} floating=${current.floatingCenter}",
-    )
-    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
-    val currentType =
-        if (current.stick == JoystickStick.LEFT) {
-            GamepadControlType.LEFT_STICK
-        } else {
-            GamepadControlType.RIGHT_STICK
-        }
-
-    GamepadControlTypeChoiceCard(
-        currentType = currentType,
-        swapFaceButtons = swapFaceButtons,
-        onChange = onChange,
-        isFirstItem = isFirstItem,
-        existingSensitivity = current.sensitivity,
-        existingFloatingCenter = current.floatingCenter,
+        "AnalogStickParameters: stick=${current.stick} sens=${current.sensitivity} floating=${current.floatingCenter}",
     )
 
     GamepadStepperCard(
@@ -291,7 +332,7 @@ internal fun AnalogStickPicker(
         description = stringResource(R.string.macropad_analog_stick_floating_desc),
         checked = current.floatingCenter,
         onCheckedChange = { enabled ->
-            AppLog.d(TAG, "AnalogStickPicker: floatingCenter=$enabled")
+            AppLog.d(TAG, "AnalogStickParameters: floatingCenter=$enabled")
             onChange(current.copy(floatingCenter = enabled))
         },
         icon = Icons.Rounded.ControlCamera,

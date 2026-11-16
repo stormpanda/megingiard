@@ -104,6 +104,7 @@ class MacroPadHitTestEngine(
     private val pointerButtonMap = mutableMapOf<Long, PadButton>()
     private val pointerTouchSlotMap = mutableMapOf<Long, Int>()
     private val activeStickPointers = mutableMapOf<Long, ActiveStickPointerState>()
+    private val lastInjectedStickAxis = mutableMapOf<Int, Int>()
     private val scrollStartY = mutableMapOf<Long, Float>()
     private var virtualCursorX = 0.5f
     private var virtualCursorY = 0.5f
@@ -150,9 +151,21 @@ class MacroPadHitTestEngine(
         )
     }
 
+    private fun injectStickAxis(
+        axisCode: Int,
+        rawValue: Int,
+    ) {
+        if (lastInjectedStickAxis[axisCode] != rawValue) {
+            lastInjectedStickAxis[axisCode] = rawValue
+            GamepadInjector.joystick(axisCode, rawValue)
+        }
+    }
+
     private fun resetAnalogStickAxes(stick: JoystickStick) {
         val axisX = if (stick == JoystickStick.LEFT) GamepadKeycodes.ABS_X else GamepadKeycodes.ABS_Z
         val axisY = if (stick == JoystickStick.LEFT) GamepadKeycodes.ABS_Y else GamepadKeycodes.ABS_RZ
+        lastInjectedStickAxis.remove(axisX)
+        lastInjectedStickAxis.remove(axisY)
         GamepadInjector.joystick(axisX, 0)
         GamepadInjector.joystick(axisY, 0)
     }
@@ -183,14 +196,10 @@ class MacroPadHitTestEngine(
         val axisX = if (state.stick == JoystickStick.LEFT) GamepadKeycodes.ABS_X else GamepadKeycodes.ABS_Z
         val axisY = if (state.stick == JoystickStick.LEFT) GamepadKeycodes.ABS_Y else GamepadKeycodes.ABS_RZ
 
-        if (rawX != state.lastRawX) {
-            state.lastRawX = rawX
-            GamepadInjector.joystick(axisX, rawX)
-        }
-        if (rawY != state.lastRawY) {
-            state.lastRawY = rawY
-            GamepadInjector.joystick(axisY, rawY)
-        }
+        state.lastRawX = rawX
+        state.lastRawY = rawY
+        injectStickAxis(axisX, rawX)
+        injectStickAxis(axisY, rawY)
 
         val prevPoint = _stickDeflections.value[state.buttonId]
         if (
@@ -499,13 +508,39 @@ class MacroPadHitTestEngine(
             btn.action is PadAction.AnalogStick -> {
                 if (isLastPointerOnButton) {
                     _pressedIds.value = _pressedIds.value - mapped
+                }
+                if (activeStickPointers.values.none { it.buttonId == mapped }) {
                     _stickDeflections.value = _stickDeflections.value - mapped
                 }
-                val targetStick = stickState?.stick ?: (btn.action as PadAction.AnalogStick).stick
-                val anyOtherSameStickActive = activeStickPointers.values.any { it.stick == targetStick }
-                if (stickState != null && !anyOtherSameStickActive) {
-                    resetAnalogStickAxes(targetStick)
-                    AppLog.d(TAG, "AnalogStick up: button=$mapped stick=$targetStick")
+                if (stickState != null) {
+                    val targetStick = stickState.stick
+                    val remainingSameStick = activeStickPointers.values.lastOrNull { it.stick == targetStick }
+                    if (remainingSameStick == null) {
+                        resetAnalogStickAxes(targetStick)
+                        AppLog.d(TAG, "AnalogStick up: button=$mapped stick=$targetStick")
+                    } else if (
+                        remainingSameStick.lastRawX != Int.MIN_VALUE &&
+                        remainingSameStick.lastRawY != Int.MIN_VALUE
+                    ) {
+                        val axisX =
+                            if (targetStick == JoystickStick.LEFT) {
+                                GamepadKeycodes.ABS_X
+                            } else {
+                                GamepadKeycodes.ABS_Z
+                            }
+                        val axisY =
+                            if (targetStick == JoystickStick.LEFT) {
+                                GamepadKeycodes.ABS_Y
+                            } else {
+                                GamepadKeycodes.ABS_RZ
+                            }
+                        injectStickAxis(axisX, remainingSameStick.lastRawX)
+                        injectStickAxis(axisY, remainingSameStick.lastRawY)
+                        AppLog.d(
+                            TAG,
+                            "AnalogStick up: button=$mapped stick=$targetStick -> restored button=${remainingSameStick.buttonId}",
+                        )
+                    }
                 }
             }
 
@@ -546,6 +581,7 @@ class MacroPadHitTestEngine(
         pointerButtonMap.clear()
         pointerTouchSlotMap.clear()
         activeStickPointers.clear()
+        lastInjectedStickAxis.clear()
         _pressedIds.value = emptySet()
         _stickDeflections.value = emptyMap()
         scrollStartY.clear()
@@ -594,6 +630,7 @@ class MacroPadHitTestEngine(
         pointerButtonMap.clear()
         pointerTouchSlotMap.clear()
         activeStickPointers.clear()
+        lastInjectedStickAxis.clear()
         scrollStartY.clear()
 
         val upX = unclampedCursorX

@@ -748,7 +748,7 @@ data class PadButton(
 /**
  * Returns a copy of this [PadButton] with dimensions, shape, and icon constraints adjusted for [newAction]
  * relative to [canvas].
- * - [PadAction.TrackpointMove]: Enforces 1:1 aspect ratio, minimum size of [LayoutCanvasSpec.largeControlMinSizePx], and [ButtonShape.CIRCLE].
+ * - [PadAction.TrackpointMove] / [PadAction.AnalogStick]: Enforces 1:1 aspect ratio, minimum size of [LayoutCanvasSpec.largeControlMinSizePx], and [ButtonShape.CIRCLE].
  * - [PadAction.ScrollWheel]: Enforces a minimum vertical height of [LayoutCanvasSpec.largeControlMinSizePx].
  * - Fixed-face actions (`!newAction.supportsCustomIcon()`): Forces [PadButton.iconName] to `null`.
  */
