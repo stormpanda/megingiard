@@ -1,15 +1,19 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.input.TouchAction
+import kotlin.math.roundToInt
 
 // Scale factor for float axis values (-1..1) → int16 (-32768..32767).
 // Using 32768 so -1.0 maps exactly to -32768; positive side is clamped to 32767 below.
 private const val ABS_FULL_DEFLECTION = 32768
+private const val DIGITAL_TRIGGER_PRESS_THRESHOLD = 0.5f
 
 /** Event types emitted by [buildMacroEventList]. */
 enum class MacroEventType {
     BUTTON_DOWN,
     BUTTON_UP,
+    DIGITAL_BUTTON_DOWN,
+    DIGITAL_BUTTON_UP,
     JOYSTICK_SET,
     HAT,
     TOUCH_DOWN,
@@ -44,6 +48,7 @@ val MacroEvent.isReset: Boolean
     get() =
         when (type) {
             MacroEventType.BUTTON_UP,
+            MacroEventType.DIGITAL_BUTTON_UP,
             MacroEventType.TOUCH_UP,
             MacroEventType.KEY_UP,
             -> true
@@ -57,11 +62,21 @@ val MacroEvent.isReset: Boolean
 
 private fun scaleAxis(value: Float): Int = (value.coerceIn(-1f, 1f) * ABS_FULL_DEFLECTION).toInt().coerceIn(-32768, 32767)
 
+private fun scaleTrigger(pressure: Float): Int =
+    (pressure.coerceIn(0f, 1f) * GamepadKeycodes.TRIGGER_RAW_MAX).roundToInt().coerceIn(0, GamepadKeycodes.TRIGGER_RAW_MAX)
+
 private fun getJoystickAxes(stick: JoystickStick): Pair<Int, Int> =
     if (stick == JoystickStick.LEFT) {
         Pair(GamepadKeycodes.ABS_X, GamepadKeycodes.ABS_Y)
     } else {
         Pair(GamepadKeycodes.ABS_Z, GamepadKeycodes.ABS_RZ)
+    }
+
+private fun getTriggerAxisAndButton(trigger: GamepadTrigger): Pair<Int, Int> =
+    if (trigger == GamepadTrigger.LEFT) {
+        Pair(GamepadKeycodes.ABS_BRAKE, GamepadKeycodes.BTN_TL2)
+    } else {
+        Pair(GamepadKeycodes.ABS_GAS, GamepadKeycodes.BTN_TR2)
     }
 
 /**
@@ -161,6 +176,42 @@ fun buildMacroEventList(macro: Macro): List<MacroEvent> =
                     for (mod in step.modifiers.asReversed()) {
                         events += MacroEvent(endTime, MacroEventType.KEY_UP, mod, 0)
                     }
+                }
+
+                is MacroStep.TriggerPress -> {
+                    val (axisCode, btnCode) = getTriggerAxisAndButton(step.trigger)
+                    val rawPressure = scaleTrigger(step.pressure)
+                    val endTime = step.startTimeMs + step.durationMs
+                    events += MacroEvent(step.startTimeMs, MacroEventType.JOYSTICK_SET, axisCode, rawPressure)
+                    if (step.pressure.coerceIn(0f, 1f) >= DIGITAL_TRIGGER_PRESS_THRESHOLD) {
+                        events += MacroEvent(step.startTimeMs, MacroEventType.DIGITAL_BUTTON_DOWN, btnCode, 0)
+                        events += MacroEvent(endTime, MacroEventType.DIGITAL_BUTTON_UP, btnCode, 0)
+                    }
+                    events += MacroEvent(endTime, MacroEventType.JOYSTICK_SET, axisCode, 0)
+                }
+
+                is MacroStep.TriggerPath -> {
+                    val (axisCode, btnCode) = getTriggerAxisAndButton(step.trigger)
+                    var digitalDown = false
+                    for (sample in step.samples) {
+                        if (sample.offsetMs >= step.durationMs) continue
+                        val clamped = sample.pressure.coerceIn(0f, 1f)
+                        val rawPressure = scaleTrigger(clamped)
+                        val t = step.startTimeMs + sample.offsetMs
+                        events += MacroEvent(t, MacroEventType.JOYSTICK_SET, axisCode, rawPressure)
+                        if (!digitalDown && clamped >= DIGITAL_TRIGGER_PRESS_THRESHOLD) {
+                            digitalDown = true
+                            events += MacroEvent(t, MacroEventType.DIGITAL_BUTTON_DOWN, btnCode, 0)
+                        } else if (digitalDown && clamped < DIGITAL_TRIGGER_PRESS_THRESHOLD) {
+                            digitalDown = false
+                            events += MacroEvent(t, MacroEventType.DIGITAL_BUTTON_UP, btnCode, 0)
+                        }
+                    }
+                    val endTime = step.startTimeMs + step.durationMs
+                    if (digitalDown) {
+                        events += MacroEvent(endTime, MacroEventType.DIGITAL_BUTTON_UP, btnCode, 0)
+                    }
+                    events += MacroEvent(endTime, MacroEventType.JOYSTICK_SET, axisCode, 0)
                 }
             }
         }

@@ -309,6 +309,27 @@ static void test_gamepad_protocol_parsing(void) {
     assert(g_events[0].code == ABS_X);
     assert(g_events[0].value == 15000);
 
+    // Trigger Axes (L2 = ABS_BRAKE=10, R2 = ABS_GAS=9)
+    g_event_count = 0;
+    res = parse_gamepad_command("JS 10 32767\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_event_count == 2);
+    assert(g_events[0].type == EV_ABS);
+    assert(g_events[0].code == ABS_BRAKE);
+    assert(g_events[0].value == 32767);
+    assert(g_events[1].type == EV_SYN);
+
+    g_event_count = 0;
+    res = parse_gamepad_command("JS 9 0\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_events[0].type == EV_ABS);
+    assert(g_events[0].code == ABS_GAS);
+    assert(g_events[0].value == 0);
+
+    // Negative trigger value rejected
+    assert(parse_gamepad_command("JS 10 -1\n", MOCK_FD) == 0);
+    assert(parse_gamepad_command("JS 9 -100\n", MOCK_FD) == 0);
+
     // Invalid format
     res = parse_gamepad_command("INVALID\n", MOCK_FD);
     assert(res == 0);
@@ -325,6 +346,106 @@ static FILE* open_string_stream(const char* text) {
     }
     rewind(tmp);
     return tmp;
+}
+
+static void test_gamepad_axis_map_and_trigger_scaling(void) {
+    printf("[TEST] Gamepad axis mapping & L2/R2 trigger scaling... ");
+
+    // Case 1: Odin / Thor / Xbox One style (0..255 triggers on ABS_BRAKE=10 & ABS_GAS=9)
+    const char* odin_dump =
+        "Event Hub State:\n"
+        "  Devices:\n"
+        "    7: Odin Controller\n"
+        "      Path: /dev/input/event4\n"
+        "Input Reader State:\n"
+        "  Device 5: Odin Controller\n"
+        "    EventHub Devices: [ 7 ]\n"
+        "    Joystick Input Mapper:\n"
+        "      Axes:\n"
+        "        X: min=-1.00000, max=1.00000\n"
+        "          rawAxis=0, rawMin=-32768, rawMax=32767, rawFlat=4096\n"
+        "        Y: min=-1.00000, max=1.00000\n"
+        "          rawAxis=1, rawMin=-32768, rawMax=32767, rawFlat=4096\n"
+        "        Z: min=-1.00000, max=1.00000\n"
+        "          rawAxis=2, rawMin=-32768, rawMax=32767, rawFlat=4096\n"
+        "        RZ: min=-1.00000, max=1.00000\n"
+        "          rawAxis=5, rawMin=-32768, rawMax=32767, rawFlat=4096\n"
+        "        BRAKE: min=0.00000, max=1.00000\n"
+        "          rawAxis=10, rawMin=0, rawMax=255, rawFlat=0\n"
+        "        GAS: min=0.00000, max=1.00000\n"
+        "          rawAxis=9, rawMin=0, rawMax=255, rawFlat=0\n";
+    GamepadAxisMap map1;
+    init_default_gamepad_axis_map(&map1);
+    FILE* s1 = open_string_stream(odin_dump);
+    assert(parse_dumpsys_input_gamepad_axes(s1, "/dev/input/event4", &map1) == 1);
+    fclose(s1);
+    assert(map1.left_trigger.raw_axis == 10 && map1.left_trigger.raw_max == 255);
+    assert(map1.right_trigger.raw_axis == 9 && map1.right_trigger.raw_max == 255);
+
+    g_event_count = 0;
+    assert(parse_gamepad_command_mapped("JS 10 32767\n", MOCK_FD, &map1) == 1);
+    assert(g_events[0].code == 10 && g_events[0].value == 255);
+
+    g_event_count = 0;
+    assert(parse_gamepad_command_mapped("JS 9 16384\n", MOCK_FD, &map1) == 1);
+    assert(g_events[0].code == 9 && (g_events[0].value == 127 || g_events[0].value == 128));
+
+    uint16_t out_code = 0;
+    int32_t out_val = 0;
+    assert(translate_gamepad_evdev_abs(&map1, 10, 255, &out_code, &out_val) == 1);
+    assert(out_code == ABS_BRAKE && out_val == 32767);
+    assert(translate_gamepad_evdev_abs(&map1, 9, 0, &out_code, &out_val) == 1);
+    assert(out_code == ABS_GAS && out_val == 0);
+
+    // Case 2: Xbox 360 Vendor_045e_Product_028e.kl (Right stick on RX=3/RY=4, Triggers on Z=2/RZ=5 0..1023)
+    const char* xbox_dump =
+        "Event Hub State:\n"
+        "  Devices:\n"
+        "    8: Xbox 360 Pad\n"
+        "      Path: /dev/input/event8\n"
+        "Input Reader State:\n"
+        "  Device 6: Xbox 360 Pad\n"
+        "    EventHub Devices: [ 8 ]\n"
+        "    Joystick Input Mapper:\n"
+        "      Axes:\n"
+        "        X: min=-1.00000, max=1.00000\n"
+        "          rawAxis=0, rawMin=-32768, rawMax=32767\n"
+        "        Y: min=-1.00000, max=1.00000\n"
+        "          rawAxis=1, rawMin=-32768, rawMax=32767\n"
+        "        Z: min=-1.00000, max=1.00000\n"
+        "          rawAxis=3, rawMin=-32768, rawMax=32767\n"
+        "        RZ: min=-1.00000, max=1.00000\n"
+        "          rawAxis=4, rawMin=-32768, rawMax=32767\n"
+        "        LTRIGGER: min=0.00000, max=1.00000\n"
+        "          rawAxis=2, rawMin=0, rawMax=1023\n"
+        "        RTRIGGER: min=0.00000, max=1.00000\n"
+        "          rawAxis=5, rawMin=0, rawMax=1023\n";
+    GamepadAxisMap map2;
+    init_default_gamepad_axis_map(&map2);
+    FILE* s2 = open_string_stream(xbox_dump);
+    assert(parse_dumpsys_input_gamepad_axes(s2, "/dev/input/event8", &map2) == 1);
+    fclose(s2);
+    assert(map2.right_x.raw_axis == ABS_RX && map2.right_y.raw_axis == ABS_RY);
+    assert(map2.left_trigger.raw_axis == ABS_Z && map2.left_trigger.raw_max == 1023);
+    assert(map2.right_trigger.raw_axis == ABS_RZ && map2.right_trigger.raw_max == 1023);
+
+    // Canonical JS 2 (Right Stick X) writes to raw ABS_RX (3), NOT trigger ABS_Z (2)!
+    g_event_count = 0;
+    assert(parse_gamepad_command_mapped("JS 2 -32768\n", MOCK_FD, &map2) == 1);
+    assert(g_events[0].code == ABS_RX && g_events[0].value == -32768);
+
+    // Canonical JS 10 (L2) writes 1023 to raw ABS_Z (2)!
+    g_event_count = 0;
+    assert(parse_gamepad_command_mapped("JS 10 32767\n", MOCK_FD, &map2) == 1);
+    assert(g_events[0].code == ABS_Z && g_events[0].value == 1023);
+
+    // Incoming raw ABS_Z=1023 translates to canonical ABS_BRAKE=32767 (not right stick!)
+    assert(translate_gamepad_evdev_abs(&map2, ABS_Z, 1023, &out_code, &out_val) == 1);
+    assert(out_code == ABS_BRAKE && out_val == 32767);
+    assert(translate_gamepad_evdev_abs(&map2, ABS_RX, 20000, &out_code, &out_val) == 1);
+    assert(out_code == ABS_Z && out_val == 20000);
+
+    printf("PASS\n");
 }
 
 static void test_primary_touch_device_name_filtering(void) {
@@ -490,6 +611,7 @@ int main(void) {
     test_mouse_protocol_parsing();
     test_touch_protocol_parsing();
     test_gamepad_protocol_parsing();
+    test_gamepad_axis_map_and_trigger_scaling();
     test_primary_touch_device_name_filtering();
     test_dumpsys_input_primary_touch_resolution();
     printf("All Native C unit tests PASSED successfully!\n");

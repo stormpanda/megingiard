@@ -28,7 +28,7 @@ OS-level peer credential checks (`SO_PEERCRED` / `peerCredentials.uid` checks) a
 
 #### Mutual HMAC-SHA256 Handshake & Protocol Version Verification
 
-Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`, currently `22`):
+Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`, currently `23`):
 
 ```
 Daemon -> App     CHAL <32-hex-nonce1>\n
@@ -87,7 +87,7 @@ the existing protocol.
 | App → D | `M <slot> <x> <y>\n` | Multi-touch finger MOVE |
 | App → D | `U <slot>\n` | Multi-touch finger UP |
 | App → D | `HD <axis> <val>\n` | D-Pad hat (axis 0=X 1=Y, val −1/0/+1) |
-| App → D | `JS <axis> <val>\n` | Analog stick (axis ABS_X=0…ABS_RZ=5, int16) |
+| App → D | `JS <axis> <val>\n` | Analog stick (`ABS_X=0, ABS_Y=1, ABS_Z=2, ABS_RZ=5`, `-32768..32767`) or canonical analog trigger (`ABS_GAS=9` R2, `ABS_BRAKE=10` L2, `0..32767`), dynamically mapped and scaled to physical `.kl` + `EVIOCGABS` bounds |
 | App → D | `KB_START\n` | Dynamically create virtual uinput keyboard device |
 | App → D | `KB_STOP\n` | Destroy virtual uinput keyboard device |
 | App → D | `KD <keycode>\n` | Virtual keyboard key DOWN (Linux `KEY_*` range 1..255) |
@@ -181,9 +181,9 @@ When the socket fails, `markBroken()` acquires `stateLock`, runs `cleanupLocked(
 
 | File | Responsibility |
 | --- | --- |
-| `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` | Shared daemon version (`PRIVD_VERSION = 22`), asset names, canonical TCP ports (`51234` / `51244`), and remote file/process path helpers |
-| `companion/ui/src/main/cpp/megingiard_privd.c` | Native daemon source (TCP loopback server, HMAC-SHA256 auth, `dumpsys input` + `EVIOCGABS` primary touchscreen discovery, `O_CLOEXEC` evdev/uinput writers, passive gamepad/touch streams, pipe-streamed `SCREENSHOT_B64`, `READ_FILE`, `LIST_PROCESSES`) |
-| `companion/ui/src/main/cpp/cmd_parsers.h` | Pure C command parsers (`parse_touch_command`, `parse_mouse_command`, `parse_key_command`, `parse_gamepad_command`, `parse_dumpsys_input_primary_touch_path`, `compute_evdev_axis_span`) shared with native unit tests |
+| `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` | Shared daemon version (`PRIVD_VERSION = 23`), asset names, canonical TCP ports (`51234` / `51244`), and remote file/process path helpers |
+| `companion/ui/src/main/cpp/megingiard_privd.c` | Native daemon source (TCP loopback server, HMAC-SHA256 auth, `dumpsys input` + `EVIOCGABS` primary touchscreen & gamepad `.kl` axis discovery, `O_CLOEXEC` evdev/uinput writers, passive gamepad/touch streams, pipe-streamed `SCREENSHOT_B64`, `READ_FILE`, `LIST_PROCESSES`) |
+| `companion/ui/src/main/cpp/cmd_parsers.h` | Pure C command parsers (`parse_touch_command`, `parse_mouse_command`, `parse_key_command`, `parse_gamepad_command_mapped`, `parse_dumpsys_input_primary_touch_path`, `parse_dumpsys_input_gamepad_axes`, `translate_gamepad_evdev_abs`, `compute_evdev_axis_span`) shared with native unit tests |
 | `companion/ui/src/main/assets/megingiard_privd_arm64` | Pre-built static arm64 daemon binary |
 | `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdPairKey.kt` | Per-install Keystore-encrypted HMAC key: `generateAndStore()`, `load()`, `delete()` |
 | `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdClient.kt` | Loopback TCP transport singleton (writer + reader threads, `PendingRpc` single-flight RPC framing, primary touch sensor dimension capture, `captureScreenshotPng`, evdev/touch event streams) |

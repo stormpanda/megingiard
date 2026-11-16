@@ -25,6 +25,11 @@ private const val EV_ABS = 3
 private const val ABS_HAT0X = 16
 private const val ABS_HAT0Y = 17
 
+private const val STICK_RAW_SCALE = 32767f
+private const val TRIGGER_RAW_SCALE = 32767f
+private const val TRIGGER_DEADZONE = 0.02f
+private const val TRIGGER_DIGITAL_HUD_THRESHOLD = 0.5f
+
 sealed interface GamepadRecordingState {
     data object Idle : GamepadRecordingState
 
@@ -36,6 +41,8 @@ sealed interface GamepadRecordingState {
         val leftStickY: Float,
         val rightStickX: Float,
         val rightStickY: Float,
+        val leftTrigger: Float = 0f,
+        val rightTrigger: Float = 0f,
         val stepCount: Int = 0,
         val startElapsedRealtime: Long = 0L,
     ) : GamepadRecordingState
@@ -85,6 +92,20 @@ object PhysicalGamepadRecordingManager {
     private var rightInGesture = false
     private var leftGestureStartMs = 0L
     private var rightGestureStartMs = 0L
+
+    // Per-trigger gesture tracking
+    private val leftTriggerSamples = mutableListOf<TriggerSample>()
+    private val rightTriggerSamples = mutableListOf<TriggerSample>()
+    private var leftTriggerInGesture = false
+    private var rightTriggerInGesture = false
+    private var leftTriggerGestureStartMs = 0L
+    private var rightTriggerGestureStartMs = 0L
+    private var leftTriggerVal = 0f
+    private var rightTriggerVal = 0f
+    private var leftTriggerDigitalDown = false
+    private var rightTriggerDigitalDown = false
+    private var leftTriggerSuppressDigital = false
+    private var rightTriggerSuppressDigital = false
 
     // Latest raw axis values — held so we can close open gestures at stop time
     private var leftX = 0f
@@ -207,7 +228,9 @@ object PhysicalGamepadRecordingManager {
                 pendingButtonDowns.size +
                 (if (hatStartMs != null) 1 else 0) +
                 (if (leftInGesture) 1 else 0) +
-                (if (rightInGesture) 1 else 0)
+                (if (rightInGesture) 1 else 0) +
+                (if (leftTriggerInGesture) 1 else 0) +
+                (if (rightTriggerInGesture) 1 else 0)
         _state.value =
             current.copy(
                 pressedButtons = pressedButtons.toSet(),
@@ -217,6 +240,8 @@ object PhysicalGamepadRecordingManager {
                 leftStickY = leftY,
                 rightStickX = rightX,
                 rightStickY = rightY,
+                leftTrigger = leftTriggerVal,
+                rightTrigger = rightTriggerVal,
                 stepCount = activeStepCount,
                 startElapsedRealtime = recordingStartEpochMs,
             )
@@ -234,6 +259,8 @@ object PhysicalGamepadRecordingManager {
                     leftStickY = 0f,
                     rightStickX = 0f,
                     rightStickY = 0f,
+                    leftTrigger = 0f,
+                    rightTrigger = 0f,
                     stepCount = 0,
                     startElapsedRealtime = startElapsedMs,
                 )
@@ -254,6 +281,19 @@ object PhysicalGamepadRecordingManager {
     ) {
         when (value) {
             1 -> {
+                if (code == GamepadKeycodes.BTN_TL2) {
+                    leftTriggerDigitalDown = true
+                    if (leftTriggerInGesture || leftTriggerSuppressDigital) {
+                        syncTriggerHudButton(GamepadTrigger.LEFT)
+                        return
+                    }
+                } else if (code == GamepadKeycodes.BTN_TR2) {
+                    rightTriggerDigitalDown = true
+                    if (rightTriggerInGesture || rightTriggerSuppressDigital) {
+                        syncTriggerHudButton(GamepadTrigger.RIGHT)
+                        return
+                    }
+                }
                 if (pendingButtonDowns.containsKey(code)) return
                 pendingButtonDowns[code] = nowMs
                 pressedButtons.add(code)
@@ -261,6 +301,25 @@ object PhysicalGamepadRecordingManager {
             }
 
             0 -> {
+                if (code == GamepadKeycodes.BTN_TL2) {
+                    leftTriggerDigitalDown = false
+                    if (!leftTriggerInGesture) {
+                        leftTriggerSuppressDigital = false
+                    }
+                    syncTriggerHudButton(GamepadTrigger.LEFT)
+                    val startMs = pendingButtonDowns.remove(code) ?: return
+                    emitButtonStep(code = code, startMs = startMs, endMs = nowMs)
+                    return
+                } else if (code == GamepadKeycodes.BTN_TR2) {
+                    rightTriggerDigitalDown = false
+                    if (!rightTriggerInGesture) {
+                        rightTriggerSuppressDigital = false
+                    }
+                    syncTriggerHudButton(GamepadTrigger.RIGHT)
+                    val startMs = pendingButtonDowns.remove(code) ?: return
+                    emitButtonStep(code = code, startMs = startMs, endMs = nowMs)
+                    return
+                }
                 val startMs = pendingButtonDowns.remove(code) ?: return
                 pressedButtons.remove(code)
                 emitButtonStep(code = code, startMs = startMs, endMs = nowMs)
@@ -283,23 +342,104 @@ object PhysicalGamepadRecordingManager {
             }
 
             GamepadKeycodes.ABS_X -> {
-                leftX = (rawValue / 32767f).coerceIn(-1f, 1f)
+                leftX = (rawValue / STICK_RAW_SCALE).coerceIn(-1f, 1f)
                 updateStick(stick = JoystickStick.LEFT, x = leftX, y = leftY, nowMs = nowMs)
             }
 
             GamepadKeycodes.ABS_Y -> {
-                leftY = (rawValue / 32767f).coerceIn(-1f, 1f)
+                leftY = (rawValue / STICK_RAW_SCALE).coerceIn(-1f, 1f)
                 updateStick(stick = JoystickStick.LEFT, x = leftX, y = leftY, nowMs = nowMs)
             }
 
             GamepadKeycodes.ABS_Z -> {
-                rightX = (rawValue / 32767f).coerceIn(-1f, 1f)
+                rightX = (rawValue / STICK_RAW_SCALE).coerceIn(-1f, 1f)
                 updateStick(stick = JoystickStick.RIGHT, x = rightX, y = rightY, nowMs = nowMs)
             }
 
             GamepadKeycodes.ABS_RZ -> {
-                rightY = (rawValue / 32767f).coerceIn(-1f, 1f)
+                rightY = (rawValue / STICK_RAW_SCALE).coerceIn(-1f, 1f)
                 updateStick(stick = JoystickStick.RIGHT, x = rightX, y = rightY, nowMs = nowMs)
+            }
+
+            GamepadKeycodes.ABS_BRAKE -> {
+                leftTriggerVal = (rawValue / TRIGGER_RAW_SCALE).coerceIn(0f, 1f)
+                updateTrigger(trigger = GamepadTrigger.LEFT, pressure = leftTriggerVal, nowMs = nowMs)
+            }
+
+            GamepadKeycodes.ABS_GAS -> {
+                rightTriggerVal = (rawValue / TRIGGER_RAW_SCALE).coerceIn(0f, 1f)
+                updateTrigger(trigger = GamepadTrigger.RIGHT, pressure = rightTriggerVal, nowMs = nowMs)
+            }
+        }
+    }
+
+    private fun syncTriggerHudButton(trigger: GamepadTrigger) {
+        val btnCode = if (trigger == GamepadTrigger.LEFT) GamepadKeycodes.BTN_TL2 else GamepadKeycodes.BTN_TR2
+        val isDigitalDown = if (trigger == GamepadTrigger.LEFT) leftTriggerDigitalDown else rightTriggerDigitalDown
+        val analogPressure = if (trigger == GamepadTrigger.LEFT) leftTriggerVal else rightTriggerVal
+        if (isDigitalDown || analogPressure >= TRIGGER_DIGITAL_HUD_THRESHOLD) {
+            pressedButtons.add(btnCode)
+        } else {
+            pressedButtons.remove(btnCode)
+        }
+    }
+
+    private fun updateTrigger(
+        trigger: GamepadTrigger,
+        pressure: Float,
+        nowMs: Long,
+    ) {
+        val clamped = pressure.coerceIn(0f, 1f)
+        val samples = if (trigger == GamepadTrigger.LEFT) leftTriggerSamples else rightTriggerSamples
+        val inGesture = if (trigger == GamepadTrigger.LEFT) leftTriggerInGesture else rightTriggerInGesture
+        val gestureStartMs = if (trigger == GamepadTrigger.LEFT) leftTriggerGestureStartMs else rightTriggerGestureStartMs
+        val digitalBtnCode = if (trigger == GamepadTrigger.LEFT) GamepadKeycodes.BTN_TL2 else GamepadKeycodes.BTN_TR2
+
+        syncTriggerHudButton(trigger)
+
+        if (!inGesture) {
+            if (clamped > TRIGGER_DEADZONE) {
+                pendingButtonDowns.remove(digitalBtnCode)
+                samples.clear()
+                samples.add(TriggerSample(offsetMs = 0L, pressure = clamped))
+                if (trigger == GamepadTrigger.LEFT) {
+                    leftTriggerInGesture = true
+                    leftTriggerGestureStartMs = nowMs
+                    leftTriggerSuppressDigital = true
+                } else {
+                    rightTriggerInGesture = true
+                    rightTriggerGestureStartMs = nowMs
+                    rightTriggerSuppressDigital = true
+                }
+                AppLog.d(TAG, "trigger gesture start trigger=$trigger at ${nowMs - recordingStartEpochMs} ms")
+            }
+        } else {
+            val offsetMs = (nowMs - gestureStartMs).coerceAtLeast(0L)
+            samples.add(TriggerSample(offsetMs = offsetMs, pressure = clamped))
+
+            if (clamped <= TRIGGER_DEADZONE) {
+                val durationMs = (offsetMs + 1L).coerceAtLeast(1L)
+                val step =
+                    MacroStep.TriggerPath(
+                        startTimeMs = (gestureStartMs - recordingStartEpochMs).coerceAtLeast(0L),
+                        durationMs = durationMs,
+                        trigger = trigger,
+                        samples = samples.toList(),
+                    )
+                recordedSteps.add(step)
+                samples.clear()
+                if (trigger == GamepadTrigger.LEFT) {
+                    leftTriggerInGesture = false
+                    if (!leftTriggerDigitalDown) {
+                        leftTriggerSuppressDigital = false
+                    }
+                } else {
+                    rightTriggerInGesture = false
+                    if (!rightTriggerDigitalDown) {
+                        rightTriggerSuppressDigital = false
+                    }
+                }
+                AppLog.d(TAG, "trigger gesture closed trigger=$trigger samples=${step.samples.size}")
             }
         }
     }
@@ -458,6 +598,32 @@ object PhysicalGamepadRecordingManager {
             rightInGesture = false
             AppLog.d(TAG, "closeOpenGesture: right stick forced-closed samples=${rightSamples.size}")
         }
+        if (leftTriggerInGesture && leftTriggerSamples.isNotEmpty()) {
+            val durationMs = (stopMs - leftTriggerGestureStartMs).coerceAtLeast(1L)
+            recordedSteps.add(
+                MacroStep.TriggerPath(
+                    startTimeMs = (leftTriggerGestureStartMs - recordingStartEpochMs).coerceAtLeast(0L),
+                    durationMs = durationMs,
+                    trigger = GamepadTrigger.LEFT,
+                    samples = leftTriggerSamples.toList(),
+                ),
+            )
+            leftTriggerInGesture = false
+            AppLog.d(TAG, "closeOpenGesture: left trigger forced-closed samples=${leftTriggerSamples.size}")
+        }
+        if (rightTriggerInGesture && rightTriggerSamples.isNotEmpty()) {
+            val durationMs = (stopMs - rightTriggerGestureStartMs).coerceAtLeast(1L)
+            recordedSteps.add(
+                MacroStep.TriggerPath(
+                    startTimeMs = (rightTriggerGestureStartMs - recordingStartEpochMs).coerceAtLeast(0L),
+                    durationMs = durationMs,
+                    trigger = GamepadTrigger.RIGHT,
+                    samples = rightTriggerSamples.toList(),
+                ),
+            )
+            rightTriggerInGesture = false
+            AppLog.d(TAG, "closeOpenGesture: right trigger forced-closed samples=${rightTriggerSamples.size}")
+        }
     }
 
     private fun flushOpenButtonAndHatSteps(stopMs: Long) {
@@ -497,6 +663,18 @@ object PhysicalGamepadRecordingManager {
             rightInGesture = false
             leftGestureStartMs = 0L
             rightGestureStartMs = 0L
+            leftTriggerSamples.clear()
+            rightTriggerSamples.clear()
+            leftTriggerInGesture = false
+            rightTriggerInGesture = false
+            leftTriggerGestureStartMs = 0L
+            rightTriggerGestureStartMs = 0L
+            leftTriggerVal = 0f
+            rightTriggerVal = 0f
+            leftTriggerDigitalDown = false
+            rightTriggerDigitalDown = false
+            leftTriggerSuppressDigital = false
+            rightTriggerSuppressDigital = false
             leftX = 0f
             leftY = 0f
             rightX = 0f

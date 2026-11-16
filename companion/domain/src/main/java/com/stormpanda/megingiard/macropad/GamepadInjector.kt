@@ -9,18 +9,25 @@ private const val JOYSTICK_RAW_MIN = -32768
 private const val JOYSTICK_DEFLECTION_MAX = 32767
 private const val JOYSTICK_DEFLECTION_MIN = -32767
 private const val JOYSTICK_DEFLECTION_CENTER = 0
+private const val TRIGGER_RAW_MIN = 0
 private const val HAT_AXIS_X = 0
 private const val HAT_AXIS_Y = 1
 private const val HAT_DIR_POS = 1
 private const val HAT_DIR_NEG = -1
 private const val HAT_DIR_CENTER = 0
 
-private val VALID_JOYSTICK_AXES =
+private val VALID_STICK_AXES =
     setOf(
         GamepadKeycodes.ABS_X,
         GamepadKeycodes.ABS_Y,
         GamepadKeycodes.ABS_Z,
         GamepadKeycodes.ABS_RZ,
+    )
+
+private val VALID_TRIGGER_AXES =
+    setOf(
+        GamepadKeycodes.ABS_GAS,
+        GamepadKeycodes.ABS_BRAKE,
     )
 
 /**
@@ -183,6 +190,16 @@ object GamepadInjector {
                 joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MAX)
             }
 
+            GamepadKeycodes.BTN_TL2 -> {
+                joystick(GamepadKeycodes.ABS_BRAKE, JOYSTICK_DEFLECTION_MAX)
+                sendButtonDown(btnCode)
+            }
+
+            GamepadKeycodes.BTN_TR2 -> {
+                joystick(GamepadKeycodes.ABS_GAS, JOYSTICK_DEFLECTION_MAX)
+                sendButtonDown(btnCode)
+            }
+
             else -> {
                 sendButtonDown(btnCode)
             }
@@ -257,10 +274,39 @@ object GamepadInjector {
                 joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_CENTER)
             }
 
+            GamepadKeycodes.BTN_TL2 -> {
+                joystick(GamepadKeycodes.ABS_BRAKE, JOYSTICK_DEFLECTION_CENTER)
+                sendButtonUp(btnCode)
+            }
+
+            GamepadKeycodes.BTN_TR2 -> {
+                joystick(GamepadKeycodes.ABS_GAS, JOYSTICK_DEFLECTION_CENTER)
+                sendButtonUp(btnCode)
+            }
+
             else -> {
                 sendButtonUp(btnCode)
             }
         }
+    }
+
+    /**
+     * Sends only the digital `EV_KEY` down event (`GD <code>`) without modifying analog axes.
+     * Used by pressure-sensitive [MacroStep.TriggerPress] and [MacroStep.TriggerPath] steps so
+     * digital `BTN_TL2` / `BTN_TR2` accompanies custom analog axis values without clobbering them.
+     */
+    fun digitalButtonDown(btnCode: Int) {
+        if (!PrivdClient.isConnected) {
+            AppLog.w(TAG, "digitalButtonDown($btnCode) dropped: Privd not connected")
+            return
+        }
+        sendButtonDown(btnCode)
+    }
+
+    /** Sends only the digital `EV_KEY` up event (`GU <code>`) without modifying analog axes. */
+    fun digitalButtonUp(btnCode: Int) {
+        if (!PrivdClient.isConnected) return
+        sendButtonUp(btnCode)
     }
 
     /** Sends a D-Pad hat event. axis: 0 = X (−1 left / +1 right), 1 = Y (−1 up / +1 down) */
@@ -276,18 +322,35 @@ object GamepadInjector {
     }
 
     /**
-     * Sends an analog joystick axis event.
+     * Sends an analog joystick or trigger axis event.
      * [axisCode]: [GamepadKeycodes.ABS_X]=0, [GamepadKeycodes.ABS_Y]=1,
-     *             [GamepadKeycodes.ABS_Z]=2, [GamepadKeycodes.ABS_RZ]=5.
-     * [value]: raw int16, range −32768…+32767.
+     *             [GamepadKeycodes.ABS_Z]=2, [GamepadKeycodes.ABS_RZ]=5 (range −32768…+32767),
+     *             [GamepadKeycodes.ABS_GAS]=9, [GamepadKeycodes.ABS_BRAKE]=10 (range 0…+32767).
      */
     fun joystick(
         axisCode: Int,
         value: Int,
     ) {
         if (!PrivdClient.isConnected || isRecordingActive) return
-        require(axisCode in VALID_JOYSTICK_AXES) { "axisCode must be one of ABS_X(0), ABS_Y(1), ABS_Z(2), or ABS_RZ(5)" }
-        require(value in JOYSTICK_RAW_MIN..JOYSTICK_DEFLECTION_MAX) { "value must be in int16 range -32768..32767" }
+        when (axisCode) {
+            in VALID_STICK_AXES -> {
+                require(value in JOYSTICK_RAW_MIN..JOYSTICK_DEFLECTION_MAX) {
+                    "stick value must be in int16 range -32768..32767"
+                }
+            }
+
+            in VALID_TRIGGER_AXES -> {
+                require(value in TRIGGER_RAW_MIN..JOYSTICK_DEFLECTION_MAX) {
+                    "trigger value must be in range 0..32767"
+                }
+            }
+
+            else -> {
+                throw IllegalArgumentException(
+                    "axisCode must be one of ABS_X(0), ABS_Y(1), ABS_Z(2), ABS_RZ(5), ABS_GAS(9), or ABS_BRAKE(10)",
+                )
+            }
+        }
         PrivdClient.send("JS $axisCode $value\n")
     }
 }

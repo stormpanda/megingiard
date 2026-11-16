@@ -67,6 +67,9 @@ object GamepadKeycodes {
     const val ABS_Y = 1 // Left stick — vertical
     const val ABS_Z = 2 // Right stick — horizontal (Android standard: AXIS_Z)
     const val ABS_RZ = 5 // Right stick — vertical   (Android standard: AXIS_RZ)
+    const val ABS_GAS = 9 // Right trigger (R2) — canonical analog range 0..32767
+    const val ABS_BRAKE = 10 // Left trigger (L2) — canonical analog range 0..32767
+    const val TRIGGER_RAW_MAX = 32767
 
     // -------------------------------------------------------------------------
     // Preset list — used by MacroPad editor to populate the gamepad-button picker

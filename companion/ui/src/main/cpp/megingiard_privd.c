@@ -29,8 +29,10 @@
  *     GD <btn>\n         button DOWN   (Linux BTN_* code, 0x100..0x1FF)
  *     GU <btn>\n         button UP
  *     HD <axis> <val>\n  D-Pad hat     (axis 0=X 1=Y, val -1/0/+1)
- *     JS <axis> <val>\n  joystick      (axis ABS_X=0 ABS_Y=1 ABS_Z=2 ABS_RZ=5,
- *                                       val -32768..+32767)
+ *     JS <axis> <val>\n  joystick/trigger (sticks: ABS_X=0 ABS_Y=1 ABS_Z=2 ABS_RZ=5,
+ *                                       val -32768..+32767;
+ *                                       triggers: ABS_BRAKE=10 [L2] ABS_GAS=9 [R2],
+ *                                       val 0..+32767)
  *   Management:
  *     PING\n             → PONG\n
  *     QUIT\n             → daemon exits cleanly with 0
@@ -65,7 +67,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 22
+#define PRIVD_VERSION 23
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
@@ -92,6 +94,8 @@ static volatile sig_atomic_t g_should_exit = 0;
  * reader thread can access it without passing it as a parameter.
  */
 static int g_gamepad_fd = -1;
+static char g_gamepad_path[64] = {0};
+static GamepadAxisMap g_gamepad_axes;
 static int g_mouse_fd = -1;
 static int g_keyboard_fd = -1;
 static int g_touch_fd = -1;
@@ -128,24 +132,32 @@ static const char *g_dex_file_path = NULL;
 #define DIRECT_MIRROR_MAIN_CLASS "com.stormpanda.megingiard.mirrorserver.DirectMirrorServer"
 
 /*
- * Returns 1 if the evdev event (type, code) should be streamed to the client.
- * We forward:
+ * Translates a physical gamepad evdev event into its canonical protocol tuple.
+ * Returns 1 if the event should be streamed to the client:
  *   EV_KEY  codes >= BTN_MISC (0x100) — physical gamepad buttons
- *   EV_ABS  joystick axes (ABS_X/Y/Z/RZ) and D-Pad hat axes (ABS_HAT0X/Y)
+ *   EV_ABS  canonicalized sticks (ABS_X/Y/Z/RZ), triggers (ABS_BRAKE/ABS_GAS), and hat (ABS_HAT0X/Y)
  */
-static int should_emit_evdev(__u16 type, __u16 code) {
-    if (type == EV_KEY) return code >= BTN_MISC;
-    if (type == EV_ABS) {
-        switch (code) {
-            case ABS_X:      /* 0  — left stick X */
-            case ABS_Y:      /* 1  — left stick Y */
-            case ABS_Z:      /* 2  — right stick X */
-            case ABS_RZ:     /* 5  — right stick Y */
-            case ABS_HAT0X:  /* 16 — D-Pad X */
-            case ABS_HAT0Y:  /* 17 — D-Pad Y */
-                return 1;
-            default:
-                return 0;
+static int translate_gamepad_evdev_event(
+    const struct input_event *ev,
+    uint16_t *out_type,
+    uint16_t *out_code,
+    int32_t *out_value
+) {
+    if (!ev || !out_type || !out_code || !out_value) return 0;
+    if (ev->type == EV_KEY && ev->code >= BTN_MISC) {
+        *out_type = EV_KEY;
+        *out_code = ev->code;
+        *out_value = ev->value;
+        return 1;
+    }
+    if (ev->type == EV_ABS) {
+        uint16_t mapped_code = 0;
+        int32_t mapped_val = 0;
+        if (translate_gamepad_evdev_abs(&g_gamepad_axes, ev->code, ev->value, &mapped_code, &mapped_val)) {
+            *out_type = EV_ABS;
+            *out_code = mapped_code;
+            *out_value = mapped_val;
+            return 1;
         }
     }
     return 0;
@@ -209,14 +221,17 @@ static void *evdev_reader_thread(void *arg) {
         ssize_t r = read(g_gamepad_fd, &ev, sizeof(ev));
         if (r != (ssize_t)sizeof(ev)) break;
 
-        if (!should_emit_evdev(ev.type, ev.code)) continue;
+        uint16_t out_type = 0;
+        uint16_t out_code = 0;
+        int32_t out_value = 0;
+        if (!translate_gamepad_evdev_event(&ev, &out_type, &out_code, &out_value)) continue;
 
         int cfd = g_client_fd_for_reader;
         if (cfd < 0) continue;
 
         char buf[64];
         int len = snprintf(buf, sizeof(buf), "EVT %d %d %d\n",
-                           (int)ev.type, (int)ev.code, (int)ev.value);
+                           (int)out_type, (int)out_code, (int)out_value);
         if (len <= 0 || len >= (int)sizeof(buf)) continue;
 
         pthread_mutex_lock(&g_send_mutex);
@@ -370,6 +385,91 @@ static int init_virtual_keyboard(void) {
  *
  * Returns the open O_RDWR | O_CLOEXEC fd on success, -1 on failure.
  */
+static int query_evdev_abs_binding(int fd, uint16_t axis_code, GamepadAxisBinding *out_binding) {
+    struct input_absinfo info;
+    memset(&info, 0, sizeof(info));
+    if (ioctl(fd, EVIOCGABS(axis_code), &info) < 0) {
+        return 0;
+    }
+    if (info.maximum <= info.minimum) {
+        return 0;
+    }
+    out_binding->supported = 1;
+    out_binding->raw_axis = axis_code;
+    out_binding->raw_min = info.minimum;
+    out_binding->raw_max = info.maximum;
+    return 1;
+}
+
+static void refresh_gamepad_axis_map(int fd, const char *gamepad_path) {
+    init_default_gamepad_axis_map(&g_gamepad_axes);
+    if (fd < 0) return;
+
+    unsigned long abs_bits[NBITS(ABS_MAX + 1)];
+    memset(abs_bits, 0, sizeof(abs_bits));
+    if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(abs_bits)), abs_bits) == 0) {
+        GamepadAxisBinding bx, by, bz, brx, bry, brz, bbrake, bgas, bhat2y, bhat2x;
+        int has_x = test_bit(ABS_X, abs_bits) && query_evdev_abs_binding(fd, ABS_X, &bx);
+        int has_y = test_bit(ABS_Y, abs_bits) && query_evdev_abs_binding(fd, ABS_Y, &by);
+        int has_z = test_bit(ABS_Z, abs_bits) && query_evdev_abs_binding(fd, ABS_Z, &bz);
+        int has_rx = test_bit(ABS_RX, abs_bits) && query_evdev_abs_binding(fd, ABS_RX, &brx);
+        int has_ry = test_bit(ABS_RY, abs_bits) && query_evdev_abs_binding(fd, ABS_RY, &bry);
+        int has_rz = test_bit(ABS_RZ, abs_bits) && query_evdev_abs_binding(fd, ABS_RZ, &brz);
+        int has_brake = test_bit(ABS_BRAKE, abs_bits) && query_evdev_abs_binding(fd, ABS_BRAKE, &bbrake);
+        int has_gas = test_bit(ABS_GAS, abs_bits) && query_evdev_abs_binding(fd, ABS_GAS, &bgas);
+        int has_hat2y = test_bit(ABS_HAT2Y, abs_bits) && query_evdev_abs_binding(fd, ABS_HAT2Y, &bhat2y);
+        int has_hat2x = test_bit(ABS_HAT2X, abs_bits) && query_evdev_abs_binding(fd, ABS_HAT2X, &bhat2x);
+
+        if (has_x) g_gamepad_axes.left_x = bx;
+        if (has_y) g_gamepad_axes.left_y = by;
+
+        if (has_rx && has_ry && brx.raw_min < 0 && bry.raw_min < 0 &&
+            has_z && has_rz && bz.raw_min >= 0 && brz.raw_min >= 0) {
+            /* xpad / Xbox 360 descriptor: sticks on RX/RY, unsigned triggers on Z/RZ */
+            g_gamepad_axes.right_x = brx;
+            g_gamepad_axes.right_y = bry;
+            g_gamepad_axes.left_trigger = bz;
+            g_gamepad_axes.right_trigger = brz;
+            if (has_brake) g_gamepad_axes.left_trigger_alt = bbrake;
+            if (has_gas) g_gamepad_axes.right_trigger_alt = bgas;
+        } else {
+            if (has_z) g_gamepad_axes.right_x = bz;
+            if (has_rz) g_gamepad_axes.right_y = brz;
+            g_gamepad_axes.left_trigger.supported = 0;
+            g_gamepad_axes.right_trigger.supported = 0;
+            if (has_brake) {
+                g_gamepad_axes.left_trigger = bbrake;
+                if (has_hat2y) g_gamepad_axes.left_trigger_alt = bhat2y;
+            } else if (has_hat2y) {
+                g_gamepad_axes.left_trigger = bhat2y;
+            }
+            if (has_gas) {
+                g_gamepad_axes.right_trigger = bgas;
+                if (has_hat2x) g_gamepad_axes.right_trigger_alt = bhat2x;
+            } else if (has_hat2x) {
+                g_gamepad_axes.right_trigger = bhat2x;
+            }
+        }
+    }
+
+    if (gamepad_path && gamepad_path[0] != '\0') {
+        FILE *fp = popen("/system/bin/dumpsys input 2>/dev/null", "r");
+        if (fp) {
+            (void)parse_dumpsys_input_gamepad_axes(fp, gamepad_path, &g_gamepad_axes);
+            pclose(fp);
+        }
+    }
+
+    fprintf(stderr,
+            "privd: gamepad axes LX=%d[%d..%d] LY=%d[%d..%d] RX=%d[%d..%d] RY=%d[%d..%d] LT=%d[%d..%d](supported=%d) RT=%d[%d..%d](supported=%d)\n",
+            (int)g_gamepad_axes.left_x.raw_axis, g_gamepad_axes.left_x.raw_min, g_gamepad_axes.left_x.raw_max,
+            (int)g_gamepad_axes.left_y.raw_axis, g_gamepad_axes.left_y.raw_min, g_gamepad_axes.left_y.raw_max,
+            (int)g_gamepad_axes.right_x.raw_axis, g_gamepad_axes.right_x.raw_min, g_gamepad_axes.right_x.raw_max,
+            (int)g_gamepad_axes.right_y.raw_axis, g_gamepad_axes.right_y.raw_min, g_gamepad_axes.right_y.raw_max,
+            (int)g_gamepad_axes.left_trigger.raw_axis, g_gamepad_axes.left_trigger.raw_min, g_gamepad_axes.left_trigger.raw_max, g_gamepad_axes.left_trigger.supported,
+            (int)g_gamepad_axes.right_trigger.raw_axis, g_gamepad_axes.right_trigger.raw_min, g_gamepad_axes.right_trigger.raw_max, g_gamepad_axes.right_trigger.supported);
+}
+
 static int discover_gamepad_fd(void) {
     char path[64];
     unsigned long key_bits[NBITS(KEY_MAX + 1)];
@@ -403,7 +503,10 @@ static int discover_gamepad_fd(void) {
 
         int rw_fd = open(path, O_RDWR | O_CLOEXEC);
         if (rw_fd >= 0) {
+            strncpy(g_gamepad_path, path, sizeof(g_gamepad_path) - 1);
+            g_gamepad_path[sizeof(g_gamepad_path) - 1] = '\0';
             fprintf(stderr, "privd: gamepad=%s name=\"%s\"\n", path, devname);
+            refresh_gamepad_axis_map(rw_fd, g_gamepad_path);
             return rw_fd;
         }
     }
@@ -1485,6 +1588,7 @@ static int serve_client(int client_fd) {
         }
         if (strcmp(line, "SUB GAMEPAD") == 0) {
             if (!g_reader_active) {
+                refresh_gamepad_axis_map(g_gamepad_fd, g_gamepad_path);
                 /* Drain any events that accumulated in the kernel buffer while the
                  * reader was inactive. These include stale physical presses and
                  * synthetic events written by previous GD/GU/JS injection sessions;
@@ -1605,7 +1709,7 @@ static int serve_client(int client_fd) {
         if (parse_touch_command(line, g_touch_fd, &active_slots_mask)) continue;
         if (parse_mouse_command(line, g_mouse_fd)) continue;
         if (parse_key_command(line, g_keyboard_fd)) continue;
-        if (parse_gamepad_command(line, g_gamepad_fd)) continue;
+        if (parse_gamepad_command_mapped(line, g_gamepad_fd, &g_gamepad_axes)) continue;
 
         /* Unknown commands are silently ignored — forward-compat for future
          * feature prefixes. */

@@ -41,11 +41,11 @@ The `megingiard_privd` daemon uses a per-install HMAC key generated on the devic
 
 `companion/ui/src/main/cpp/megingiard_privd.c`
 
-The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug; current protocol `PRIVD_VERSION = 22`). It provides:
-1. Multi-touch injection (`D`/`M`/`U`) and touchscreen event observation (`SUB TOUCH`) via the dynamically discovered primary touchscreen `evdev` node (`dumpsys input` `Viewport INTERNAL: displayId=0` resolution with exact `"fts_ts"` fallback, `INPUT_PROP_DIRECT` + `ABS_MT_POSITION_X/Y` + `EVIOCGABS`, excluding `"fts_ts_sec"` and `"Megingiard*"`; sensor dimensions reported in `VERSION_OK 22 <touchW> <touchH>`).
+The privileged daemon runs under shell UID (`com.android.shell`, UID 2000) or root, listening on a local TCP loopback socket (`127.0.0.1:51234` for release, `127.0.0.1:51244` for debug; current protocol `PRIVD_VERSION = 23`). It provides:
+1. Multi-touch injection (`D`/`M`/`U`) and touchscreen event observation (`SUB TOUCH`) via the dynamically discovered primary touchscreen `evdev` node (`dumpsys input` `Viewport INTERNAL: displayId=0` resolution with exact `"fts_ts"` fallback, `INPUT_PROP_DIRECT` + `ABS_MT_POSITION_X/Y` + `EVIOCGABS`, excluding `"fts_ts_sec"` and `"Megingiard*"`; sensor dimensions reported in `VERSION_OK 23 <touchW> <touchH>`).
 2. Mouse event injection (`MM`/`MB`/`MW`/`MH`) via `/dev/uinput`.
 3. Keyboard key injection (`KB_START`/`KB_STOP`/`KD`/`KU`) via `/dev/uinput`.
-4. Gamepad input injection (`GD`/`GU`/`HD`/`JS`) and physical gamepad observation (`SUB GAMEPAD`) via `/dev/input/event*`.
+4. Gamepad input injection (`GD`/`GU`/`HD`/`JS`, including canonical analog sticks `ABS_X/Y/Z/RZ` and analog triggers `ABS_BRAKE=10` [L2] / `ABS_GAS=9` [R2] scaled to exact hardware `EVIOCGABS` + `dumpsys input` `.kl` axis bindings) and physical gamepad observation (`SUB GAMEPAD`) via `/dev/input/event*`.
 5. Display screenshot capture via in-memory pipe-streamed loopback base64 (`SCREENSHOT_B64 [<display_id>]`) backed by `/system/bin/screencap -p`, resolving the 64-bit SurfaceFlinger `(HWC display 0)` physical ID automatically on Android 14+.
 6. Privileged text file reading (`READ_FILE <path>`) and process listing (`LIST_PROCESSES`) from `/proc` for active game detection.
 7. Low-latency lifecycle control (`PING`/`VERSION`/`QUIT`) and privileged DEX spawning (`MIRROR START_DIRECT`/`MIRROR STOP`).

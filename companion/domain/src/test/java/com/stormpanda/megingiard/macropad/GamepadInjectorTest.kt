@@ -1,9 +1,19 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.privd.PrivdClient
+import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class GamepadInjectorTest {
+    @After
+    fun tearDown() {
+        PrivdClient.clearQueueForTest()
+        PrivdClient.isConnectedForTest = null
+        GamepadInjector.isRecordingActive = false
+    }
+
     @Test
     fun buttonDownAndUp_dpadDirections() {
         val dpadCodes =
@@ -78,5 +88,61 @@ class GamepadInjectorTest {
         GamepadInjector.joystick(GamepadKeycodes.ABS_X, 1000)
         GamepadInjector.hat(0, 1)
         assertFalse(GamepadInjector.isRunning)
+    }
+
+    @Test
+    fun buttonDownAndUp_l2AndR2EmitBothAnalogTriggerAndDigitalKey() {
+        PrivdClient.isConnectedForTest = true
+        PrivdClient.clearQueueForTest()
+
+        GamepadInjector.buttonDown(GamepadKeycodes.BTN_TL2)
+        GamepadInjector.buttonUp(GamepadKeycodes.BTN_TL2)
+        GamepadInjector.buttonDown(GamepadKeycodes.BTN_TR2)
+        GamepadInjector.buttonUp(GamepadKeycodes.BTN_TR2)
+
+        val cmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(
+            listOf(
+                "JS 10 32767\n",
+                "GD 312\n",
+                "JS 10 0\n",
+                "GU 312\n",
+                "JS 9 32767\n",
+                "GD 313\n",
+                "JS 9 0\n",
+                "GU 313\n",
+            ),
+            cmds,
+        )
+    }
+
+    @Test
+    fun digitalButtonDownAndUp_emitOnlyDigitalKeyWithoutOverwritingAxis() {
+        PrivdClient.isConnectedForTest = true
+        PrivdClient.clearQueueForTest()
+
+        GamepadInjector.digitalButtonDown(GamepadKeycodes.BTN_TL2)
+        GamepadInjector.digitalButtonUp(GamepadKeycodes.BTN_TL2)
+
+        val cmds =
+            buildList {
+                while (true) {
+                    val cmd = PrivdClient.pollCommandForTest() ?: break
+                    add(cmd)
+                }
+            }
+        assertEquals(listOf("GD 312\n", "GU 312\n"), cmds)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun joystick_rejectsNegativeTriggerValue() {
+        PrivdClient.isConnectedForTest = true
+        GamepadInjector.joystick(GamepadKeycodes.ABS_BRAKE, -1)
     }
 }

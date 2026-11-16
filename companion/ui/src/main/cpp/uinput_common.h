@@ -50,9 +50,16 @@ struct input_event {
 #define ABS_X 0x00
 #define ABS_Y 0x01
 #define ABS_Z 0x02
+#define ABS_RX 0x03
+#define ABS_RY 0x04
 #define ABS_RZ 0x05
+#define ABS_GAS 0x09
+#define ABS_BRAKE 0x0a
 #define ABS_HAT0X 0x10
 #define ABS_HAT0Y 0x11
+#define ABS_HAT2X 0x16
+#define ABS_HAT2Y 0x17
+#define ABS_MAX 0x3f
 
 #define ABS_MT_SLOT 0x2f
 #define ABS_MT_POSITION_X 0x35
