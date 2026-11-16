@@ -256,9 +256,9 @@ private fun MacroPadToastOverlay(modifier: Modifier = Modifier) {
 @Composable
 private fun LayoutTransitionSnapshotOverlay() {
     val transitionSnapshot by LayoutTransitionManager.transitionSnapshot.collectAsStateWithLifecycle()
-    val transitionAlpha by LayoutTransitionManager.transitionAlpha.collectAsStateWithLifecycle()
+    val transitionAlphaState = LayoutTransitionManager.transitionAlpha.collectAsStateWithLifecycle()
     val activeSnapshot = transitionSnapshot
-    if (activeSnapshot != null && !activeSnapshot.isRecycled && transitionAlpha > 0f) {
+    if (activeSnapshot != null && !activeSnapshot.isRecycled) {
         val snapshotImageBitmap = remember(activeSnapshot) { activeSnapshot.asImageBitmap() }
         Image(
             bitmap = snapshotImageBitmap,
@@ -267,7 +267,7 @@ private fun LayoutTransitionSnapshotOverlay() {
                 Modifier
                     .fillMaxSize()
                     .graphicsLayer {
-                        alpha = transitionAlpha
+                        alpha = transitionAlphaState.value
                     },
         )
     }

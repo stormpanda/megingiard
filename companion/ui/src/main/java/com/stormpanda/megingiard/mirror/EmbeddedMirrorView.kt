@@ -27,13 +27,35 @@ import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.combine
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 private const val TAG = "EmbeddedMirrorView"
 private const val EMV_DEFAULT_SRC_WIDTH = 1920
 private const val EMV_DEFAULT_SRC_HEIGHT = 1080
 private const val EMV_MIN_FPS = 10
+private const val EMV_DEFAULT_UNTHROTTLED_FPS = 60
 private const val EMV_MAX_FPS = 120
+private const val EMV_SYSTEM_DEFAULT_FRAME_RATE_VOTE = 0f
 private const val EMV_NS_PER_SECOND = 1_000_000_000L
+
+internal fun resolveEffectiveMirrorFpsCap(
+    configuredMaxFps: Int,
+    displayRefreshRateHz: Float,
+): Int =
+    if (configuredMaxFps < EMV_DEFAULT_UNTHROTTLED_FPS) {
+        configuredMaxFps.coerceIn(EMV_MIN_FPS, EMV_MAX_FPS)
+    } else {
+        val panelHz = if (displayRefreshRateHz > 0f) displayRefreshRateHz.roundToInt() else EMV_DEFAULT_UNTHROTTLED_FPS
+        max(configuredMaxFps, panelHz).coerceIn(EMV_MIN_FPS, EMV_MAX_FPS)
+    }
+
+internal fun resolveSurfaceFrameRateVote(configuredMaxFps: Int): Float =
+    if (configuredMaxFps < EMV_DEFAULT_UNTHROTTLED_FPS) {
+        configuredMaxFps.coerceIn(EMV_MIN_FPS, EMV_MAX_FPS).toFloat()
+    } else {
+        EMV_SYSTEM_DEFAULT_FRAME_RATE_VOTE
+    }
 
 @Composable
 fun EmbeddedMirrorView(
@@ -141,7 +163,7 @@ fun EmbeddedMirrorView(
                 var masterSurface: Surface? = null
                 var currentRoutedSurface: Surface? = null
                 var gpuMotionSmoother: GpuMotionSmoother? = null
-                var lastAppliedMaxFps: Int = -1
+                var lastAppliedFrameRateVote: Float = Float.NaN
 
                 fun updateSurfaceRouting(
                     width: Int,
@@ -155,7 +177,7 @@ fun EmbeddedMirrorView(
 
                     val activeLayout = MacroPadState.activeLayout.value
                     val streamDelay =
-                        if (activeLayout?.visualAnchor?.enabled == true) {
+                        if (activeLayout?.visualAnchor?.enabled == true && activeLayout.visualAnchor.isCalibrated) {
                             activeLayout.visualAnchor.streamDelayFrames
                         } else {
                             0
@@ -244,7 +266,7 @@ fun EmbeddedMirrorView(
             containerHolder.gpuMotionSmoother?.release()
             containerHolder.gpuMotionSmoother = null
             containerHolder.currentRoutedSurface = null
-            containerHolder.lastAppliedMaxFps = -1
+            containerHolder.lastAppliedFrameRateVote = Float.NaN
             MasterSurfaceRegistry.unregisterMasterSurface(surfaceOwner, surfaceToClear)
             containerHolder.masterSurface?.release()
             containerHolder.masterSurface = null
@@ -305,10 +327,10 @@ fun EmbeddedMirrorView(
                         containerHolder.masterSurface = surface
                         MirrorFrameSampler.registerTextureView(tv)
                         try {
-                            val fps = ScreenCaptureManager.maxFps.value
-                            AppLog.i(TAG, "Setting initial surface frame rate to $fps FPS")
-                            surface.setFrameRate(fps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
-                            containerHolder.lastAppliedMaxFps = fps
+                            val vote = resolveSurfaceFrameRateVote(ScreenCaptureManager.maxFps.value)
+                            AppLog.i(TAG, "Setting initial surface frame rate vote to $vote FPS")
+                            surface.setFrameRate(vote, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                            containerHolder.lastAppliedFrameRateVote = vote
                         } catch (e: Exception) {
                             AppLog.e(TAG, "Error setting initial surface frame rate", e)
                         }
@@ -335,7 +357,7 @@ fun EmbeddedMirrorView(
                         containerHolder.gpuMotionSmoother?.release()
                         containerHolder.gpuMotionSmoother = null
                         containerHolder.currentRoutedSurface = null
-                        containerHolder.lastAppliedMaxFps = -1
+                        containerHolder.lastAppliedFrameRateVote = Float.NaN
                         MasterSurfaceRegistry.unregisterMasterSurface(surfaceOwner, surfaceToClear)
                         containerHolder.masterSurface?.release()
                         containerHolder.masterSurface = null
@@ -344,7 +366,8 @@ fun EmbeddedMirrorView(
 
                     override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
                         val nowNs = SystemClock.elapsedRealtimeNanos()
-                        val fps = ScreenCaptureManager.maxFps.value.coerceIn(EMV_MIN_FPS, EMV_MAX_FPS)
+                        val displayHz = mcc.display?.refreshRate ?: 0f
+                        val fps = resolveEffectiveMirrorFpsCap(ScreenCaptureManager.maxFps.value, displayHz)
                         val intervalNs = EMV_NS_PER_SECOND / fps
                         if (nowNs - lastUpdateTimeNs >= intervalNs) {
                             mcc.invalidate()
@@ -378,11 +401,12 @@ fun EmbeddedMirrorView(
                 if (effectiveShowLayoutBackground) layout?.maskScaleMode ?: BackgroundScaleMode.FILL else BackgroundScaleMode.FILL
             mcc.ambientDim = if (overrideCutouts == null) layout?.ambientDim ?: 0f else 0f
 
+            val vote = resolveSurfaceFrameRateVote(maxFps)
             containerHolder.masterSurface?.let { surface ->
-                if (surface.isValid && containerHolder.lastAppliedMaxFps != maxFps) {
+                if (surface.isValid && containerHolder.lastAppliedFrameRateVote != vote) {
                     try {
-                        surface.setFrameRate(maxFps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
-                        containerHolder.lastAppliedMaxFps = maxFps
+                        surface.setFrameRate(vote, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                        containerHolder.lastAppliedFrameRateVote = vote
                     } catch (e: Exception) {
                         AppLog.e(TAG, "Error updating surface frame rate", e)
                     }

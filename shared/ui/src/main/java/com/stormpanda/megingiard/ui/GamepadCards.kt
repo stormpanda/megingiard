@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +64,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
@@ -144,57 +146,52 @@ fun GamepadFocusCard(
         hasEverBeenEffectivelyFocused = true
     }
 
-    val animatedBorderWidth =
+    val defaultUnfocusedBgColor = colors.surface.copy(alpha = GC_CARD_UNFOCUSED_BG_ALPHA)
+    val animatedBorderWidthState: State<Dp>? =
         if (hasEverBeenEffectivelyFocused) {
-            val bw by animateDpAsState(
+            animateDpAsState(
                 targetValue = if (isEffectivelyFocused) GC_FOCUS_BORDER_WIDTH else GC_DEFAULT_BORDER_WIDTH,
                 animationSpec = tween(GC_ANIM_DURATION_MS),
                 label = "cardBorderWidth",
             )
-            bw
         } else {
-            GC_DEFAULT_BORDER_WIDTH
+            null
         }
-    val animatedBorderColor =
+    val animatedBorderColorState: State<Color>? =
         if (hasEverBeenEffectivelyFocused) {
-            val bc by animateColorAsState(
+            animateColorAsState(
                 targetValue = if (isEffectivelyFocused) colors.accent else unfocusedBorderColor,
                 animationSpec = tween(GC_ANIM_DURATION_MS),
                 label = "cardBorderColor",
             )
-            bc
         } else {
-            unfocusedBorderColor
+            null
         }
-    val animatedBgColor =
-        if (cardBgColor != null) {
-            cardBgColor
-        } else if (hasEverBeenEffectivelyFocused) {
+    val animatedBgColorState: State<Color>? =
+        if (cardBgColor == null && hasEverBeenEffectivelyFocused) {
             val targetBg =
                 if (isEffectivelyFocused) {
                     colors.surface.copy(alpha = GC_CARD_FOCUSED_BG_ALPHA)
                 } else {
-                    colors.surface.copy(alpha = GC_CARD_UNFOCUSED_BG_ALPHA)
+                    defaultUnfocusedBgColor
                 }
-            val bg by animateColorAsState(
+            animateColorAsState(
                 targetValue = targetBg,
                 animationSpec = tween(GC_ANIM_DURATION_MS),
                 label = "cardBgColor",
             )
-            bg
         } else {
-            colors.surface.copy(alpha = GC_CARD_UNFOCUSED_BG_ALPHA)
+            null
         }
-    val animatedElevation =
+    val animatedElevationState: State<Dp>? =
         if (hasEverBeenEffectivelyFocused) {
-            val el by animateDpAsState(
+            animateDpAsState(
                 targetValue = if (isEffectivelyFocused) GC_FOCUS_ELEVATION else GC_DEFAULT_ELEVATION,
                 animationSpec = tween(GC_ANIM_DURATION_MS),
                 label = "cardElevation",
             )
-            el
         } else {
-            GC_DEFAULT_ELEVATION
+            null
         }
 
     var lastCustomConsumedDownKeyCode by remember { mutableIntStateOf(0) }
@@ -281,22 +278,31 @@ fun GamepadFocusCard(
         if (clipToShape) {
             modifier
                 .graphicsLayer {
-                    this.shadowElevation = animatedElevation.toPx()
+                    this.shadowElevation = (animatedElevationState?.value ?: GC_DEFAULT_ELEVATION).toPx()
                     this.shape = shape
                     this.clip = false
-                }.background(animatedBgColor, shape)
-                .clip(shape)
-                .border(
-                    width = animatedBorderWidth,
-                    color = animatedBorderColor,
-                    shape = shape,
-                )
+                }.drawWithCache {
+                    val outline = shape.createOutline(size, layoutDirection, this)
+                    onDrawWithContent {
+                        drawOutline(
+                            outline = outline,
+                            color = cardBgColor ?: animatedBgColorState?.value ?: defaultUnfocusedBgColor,
+                            style = Fill,
+                        )
+                        drawContent()
+                        drawOutline(
+                            outline = outline,
+                            color = animatedBorderColorState?.value ?: unfocusedBorderColor,
+                            style = Stroke(width = (animatedBorderWidthState?.value ?: GC_DEFAULT_BORDER_WIDTH).toPx()),
+                        )
+                    }
+                }.clip(shape)
         } else {
             modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = GC_CARD_MIN_HEIGHT)
                 .graphicsLayer {
-                    this.shadowElevation = animatedElevation.toPx()
+                    this.shadowElevation = (animatedElevationState?.value ?: GC_DEFAULT_ELEVATION).toPx()
                     this.shape = shape
                     this.clip = false
                 }.drawWithCache {
@@ -304,13 +310,13 @@ fun GamepadFocusCard(
                     onDrawBehind {
                         drawOutline(
                             outline = outline,
-                            color = animatedBgColor,
+                            color = cardBgColor ?: animatedBgColorState?.value ?: defaultUnfocusedBgColor,
                             style = Fill,
                         )
                         drawOutline(
                             outline = outline,
-                            color = animatedBorderColor,
-                            style = Stroke(width = animatedBorderWidth.toPx()),
+                            color = animatedBorderColorState?.value ?: unfocusedBorderColor,
+                            style = Stroke(width = (animatedBorderWidthState?.value ?: GC_DEFAULT_BORDER_WIDTH).toPx()),
                         )
                     }
                 }

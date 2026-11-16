@@ -160,8 +160,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M14: Mirror Refresh Rate (FPS) Limit
 
-- The frame rate (FPS) limit for the mirrored screens is persisted per-layout in `PadLayout.mirrorMaxFps` and exposed via `ScreenCaptureManager.maxFps` to `GpuMotionSmoother`.
-- While the underlying limiting capability in `GpuMotionSmoother` is functional, the layout-editor toolbar slider UI is currently hidden/removed.
+- The frame rate (FPS) limit for the mirrored screens is persisted per-layout in `PadLayout.mirrorMaxFps` and exposed via `ScreenCaptureManager.maxFps` to `EmbeddedMirrorView`.
+- At the default unthrottled setting (`mirrorMaxFps >= 60`), `EmbeddedMirrorView` clears explicit surface frame-rate down-voting (`Surface.setFrameRate(0f, ...)`) and paces `TextureView` invalidations up to the secondary display's active refresh rate (`60 Hz` on AYN Thor, up to `120 Hz` on Retroid Pocket Duo). Sub-`60` values apply an explicit `Surface.setFrameRate` vote and nanosecond invalidation cap (`10..120` FPS). While the underlying limiting pipeline is functional, the layout-editor toolbar slider UI is currently hidden/removed.
 
 ### FR-M15: Motion Smoothing / Temporal Blending
 

@@ -52,6 +52,22 @@ object CutoutMaskManager {
         _cacheRevision.update { it + 1 }
     }
 
+    /**
+     * Clears all in-memory mask, variance, static-asset, and freeze-frame caches (e.g. after a `.mgrd` backup restore)
+     * and bumps [cacheRevision] so active mirror containers reload fresh disk assets.
+     */
+    fun invalidateAllCaches() {
+        baseMaskCache.clear()
+        tunedMaskCache.clear()
+        varianceCache.clear()
+        freezeFrameCache.clear()
+        staticAssetCache.clear()
+        maskExistenceCache.clear()
+        freezeExistenceCache.clear()
+        _cacheRevision.update { it + 1 }
+        AppLog.d(TAG, "Invalidated all cutout mask and freeze-frame caches")
+    }
+
     @VisibleForTesting
     internal fun tunedMaskCacheSizeForTest(cutoutId: String): Int = tunedMaskCache.keys.count { it.startsWith("$cutoutId:") }
 

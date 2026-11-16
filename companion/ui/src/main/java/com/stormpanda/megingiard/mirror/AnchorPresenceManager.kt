@@ -71,6 +71,10 @@ object AnchorPresenceManager {
 
     private val _monitorWakeSignal = MutableStateFlow(0)
 
+    @VisibleForTesting
+    internal val monitorWakeSignalForTest: Int
+        get() = _monitorWakeSignal.value
+
     fun registerGpuMotionSmoother(smoother: GpuMotionSmoother) {
         if (activeSmoother?.get() !== smoother) {
             AppLog.d(TAG, "Registering active GpuMotionSmoother for hardware presence tracking")
@@ -307,6 +311,7 @@ object AnchorPresenceManager {
                 continue
             }
 
+            val wakeSnapshot = _monitorWakeSignal.value
             val activeLayout = MacroPadState.activeLayout.value
             val layoutAnchor = activeLayout?.visualAnchor?.takeIf { it.enabled }
             val activeProfile = MacroPadState.activeProfile.value
@@ -338,9 +343,9 @@ object AnchorPresenceManager {
 
             // Event-driven idle when anchor is PRESENT (presence is evaluated directly on the GL thread);
             // tiered back-off (33ms -> 100ms -> 500ms) when LOST to scan candidate layouts.
+            // wakeSnapshot is captured before reading activeLayout / layoutStates to prevent a TOCTOU lost wakeup.
             val isCurrentLost = layoutStates[activeLayout.id] == AnchorPresenceState.LOST
             if (!isCurrentLost) {
-                val wakeSnapshot = _monitorWakeSignal.value
                 _monitorWakeSignal.first { it != wakeSnapshot }
                 continue
             }

@@ -53,6 +53,17 @@ object MacroPadMediaRepository {
         _mediaRevision.value = 0
     }
 
+    /**
+     * Evicts all cached layout background/mask bitmaps and cutout calibration caches (e.g. after a `.mgrd`
+     * backup or profile restore overwrites files under `filesDir`) and increments [mediaRevision].
+     */
+    fun invalidateAllCaches() {
+        synchronized(bitmapCache) { bitmapCache.evictAll() }
+        CutoutMaskManager.invalidateAllCaches()
+        _mediaRevision.update { it + 1 }
+        AppLog.d(TAG, "Invalidated all cached MacroPad media bitmaps and cutout assets")
+    }
+
     private fun buildCacheKey(
         context: Context,
         pathOrUri: String,

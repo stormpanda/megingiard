@@ -31,8 +31,8 @@ When a cutout's shape is set to `CIRCLE`:
 
 To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support limiting the refresh rate of the mirrored screens:
 
-1. **GPU-Level & Surface Frame Pacing (`EmbeddedMirrorView` / `GpuMotionSmoother`)**:
-   `ScreenCaptureManager.maxFps` is derived from `PadLayout.mirrorMaxFps` (`10..120` FPS, supporting 120 Hz secondary panels such as Retroid Pocket Duo). `EmbeddedMirrorView` deduplicates `Surface.setFrameRate()` Binder calls and paces `TextureView` invalidation using nanosecond `SystemClock.elapsedRealtimeNanos()` intervals (`1_000_000_000L / fps`).
+1. **Surface & Invalidation Frame Pacing (`EmbeddedMirrorView`)**:
+   `ScreenCaptureManager.maxFps` is derived from `PadLayout.mirrorMaxFps` (`10..120` FPS). At the default unthrottled setting (`>= 60`), `EmbeddedMirrorView` passes `0f` to `Surface.setFrameRate()` (preserving native `120 Hz` mode on secondary panels such as Retroid Pocket Duo) and paces `TextureView` invalidation up to the display's active refresh rate using nanosecond `SystemClock.elapsedRealtimeNanos()` intervals (`1_000_000_000L / fps`); explicit sub-`60` caps vote their exact rate to SurfaceFlinger with deduplicated Binder calls.
 
 ### Motion Smoothing & Hardware Stream Delay (`GpuMotionSmoother`)
 

@@ -403,4 +403,30 @@ class AnchorPresenceManagerTest {
         assertEquals(0, AnchorPresenceManager.lastValidFrameCount)
         assertTrue(bmp.isRecycled)
     }
+
+    @Test
+    fun `onHardwareAnchorEvaluated advances monitorWakeSignal after publishing LOST state`() {
+        val points = listOf(AnchorPoint(u = 0.5f, v = 0.5f, r = 255, g = 0, b = 0))
+        val sig = VisualAnchorSignature(cutoutId = "layout_wake", points = points)
+        val layout =
+            PadLayout(
+                id = "layout_wake",
+                name = "Wake Test",
+                visualAnchor = LayoutVisualAnchor(enabled = true, signature = sig),
+            )
+        val profile = PadProfile(id = "p1", name = "Profile", layouts = listOf(layout))
+        MacroPadState.loadFrom(listOf(profile), profile.id)
+        MacroPadState.setActiveLayoutId(layout.id)
+
+        val preSnapshot = AnchorPresenceManager.monitorWakeSignalForTest
+        assertFalse(AnchorPresenceManager.isLayoutAnchorLost(layout.id))
+
+        AnchorPresenceManager.onHardwareAnchorEvaluated(layout.id, 0.0f)
+
+        assertTrue(AnchorPresenceManager.isLayoutAnchorLost(layout.id))
+        assertTrue(
+            "monitorWakeSignal must advance on PRESENT -> LOST transition so pre-captured wakeSnapshot never stalls",
+            AnchorPresenceManager.monitorWakeSignalForTest > preSnapshot,
+        )
+    }
 }

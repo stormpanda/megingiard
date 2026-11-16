@@ -124,7 +124,7 @@ class GpuMotionSmoother(
     private val height: Int,
     private var strength: Int,
     private var streamDelayFrames: Int = 0,
-    initGl: Boolean = true,
+    private val initGl: Boolean = true,
 ) {
     private val glThread = HandlerThread("GpuMotionSmootherGL").apply { start() }
     private val glHandler = Handler(glThread.looper)
@@ -188,6 +188,7 @@ class GpuMotionSmoother(
     private var released = false
 
     init {
+        this.streamDelayFrames = streamDelayFrames.coerceIn(0, MAX_LAYOUT_STREAM_DELAY_FRAMES)
         val vertBb = ByteBuffer.allocateDirect(FULL_QUAD_VERTICES.size * 4).apply { order(ByteOrder.nativeOrder()) }
         vertexBuffer =
             vertBb.asFloatBuffer().apply {
@@ -226,9 +227,7 @@ class GpuMotionSmoother(
             if (this.strength != newStrength) {
                 this.strength = newStrength
                 isFirstFrame = true
-                if (requiresFboPipeline()) {
-                    ensureFbosAllocated()
-                }
+                syncFboLifecycle()
             }
         }
     }
@@ -241,9 +240,7 @@ class GpuMotionSmoother(
             if (this.streamDelayFrames != clampedDelay) {
                 AppLog.i(TAG, "Updating streamDelayFrames from $streamDelayFrames to $clampedDelay")
                 this.streamDelayFrames = clampedDelay
-                if (requiresFboPipeline()) {
-                    ensureFbosAllocated()
-                }
+                syncFboLifecycle()
             }
         }
     }
@@ -258,9 +255,7 @@ class GpuMotionSmoother(
             this.activeTrackingLayoutId = layoutId
             this.activeAnchor = anchor
             this.onPresenceEvaluated = listener
-            if (requiresFboPipeline()) {
-                ensureFbosAllocated()
-            }
+            syncFboLifecycle()
         }
     }
 
@@ -274,10 +269,34 @@ class GpuMotionSmoother(
 
     private fun targetFboCount(): Int = (streamDelayFrames + 1).coerceIn(2, MAX_LAYOUT_STREAM_DELAY_FRAMES + 2)
 
+    private fun syncFboLifecycle() {
+        if (requiresFboPipeline()) {
+            ensureFbosAllocated()
+        } else {
+            releaseFbosIfAllocated()
+        }
+    }
+
     private fun ensureFbosAllocated() {
+        if (!initGl || oesTextureId == 0) return
         val target = targetFboCount()
         if (fboCount != target || fboFramebuffers.isEmpty() || fboFramebuffers[0] == 0) {
             setupTexturesAndFbos(target)
+        }
+    }
+
+    private fun releaseFbosIfAllocated() {
+        if (!initGl || oesTextureId == 0) return
+        if (fboTextureIds.isNotEmpty() && fboTextureIds[0] != 0) {
+            GLES20.glDeleteTextures(fboTextureIds.size, fboTextureIds, 0)
+            GLES20.glDeleteFramebuffers(fboFramebuffers.size, fboFramebuffers, 0)
+            fboCount = 0
+            fboTextureIds = IntArray(0)
+            fboFramebuffers = IntArray(0)
+            writeIndex = 0
+            frameCount = 0L
+            isFirstFrame = true
+            AppLog.d(TAG, "Reclaimed FBO ring buffer VRAM on transition to zero-FBO passthrough")
         }
     }
 

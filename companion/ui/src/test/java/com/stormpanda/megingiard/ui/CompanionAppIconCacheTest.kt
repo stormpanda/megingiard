@@ -1,10 +1,12 @@
 package com.stormpanda.megingiard.ui
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.net.Uri
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -83,5 +85,43 @@ class CompanionAppIconCacheTest {
             assertNull(CompanionAppIconCache.loadLabel(context, "   "))
             assertNull(CompanionAppIconCache.loadIcon(context, "com.nonexistent.missing.pkg"))
             assertNull(CompanionAppIconCache.loadLabel(context, "com.nonexistent.missing.pkg"))
+        }
+
+    @Test
+    fun `handleSystemBroadcast invalidates replaced packages and evicts labels on locale change`() =
+        runTest {
+            val testPkg = "com.example.updatedgame"
+            val shadowPm = Shadows.shadowOf(context.packageManager)
+            val appInfo =
+                ApplicationInfo().apply {
+                    packageName = testPkg
+                    name = "Game V1"
+                    nonLocalizedLabel = "Game V1"
+                }
+            val pkgInfo =
+                PackageInfo().apply {
+                    packageName = testPkg
+                    applicationInfo = appInfo
+                }
+            shadowPm.installPackage(pkgInfo)
+            shadowPm.setApplicationIcon(testPkg, ColorDrawable(Color.CYAN))
+
+            assertNotNull(CompanionAppIconCache.loadIcon(context, testPkg))
+            assertEquals("Game V1", CompanionAppIconCache.loadLabel(context, testPkg))
+
+            // Locale change evicts cached labels while keeping rasterized icons
+            CompanionAppIconCache.handleSystemBroadcast(Intent(Intent.ACTION_LOCALE_CHANGED))
+            assertNotNull(CompanionAppIconCache.getCachedIcon(testPkg))
+            assertNull(CompanionAppIconCache.getCachedLabel(testPkg))
+
+            // Repopulate label, then simulate package update broadcast
+            assertEquals("Game V1", CompanionAppIconCache.loadLabel(context, testPkg))
+            val replaceIntent =
+                Intent(Intent.ACTION_PACKAGE_REPLACED).apply {
+                    data = Uri.parse("package:$testPkg")
+                }
+            CompanionAppIconCache.handleSystemBroadcast(replaceIntent)
+            assertNull(CompanionAppIconCache.getCachedIcon(testPkg))
+            assertNull(CompanionAppIconCache.getCachedLabel(testPkg))
         }
 }

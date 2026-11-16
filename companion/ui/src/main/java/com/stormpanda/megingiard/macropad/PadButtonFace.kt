@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import android.util.LruCache
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
@@ -44,21 +45,21 @@ private const val PBF_ROUNDED_SQUARE_PERCENT = 25
 internal val PBF_ROUNDED_SQUARE_SHAPE = RoundedCornerShape(percent = PBF_ROUNDED_SQUARE_PERCENT)
 private const val PBF_PILL_PERCENT = 50
 internal val PBF_PILL_SHAPE = RoundedCornerShape(percent = PBF_PILL_PERCENT)
+private const val PBF_OUTLINE_CACHE_SIZE = 16
 
 private class PolygonButtonShape(
     private val vertices: List<NormalizedPoint>,
     val contentCenterOffset: NormalizedPoint,
 ) : Shape {
-    @Volatile
-    private var cachedOutline: Pair<Size, Outline.Generic>? = null
+    private val outlineCache = LruCache<Size, Outline.Generic>(PBF_OUTLINE_CACHE_SIZE)
 
     override fun createOutline(
         size: Size,
         layoutDirection: LayoutDirection,
         density: Density,
     ): Outline {
-        cachedOutline?.let { (cachedSize, outline) ->
-            if (cachedSize == size) return outline
+        synchronized(outlineCache) {
+            outlineCache.get(size)?.let { return it }
         }
         val path =
             Path().apply {
@@ -71,7 +72,9 @@ private class PolygonButtonShape(
                 }
             }
         return Outline.Generic(path).also { outline ->
-            cachedOutline = size to outline
+            synchronized(outlineCache) {
+                outlineCache.put(size, outline)
+            }
         }
     }
 

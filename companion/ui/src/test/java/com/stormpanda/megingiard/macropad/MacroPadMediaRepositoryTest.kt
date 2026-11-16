@@ -177,4 +177,25 @@ class MacroPadMediaRepositoryTest {
             MacroPadMediaRepository.deleteBackgroundImage(context, "cache-layout")
             assertNull(MacroPadMediaRepository.getCachedScaledBitmap(context, "backgrounds/bg_cache-layout"))
         }
+
+    @Test
+    fun `invalidateAllCaches evicts cached bitmaps and increments mediaRevision`() =
+        runTest {
+            val bgDir = File(context.filesDir, "backgrounds").apply { mkdirs() }
+            val bgFile = File(bgDir, "bg_restore-layout")
+            val sourceBmp = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
+            FileOutputStream(bgFile).use { out ->
+                sourceBmp.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            sourceBmp.recycle()
+
+            assertNotNull(MacroPadMediaRepository.loadScaledBitmap(context, "backgrounds/bg_restore-layout"))
+            assertNotNull(MacroPadMediaRepository.getCachedScaledBitmap(context, "backgrounds/bg_restore-layout"))
+            val revBefore = MacroPadMediaRepository.mediaRevision.value
+
+            MacroPadMediaRepository.invalidateAllCaches()
+
+            assertNull(MacroPadMediaRepository.getCachedScaledBitmap(context, "backgrounds/bg_restore-layout"))
+            assertTrue(MacroPadMediaRepository.mediaRevision.value > revBefore)
+        }
 }

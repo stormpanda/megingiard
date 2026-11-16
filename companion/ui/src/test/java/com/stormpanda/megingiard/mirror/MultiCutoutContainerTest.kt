@@ -600,4 +600,19 @@ class MultiCutoutContainerTest {
             bmp.recycle()
         }
     }
+
+    @Test
+    fun testMirrorFpsCapAndSurfaceVoteFollowNativeDisplayAtDefaultAndThrottleBelow60() {
+        // Default unthrottled (60) follows 120 Hz RP Duo panel without voting Display 2 down to 60 Hz
+        assertEquals(120, resolveEffectiveMirrorFpsCap(configuredMaxFps = 60, displayRefreshRateHz = 120.00001f))
+        assertEquals(0f, resolveSurfaceFrameRateVote(configuredMaxFps = 60), 0.0001f)
+
+        // Default unthrottled (60) stays at 60 FPS on 60 Hz panels (AYN Thor or RP Duo 60 Hz mode)
+        assertEquals(60, resolveEffectiveMirrorFpsCap(configuredMaxFps = 60, displayRefreshRateHz = 60.0f))
+        assertEquals(60, resolveEffectiveMirrorFpsCap(configuredMaxFps = 60, displayRefreshRateHz = 0f))
+
+        // Explicit sub-60 power-saving cap throttles and votes exact FPS
+        assertEquals(30, resolveEffectiveMirrorFpsCap(configuredMaxFps = 30, displayRefreshRateHz = 120.0f))
+        assertEquals(30f, resolveSurfaceFrameRateVote(configuredMaxFps = 30), 0.0001f)
+    }
 }
