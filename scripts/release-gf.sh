@@ -4,7 +4,7 @@
 #
 # Commands:
 #   build          Compiles the Game Focus release APK, signs it, and copies it to app/release-gf/
-#   install        Installs the built Game Focus release APK on a connected device via ADB
+#   install        Installs the built Game Focus release APK on connected device(s) via ADB
 #   build-install  Builds and installs the Game Focus release APK in a single step
 #
 set -e
@@ -13,6 +13,8 @@ SCRIPT_DIR="${0:A:h}"
 PROJECT_ROOT="$SCRIPT_DIR/.."
 GRADLE_FILE="$PROJECT_ROOT/gamefocus/ui/build.gradle.kts"
 LOCAL_PROPERTIES="$PROJECT_ROOT/local.properties"
+
+source "$SCRIPT_DIR/_adb_target_devices.sh"
 
 # Ensure running from project root
 cd "$PROJECT_ROOT"
@@ -93,44 +95,16 @@ install_release_apk() {
         exit 1
     fi
 
-    ADB="${ADB:-$(command -v adb 2>/dev/null || echo "$HOME/Library/Android/sdk/platform-tools/adb")}"
-    DEVICE="${DEVICE:-}"
+    resolve_adb_target_devices "$strict_mode"
+    (( ${#SELECTED_DEVICES} == 0 )) && return 0
 
-    if command -v "$ADB" >/dev/null 2>&1 || [[ -x "$ADB" ]]; then
-        if [[ -z "$DEVICE" ]]; then
-            local raw_devices=(${(f)"$("$ADB" devices 2>/dev/null | grep -v "List of devices" | grep -E '[[:space:]]device$' | awk '{print $1}')"})
-            local devices=(${raw_devices:#})
-            if (( ${#devices} == 0 )); then
-                if [[ "$strict_mode" == "true" ]]; then
-                    log_error "No connected Thor/Android device found via ADB."
-                    exit 1
-                else
-                    log_info "No connected Thor/Android device found via ADB. Skipping device install."
-                    return 0
-                fi
-            elif (( ${#devices} == 1 )); then
-                DEVICE="${devices[1]}"
-                log_info "Thor/Android device detected via ADB ($DEVICE)."
-            else
-                DEVICE="${devices[1]}"
-                log_warn "Multiple ADB devices detected (${(j:, :)devices}). Using first device: $DEVICE"
-            fi
-        else
-            log_info "Using explicitly targeted ADB device ($DEVICE)."
-        fi
-
-        ADB_CMD=("$ADB" "-s" "$DEVICE")
-        log_info "Installing Game Focus release APK on device ($release_apk)..."
-        "${ADB_CMD[@]}" install -r "$release_apk"
-        log_success "Successfully installed Game Focus release APK on device."
-    else
-        if [[ "$strict_mode" == "true" ]]; then
-            log_error "ADB executable not found at '$ADB'."
-            exit 1
-        else
-            log_info "ADB executable not found at '$ADB'. Skipping device install."
-        fi
-    fi
+    local target_device target_label
+    for target_device in "${SELECTED_DEVICES[@]}"; do
+        target_label="${ADB_DEVICE_LABELS[$target_device]:-$target_device}"
+        log_info "Installing Game Focus release APK on $target_label ($release_apk)..."
+        "$ADB_BIN" -s "$target_device" install -r "$release_apk"
+        log_success "Successfully installed Game Focus release APK on $target_label."
+    done
 }
 
 case "$1" in
