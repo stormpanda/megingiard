@@ -177,8 +177,13 @@ class FocusTopLauncherViewModel(
         return false
     }
 
+    @Volatile
+    var lastCategoryStepDirection: Int = 0
+        private set
+
     fun setSelectedCategory(category: GameFocusCategory) {
         AppLog.d(TAG, "setSelectedCategory: ${category.id}")
+        lastCategoryStepDirection = 0
         _selectedCategory.value = category
     }
 
@@ -191,6 +196,7 @@ class FocusTopLauncherViewModel(
             if (logTransition) {
                 AppLog.i(TAG, "Category UP -> switching launcher category to ${prevCategory.id}")
             }
+            lastCategoryStepDirection = -1
             _selectedCategory.value = prevCategory
             return true
         }
@@ -206,6 +212,7 @@ class FocusTopLauncherViewModel(
             if (logTransition) {
                 AppLog.i(TAG, "Category DOWN -> switching launcher category to ${nextCategory.id}")
             }
+            lastCategoryStepDirection = 1
             _selectedCategory.value = nextCategory
             return true
         }

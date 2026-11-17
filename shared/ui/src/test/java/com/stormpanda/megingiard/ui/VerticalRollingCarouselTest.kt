@@ -103,4 +103,15 @@ class VerticalRollingCarouselTest {
         tracker.commitTarget(selectedIndex = 3, itemCount = 4, computedTarget = uncommitted)
         assertEquals(-1f, tracker.targetOffset, 0.0001f)
     }
+
+    @Test
+    fun testRollingOffsetTracker_twoItemStepDirectionHintDisambiguatesUpAndDown() {
+        AppLog.d(TAG, "Testing RollingOffsetTracker 2-item direction hint disambiguation")
+        val tracker = RollingOffsetTracker(initialIndex = 0)
+        assertEquals(0f, tracker.resolveTarget(selectedIndex = 0, itemCount = 2), 0.0001f)
+        assertEquals(1f, tracker.resolveTarget(selectedIndex = 1, itemCount = 2, stepDirectionHint = 1), 0.0001f)
+        assertEquals(2f, tracker.resolveTarget(selectedIndex = 0, itemCount = 2, stepDirectionHint = 1), 0.0001f)
+        assertEquals(1f, tracker.resolveTarget(selectedIndex = 1, itemCount = 2, stepDirectionHint = -1), 0.0001f)
+        assertEquals(0f, tracker.resolveTarget(selectedIndex = 0, itemCount = 2, stepDirectionHint = -1), 0.0001f)
+    }
 }

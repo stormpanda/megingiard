@@ -13,9 +13,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -124,6 +122,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import com.stormpanda.megingiard.ui.isScreenReaderAccessibilityActive as sharedIsScreenReaderAccessibilityActive
 import com.stormpanda.megingiard.ui.isScreenReaderFeedbackMask as sharedIsScreenReaderFeedbackMask
 import com.stormpanda.megingiard.ui.isScreenReaderService as sharedIsScreenReaderService
@@ -160,12 +159,12 @@ private const val FTL_VISIBLE_BADGE_ALPHA = 0.0f
 private const val FTL_FULL_ALPHA = 1.0f
 private const val FTL_HIDE_ANIMATION_DURATION_MS = GameFocusMotionTokens.HIDE_ANIMATION_DURATION_MS
 private const val FTL_CAROUSEL_ANIMATION_DURATION_MS = GameFocusMotionTokens.CAROUSEL_STEP_ANIM_DURATION_MS
+private const val FTL_CATEGORY_SLIDE_ANIM_DURATION_MS = GameFocusMotionTokens.CATEGORY_ROLL_ANIM_DURATION_MS
 private const val FTL_TITLE_OVERLAY_Z_INDEX = 1f
 private const val FTL_MAX_RETAINED_CATEGORIES = 16
 private const val FTL_MAX_IN_FLIGHT_HEADROOM = 2
-private const val FTL_PREWARM_DELAY_MS = 480L
+private const val FTL_PREWARM_DELAY_MS = 240L
 private const val FTL_IDLE_BATCH_PREWARM_GAP_MS = 120L
-private const val FTL_SLIDE_VISIBILITY_THRESHOLD = 0.001f
 private const val FTL_DIRECTION_NEXT = 1
 private const val FTL_DIRECTION_PREV = -1
 private const val FTL_NEXT_NEIGHBOR_OFFSET = 1f
@@ -200,9 +199,15 @@ internal fun categoryStepDirection(
     previous: GameFocusCategory,
     target: GameFocusCategory,
     categories: List<GameFocusCategory>,
+    directionHint: Int = 0,
 ): Int {
     if (previous == target || categories.size <= 1) return 0
-    return if (previous.next(categories) == target) FTL_DIRECTION_NEXT else FTL_DIRECTION_PREV
+    val isNext = previous.next(categories) == target
+    val isPrev = previous.previous(categories) == target
+    if (isNext && isPrev && (directionHint == FTL_DIRECTION_NEXT || directionHint == FTL_DIRECTION_PREV)) {
+        return directionHint
+    }
+    return if (isNext) FTL_DIRECTION_NEXT else FTL_DIRECTION_PREV
 }
 
 @Stable
@@ -213,10 +218,11 @@ internal class CategorySlideEntry(
     initiallySelected: Boolean,
     initialZOrder: Float,
     initialLastUsedTick: Long,
+    initialTargetOffset: Float = if (initiallySelected) 0f else initialOffset,
 ) {
     var category by mutableStateOf(category)
     var renderOffset by mutableFloatStateOf(initialOffset)
-    var targetOffset by mutableFloatStateOf(initialOffset)
+    var targetOffset by mutableFloatStateOf(initialTargetOffset)
     var isActive by mutableStateOf(initiallyActive)
     var isSelected by mutableStateOf(initiallySelected)
     var zOrder by mutableFloatStateOf(initialZOrder)
@@ -277,6 +283,7 @@ internal class CategoryTransitionController(
     fun onSelectedCategoryChanged(
         selectedCategory: GameFocusCategory,
         categories: List<GameFocusCategory>,
+        directionHint: Int = 0,
     ) {
         Snapshot.withoutReadObservation {
             val categoriesChanged = updateAllowedIdsIfNeeded(selectedCategory, categories)
@@ -294,7 +301,7 @@ internal class CategoryTransitionController(
 
             val previousCategory = lastSelectedCategory
             lastSelectedCategory = selectedCategory
-            val direction = categoryStepDirection(previousCategory, selectedCategory, categories)
+            val direction = categoryStepDirection(previousCategory, selectedCategory, categories, directionHint)
             val effectiveDirection = if (direction == 0) FTL_DIRECTION_NEXT else direction
             val exitTargetOffset = -effectiveDirection.toFloat()
 
@@ -313,8 +320,11 @@ internal class CategoryTransitionController(
 
                     else -> {
                         if (item.isActive) {
+                            val parkedOffset = if (item.targetOffset != 0f) item.targetOffset else exitTargetOffset
                             item.isSelected = false
-                            item.targetOffset = exitTargetOffset
+                            item.isActive = false
+                            item.renderOffset = parkedOffset
+                            item.targetOffset = parkedOffset
                             item.animGeneration++
                         }
                     }
@@ -322,6 +332,9 @@ internal class CategoryTransitionController(
             }
 
             if (outgoing != null) {
+                if (!outgoing.isActive) {
+                    outgoing.renderOffset = 0f
+                }
                 outgoing.isSelected = false
                 outgoing.isActive = true
                 outgoing.targetOffset = exitTargetOffset
@@ -333,7 +346,7 @@ internal class CategoryTransitionController(
             val newTick = ++lruCounter
             if (incoming != null) {
                 incoming.category = selectedCategory
-                if (!incoming.isActive) {
+                if (!incoming.isActive || incoming.renderOffset * effectiveDirection <= 0f) {
                     incoming.renderOffset = effectiveDirection.toFloat()
                 }
                 incoming.isSelected = true
@@ -392,8 +405,14 @@ internal class CategoryTransitionController(
             true
         }
 
-    fun onEntrySettled(entry: CategorySlideEntry) {
+    fun onEntrySettled(
+        entry: CategorySlideEntry,
+        settledGeneration: Int = entry.animGeneration,
+    ) {
         Snapshot.withoutReadObservation {
+            if (entry.animGeneration != settledGeneration) {
+                return@withoutReadObservation
+            }
             if (!entry.isSelected && entry.targetOffset != 0f) {
                 entry.renderOffset = entry.targetOffset
                 entry.isActive = false
@@ -732,6 +751,7 @@ fun FocusTopLauncherScreen(
                             resolveCategoryApps = resolveCategoryApps,
                             lastHighlightedPackages = lastHighlightedPackages,
                             pagerStateProvider = pagerStateProvider,
+                            directionHintProvider = { viewModel.lastCategoryStepDirection },
                         )
 
                         if (isMainOptionsMenuExpanded) {
@@ -789,6 +809,7 @@ fun FocusTopLauncherScreen(
                             categories = categories,
                             onCategoryUp = handleCategoryUp,
                             onCategoryDown = handleCategoryDown,
+                            stepDirectionHintProvider = { viewModel.lastCategoryStepDirection },
                             enabled = isControlsEnabled,
                             areButtonPromptsVisible = areButtonPromptsVisible,
                             modifier =
@@ -1277,10 +1298,15 @@ private fun GalleryCategoryCoordinator(
     resolveCategoryApps: (GameFocusCategory) -> List<InstalledAppInfo>,
     lastHighlightedPackages: Map<String, String>,
     pagerStateProvider: (GameFocusCategory) -> PagerState,
+    directionHintProvider: () -> Int = { 0 },
 ) {
     val selectedCategory = selectedCategoryState.value
     SideEffect {
-        controller.onSelectedCategoryChanged(selectedCategory, categories)
+        controller.onSelectedCategoryChanged(
+            selectedCategory = selectedCategory,
+            categories = categories,
+            directionHint = directionHintProvider(),
+        )
     }
 
     val currentCategories by rememberUpdatedState(categories)
@@ -1298,7 +1324,7 @@ private fun GalleryCategoryCoordinator(
         }.collectLatest { snapshot ->
             val categoryList = snapshot.categories
             if (categoryList.size <= 1) return@collectLatest
-            // Wait until any in-flight StiffnessMediumLow slide has completely settled before pre-warming
+            // Wait until any in-flight category slide has completely settled before pre-warming
             delay(FTL_PREWARM_DELAY_MS)
 
             val active = snapshot.selectedCategory
@@ -1397,10 +1423,10 @@ private fun GalleryCategoryCarouselStack(
         } else {
             configuration.screenWidthDp.dp
         }
-    val onSettled: (CategorySlideEntry) -> Unit =
+    val onSettled: (CategorySlideEntry, Int) -> Unit =
         remember(controller) {
-            { settledEntry ->
-                controller.onEntrySettled(settledEntry)
+            { settledEntry, settledGeneration ->
+                controller.onEntrySettled(settledEntry, settledGeneration)
             }
         }
 
@@ -1468,7 +1494,7 @@ private fun GalleryCategoryPage(
     isScreenReaderActive: Boolean,
     letterNavState: LetterNavigationOverlayState,
     appColors: AppColors,
-    onSettled: (CategorySlideEntry) -> Unit,
+    onSettled: (CategorySlideEntry, Int) -> Unit,
     onAppClickTop: (InstalledAppInfo) -> Unit,
 ) {
     val category = entry.category
@@ -1640,34 +1666,41 @@ private fun GalleryCategoryPage(
 @Composable
 private fun CategorySlideEffect(
     entry: CategorySlideEntry,
-    onSettled: (CategorySlideEntry) -> Unit,
+    onSettled: (CategorySlideEntry, Int) -> Unit,
 ) {
     val currentOnSettled by rememberUpdatedState(onSettled)
     LaunchedEffect(entry) {
         snapshotFlow { entry.animGeneration }
-            .collectLatest {
+            .collectLatest { generation ->
                 val start = Snapshot.withoutReadObservation { entry.renderOffset }
                 val target = Snapshot.withoutReadObservation { entry.targetOffset }
                 if (start == target) {
                     if (!Snapshot.withoutReadObservation { entry.isSelected } && target != 0f) {
-                        currentOnSettled(entry)
+                        currentOnSettled(entry, generation)
                     }
                     return@collectLatest
                 }
+                val durationMs =
+                    (abs(target - start) * FTL_CATEGORY_SLIDE_ANIM_DURATION_MS)
+                        .roundToInt()
+                        .coerceIn(1, FTL_CATEGORY_SLIDE_ANIM_DURATION_MS)
                 animate(
                     initialValue = start,
                     targetValue = target,
                     animationSpec =
-                        spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMediumLow,
-                            visibilityThreshold = FTL_SLIDE_VISIBILITY_THRESHOLD,
+                        tween(
+                            durationMillis = durationMs,
+                            easing = FastOutSlowInEasing,
                         ),
                 ) { value, _ ->
-                    entry.renderOffset = value
+                    if (Snapshot.withoutReadObservation { entry.animGeneration } == generation) {
+                        entry.renderOffset = value
+                    }
                 }
-                entry.renderOffset = target
-                currentOnSettled(entry)
+                if (Snapshot.withoutReadObservation { entry.animGeneration } == generation) {
+                    entry.renderOffset = target
+                    currentOnSettled(entry, generation)
+                }
             }
     }
 }
@@ -2640,6 +2673,7 @@ private fun InteractiveCategoryHeader(
     categories: List<GameFocusCategory>,
     onCategoryUp: () -> Unit = {},
     onCategoryDown: () -> Unit = {},
+    stepDirectionHintProvider: () -> Int = { 0 },
     enabled: Boolean = true,
     areButtonPromptsVisible: Boolean = true,
     modifier: Modifier = Modifier,
@@ -2686,6 +2720,9 @@ private fun InteractiveCategoryHeader(
         enabled = enabled,
         showButtonIcons = areButtonPromptsVisible,
         showNeighboringItems = true,
+        stepDirectionHint = stepDirectionHintProvider(),
+        onStepUp = onCategoryUp,
+        onStepDown = onCategoryDown,
         modifier = modifier,
     )
 }

@@ -62,6 +62,7 @@ private const val VRC_NEIGHBOR_GUARD_SLOTS = 1
 private const val VRC_WINDOW_SYMMETRY_MULTIPLIER = 2
 private const val VRC_OFFSCREEN_PARK_MULTIPLIER = 4f
 private const val VRC_WEIGHT_FILL = 1f
+private const val VRC_TIE_EPSILON = 0.001f
 private val VRC_ITEM_HEIGHT = 26.dp
 private val VRC_BUTTON_COL_PADDING_END = 6.dp
 private val VRC_BUTTON_SPACER_HEIGHT = 2.dp
@@ -78,6 +79,7 @@ internal class RollingOffsetTracker(
     fun computeTarget(
         selectedIndex: Int,
         itemCount: Int,
+        stepDirectionHint: Int = 0,
     ): Float {
         if (itemCount <= 0) return targetOffset
         if (lastItemCount == 0 || itemCount != lastItemCount) {
@@ -92,6 +94,8 @@ internal class RollingOffsetTracker(
             delta -= itemCount
         } else if (delta < -halfCount) {
             delta += itemCount
+        } else if (abs(abs(delta) - halfCount) < VRC_TIE_EPSILON && stepDirectionHint != 0) {
+            delta = if (stepDirectionHint > 0) halfCount else -halfCount
         }
         return targetOffset + delta
     }
@@ -110,8 +114,9 @@ internal class RollingOffsetTracker(
     fun resolveTarget(
         selectedIndex: Int,
         itemCount: Int,
+        stepDirectionHint: Int = 0,
     ): Float {
-        val computed = computeTarget(selectedIndex, itemCount)
+        val computed = computeTarget(selectedIndex, itemCount, stepDirectionHint)
         commitTarget(selectedIndex, itemCount, computed)
         return computed
     }
@@ -153,6 +158,9 @@ fun <T> VerticalRollingCarousel(
     enabled: Boolean = true,
     showButtonIcons: Boolean = true,
     showNeighboringItems: Boolean = true,
+    stepDirectionHint: Int = 0,
+    onStepUp: (() -> Unit)? = null,
+    onStepDown: (() -> Unit)? = null,
 ) {
     if (items.isEmpty()) return
 
@@ -161,33 +169,47 @@ fun <T> VerticalRollingCarousel(
     val currentSelectedIndexState = rememberUpdatedState(selectedIndex)
     val currentItemsState = rememberUpdatedState(items)
     val currentOnSelectedIndexChangeState = rememberUpdatedState(onSelectedIndexChange)
+    val currentOnStepUpState = rememberUpdatedState(onStepUp)
+    val currentOnStepDownState = rememberUpdatedState(onStepDown)
 
-    val onStepUp: () -> Unit =
+    val handleStepUp: () -> Unit =
         remember {
             {
-                val size = currentItemsState.value.size
-                if (size > 0) {
-                    val nextIndex = (currentSelectedIndexState.value - 1).floorMod(size)
-                    AppLog.d(TAG, "Step up clicked -> index=$nextIndex")
-                    currentOnSelectedIndexChangeState.value(nextIndex)
+                val customStepUp = currentOnStepUpState.value
+                if (customStepUp != null) {
+                    AppLog.d(TAG, "Step up clicked -> invoking custom onStepUp")
+                    customStepUp()
+                } else {
+                    val size = currentItemsState.value.size
+                    if (size > 0) {
+                        val nextIndex = (currentSelectedIndexState.value - 1).floorMod(size)
+                        AppLog.d(TAG, "Step up clicked -> index=$nextIndex")
+                        currentOnSelectedIndexChangeState.value(nextIndex)
+                    }
                 }
             }
         }
 
-    val onStepDown: () -> Unit =
+    val handleStepDown: () -> Unit =
         remember {
             {
-                val size = currentItemsState.value.size
-                if (size > 0) {
-                    val nextIndex = (currentSelectedIndexState.value + 1).floorMod(size)
-                    AppLog.d(TAG, "Step down clicked -> index=$nextIndex")
-                    currentOnSelectedIndexChangeState.value(nextIndex)
+                val customStepDown = currentOnStepDownState.value
+                if (customStepDown != null) {
+                    AppLog.d(TAG, "Step down clicked -> invoking custom onStepDown")
+                    customStepDown()
+                } else {
+                    val size = currentItemsState.value.size
+                    if (size > 0) {
+                        val nextIndex = (currentSelectedIndexState.value + 1).floorMod(size)
+                        AppLog.d(TAG, "Step down clicked -> index=$nextIndex")
+                        currentOnSelectedIndexChangeState.value(nextIndex)
+                    }
                 }
             }
         }
 
     val offsetTracker = remember { RollingOffsetTracker(selectedIndex) }
-    val targetOffset = offsetTracker.computeTarget(selectedIndex, items.size)
+    val targetOffset = offsetTracker.computeTarget(selectedIndex, items.size, stepDirectionHint)
     SideEffect {
         offsetTracker.commitTarget(selectedIndex, items.size, targetOffset)
     }
@@ -202,12 +224,22 @@ fun <T> VerticalRollingCarousel(
     val onTapSlot: (Int) -> Unit =
         remember(animatedOffsetState) {
             { slotOffset ->
-                val size = currentItemsState.value.size
-                if (size > 0) {
-                    val centerIndex = animatedOffsetState.value.roundToInt()
-                    val tappedIndex = (centerIndex + slotOffset).floorMod(size)
-                    AppLog.d(TAG, "Slot tapped (offset=$slotOffset) -> index=$tappedIndex")
-                    currentOnSelectedIndexChangeState.value(tappedIndex)
+                val customStepUp = currentOnStepUpState.value
+                val customStepDown = currentOnStepDownState.value
+                if (slotOffset == -1 && customStepUp != null) {
+                    AppLog.d(TAG, "Slot tapped (offset=-1) -> invoking custom onStepUp")
+                    customStepUp()
+                } else if (slotOffset == 1 && customStepDown != null) {
+                    AppLog.d(TAG, "Slot tapped (offset=1) -> invoking custom onStepDown")
+                    customStepDown()
+                } else {
+                    val size = currentItemsState.value.size
+                    if (size > 0) {
+                        val centerIndex = animatedOffsetState.value.roundToInt()
+                        val tappedIndex = (centerIndex + slotOffset).floorMod(size)
+                        AppLog.d(TAG, "Slot tapped (offset=$slotOffset) -> index=$tappedIndex")
+                        currentOnSelectedIndexChangeState.value(tappedIndex)
+                    }
                 }
             }
         }
@@ -230,8 +262,8 @@ fun <T> VerticalRollingCarousel(
             enabled = enabled,
             showButtonIcons = showButtonIcons,
             density = density,
-            onStepUp = onStepUp,
-            onStepDown = onStepDown,
+            onStepUp = handleStepUp,
+            onStepDown = handleStepDown,
         )
 
         RollingItemsViewport(

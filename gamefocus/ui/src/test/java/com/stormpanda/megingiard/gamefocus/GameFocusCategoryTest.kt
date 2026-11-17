@@ -318,4 +318,111 @@ class GameFocusCategoryTest {
         assertEquals(listOf(GameFocusCategory.GAMES.id), controller.entries.map { it.category.id })
         assertEquals(0f, controller.entries.single().renderOffset, 0.0001f)
     }
+
+    @Test
+    fun testCategoryTransitionController_threeCategoryReversalPreservesExitingEntryTarget() {
+        val threeCategories =
+            listOf(
+                GameFocusCategory.GAMES,
+                GameFocusCategory.APPS,
+                GameFocusCategory.LAST_USED,
+            )
+        val controller = CategoryTransitionController(initialCategory = GameFocusCategory.GAMES, maxRetained = 4)
+
+        // Step down: GAMES -> APPS
+        controller.onSelectedCategoryChanged(GameFocusCategory.APPS, threeCategories)
+        val gamesEntry = controller.entries.first { it.category == GameFocusCategory.GAMES }
+        val appsEntry = controller.entries.first { it.category == GameFocusCategory.APPS }
+        gamesEntry.renderOffset = -0.5f
+        appsEntry.renderOffset = 0.5f
+
+        // Step down again before GAMES settles: APPS -> LAST_USED
+        controller.onSelectedCategoryChanged(GameFocusCategory.LAST_USED, threeCategories)
+        val lastUsedEntry = controller.entries.first { it.category == GameFocusCategory.LAST_USED }
+        assertFalse(gamesEntry.isActive)
+        assertEquals(-1f, gamesEntry.renderOffset, 0.0001f)
+        assertEquals(-1f, gamesEntry.targetOffset, 0.0001f)
+        assertEquals(1f, lastUsedEntry.renderOffset, 0.0001f)
+        assertEquals(0f, lastUsedEntry.targetOffset, 0.0001f)
+        appsEntry.renderOffset = -0.2f
+        lastUsedEntry.renderOffset = 0.8f
+
+        // Reverse direction UP: LAST_USED -> APPS; GAMES stays parked at -1f rather than reversing across viewport
+        controller.onSelectedCategoryChanged(GameFocusCategory.APPS, threeCategories)
+        assertFalse(gamesEntry.isActive)
+        assertEquals(-1f, gamesEntry.renderOffset, 0.0001f)
+        assertEquals(-1f, gamesEntry.targetOffset, 0.0001f)
+        assertFalse(gamesEntry.isSelected)
+        assertEquals(0f, appsEntry.targetOffset, 0.0001f)
+        assertTrue(appsEntry.isSelected)
+        assertEquals(1f, lastUsedEntry.targetOffset, 0.0001f)
+        assertFalse(lastUsedEntry.isSelected)
+    }
+
+    @Test
+    fun testCategoryTransitionController_coldEntryTargetsZeroAndStaleSettleIsIgnored() {
+        val controller = CategoryTransitionController(initialCategory = GameFocusCategory.GAMES, maxRetained = 4)
+
+        // Cold switch without pre-warming: incoming APPS entry must start at +1f and target 0f
+        controller.onSelectedCategoryChanged(GameFocusCategory.APPS, categories)
+        val appsEntry = controller.entries.first { it.category == GameFocusCategory.APPS }
+        assertEquals(1f, appsEntry.renderOffset, 0.0001f)
+        assertEquals(0f, appsEntry.targetOffset, 0.0001f)
+        assertTrue(appsEntry.isActive)
+        assertTrue(appsEntry.isSelected)
+
+        // Reverse back UP to GAMES; a late settle callback from APPS's older generation must be ignored
+        val staleGen = appsEntry.animGeneration
+        controller.onSelectedCategoryChanged(GameFocusCategory.GAMES, categories)
+        appsEntry.renderOffset = 0.4f
+        controller.onEntrySettled(appsEntry, settledGeneration = staleGen)
+        assertTrue(appsEntry.isActive)
+        assertEquals(0.4f, appsEntry.renderOffset, 0.0001f)
+    }
+
+    @Test
+    fun testCategoryTransitionController_twoCategoryReversalWithDirectionHint() {
+        val twoCategories = listOf(GameFocusCategory.GAMES, GameFocusCategory.APPS)
+        val controller = CategoryTransitionController(initialCategory = GameFocusCategory.GAMES, maxRetained = 4)
+
+        // Step down: GAMES -> APPS (directionHint = +1)
+        controller.onSelectedCategoryChanged(GameFocusCategory.APPS, twoCategories, directionHint = 1)
+        val gamesEntry = controller.entries.first { it.category == GameFocusCategory.GAMES }
+        val appsEntry = controller.entries.first { it.category == GameFocusCategory.APPS }
+        assertEquals(-1f, gamesEntry.targetOffset, 0.0001f)
+        assertEquals(1f, appsEntry.renderOffset, 0.0001f)
+
+        // Reverse mid-flight UP: APPS -> GAMES (directionHint = -1)
+        gamesEntry.renderOffset = -0.5f
+        appsEntry.renderOffset = 0.5f
+        controller.onSelectedCategoryChanged(GameFocusCategory.GAMES, twoCategories, directionHint = -1)
+        assertEquals(0f, gamesEntry.targetOffset, 0.0001f)
+        assertTrue(gamesEntry.isSelected)
+        assertEquals(1f, appsEntry.targetOffset, 0.0001f)
+        assertFalse(appsEntry.isSelected)
+    }
+
+    @Test
+    fun testCategoryTransitionController_wrapAroundReentryResetsOppositeSideOffset() {
+        val threeCategories =
+            listOf(
+                GameFocusCategory.GAMES,
+                GameFocusCategory.APPS,
+                GameFocusCategory.LAST_USED,
+            )
+        val controller = CategoryTransitionController(initialCategory = GameFocusCategory.GAMES, maxRetained = 4)
+
+        controller.onSelectedCategoryChanged(GameFocusCategory.APPS, threeCategories, directionHint = 1)
+        val gamesEntry = controller.entries.first { it.category == GameFocusCategory.GAMES }
+        gamesEntry.renderOffset = -0.5f
+
+        controller.onSelectedCategoryChanged(GameFocusCategory.LAST_USED, threeCategories, directionHint = 1)
+        gamesEntry.renderOffset = -0.85f
+
+        // Wrap around DOWN: LAST_USED -> GAMES (+1) while GAMES is still active on the -1 side
+        controller.onSelectedCategoryChanged(GameFocusCategory.GAMES, threeCategories, directionHint = 1)
+        assertEquals(1f, gamesEntry.renderOffset, 0.0001f)
+        assertEquals(0f, gamesEntry.targetOffset, 0.0001f)
+        assertTrue(gamesEntry.isSelected)
+    }
 }
