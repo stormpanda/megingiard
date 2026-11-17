@@ -33,7 +33,7 @@
 | `PadActionSubPickers.kt` | Sub-widgets for configuring action details: `KeyboardKeyPicker`, `GamepadActionPicker` (unified discrete button slots & `AnalogStick` sensitivity/floating-center parameters with focus-preserving `GamepadControlTypeChoiceCard`), `TrackpointPicker`, `FullScreenMousePicker`, `MacroPicker`, `SwitchToLayoutPicker`, `SwitchToProfilePicker`, `TouchTapPicker`, and `SingleTouchGesturePicker` |
 | `ActionGridSubPages.kt` | Shared `ActionGridItem` model and 2-column grid sub-pages (`ChooseButtonTypeSubPageContent`, `TouchActionPickerSubPageContent`, `MirrorActionPickerSubPageContent`, `ToolsActionPickerSubPageContent`, `LayoutActionPickerSubPageContent`, `MediaActionPickerSubPageContent`, `MacroActionPickerSubPageContent`) |
 | `VisualKeyboardPicker.kt` | Interactive virtual keyboard sub-page (`VisualKeyboardPicker`) with 2D D-pad spatial navigation |
-| `VisualGamepadPicker.kt` | Interactive virtual handheld controller sub-page (`VisualGamepadPicker`) with 2D D-pad spatial navigation and primary-slot **Emulate Stick** pills |
+| `VisualGamepadPicker.kt` | Interactive virtual handheld controller sub-page (`VisualGamepadPicker`) with 2D D-pad spatial navigation |
 | `VisualMousePicker.kt` | 2-column mouse action picker sub-page (`VisualMousePicker`) |
 | `AppLauncherManager.kt` | Resolves app names/icons via `PackageManager` and launches target apps on the secondary display with floating restore bubble |
 | `AppLauncherPicker.kt` | Card component in button editor for selecting an App Quick-Switch target |

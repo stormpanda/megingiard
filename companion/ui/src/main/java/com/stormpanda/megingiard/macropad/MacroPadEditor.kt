@@ -1649,17 +1649,6 @@ fun MacroPadEditor(
                                                     MacroPadNavState.setButtonDraft(updatedDraft)
                                                     MacroPadNavState.pop()
                                                 },
-                                                onSelectAnalogStick =
-                                                    if (slotIndex == 0) {
-                                                        { stick ->
-                                                            val newAction = PadAction.AnalogStick(stick = stick)
-                                                            val updatedDraft = applyDraftAction(effectiveButton, newAction)
-                                                            MacroPadNavState.setButtonDraft(updatedDraft)
-                                                            MacroPadNavState.pop()
-                                                        }
-                                                    } else {
-                                                        null
-                                                    },
                                                 onClear =
                                                     if (slotIndex in 1..3 && currentBtnCode != -1) {
                                                         {

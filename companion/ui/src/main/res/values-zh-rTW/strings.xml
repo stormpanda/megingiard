@@ -208,7 +208,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_analog_stick_sensitivity_desc">達到最大搖桿傾斜的徑向推移乘數</string>
     <string name="macropad_analog_stick_floating_title">浮動中心點</string>
     <string name="macropad_analog_stick_floating_desc">以手指按下的位置作為中立原點 (0, 0)，而非搖桿墊正中央</string>
-    <string name="macropad_picker_emulate_stick_pill">模擬搖桿</string>
     <string name="macropad_action_mouse_button">滑鼠按鈕</string>
     <string name="macropad_action_scroll_wheel">滾輪</string>
     <string name="macropad_action_trackpoint">軌跡點 (相對滑鼠)</string>

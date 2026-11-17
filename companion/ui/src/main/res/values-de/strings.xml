@@ -208,7 +208,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_analog_stick_sensitivity_desc">Radialer Neigungsmultiplikator bis zum vollen Ausschlag</string>
     <string name="macropad_analog_stick_floating_title">Dynamischer Mittelpunkt</string>
     <string name="macropad_analog_stick_floating_desc">Neutralpunkt (0, 0) beim Aufsetzen des Fingers statt in der Pad-Mitte setzen</string>
-    <string name="macropad_picker_emulate_stick_pill">Stick emulieren</string>
     <string name="macropad_action_mouse_button">Maustaste</string>
     <string name="macropad_action_scroll_wheel">Scrollrad</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative Maus)</string>
