@@ -4,7 +4,8 @@
 #
 # Environment overrides:
 #   ADB      Path to adb binary (auto-detected from PATH or ~/Library/Android/sdk/platform-tools/adb)
-#   DEVICE   Target serial(s) (comma/space-separated) or "all" to bypass interactive prompt
+#   DEVICE   Target serial(s) (comma-separated, or space-separated when serials contain no spaces)
+#            or "all" to bypass interactive prompt
 #
 # Populates globals:
 #   ADB_BIN            Resolved path to the adb executable
@@ -56,22 +57,53 @@ resolve_adb_target_devices() {
         fi
     fi
 
-    local raw_lines=(${(f)"$("$ADB_BIN" devices -l 2>/dev/null || true)"})
+    # 'adb devices' uses a literal tab (<serial>\t<state>), preserving spaces inside mDNS serials
+    # (e.g. "adb-xxxx (2)._adb-tls-connect._tcp"). 'adb devices -l' supplies model/transport metadata.
+    local raw_tab_lines=(${(f)"$("$ADB_BIN" devices 2>/dev/null || true)"})
+    local raw_detail_lines=(${(f)"$("$ADB_BIN" devices -l 2>/dev/null || true)"})
     local connected_devices=()
-    local line serial state
-    for line in "${raw_lines[@]}"; do
-        [[ -z "$line" || "$line" == "List of devices"* ]] && continue
-        serial="${line%%[[:space:]]*}"
-        state=$(echo "$line" | awk '{print $2}')
+    local tab_line detail_line remainder serial state details_line
+    for tab_line in "${raw_tab_lines[@]}"; do
+        tab_line="${tab_line%$'\r'}"
+        [[ "$tab_line" != *$'\t'* ]] && continue
+        serial="${tab_line%%$'\t'*}"
+        state="${tab_line#*$'\t'}"
         if [[ "$state" == "device" && -n "$serial" ]]; then
+            details_line=""
+            for detail_line in "${raw_detail_lines[@]}"; do
+                detail_line="${detail_line%$'\r'}"
+                if [[ "$detail_line" == "${serial}"[[:space:]]* ]]; then
+                    remainder="${detail_line#"${serial}"}"
+                    remainder="${remainder#"${remainder%%[![:space:]]*}"}"
+                    if [[ "$remainder" == "device" || "$remainder" == "device "[[:print:]]* ]]; then
+                        details_line="$remainder"
+                        break
+                    fi
+                fi
+            done
             connected_devices+=("$serial")
-            ADB_DEVICE_LABELS[$serial]="$(_format_adb_device_label "$serial" "$line")"
+            ADB_DEVICE_LABELS[$serial]="$(_format_adb_device_label "$serial" "$details_line")"
         fi
     done
 
     local explicit_device="${DEVICE:-}"
+    explicit_device="${explicit_device#"${explicit_device%%[![:space:]]*}"}"
+    explicit_device="${explicit_device%"${explicit_device##*[![:space:]]}"}"
     if [[ -n "$explicit_device" && "${explicit_device:l}" != "all" && "$explicit_device" != "*" ]]; then
-        local -U explicit_list=(${=explicit_device//,/ })
+        local -U explicit_list=()
+        if [[ "$explicit_device" == *","* ]]; then
+            local raw_entry trimmed_entry
+            for raw_entry in "${(@s:,:)explicit_device}"; do
+                trimmed_entry="${raw_entry#"${raw_entry%%[![:space:]]*}"}"
+                trimmed_entry="${trimmed_entry%"${trimmed_entry##*[![:space:]]}"}"
+                [[ -n "$trimmed_entry" ]] && explicit_list+=("$trimmed_entry")
+            done
+        elif (( ${connected_devices[(Ie)$explicit_device]} )); then
+            explicit_list=("$explicit_device")
+        else
+            explicit_list=(${=explicit_device})
+        fi
+
         for serial in "${explicit_list[@]}"; do
             [[ -z "$serial" ]] && continue
             if [[ -z "${ADB_DEVICE_LABELS[$serial]:-}" ]]; then
