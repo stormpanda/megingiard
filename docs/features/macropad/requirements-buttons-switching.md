@@ -43,6 +43,7 @@
   - **Preservation Rules (`PadButton.withActionDefaults`)**:
     - `label` auto-updates to `newAction`'s default label **only if** the current label is blank, equals the placeholder (`R.string.macropad_editor_new_button_default_label`), or still equals `oldAction`'s default label. User-typed custom labels are never overwritten.
     - `iconName` auto-updates to `newAction.defaultIconName()` **only if** `currentIconName == oldAction.defaultIconName()` (and is forced to `null` whenever `!newAction.supportsCustomIcon()`). Manually picked or cleared icons are preserved across action edits, while adding/removing keyboard modifiers or extra gamepad buttons automatically toggles between the chord text (`null`) and single-input glyph.
+    - When switching away from `AnalogStick`, `TrackpointMove`, or `ScrollWheel` back to a standard button action, `withActionDefaultsResolved` resets untouched `canvas.largeControlMinSizePx` defaults back to `canvas.baseButtonSizePx`, and `EditButtonSubPageContent` restores any remembered standard-button `(widthPx, heightPx, buttonShape)` from the active edit session (unless the user manually resized the stick/trackpoint/scroll wheel).
 - Default mapping:
 
   | `PadAction` / Variant | Default label (localized / live) | Default icon (`defaultIconName()`) |

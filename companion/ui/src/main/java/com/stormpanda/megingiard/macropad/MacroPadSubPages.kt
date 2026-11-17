@@ -18,6 +18,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -359,6 +360,8 @@ internal fun ColorWheelSubPageContent(
         }
     }
 
+    val currentOnColorChange by rememberUpdatedState(onColorChange)
+
     LaunchedEffect(initialColor) {
         AppLog.d(TAG, "ColorWheelSubPageContent opened (initialColor=$initialColor)")
     }
@@ -366,7 +369,7 @@ internal fun ColorWheelSubPageContent(
     LaunchedEffect(Unit) {
         snapshotFlow { workingColor }
             .collectLatest { color ->
-                onColorChange?.invoke(color)
+                currentOnColorChange?.invoke(color)
             }
     }
 

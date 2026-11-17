@@ -317,4 +317,121 @@ class PadActionDefaultsTest {
         assertNull(analogStick.iconName)
         assertEquals("Right Stick (Emulated)", analogStick.label)
     }
+
+    @Test
+    fun `resolveInitialEditButtonSizing sizes null button and preserves resized AnalogStick on existing draft`() {
+        val rpDuoCanvas = LayoutCanvasSpec(widthPx = 1280, heightPx = 960)
+        val createdStick =
+            resolveInitialEditButtonSizing(
+                button = null,
+                stableButtonId = "btn-new-stick",
+                initLabel = "Left Stick (Emulated)",
+                initIconName = null,
+                initAction = PadAction.AnalogStick(stick = JoystickStick.LEFT),
+                designCanvas = rpDuoCanvas,
+            )
+        assertEquals(240f, createdStick.widthPx, 0.001f)
+        assertEquals(240f, createdStick.heightPx, 0.001f)
+        assertEquals(ButtonShape.CIRCLE, createdStick.buttonShape)
+
+        val userResizedSmallerStick =
+            createdStick.copy(
+                widthPx = 180f,
+                heightPx = 180f,
+            )
+        val preserved =
+            resolveInitialEditButtonSizing(
+                button = userResizedSmallerStick,
+                stableButtonId = userResizedSmallerStick.id,
+                initLabel = userResizedSmallerStick.label,
+                initIconName = userResizedSmallerStick.iconName,
+                initAction = userResizedSmallerStick.action,
+                designCanvas = rpDuoCanvas,
+            )
+        assertEquals(180f, preserved.widthPx, 0.001f)
+        assertEquals(180f, preserved.heightPx, 0.001f)
+    }
+
+    @Test
+    fun `withActionDefaultsResolved resets untouched stick trackpoint and scroll wheel default sizes back to baseButtonSizePx`() {
+        val rpDuoCanvas = LayoutCanvasSpec(widthPx = 1280, heightPx = 960)
+        val initialGamepad =
+            PadButton(
+                id = "btn-cycle",
+                label = "A",
+                posX = 0.5f,
+                posY = 0.5f,
+                widthPx = rpDuoCanvas.baseButtonSizePx,
+                heightPx = rpDuoCanvas.baseButtonSizePx,
+                action = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
+            )
+
+        val leftStick =
+            initialGamepad.withActionDefaultsResolved(
+                newAction = PadAction.AnalogStick(stick = JoystickStick.LEFT),
+                newButtonPlaceholder = "New Button",
+                oldDefaultLabel = "A",
+                newDefaultLabel = "Left Stick (Emulated)",
+                canvas = rpDuoCanvas,
+            )
+        assertEquals(240f, leftStick.widthPx, 0.001f)
+        assertEquals(240f, leftStick.heightPx, 0.001f)
+
+        val rightStick =
+            leftStick.withActionDefaultsResolved(
+                newAction = PadAction.AnalogStick(stick = JoystickStick.RIGHT),
+                newButtonPlaceholder = "New Button",
+                oldDefaultLabel = "Left Stick (Emulated)",
+                newDefaultLabel = "Right Stick (Emulated)",
+                canvas = rpDuoCanvas,
+            )
+        assertEquals(240f, rightStick.widthPx, 0.001f)
+        assertEquals(240f, rightStick.heightPx, 0.001f)
+
+        val backToGamepad =
+            rightStick.withActionDefaultsResolved(
+                newAction = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
+                newButtonPlaceholder = "New Button",
+                oldDefaultLabel = "Right Stick (Emulated)",
+                newDefaultLabel = "A",
+                canvas = rpDuoCanvas,
+            )
+        assertEquals(120f, backToGamepad.widthPx, 0.001f)
+        assertEquals(120f, backToGamepad.heightPx, 0.001f)
+        assertEquals("A", backToGamepad.label)
+
+        val scrollWheel =
+            backToGamepad.withActionDefaultsResolved(
+                newAction = PadAction.ScrollWheel,
+                newButtonPlaceholder = "New Button",
+                oldDefaultLabel = "A",
+                newDefaultLabel = "Scroll Wheel",
+                canvas = rpDuoCanvas,
+            )
+        assertEquals(120f, scrollWheel.widthPx, 0.001f)
+        assertEquals(240f, scrollWheel.heightPx, 0.001f)
+
+        val fromScrollToMouse =
+            scrollWheel.withActionDefaultsResolved(
+                newAction = PadAction.MouseButton(MouseButton.LEFT),
+                newButtonPlaceholder = "New Button",
+                oldDefaultLabel = "Scroll Wheel",
+                newDefaultLabel = "Mouse Left",
+                canvas = rpDuoCanvas,
+            )
+        assertEquals(120f, fromScrollToMouse.widthPx, 0.001f)
+        assertEquals(120f, fromScrollToMouse.heightPx, 0.001f)
+
+        val customResizedStick = leftStick.copy(widthPx = 360f, heightPx = 360f)
+        val fromCustomStick =
+            customResizedStick.withActionDefaultsResolved(
+                newAction = PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A"),
+                newButtonPlaceholder = "New Button",
+                oldDefaultLabel = "Left Stick (Emulated)",
+                newDefaultLabel = "A",
+                canvas = rpDuoCanvas,
+            )
+        assertEquals(360f, fromCustomStick.widthPx, 0.001f)
+        assertEquals(360f, fromCustomStick.heightPx, 0.001f)
+    }
 }

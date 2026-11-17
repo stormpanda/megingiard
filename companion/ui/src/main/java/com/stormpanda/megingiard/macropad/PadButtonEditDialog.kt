@@ -111,6 +111,14 @@ private data class ButtonTouchRecordingObservation(
     val isIdle: Boolean,
 )
 
+private data class StandardButtonGeometry(
+    val widthPx: Float,
+    val heightPx: Float,
+    val buttonShape: ButtonShape,
+)
+
+private fun PadAction.isStandardSizedAction(): Boolean = !isCircularControl() && this !is PadAction.ScrollWheel
+
 internal class Button2DAdjusterState(
     private val coroutineScope: CoroutineScope,
     private val resolveButton: (String) -> PadButton?,
@@ -406,6 +414,25 @@ internal fun Button2DAdjusterPill(
     }
 }
 
+internal fun resolveInitialEditButtonSizing(
+    button: PadButton?,
+    stableButtonId: String,
+    initLabel: String,
+    initIconName: String?,
+    initAction: PadAction,
+    designCanvas: LayoutCanvasSpec,
+): PadButton =
+    button ?: PadButton(
+        id = stableButtonId,
+        posX = PBD_DEFAULT_CENTER_POS,
+        posY = PBD_DEFAULT_CENTER_POS,
+        widthPx = designCanvas.baseButtonSizePx,
+        heightPx = designCanvas.baseButtonSizePx,
+        label = initLabel,
+        iconName = initIconName,
+        action = initAction,
+    ).withActionSizing(initAction, designCanvas)
+
 @Composable
 internal fun describeButtonColorOption(
     option: ColorOption?,
@@ -510,31 +537,40 @@ internal fun EditButtonSubPageContent(
         } else {
             selectedIcon ?: initAction.defaultIconName()
         }
-    var label by remember(button) { mutableStateOf(initLabel) }
-    var iconName by remember(button, selectedIcon) { mutableStateOf(selectedIcon ?: initIconName) }
+    var label by remember(stableButtonId) { mutableStateOf(initLabel) }
+    var iconName by remember(stableButtonId, selectedIcon) { mutableStateOf(selectedIcon ?: initIconName) }
     val initialSized =
-        remember(button, initAction, designCanvas) {
-            val base =
-                button ?: PadButton(
-                    id = stableButtonId,
-                    posX = PBD_DEFAULT_CENTER_POS,
-                    posY = PBD_DEFAULT_CENTER_POS,
-                    widthPx = designCanvas.baseButtonSizePx,
-                    heightPx = designCanvas.baseButtonSizePx,
-                    label = initLabel,
-                    iconName = initIconName,
-                    action = initAction,
-                )
-            base.withActionSizing(initAction, designCanvas)
+        remember(stableButtonId) {
+            resolveInitialEditButtonSizing(
+                button = button,
+                stableButtonId = stableButtonId,
+                initLabel = initLabel,
+                initIconName = initIconName,
+                initAction = initAction,
+                designCanvas = designCanvas,
+            )
         }
-    var buttonShape by remember(button) { mutableStateOf(initialSized.buttonShape) }
-    var widthPx by remember(button) { mutableFloatStateOf(initialSized.widthPx) }
-    var heightPx by remember(button) { mutableFloatStateOf(initialSized.heightPx) }
-    var action by remember(button) { mutableStateOf(initAction) }
-    var iconFilled by remember(button) { mutableStateOf(button?.iconFilled ?: true) }
-    var hapticStrength by remember(button) { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
+    var buttonShape by remember(stableButtonId) { mutableStateOf(initialSized.buttonShape) }
+    var widthPx by remember(stableButtonId) { mutableFloatStateOf(initialSized.widthPx) }
+    var heightPx by remember(stableButtonId) { mutableFloatStateOf(initialSized.heightPx) }
+    var action by remember(stableButtonId) { mutableStateOf(initAction) }
+    var rememberedStandardGeometry by remember(stableButtonId) {
+        mutableStateOf(
+            if (initAction.isStandardSizedAction()) {
+                StandardButtonGeometry(
+                    widthPx = initialSized.widthPx,
+                    heightPx = initialSized.heightPx,
+                    buttonShape = initialSized.buttonShape,
+                )
+            } else {
+                null
+            },
+        )
+    }
+    var iconFilled by remember(stableButtonId) { mutableStateOf(button?.iconFilled ?: true) }
+    var hapticStrength by remember(stableButtonId) { mutableStateOf(button?.hapticStrength ?: HapticStrength.OFF) }
 
-    var hapticCustomDurationMs by remember(button) {
+    var hapticCustomDurationMs by remember(stableButtonId) {
         mutableIntStateOf(
             if (button?.hapticStrength in listOf(HapticStrength.LIGHT, HapticStrength.MEDIUM, HapticStrength.STRONG)) {
                 HF_PRESET_DURATION_MS
@@ -543,13 +579,13 @@ internal fun EditButtonSubPageContent(
             },
         )
     }
-    var hapticCustomAmplitude by remember(button) {
+    var hapticCustomAmplitude by remember(stableButtonId) {
         mutableIntStateOf(button?.hapticStrength?.defaultCustomAmplitude() ?: (button?.hapticCustomAmplitude ?: HF_LIGHT_AMPLITUDE_USER))
     }
-    var buttonTextColor by remember(button) { mutableStateOf(button?.buttonTextColor) }
-    var buttonBorderColor by remember(button) { mutableStateOf(button?.buttonBorderColor) }
-    var buttonBgColor by remember(button) { mutableStateOf(button?.buttonBgColor) }
-    var invisible by remember(button) { mutableStateOf(button?.invisible ?: (activeLayout?.invisibleButtons ?: false)) }
+    var buttonTextColor by remember(stableButtonId) { mutableStateOf(button?.buttonTextColor) }
+    var buttonBorderColor by remember(stableButtonId) { mutableStateOf(button?.buttonBorderColor) }
+    var buttonBgColor by remember(stableButtonId) { mutableStateOf(button?.buttonBgColor) }
+    var invisible by remember(stableButtonId) { mutableStateOf(button?.invisible ?: (activeLayout?.invisibleButtons ?: false)) }
 
     val globalAccentInt by SettingsManager.accentColor.collectAsStateWithLifecycle()
     val globalAccentColor = Color(globalAccentInt)
@@ -607,8 +643,8 @@ internal fun EditButtonSubPageContent(
         }
     }
 
-    var posX by remember(button) { mutableFloatStateOf(button?.posX ?: PBD_DEFAULT_CENTER_POS) }
-    var posY by remember(button) { mutableFloatStateOf(button?.posY ?: PBD_DEFAULT_CENTER_POS) }
+    var posX by remember(stableButtonId) { mutableFloatStateOf(button?.posX ?: PBD_DEFAULT_CENTER_POS) }
+    var posY by remember(stableButtonId) { mutableFloatStateOf(button?.posY ?: PBD_DEFAULT_CENTER_POS) }
     var isAdjusting by remember { mutableStateOf(false) }
 
     val currentButton =
@@ -656,10 +692,23 @@ internal fun EditButtonSubPageContent(
         rememberButton2DAdjusterState(
             resolveButton = { currentButton },
             onButtonChange = { updated ->
+                val sizeChanged = updated.widthPx != widthPx || updated.heightPx != heightPx
                 posX = updated.posX
                 posY = updated.posY
                 widthPx = updated.widthPx
                 heightPx = updated.heightPx
+                if (sizeChanged) {
+                    rememberedStandardGeometry =
+                        if (action.isStandardSizedAction()) {
+                            StandardButtonGeometry(
+                                widthPx = updated.widthPx,
+                                heightPx = updated.heightPx,
+                                buttonShape = buttonShape,
+                            )
+                        } else {
+                            null
+                        }
+                }
             },
         )
 
@@ -678,6 +727,14 @@ internal fun EditButtonSubPageContent(
 
     fun onActionChanged(newAction: PadAction) {
         AppLog.d(TAG, "onActionChanged: $newAction")
+        if (action.isStandardSizedAction()) {
+            rememberedStandardGeometry =
+                StandardButtonGeometry(
+                    widthPx = widthPx,
+                    heightPx = heightPx,
+                    buttonShape = buttonShape,
+                )
+        }
         val updated =
             currentButton.withActionDefaults(
                 newAction = newAction,
@@ -687,12 +744,18 @@ internal fun EditButtonSubPageContent(
                 swapFaceButtons = swapFaceButtons,
                 canvas = designCanvas,
             )
+        val restoredStandard =
+            if (!action.isStandardSizedAction() && newAction.isStandardSizedAction()) {
+                rememberedStandardGeometry
+            } else {
+                null
+            }
         action = updated.action
         label = updated.label
         iconName = updated.iconName
-        widthPx = updated.widthPx
-        heightPx = updated.heightPx
-        buttonShape = updated.buttonShape
+        widthPx = restoredStandard?.widthPx ?: updated.widthPx
+        heightPx = restoredStandard?.heightPx ?: updated.heightPx
+        buttonShape = restoredStandard?.buttonShape ?: updated.buttonShape
     }
 
     val isConfirmEnabled =
@@ -733,9 +796,10 @@ internal fun EditButtonSubPageContent(
         }
 
     val isNew = savedButton == null
+    val currentButtonState by rememberUpdatedState(currentButton)
 
     LaunchedEffect(Unit) {
-        snapshotFlow { currentButton }
+        snapshotFlow { currentButtonState }
             .collectLatest { draft ->
                 MacroPadNavState.setButtonDraft(draft)
             }
@@ -868,11 +932,17 @@ internal fun EditButtonSubPageContent(
                 val nextShape = ButtonShape.entries.cycle(buttonShape, BumperDirection.PREV)
                 AppLog.d(TAG, "buttonShape changed: $buttonShape -> $nextShape")
                 buttonShape = nextShape
+                if (action.isStandardSizedAction()) {
+                    rememberedStandardGeometry = StandardButtonGeometry(widthPx, heightPx, nextShape)
+                }
             },
             onNext = {
                 val nextShape = ButtonShape.entries.cycle(buttonShape, BumperDirection.NEXT)
                 AppLog.d(TAG, "buttonShape changed: $buttonShape -> $nextShape")
                 buttonShape = nextShape
+                if (action.isStandardSizedAction()) {
+                    rememberedStandardGeometry = StandardButtonGeometry(widthPx, heightPx, nextShape)
+                }
             },
         )
     }

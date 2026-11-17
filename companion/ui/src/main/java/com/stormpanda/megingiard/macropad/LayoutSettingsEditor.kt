@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -122,12 +123,14 @@ internal fun EditLayoutSubPageContent(
     val colors = LocalAppColors.current
     var nameText by remember(savedLayout.id, savedLayout.name) { mutableStateOf(savedLayout.name) }
 
+    val currentLayout by rememberUpdatedState(layout)
+
     LaunchedEffect(savedLayout.id) {
         AppLog.d(TAG, "EditLayoutSubPageContent opened for layout: ${savedLayout.name} (${savedLayout.id})")
     }
 
     LaunchedEffect(Unit) {
-        snapshotFlow { layout }
+        snapshotFlow { currentLayout }
             .collectLatest { inFlightLayout ->
                 MacroPadState.setPreviewLayout(inFlightLayout)
             }

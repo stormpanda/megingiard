@@ -1018,9 +1018,29 @@ internal fun PadButton.withActionDefaultsResolved(
         } else {
             iconName
         }
+    val resetFromCircularDefault =
+        action.isCircularControl() &&
+            !newAction.isCircularControl() &&
+            widthPx == canvas.largeControlMinSizePx &&
+            heightPx == canvas.largeControlMinSizePx
+    val resetFromScrollWheelDefault =
+        action is PadAction.ScrollWheel &&
+            newAction !is PadAction.ScrollWheel &&
+            widthPx == canvas.baseButtonSizePx &&
+            heightPx == canvas.largeControlMinSizePx
+    val preSizedWidthPx =
+        if (resetFromCircularDefault) canvas.baseButtonSizePx else widthPx
+    val preSizedHeightPx =
+        if (resetFromCircularDefault || resetFromScrollWheelDefault) {
+            canvas.baseButtonSizePx
+        } else {
+            heightPx
+        }
     return copy(
         label = resolvedLabel,
         iconName = resolvedIconName,
+        widthPx = preSizedWidthPx,
+        heightPx = preSizedHeightPx,
     ).withActionSizing(newAction, canvas)
 }
 
