@@ -69,6 +69,23 @@ private const val PACKAGE_DATA_SCHEME = "package"
 internal const val LIBRARY_APP_ACTIONS_COUNT = 4
 internal const val LIBRARY_ROM_ACTIONS_COUNT = 2
 
+internal fun shouldSnapFrozenHidden(
+    previousApps: List<InstalledAppInfo>,
+    currentApps: List<InstalledAppInfo>,
+    previousCategory: GameFocusCategory,
+    currentCategory: GameFocusCategory,
+    previousLibraryOpen: Boolean,
+    currentLibraryOpen: Boolean,
+    frozenHidden: Set<String>,
+    liveHidden: Set<String>,
+): Boolean =
+    frozenHidden != liveHidden &&
+        (
+            previousApps !== currentApps ||
+                previousCategory != currentCategory ||
+                previousLibraryOpen != currentLibraryOpen
+        )
+
 internal fun shouldHandlePackageBroadcast(
     action: String?,
     isReplacing: Boolean,
@@ -658,7 +675,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             var frozenHidden by remember { mutableStateOf(hidden) }
-            val lastCatalogTracker = remember { LastCatalogRef(allApps) }
             val editingAppInfo by viewModel.editingAppInfo.collectAsStateWithLifecycle()
             val isManageGalleriesOpen by viewModel.isManageGalleriesOpen.collectAsStateWithLifecycle()
             val isPrimaryOverlayOpen = editingAppInfo != null || isManageGalleriesOpen
@@ -669,14 +685,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
             }
 
-            SideEffect {
-                if (lastCatalogTracker.apps !== allApps) {
-                    lastCatalogTracker.apps = allApps
-                    if (frozenHidden != hidden) {
-                        frozenHidden = hidden
-                    }
-                }
-            }
             val handleSnapHidden: (Set<String>) -> Unit =
                 remember {
                     { snapped -> frozenHidden = snapped }
@@ -684,6 +692,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
             LauncherSelectionGuard(
                 viewModel = viewModel,
+                allApps = allApps,
                 categories = categories,
                 liveHidden = hidden,
                 frozenHidden = frozenHidden,
@@ -794,7 +803,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         viewModel = viewModel,
                         allApps = allApps,
                         favoritesSet = favorites,
-                        hiddenSet = frozenHidden,
+                        hiddenSet = hidden,
+                        frozenHiddenSet = frozenHidden,
                         lastUsed = lastUsed,
                         collectionMembers = collectionMembers,
                         categories = categories,
@@ -1205,11 +1215,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 }
 
-private class LastCatalogRef(
-    var apps: List<InstalledAppInfo>,
-)
-
 private class LastSelectionTracker(
+    var apps: List<InstalledAppInfo>,
     var category: GameFocusCategory,
     var isLibraryOpen: Boolean,
 )
@@ -1217,6 +1224,7 @@ private class LastSelectionTracker(
 @Composable
 private fun LauncherSelectionGuard(
     viewModel: FocusTopLauncherViewModel,
+    allApps: List<InstalledAppInfo>,
     categories: List<GameFocusCategory>,
     liveHidden: Set<String>,
     frozenHidden: Set<String>,
@@ -1225,14 +1233,24 @@ private fun LauncherSelectionGuard(
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
     val isLibraryOpen by viewModel.isLibraryOpen.collectAsStateWithLifecycle()
 
-    val selectionTracker = remember { LastSelectionTracker(selectedCategory, isLibraryOpen) }
+    val selectionTracker = remember { LastSelectionTracker(allApps, selectedCategory, isLibraryOpen) }
     SideEffect {
-        if (selectionTracker.category != selectedCategory || selectionTracker.isLibraryOpen != isLibraryOpen) {
-            selectionTracker.category = selectedCategory
-            selectionTracker.isLibraryOpen = isLibraryOpen
-            if (frozenHidden != liveHidden) {
-                onSnapHidden(liveHidden)
-            }
+        val snapHidden =
+            shouldSnapFrozenHidden(
+                previousApps = selectionTracker.apps,
+                currentApps = allApps,
+                previousCategory = selectionTracker.category,
+                currentCategory = selectedCategory,
+                previousLibraryOpen = selectionTracker.isLibraryOpen,
+                currentLibraryOpen = isLibraryOpen,
+                frozenHidden = frozenHidden,
+                liveHidden = liveHidden,
+            )
+        selectionTracker.apps = allApps
+        selectionTracker.category = selectedCategory
+        selectionTracker.isLibraryOpen = isLibraryOpen
+        if (snapHidden) {
+            onSnapHidden(liveHidden)
         }
         if (selectedCategory !in categories) {
             val fallbackCategory = categories.first()

@@ -213,6 +213,114 @@ class FocusMenuTest {
     }
 
     @Test
+    fun testShouldSnapFrozenHidden_keepsInPlaceDuringActiveGalleryAndSnapsOnTransitions() {
+        val catalogA = listOf(nativeApp, retroArchRomApp)
+        val catalogB = listOf(nativeApp, retroArchRomApp)
+        val frozenEmpty = emptySet<String>()
+        val liveHidden = setOf(nativeApp.packageName)
+
+        // Toggling hide in place (same catalog instance, same category, same Library state): must NOT snap
+        // so the hidden poster stays in the active gallery carousel with 0.4f alpha + visibility_off badge.
+        assertFalse(
+            shouldSnapFrozenHidden(
+                previousApps = catalogA,
+                currentApps = catalogA,
+                previousCategory = GameFocusCategory.GAMES,
+                currentCategory = GameFocusCategory.GAMES,
+                previousLibraryOpen = false,
+                currentLibraryOpen = false,
+                frozenHidden = frozenEmpty,
+                liveHidden = liveHidden,
+            ),
+        )
+
+        // Switching gallery category snaps frozenHidden so the hidden app is filtered out
+        assertTrue(
+            shouldSnapFrozenHidden(
+                previousApps = catalogA,
+                currentApps = catalogA,
+                previousCategory = GameFocusCategory.GAMES,
+                currentCategory = GameFocusCategory.APPS,
+                previousLibraryOpen = false,
+                currentLibraryOpen = false,
+                frozenHidden = frozenEmpty,
+                liveHidden = liveHidden,
+            ),
+        )
+
+        // Opening or closing Library snaps frozenHidden
+        assertTrue(
+            shouldSnapFrozenHidden(
+                previousApps = catalogA,
+                currentApps = catalogA,
+                previousCategory = GameFocusCategory.GAMES,
+                currentCategory = GameFocusCategory.GAMES,
+                previousLibraryOpen = false,
+                currentLibraryOpen = true,
+                frozenHidden = frozenEmpty,
+                liveHidden = liveHidden,
+            ),
+        )
+
+        // New catalog instance (e.g. cold load / reload) snaps frozenHidden
+        assertTrue(
+            shouldSnapFrozenHidden(
+                previousApps = catalogA,
+                currentApps = catalogB,
+                previousCategory = GameFocusCategory.GAMES,
+                currentCategory = GameFocusCategory.GAMES,
+                previousLibraryOpen = false,
+                currentLibraryOpen = false,
+                frozenHidden = frozenEmpty,
+                liveHidden = liveHidden,
+            ),
+        )
+
+        // Already in sync: no redundant snap on category switch
+        assertFalse(
+            shouldSnapFrozenHidden(
+                previousApps = catalogA,
+                currentApps = catalogA,
+                previousCategory = GameFocusCategory.GAMES,
+                currentCategory = GameFocusCategory.APPS,
+                previousLibraryOpen = false,
+                currentLibraryOpen = false,
+                frozenHidden = liveHidden,
+                liveHidden = liveHidden,
+            ),
+        )
+    }
+
+    @Test
+    fun testBuildMenuActions_reflectsLiveHiddenToggleForHideAndUnhideLabelsAndIcons() {
+        val visibleGalleryActions =
+            buildGalleryMenuActions(
+                currentApp = nativeApp,
+                isHidden = false,
+            )
+        val hiddenGalleryActions =
+            buildGalleryMenuActions(
+                currentApp = nativeApp,
+                isHidden = true,
+            )
+        assertEquals("visibility_off", visibleGalleryActions[2].iconSymbol)
+        assertEquals("visibility", hiddenGalleryActions[2].iconSymbol)
+
+        val visibleLibraryActions =
+            buildLibraryMenuActions(
+                focusedApp = nativeApp,
+                isHidden = false,
+            )
+        val hiddenLibraryActions =
+            buildLibraryMenuActions(
+                focusedApp = nativeApp,
+                isHidden = true,
+            )
+        assertEquals("visibility_off", visibleLibraryActions[1].iconSymbol)
+        assertEquals("visibility", hiddenLibraryActions[1].iconSymbol)
+    }
+
+    @Test
     fun testIsScreenReaderFeedbackMask_distinguishesScreenReadersFromGenericMonitors() {
         assertFalse(isScreenReaderFeedbackMask(0))
         assertFalse(isScreenReaderFeedbackMask(AccessibilityServiceInfo.FEEDBACK_GENERIC))

@@ -492,6 +492,7 @@ fun FocusTopLauncherScreen(
     allApps: List<InstalledAppInfo> = emptyList(),
     favoritesSet: Set<String> = emptySet(),
     hiddenSet: Set<String> = emptySet(),
+    frozenHiddenSet: Set<String> = hiddenSet,
     lastUsed: List<String> = emptyList(),
     collectionMembers: Map<String, Set<String>> = emptyMap(),
     categories: List<GameFocusCategory> = GameFocusCategory.builtIns,
@@ -553,12 +554,12 @@ fun FocusTopLauncherScreen(
     // Memoize filtered category lists once per catalog/filter change so PagerState.pageCount
     // (invoked ~100x per animation frame by HorizontalPager) is an O(1) map lookup with zero allocations.
     val appsByCategoryId =
-        remember(allKnownCategories, allApps, favoritesSet, hiddenSet, lastUsed, collectionMembers) {
+        remember(allKnownCategories, allApps, favoritesSet, frozenHiddenSet, lastUsed, collectionMembers) {
             GameFocusCategory.buildAppsByCategoryId(
                 categories = allKnownCategories,
                 allApps = allApps,
                 favorites = favoritesSet,
-                hidden = hiddenSet,
+                hidden = frozenHiddenSet,
                 lastUsed = lastUsed,
                 collectionMembers = collectionMembers,
             )
@@ -566,7 +567,7 @@ fun FocusTopLauncherScreen(
     val appsByCategoryIdState = rememberUpdatedState(appsByCategoryId)
     val allAppsState = rememberUpdatedState(allApps)
     val favoritesSetState = rememberUpdatedState(favoritesSet)
-    val hiddenSetState = rememberUpdatedState(hiddenSet)
+    val frozenHiddenSetState = rememberUpdatedState(frozenHiddenSet)
     val lastUsedState = rememberUpdatedState(lastUsed)
     val collectionMembersState = rememberUpdatedState(collectionMembers)
     val uniqueLettersByCategoryId =
@@ -584,7 +585,7 @@ fun FocusTopLauncherScreen(
                     ?: cat.filterApps(
                         allAppsState.value,
                         favoritesSetState.value,
-                        hiddenSetState.value,
+                        frozenHiddenSetState.value,
                         lastUsedState.value,
                         collectionMembersState.value,
                     )
