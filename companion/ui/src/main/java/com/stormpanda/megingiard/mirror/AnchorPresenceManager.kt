@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -230,11 +231,24 @@ object AnchorPresenceManager {
     }
 
     private fun observeCaptureState() {
+        val relevantLayoutFlow =
+            MacroPadState.activeLayout.distinctUntilChanged { old, new ->
+                old?.id == new?.id && old?.visualAnchor == new?.visualAnchor
+            }
+        val relevantProfileFlow =
+            MacroPadState.activeProfile.distinctUntilChanged { old, new ->
+                old?.id == new?.id &&
+                    old?.autoLayoutSwitching == new?.autoLayoutSwitching &&
+                    old?.layouts?.size == new?.layouts?.size &&
+                    old?.layouts?.zip(new?.layouts.orEmpty())?.all { (a, b) ->
+                        a.id == b.id && a.visualAnchor == b.visualAnchor
+                    } == true
+            }
         scope.launch {
             combine(
                 ScreenCaptureManager.isCapturing,
-                MacroPadState.activeLayout,
-                MacroPadState.activeProfile,
+                relevantLayoutFlow,
+                relevantProfileFlow,
                 AppStateManager.companionViewMode,
             ) { capturing, layout, profile, viewMode ->
                 CaptureState(capturing, layout, profile, viewMode)

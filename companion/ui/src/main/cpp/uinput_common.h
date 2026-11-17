@@ -108,6 +108,115 @@ static inline int write_event(int fd, uint16_t type, uint16_t code, int32_t valu
 }
 
 /**
+ * Writes a batch of Linux struct input_event records in a single atomic write() syscall.
+ * Returns 0 on success, or -1 on write failure (preserving errno).
+ */
+static inline int write_events_batch(int fd, const struct input_event* evs, int count) {
+    if (count <= 0) return 0;
+#ifdef TEST_MOCK_WRITE_EVENT
+    (void)fd;
+    for (int i = 0; i < count; i++) {
+        if (mock_write_event(evs[i].type, evs[i].code, evs[i].value) < 0) {
+            return -1;
+        }
+    }
+    return 0;
+#else
+    size_t byte_len = sizeof(struct input_event) * (size_t)count;
+    return (write(fd, evs, byte_len) == (ssize_t)byte_len) ? 0 : -1;
+#endif
+}
+
+static inline void set_input_event(struct input_event* ev, uint16_t type, uint16_t code, int32_t value) {
+    memset(ev, 0, sizeof(*ev));
+    ev->type  = type;
+    ev->code  = code;
+    ev->value = value;
+}
+
+#define PRIVD_LINE_READER_BUF_SIZE 4096
+
+typedef struct {
+    char buf[PRIVD_LINE_READER_BUF_SIZE];
+    size_t pos;
+    size_t len;
+} PrivdLineReader;
+
+static inline void privd_line_reader_init(PrivdLineReader* lr) {
+    if (!lr) return;
+    lr->pos = 0;
+    lr->len = 0;
+}
+
+static inline ssize_t privd_line_reader_fill(PrivdLineReader* lr, int fd) {
+    lr->pos = 0;
+    while (1) {
+        ssize_t r = read(fd, lr->buf, sizeof(lr->buf));
+        if (r < 0 && errno == EINTR) continue;
+        if (r <= 0) {
+            lr->len = 0;
+            return r;
+        }
+        lr->len = (size_t)r;
+        return r;
+    }
+}
+
+/**
+ * Buffered replacement for 1-byte read_line(): reads newline-terminated ASCII commands
+ * into `out` (capacity `max_out`, >= 2) using 4 KB chunked read() syscalls.
+ * Returns line length (>= 0) on a newline-terminated line, 0 on clean EOF with no bytes,
+ * or -1 on read error. Wait: to preserve exact read_line() return convention where empty
+ * lines ("\n") vs EOF are distinguished: returns >0 for non-empty line, 0 on EOF (when no
+ * bytes precede EOF), or 0 for empty "\n"? Note: original read_line returned 0 on BOTH EOF
+ * and bare "\n". To avoid dropping connection on accidental bare "\n", skip bare "\n" or
+ * return -2? No: callers check `n <= 0` for EOF/error and never send empty lines, so
+ * returning `n` when `n > 0`, continuing on bare `\n` (ignoring empty keepalive lines), and
+ * returning `0` ONLY on true EOF is strictly safer and cleaner!
+ */
+static inline int privd_line_reader_next(PrivdLineReader* lr, int fd, char* out, int max_out) {
+    if (!lr || !out || max_out < 2) return -1;
+    while (1) {
+        int n = 0;
+        int saw_any = 0;
+        while (n < max_out - 1) {
+            if (lr->pos >= lr->len) {
+                ssize_t r = privd_line_reader_fill(lr, fd);
+                if (r == 0) {
+                    if (!saw_any) return 0;
+                    out[n] = '\0';
+                    return n;
+                }
+                if (r < 0) return -1;
+            }
+            char ch = lr->buf[lr->pos++];
+            saw_any = 1;
+            if (ch == '\n') {
+                out[n] = '\0';
+                if (n == 0) {
+                    /* Ignore empty blank line rather than mistaking it for EOF. */
+                    break;
+                }
+                return n;
+            }
+            out[n++] = ch;
+        }
+        if (n == max_out - 1) {
+            /* Drain remainder of overlong line up to '\n' or EOF. */
+            while (1) {
+                if (lr->pos >= lr->len) {
+                    ssize_t r = privd_line_reader_fill(lr, fd);
+                    if (r <= 0) break;
+                }
+                if (lr->buf[lr->pos++] == '\n') break;
+            }
+            out[n] = '\0';
+            return n;
+        }
+    }
+}
+
+/**
  * Configures and creates a virtual input device on an open /dev/uinput file descriptor.
  * Returns 0 on success, or -1 on ioctl failure.
  */

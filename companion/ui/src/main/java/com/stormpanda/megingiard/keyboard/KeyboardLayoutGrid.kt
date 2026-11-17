@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,12 +25,14 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.ui.pruneNonScreenReaderSemantics
+import com.stormpanda.megingiard.ui.rememberScreenReaderActive
 
 private const val TAG = "KeyboardLayoutGrid"
 private const val KB_NUMERIC_GRID_ROW_COUNT = 3
@@ -59,45 +63,18 @@ internal fun KeyboardLayoutGrid(
     val isFullLayoutMode = activeState.mode == KeyboardMode.FULL
     val gridHeight = if (isFullLayoutMode) KB_GRID_HEIGHT_FULL else KB_GRID_HEIGHT_ERGO
     val boxCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
-    val pressedKeys = gestureProcessor.pressedKeys.collectAsStateWithLifecycle().value
+    val pressedKeysState = gestureProcessor.pressedKeys.collectAsStateWithLifecycle()
     val density = LocalDensity.current
+    val isScreenReaderActive = rememberScreenReaderActive()
+    val onUpdateKeyBounds =
+        remember(gestureProcessor) {
+            { id: String, left: Float, top: Float, right: Float, bottom: Float ->
+                gestureProcessor.updateBounds(id, left, top, right, bottom)
+            }
+        }
 
     LaunchedEffect(activeState.mode) {
         AppLog.d(TAG, "Keyboard layout grid mode=${activeState.mode} rows=${activeState.grid.size}")
-    }
-
-    @Composable
-    fun renderKey(
-        key: KeyDef,
-        keyModifier: Modifier,
-    ) {
-        key(key.id) {
-            val keyId = key.id
-            val boundsUpdater =
-                remember(keyId, gestureProcessor) {
-                    { coords: LayoutCoordinates ->
-                        val box = boxCoords.value
-                        if (box != null && coords.isAttached) {
-                            val localTopLeft = box.localPositionOf(coords, Offset.Zero)
-                            val left = localTopLeft.x
-                            val top = localTopLeft.y
-                            val right = left + coords.size.width
-                            val bottom = top + coords.size.height
-                            gestureProcessor.updateBounds(keyId, left, top, right, bottom)
-                        }
-                    }
-                }
-            KeyboardKey(
-                keyDef = key,
-                isPressed = keyId in pressedKeys,
-                isShiftActive = isShiftActive,
-                isCapsActive = isCapsActive,
-                isAltGrActive = isAltGrActive,
-                isFullLayout = activeState.mode == KeyboardMode.FULL,
-                modifier = keyModifier,
-                onBoundsUpdate = boundsUpdater,
-            )
-        }
     }
 
     Box(
@@ -105,8 +82,9 @@ internal fun KeyboardLayoutGrid(
             modifier
                 .fillMaxWidth()
                 .height(gridHeight)
+                .pruneNonScreenReaderSemantics(isScreenReaderActive)
                 .padding(horizontal = KB_GRID_PADDING_H, vertical = KB_GRID_PADDING_V)
-                .onGloballyPositioned { boxCoords.value = it }
+                .onPlaced { boxCoords.value = it }
                 .pointerInput(isFullLayoutMode) {
                     try {
                         awaitPointerEventScope {
@@ -209,7 +187,19 @@ internal fun KeyboardLayoutGrid(
                                     .fillMaxHeight(),
                         ) {
                             ops.forEach { key ->
-                                renderKey(key, Modifier.weight(1f))
+                                key(key.id) {
+                                    KeyboardKeySlot(
+                                        keyDef = key,
+                                        pressedKeysState = pressedKeysState,
+                                        isShiftActive = isShiftActive,
+                                        isCapsActive = isCapsActive,
+                                        isAltGrActive = isAltGrActive,
+                                        isFullLayout = isFullLayoutMode,
+                                        boxCoordsState = boxCoords,
+                                        onUpdateKeyBounds = onUpdateKeyBounds,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
                             }
                         }
 
@@ -227,7 +217,19 @@ internal fun KeyboardLayoutGrid(
                                             .fillMaxWidth(),
                                 ) {
                                     row.forEach { key ->
-                                        renderKey(key, Modifier.weight(key.widthWeight))
+                                        key(key.id) {
+                                            KeyboardKeySlot(
+                                                keyDef = key,
+                                                pressedKeysState = pressedKeysState,
+                                                isShiftActive = isShiftActive,
+                                                isCapsActive = isCapsActive,
+                                                isAltGrActive = isAltGrActive,
+                                                isFullLayout = isFullLayoutMode,
+                                                boxCoordsState = boxCoords,
+                                                onUpdateKeyBounds = onUpdateKeyBounds,
+                                                modifier = Modifier.weight(key.widthWeight),
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -241,7 +243,19 @@ internal fun KeyboardLayoutGrid(
                                 .fillMaxWidth(),
                     ) {
                         bottomRow.forEach { key ->
-                            renderKey(key, Modifier.weight(key.widthWeight))
+                            key(key.id) {
+                                KeyboardKeySlot(
+                                    keyDef = key,
+                                    pressedKeysState = pressedKeysState,
+                                    isShiftActive = isShiftActive,
+                                    isCapsActive = isCapsActive,
+                                    isAltGrActive = isAltGrActive,
+                                    isFullLayout = isFullLayoutMode,
+                                    boxCoordsState = boxCoords,
+                                    onUpdateKeyBounds = onUpdateKeyBounds,
+                                    modifier = Modifier.weight(key.widthWeight),
+                                )
+                            }
                         }
                     }
                 }
@@ -258,7 +272,19 @@ internal fun KeyboardLayoutGrid(
                                     .fillMaxWidth(),
                         ) {
                             row.forEach { key ->
-                                renderKey(key, Modifier.weight(key.widthWeight))
+                                key(key.id) {
+                                    KeyboardKeySlot(
+                                        keyDef = key,
+                                        pressedKeysState = pressedKeysState,
+                                        isShiftActive = isShiftActive,
+                                        isCapsActive = isCapsActive,
+                                        isAltGrActive = isAltGrActive,
+                                        isFullLayout = isFullLayoutMode,
+                                        boxCoordsState = boxCoords,
+                                        onUpdateKeyBounds = onUpdateKeyBounds,
+                                        modifier = Modifier.weight(key.widthWeight),
+                                    )
+                                }
                             }
                         }
                     }
@@ -272,6 +298,48 @@ internal fun KeyboardLayoutGrid(
             density = density,
         )
     }
+}
+
+@Composable
+private fun KeyboardKeySlot(
+    keyDef: KeyDef,
+    pressedKeysState: State<Set<String>>,
+    isShiftActive: Boolean,
+    isCapsActive: Boolean,
+    isAltGrActive: Boolean,
+    isFullLayout: Boolean,
+    boxCoordsState: State<LayoutCoordinates?>,
+    onUpdateKeyBounds: (String, Float, Float, Float, Float) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val keyId = keyDef.id
+    val isPressed by remember(keyId, pressedKeysState) {
+        derivedStateOf { keyId in pressedKeysState.value }
+    }
+    val boundsUpdater =
+        remember(keyId, boxCoordsState, onUpdateKeyBounds) {
+            { coords: LayoutCoordinates ->
+                val box = boxCoordsState.value
+                if (box != null && coords.isAttached && box.isAttached) {
+                    val localTopLeft = box.localPositionOf(coords, Offset.Zero)
+                    val left = localTopLeft.x
+                    val top = localTopLeft.y
+                    val right = left + coords.size.width
+                    val bottom = top + coords.size.height
+                    onUpdateKeyBounds(keyId, left, top, right, bottom)
+                }
+            }
+        }
+    KeyboardKey(
+        keyDef = keyDef,
+        isPressed = isPressed,
+        isShiftActive = isShiftActive,
+        isCapsActive = isCapsActive,
+        isAltGrActive = isAltGrActive,
+        isFullLayout = isFullLayout,
+        modifier = modifier,
+        onBoundsUpdate = boundsUpdater,
+    )
 }
 
 @Composable

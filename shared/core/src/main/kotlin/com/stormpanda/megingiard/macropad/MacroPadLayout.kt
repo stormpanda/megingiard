@@ -9,9 +9,15 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonTransformingSerializer
 import kotlin.math.min
 import kotlin.math.round
 import com.stormpanda.megingiard.macropad.MouseButton as MouseBtnEnum
@@ -331,15 +337,6 @@ sealed class PadAction {
         val macroId: String,
     ) : PadAction()
 
-    /**
-     * Toggles the Ambient Peek mode. When active, all other MacroPad buttons are hidden
-     * and blur/dim are set to zero, revealing the clear screen mirror behind the pad.
-     * Tapping again restores the previous state.
-     */
-    @Serializable
-    @SerialName("ambient_peek")
-    data object BackgroundPeek : PadAction()
-
     // ── Screen Mirroring ───────────────────────────────────────────────────
 
     /** Toggles screen mirroring on/off (starts/stops MediaProjection capture). */
@@ -477,16 +474,14 @@ fun PadAction.isCircularControl(): Boolean = this is PadAction.TrackpointMove ||
 /**
  * Returns `true` when this action supports assigning a Material Symbols icon via
  * [PadButton.iconName]. Fixed-face actions ([PadAction.ScrollWheel],
- * [PadAction.TrackpointMove], [PadAction.AnalogStick], [PadAction.BackgroundPeek],
- * [PadAction.AppLauncher]) render dedicated glyphs or package icons and always enforce
- * `iconName = null`.
+ * [PadAction.TrackpointMove], [PadAction.AnalogStick], [PadAction.AppLauncher])
+ * render dedicated glyphs or package icons and always enforce `iconName = null`.
  */
 fun PadAction.supportsCustomIcon(): Boolean =
     when (this) {
         is PadAction.ScrollWheel,
         is PadAction.TrackpointMove,
         is PadAction.AnalogStick,
-        is PadAction.BackgroundPeek,
         is PadAction.AppLauncher,
         -> false
 
@@ -902,10 +897,28 @@ data class LayoutVisualAnchor(
         get() = hasEffect(CutoutLostAnchorEffect.FREEZE)
 }
 
+private const val MP_REMOVED_AMBIENT_PEEK_SERIAL_NAME = "ambient_peek"
+
+internal object PadButtonListFilteringSerializer : JsonTransformingSerializer<List<PadButton>>(
+    ListSerializer(PadButton.serializer()),
+) {
+    override fun transformDeserialize(element: JsonElement): JsonElement {
+        if (element !is JsonArray) return element
+        val filtered =
+            element.filterNot { item ->
+                val actionObj = (item as? JsonObject)?.get("action") as? JsonObject
+                val typeStr = (actionObj?.get("type") as? JsonPrimitive)?.takeIf { it.isString }?.content
+                typeStr == MP_REMOVED_AMBIENT_PEEK_SERIAL_NAME
+            }
+        return if (filtered.size == element.size) element else JsonArray(filtered)
+    }
+}
+
 @Serializable
 data class PadLayout(
     val id: String,
     val name: String,
+    @Serializable(with = PadButtonListFilteringSerializer::class)
     val buttons: List<PadButton> = emptyList(),
     val ambientDim: Float = 0f,
     val mirrorSavedScale: Float = 1f,

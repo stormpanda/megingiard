@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -169,7 +170,7 @@ fun GamepadAdjustableCapsule(
             modifier =
                 Modifier
                     .width(GC_CAPSULE_TEXT_WIDTH)
-                    .appMarquee()
+                    .appMarquee(enabled = isFocused || isAdjusting)
                     .padding(horizontal = GC_SPACING_8),
         )
 
@@ -430,6 +431,7 @@ fun GamepadSliderCard(
     valueRange: ClosedFloatingPointRange<Float>,
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
+    onValueChangeFinished: (() -> Unit)? = null,
     description: String? = null,
     icon: ImageVector? = null,
     valueLabel: String = "%.0f%%".format(value * 100f),
@@ -443,6 +445,24 @@ fun GamepadSliderCard(
     val colors = LocalAppColors.current
     var isAdjusting by rememberSaveable { mutableStateOf(false) }
     var isL2Held by remember { mutableStateOf(false) }
+    var dirtySinceCommit by remember { mutableStateOf(false) }
+    val currentOnValueChangeFinished = rememberUpdatedState(onValueChangeFinished)
+
+    val flushCommitIfDirty: () -> Unit = {
+        if (dirtySinceCommit) {
+            dirtySinceCommit = false
+            currentOnValueChangeFinished.value?.invoke()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (dirtySinceCommit) {
+                dirtySinceCommit = false
+                currentOnValueChangeFinished.value?.invoke()
+            }
+        }
+    }
 
     val hasFineStep = fineStep != null && fineStep < step
     val toastMessage = stringResource(R.string.gamepad_slider_fine_adjustment_toast)
@@ -469,6 +489,7 @@ fun GamepadSliderCard(
                 isAdjusting = nextState
                 if (!nextState) {
                     isL2Held = false
+                    flushCommitIfDirty()
                 }
             }
         },
@@ -491,28 +512,40 @@ fun GamepadSliderCard(
                 }
             } else {
                 val effectiveStep = if (isL2Held && fineStep != null) fineStep else step
-                handleAdjustmentKeyEvent(
-                    keyEvent = keyEvent,
-                    isAdjusting = isAdjusting,
-                    onAdjustLeft = {
-                        val newVal = (value - effectiveStep).coerceIn(valueRange.start, valueRange.endInclusive)
-                        onValueChange(newVal)
-                    },
-                    onAdjustRight = {
-                        val newVal = (value + effectiveStep).coerceIn(valueRange.start, valueRange.endInclusive)
-                        onValueChange(newVal)
-                    },
-                    onDismissAdjustment = {
-                        isAdjusting = false
-                        isL2Held = false
-                    },
-                )
+                val consumed =
+                    handleAdjustmentKeyEvent(
+                        keyEvent = keyEvent,
+                        isAdjusting = isAdjusting,
+                        onAdjustLeft = {
+                            val newVal = (value - effectiveStep).coerceIn(valueRange.start, valueRange.endInclusive)
+                            dirtySinceCommit = true
+                            onValueChange(newVal)
+                        },
+                        onAdjustRight = {
+                            val newVal = (value + effectiveStep).coerceIn(valueRange.start, valueRange.endInclusive)
+                            dirtySinceCommit = true
+                            onValueChange(newVal)
+                        },
+                        onDismissAdjustment = {
+                            isAdjusting = false
+                            isL2Held = false
+                            flushCommitIfDirty()
+                        },
+                    )
+                if (consumed &&
+                    keyEvent.type == KeyEventType.KeyUp &&
+                    (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
+                ) {
+                    flushCommitIfDirty()
+                }
+                consumed
             }
         },
         onFocusChanged = { focused ->
             if (!focused) {
                 isAdjusting = false
                 isL2Held = false
+                flushCommitIfDirty()
             }
         },
     ) { focused ->
@@ -557,8 +590,14 @@ fun GamepadSliderCard(
 
                     Slider(
                         value = value,
-                        onValueChange = onValueChange,
-                        onValueChangeFinished = { isAdjusting = false },
+                        onValueChange = {
+                            dirtySinceCommit = true
+                            onValueChange(it)
+                        },
+                        onValueChangeFinished = {
+                            isAdjusting = false
+                            flushCommitIfDirty()
+                        },
                         valueRange = valueRange,
                         enabled = enabled,
                         colors =
@@ -576,8 +615,14 @@ fun GamepadSliderCard(
             } else {
                 Slider(
                     value = value,
-                    onValueChange = onValueChange,
-                    onValueChangeFinished = { isAdjusting = false },
+                    onValueChange = {
+                        dirtySinceCommit = true
+                        onValueChange(it)
+                    },
+                    onValueChangeFinished = {
+                        isAdjusting = false
+                        flushCommitIfDirty()
+                    },
                     valueRange = valueRange,
                     enabled = enabled,
                     colors =

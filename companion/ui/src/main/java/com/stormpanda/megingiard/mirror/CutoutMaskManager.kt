@@ -443,6 +443,26 @@ object CutoutMaskManager {
         }
     }
 
+    private fun findAnyCachedTunedMask(cutoutId: String): Bitmap? {
+        val prefix = "$cutoutId:"
+        for ((key, bmp) in tunedMaskCache) {
+            if (key.startsWith(prefix) && !bmp.isRecycled) {
+                return bmp
+            }
+        }
+        return null
+    }
+
+    private fun findAnyCachedStaticAsset(cutoutId: String): Bitmap? {
+        val prefix = "$cutoutId:"
+        for ((key, bmp) in staticAssetCache) {
+            if (key.startsWith(prefix) && !bmp.isRecycled) {
+                return bmp
+            }
+        }
+        return null
+    }
+
     private fun evictStaleTunedMasksExcept(
         cutoutId: String,
         keepKey: String,
@@ -596,7 +616,7 @@ object CutoutMaskManager {
                 }
             }
         }
-        return baseMaskCache[cutoutId]?.takeIf { !it.isRecycled }
+        return findAnyCachedTunedMask(cutoutId) ?: baseMaskCache[cutoutId]?.takeIf { !it.isRecycled }
     }
 
     /**
@@ -643,7 +663,7 @@ object CutoutMaskManager {
                 }
             }
         }
-        return null
+        return findAnyCachedStaticAsset(cutoutId)
     }
 
     /**

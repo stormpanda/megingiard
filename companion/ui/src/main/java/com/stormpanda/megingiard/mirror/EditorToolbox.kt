@@ -17,7 +17,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -44,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -56,14 +56,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -81,6 +80,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -138,8 +138,12 @@ val TOOLBOX_TOGGLE_ICON_SIZE = 14.dp
 val TOOLBOX_FOCUS_BORDER_WIDTH = 2.dp
 val TOOLBOX_DEFAULT_BORDER_WIDTH = 1.dp
 val TOOLBOX_FOCUS_ELEVATION = 4.dp
+private val TOOLBOX_DEFAULT_ELEVATION = 0.dp
 
 const val TOOLBOX_SURFACE_ALPHA = 0.70f
+private const val TOOLBOX_CARD_FOCUSED_BG_ALPHA = 0.90f
+private const val TOOLBOX_CARD_UNFOCUSED_BG_ALPHA = 0.40f
+private const val TOOLBOX_ANIM_DURATION_MS = 150
 const val TOOLBOX_NORMAL_STEP_PX = 10
 const val TOOLBOX_FINE_STEP_PX = 1
 const val TOOLBOX_ADJUST_TOAST_DURATION_MS = 5000L
@@ -160,27 +164,35 @@ fun ToolboxContainer(
 ) {
     val colors = LocalAppColors.current
     val density = LocalDensity.current
+    var boxMaxWidth by remember { mutableIntStateOf(0) }
+    var boxMaxHeight by remember { mutableIntStateOf(0) }
+    var surfaceHeightPx by remember { mutableIntStateOf(0) }
+    var offsetX by remember {
+        mutableFloatStateOf(with(density) { TOOLBOX_PADDING_START.toPx() })
+    }
+    var offsetY by remember {
+        mutableFloatStateOf(0f)
+    }
 
-    BoxWithConstraints(
+    Box(
         modifier =
             modifier
                 .fillMaxSize()
                 .padding(
                     top = TOOLBOX_PADDING_VERTICAL,
                     bottom = TOOLBOX_PADDING_VERTICAL,
-                ),
+                ).onSizeChanged { size ->
+                    boxMaxWidth = size.width
+                    boxMaxHeight = size.height
+                    if (surfaceHeightPx > 0 && size.height > 0) {
+                        val currentMaxOffsetY = (size.height - surfaceHeightPx).coerceAtLeast(0).toFloat()
+                        if (offsetY > currentMaxOffsetY) {
+                            offsetY = currentMaxOffsetY
+                        }
+                    }
+                },
     ) {
-        val boxMaxHeight = constraints.maxHeight
-        val boxMaxWidth = constraints.maxWidth
-        var surfaceHeightPx by remember { mutableIntStateOf(0) }
         val maxOffsetX = (boxMaxWidth - with(density) { TOOLBOX_WIDTH.toPx() }).coerceAtLeast(0f)
-
-        var offsetX by remember {
-            mutableFloatStateOf(with(density) { TOOLBOX_PADDING_START.toPx() })
-        }
-        var offsetY by remember {
-            mutableFloatStateOf(0f)
-        }
 
         Surface(
             modifier =
@@ -197,9 +209,11 @@ fun ToolboxContainer(
                         animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy),
                     ).onSizeChanged { size ->
                         surfaceHeightPx = size.height
-                        val currentMaxOffsetY = (boxMaxHeight - size.height).coerceAtLeast(0).toFloat()
-                        if (offsetY > currentMaxOffsetY) {
-                            offsetY = currentMaxOffsetY
+                        if (boxMaxHeight > 0) {
+                            val currentMaxOffsetY = (boxMaxHeight - size.height).coerceAtLeast(0).toFloat()
+                            if (offsetY > currentMaxOffsetY) {
+                                offsetY = currentMaxOffsetY
+                            }
                         }
                     },
             color = colors.surface.copy(alpha = TOOLBOX_SURFACE_ALPHA),
@@ -382,38 +396,59 @@ fun ToolboxCard(
     val isFocused by interactionSource.collectIsFocusedAsState()
     val effectivelyFocused = isFocused || isFocusedOverride
 
-    val animatedBorderWidth by animateDpAsState(
-        targetValue = if (effectivelyFocused) TOOLBOX_FOCUS_BORDER_WIDTH else TOOLBOX_DEFAULT_BORDER_WIDTH,
-        animationSpec = tween(150),
-        label = "cardBorderWidth",
-    )
-    val animatedBorderColor by animateColorAsState(
-        targetValue = if (effectivelyFocused) (if (isDestructive) colors.error else colors.accent) else colors.subduedBorder,
-        animationSpec = tween(150),
-        label = "cardBorderColor",
-    )
-    val animatedBgColor =
-        if (cardBgColor != null) {
-            cardBgColor
+    var hasEverBeenFocused by remember { mutableStateOf(effectivelyFocused) }
+    if (effectivelyFocused && !hasEverBeenFocused) {
+        hasEverBeenFocused = true
+    }
+
+    val defaultUnfocusedBgColor = colors.surface.copy(alpha = TOOLBOX_CARD_UNFOCUSED_BG_ALPHA)
+    val unfocusedBorderColor = colors.subduedBorder
+    val animatedBorderWidthState: State<Dp>? =
+        if (hasEverBeenFocused) {
+            animateDpAsState(
+                targetValue = if (effectivelyFocused) TOOLBOX_FOCUS_BORDER_WIDTH else TOOLBOX_DEFAULT_BORDER_WIDTH,
+                animationSpec = tween(TOOLBOX_ANIM_DURATION_MS),
+                label = "cardBorderWidth",
+            )
         } else {
+            null
+        }
+    val animatedBorderColorState: State<Color>? =
+        if (hasEverBeenFocused) {
+            animateColorAsState(
+                targetValue = if (effectivelyFocused) (if (isDestructive) colors.error else colors.accent) else unfocusedBorderColor,
+                animationSpec = tween(TOOLBOX_ANIM_DURATION_MS),
+                label = "cardBorderColor",
+            )
+        } else {
+            null
+        }
+    val animatedBgColorState: State<Color>? =
+        if (cardBgColor == null && hasEverBeenFocused) {
             val targetBg =
                 if (effectivelyFocused) {
-                    colors.surface.copy(alpha = 0.90f)
+                    colors.surface.copy(alpha = TOOLBOX_CARD_FOCUSED_BG_ALPHA)
                 } else {
-                    colors.surface.copy(alpha = 0.40f)
+                    defaultUnfocusedBgColor
                 }
-            val bg by animateColorAsState(
+            animateColorAsState(
                 targetValue = targetBg,
-                animationSpec = tween(150),
+                animationSpec = tween(TOOLBOX_ANIM_DURATION_MS),
                 label = "cardBgColor",
             )
-            bg
+        } else {
+            null
         }
-    val animatedElevation by animateDpAsState(
-        targetValue = if (effectivelyFocused) TOOLBOX_FOCUS_ELEVATION else 0.dp,
-        animationSpec = tween(150),
-        label = "cardElevation",
-    )
+    val animatedElevationState: State<Dp>? =
+        if (hasEverBeenFocused) {
+            animateDpAsState(
+                targetValue = if (effectivelyFocused) TOOLBOX_FOCUS_ELEVATION else TOOLBOX_DEFAULT_ELEVATION,
+                animationSpec = tween(TOOLBOX_ANIM_DURATION_MS),
+                label = "cardElevation",
+            )
+        } else {
+            null
+        }
 
     var lastCustomConsumedDownKeyCode by remember { mutableIntStateOf(0) }
 
@@ -475,21 +510,23 @@ fun ToolboxCard(
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = TOOLBOX_CARD_MIN_HEIGHT)
                 .graphicsLayer {
-                    this.shadowElevation = animatedElevation.toPx()
+                    this.shadowElevation = (animatedElevationState?.value ?: TOOLBOX_DEFAULT_ELEVATION).toPx()
                     this.shape = TOOLBOX_CARD_SHAPE
                     this.clip = false
-                }.drawBehind {
+                }.drawWithCache {
                     val outline = TOOLBOX_CARD_SHAPE.createOutline(size, layoutDirection, this)
-                    drawOutline(
-                        outline = outline,
-                        brush = SolidColor(animatedBgColor),
-                        style = Fill,
-                    )
-                    drawOutline(
-                        outline = outline,
-                        brush = SolidColor(animatedBorderColor),
-                        style = Stroke(width = animatedBorderWidth.toPx()),
-                    )
+                    onDrawBehind {
+                        drawOutline(
+                            outline = outline,
+                            color = cardBgColor ?: animatedBgColorState?.value ?: defaultUnfocusedBgColor,
+                            style = Fill,
+                        )
+                        drawOutline(
+                            outline = outline,
+                            color = animatedBorderColorState?.value ?: unfocusedBorderColor,
+                            style = Stroke(width = (animatedBorderWidthState?.value ?: TOOLBOX_DEFAULT_BORDER_WIDTH).toPx()),
+                        )
+                    }
                 }.focusRequester(cardFocusRequester)
                 .onFocusChanged { state ->
                     onFocusChanged?.invoke(state.isFocused)

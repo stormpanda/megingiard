@@ -38,7 +38,7 @@ class ButtonShapeTest {
                 posX = 0.5f,
                 posY = 0.5f,
                 buttonShape = ButtonShape.ICON_ONLY,
-                action = PadAction.BackgroundPeek,
+                action = PadAction.SwitchToHub,
             )
         val encoded = json.encodeToString(button)
         val decoded = json.decodeFromString<PadButton>(encoded)

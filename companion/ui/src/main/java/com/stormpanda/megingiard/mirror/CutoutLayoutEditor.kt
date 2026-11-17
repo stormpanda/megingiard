@@ -50,6 +50,8 @@ import com.stormpanda.megingiard.math.calculateCutoutAlignmentSnap
 import com.stormpanda.megingiard.math.findAlignedCutoutCenterGuides
 import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.pruneNonScreenReaderSemantics
+import com.stormpanda.megingiard.ui.rememberScreenReaderActive
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -109,11 +111,13 @@ fun CutoutLayoutEditor() {
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else CLE_FALLBACK_SRC_HEIGHT
 
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
+    val isScreenReaderActive = rememberScreenReaderActive()
 
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
+                .pruneNonScreenReaderSemantics(isScreenReaderActive)
                 .background(Color.Transparent)
                 .onSizeChanged { containerSize = it },
     ) {

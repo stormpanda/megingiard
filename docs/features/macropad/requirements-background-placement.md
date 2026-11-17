@@ -17,7 +17,6 @@
 - **Per-layout mirror & background settings:** Dimming parameters and mirror cutouts are stored **per layout** in `PadLayout` (not globally).
 - **Mirror Deck (`MirrorSettingsEditor.kt`):** Configures the active layout's mirror cutouts, dimming parameters, edge blending (`GamepadSliderCard`), layout-wide touch tracking, and per-cutout smoothing settings.
 - **Dimming** (0–90%, default 0%): Configured via a `GamepadSliderCard` that draws a semi-transparent black overlay on top of the mirror background.
-- A special **Background Peek** action (`PadAction.BackgroundPeek`): toggles hiding all buttons and dimming.
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
 - **Per-layout button color defaults** (`PadLayout.buttonTextColor` / `PadLayout.buttonBorderColor` / `PadLayout.buttonBgColor`): Each layout can independently configure the default colors for text/icon, border, and fading color.
   - Colors are stored using the `ColorOption` schema, which supports **Neutral Style** (neutral theme-independent palette), **Accent Color** (dynamically resolved system accent color), or a **Custom Color** (fixed ARGB).

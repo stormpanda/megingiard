@@ -5,10 +5,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -26,7 +25,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,19 +50,25 @@ private val IP_ICON_CELL_SIZE = 64.dp
 private val IP_ICON_SIZE = 28.dp
 private val IP_PREVIEW_SIZE = 36.dp
 private val IP_PREVIEW_ICON_SIZE = 24.dp
+
+// CODING_GUIDE §16.1 exception: Intentionally tiny 8sp label below 11sp inside compact 64dp icon cells.
 private val IP_ICON_NAME_SIZE = 8.sp
 private const val IP_GRID_COLUMNS = 5
 private val IP_CELL_CORNER = 8.dp
 private val IP_CELL_SHAPE = RoundedCornerShape(IP_CELL_CORNER)
 private val IP_GRID_SPACING = 4.dp
 private val IP_GRID_VERTICAL_PADDING = 4.dp
-private val IP_GRID_4_ROWS_HEIGHT = (IP_ICON_CELL_SIZE * 4) + (IP_GRID_SPACING * 3) + (IP_GRID_VERTICAL_PADDING * 2)
+private const val IP_PREVIEW_BG_ALPHA = 0.2f
+private const val IP_SELECTED_BG_ALPHA = 0.25f
+private val IP_SELECTED_BORDER_WIDTH = 2.dp
+private val IP_DEFAULT_BORDER_WIDTH = 1.dp
+private val IP_LABEL_H_PADDING = 2.dp
 
 /**
  * Full-screen icon picker that lets the user choose a Material Symbol icon by name.
  */
 @Composable
-internal fun ChooseIconSubPageContent(
+internal fun ColumnScope.ChooseIconSubPageContent(
     selectedIcon: String?,
     accentColor: Color,
     onSelect: (String?) -> Unit,
@@ -98,8 +106,8 @@ internal fun ChooseIconSubPageContent(
                         Modifier
                             .size(IP_PREVIEW_SIZE)
                             .clip(IP_CELL_SHAPE)
-                            .background(accentColor.copy(alpha = 0.2f))
-                            .border(2.dp, accentColor, IP_CELL_SHAPE),
+                            .background(accentColor.copy(alpha = IP_PREVIEW_BG_ALPHA))
+                            .border(IP_SELECTED_BORDER_WIDTH, accentColor, IP_CELL_SHAPE),
                 ) {
                     MaterialSymbol(
                         name = currentIcon,
@@ -124,61 +132,61 @@ internal fun ChooseIconSubPageContent(
             icon = Icons.Rounded.Search,
         )
     } else {
-        Box(
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(IP_GRID_COLUMNS),
+            contentPadding = PaddingValues(vertical = IP_GRID_VERTICAL_PADDING),
+            horizontalArrangement = Arrangement.spacedBy(IP_GRID_SPACING),
+            verticalArrangement = Arrangement.spacedBy(IP_GRID_SPACING),
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(IP_GRID_4_ROWS_HEIGHT),
+                    .weight(1f),
         ) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(IP_GRID_COLUMNS),
-                contentPadding = PaddingValues(vertical = IP_GRID_VERTICAL_PADDING),
-                horizontalArrangement = Arrangement.spacedBy(IP_GRID_SPACING),
-                verticalArrangement = Arrangement.spacedBy(IP_GRID_SPACING),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                items(results, key = { it }) { name ->
-                    val isSelected = name == pendingIcon
+            items(results, key = { it }) { name ->
+                val isSelected = name == pendingIcon
+                val cellBgColor = if (isSelected) accentColor.copy(alpha = IP_SELECTED_BG_ALPHA) else colors.surface
+                val cellBorderColor = if (isSelected) accentColor else colors.subduedBorder
+                val cellBorderWidth = if (isSelected) IP_SELECTED_BORDER_WIDTH else IP_DEFAULT_BORDER_WIDTH
 
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier =
-                            Modifier
-                                .size(IP_ICON_CELL_SIZE)
-                                .clip(IP_CELL_SHAPE)
-                                .background(
-                                    if (isSelected) accentColor.copy(alpha = 0.25f) else colors.surface,
-                                ).border(
-                                    width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) accentColor else colors.subduedBorder,
-                                    shape = IP_CELL_SHAPE,
-                                ).primaryOverlayFocusable(
-                                    onClick = {
-                                        pendingIcon = name
-                                        onSelect(name)
-                                    },
-                                    shape = IP_CELL_SHAPE,
-                                ),
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier =
+                        Modifier
+                            .size(IP_ICON_CELL_SIZE)
+                            .drawBehind {
+                                val cr = CornerRadius(IP_CELL_CORNER.toPx())
+                                drawRoundRect(color = cellBgColor, cornerRadius = cr)
+                                drawRoundRect(
+                                    color = cellBorderColor,
+                                    cornerRadius = cr,
+                                    style = Stroke(width = cellBorderWidth.toPx()),
+                                )
+                            }.primaryOverlayFocusable(
+                                onClick = {
+                                    pendingIcon = name
+                                    onSelect(name)
+                                },
+                                shape = IP_CELL_SHAPE,
+                            ),
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            MaterialSymbol(
-                                name = name,
-                                size = IP_ICON_SIZE,
-                                tint = if (isSelected) accentColor else colors.onSurface,
-                            )
-                            Text(
-                                text = name,
-                                color = if (isSelected) accentColor else colors.onSurfaceSecondary,
-                                fontSize = IP_ICON_NAME_SIZE,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 2.dp),
-                            )
-                        }
+                        MaterialSymbol(
+                            name = name,
+                            size = IP_ICON_SIZE,
+                            tint = if (isSelected) accentColor else colors.onSurface,
+                        )
+                        Text(
+                            text = name,
+                            color = if (isSelected) accentColor else colors.onSurfaceSecondary,
+                            fontSize = IP_ICON_NAME_SIZE,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = IP_LABEL_H_PADDING),
+                        )
                     }
                 }
             }

@@ -21,10 +21,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlin.math.roundToInt
 
-private val KB_POPUP_SHAPE = RoundedCornerShape(12.dp)
+private val KB_POPUP_CORNER = 12.dp
+private val KB_POPUP_SHAPE = RoundedCornerShape(KB_POPUP_CORNER)
+private val KB_POPUP_H_PADDING = 16.dp
+private val KB_POPUP_EDGE_MARGIN = 4.dp
+private val KB_POPUP_BORDER_WIDTH = 1.dp
+private const val KB_POPUP_BORDER_ALPHA = 0.15f
+private val KB_POPUP_INNER_PADDING = 8.dp
+private val KB_POPUP_CELL_SPACING = 4.dp
 
 @Composable
 internal fun CharPopupOverlay(
@@ -38,35 +47,36 @@ internal fun CharPopupOverlay(
     val keyCenterX = popup.keyBounds.left + (popup.keyBounds.right - popup.keyBounds.left) / 2
     val keyTop = popup.keyBounds.top
 
-    val keyCenterXDp = with(density) { keyCenterX.toDp() }
-    val keyTopDp = with(density) { keyTop.toDp() }
-
     val cellWidth = KB_CELL_WIDTH
-    val popupWidth = cellWidth * popup.options.size + 16.dp
+    val popupWidth = cellWidth * popup.options.size + KB_POPUP_H_PADDING
     val popupHeight = KB_POPUP_HEIGHT
 
-    val screenWidthDp = with(density) { boxWidthPx.toDp() }
-    val maxPopupLeft = screenWidthDp - popupWidth - 4.dp
-    val popupLeft =
-        (keyCenterXDp - popupWidth / 2)
-            .coerceAtLeast(4.dp)
-            .coerceAtMost(maxPopupLeft)
-    val popupTop = keyTopDp - popupHeight - KB_POPUP_OFFSET_Y
+    val popupWidthPx = with(density) { popupWidth.toPx() }
+    val popupHeightPx = with(density) { popupHeight.toPx() }
+    val edgeMarginPx = with(density) { KB_POPUP_EDGE_MARGIN.toPx() }
+    val offsetYPx = with(density) { KB_POPUP_OFFSET_Y.toPx() }
+
+    val maxPopupLeftPx = (boxWidthPx - popupWidthPx - edgeMarginPx).coerceAtLeast(edgeMarginPx)
+    val popupLeftPx =
+        (keyCenterX - popupWidthPx / 2f)
+            .coerceIn(edgeMarginPx, maxPopupLeftPx)
+            .roundToInt()
+    val popupTopPx = (keyTop - popupHeightPx - offsetYPx).roundToInt()
 
     Box(
         modifier =
             modifier
-                .offset(x = popupLeft, y = popupTop)
+                .offset { IntOffset(popupLeftPx, popupTopPx) }
                 .width(popupWidth)
                 .height(popupHeight)
                 .clip(KB_POPUP_SHAPE)
                 .background(colors.surfaceVariant)
-                .border(1.dp, colors.onSurface.copy(alpha = 0.15f), KB_POPUP_SHAPE)
-                .padding(8.dp),
+                .border(KB_POPUP_BORDER_WIDTH, colors.onSurface.copy(alpha = KB_POPUP_BORDER_ALPHA), KB_POPUP_SHAPE)
+                .padding(KB_POPUP_INNER_PADDING),
         contentAlignment = Alignment.Center,
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(KB_POPUP_CELL_SPACING),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             popup.options.forEachIndexed { index, opt ->

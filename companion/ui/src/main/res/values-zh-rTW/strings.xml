@@ -211,7 +211,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_mouse_button">滑鼠按鈕</string>
     <string name="macropad_action_scroll_wheel">滾輪</string>
     <string name="macropad_action_trackpoint">軌跡點 (相對滑鼠)</string>
-    <string name="macropad_action_ambient_peek">背景預覽</string>
     <string name="macropad_action_layout_next">下一個配置</string>
     <string name="macropad_action_layout_previous">上一個配置</string>
     <string name="macropad_action_profile_switcher">設定檔切換器</string>
@@ -1159,7 +1158,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_mirror_freeze_desc">凍結或繼續鏡像畫面</string>
     <string name="macropad_action_mirror_viewport_edit_desc">調整鏡像的縮放、平移與裁切</string>
     <string name="macropad_action_mirror_touch_projection_desc">將觸控直接投影至鏡像螢幕</string>
-    <string name="macropad_action_ambient_peek_desc">按住或切換以顯示下螢幕</string>
     <string name="macropad_action_fullscreen_mouse_desc">開啟全螢幕虛擬觸控板覆蓋層</string>
     <string name="macropad_action_fullscreen_keyboard_desc">開啟全螢幕虛擬鍵盤覆蓋層</string>
     <string name="macropad_action_screenshot_top_desc">擷取並儲存上螢幕的螢幕截圖</string>

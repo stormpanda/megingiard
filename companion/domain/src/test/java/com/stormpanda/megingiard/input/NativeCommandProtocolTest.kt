@@ -62,10 +62,19 @@ class NativeCommandProtocolTest {
         val buttonUp = "GU 304\n"
         val hatMove = "HD 0 1\n"
         val analogStick = "JS 0 16384\n"
+        val dualAxisStick = "J2 0 16384 1 -8192\n"
 
         assertEquals("GD 304", buttonDown.trim())
         assertEquals("GU 304", buttonUp.trim())
         assertEquals("HD 0 1", hatMove.trim())
         assertEquals("JS 0 16384", analogStick.trim())
+
+        val j2Parts = dualAxisStick.trim().split(" ")
+        assertEquals(5, j2Parts.size)
+        assertEquals("J2", j2Parts[0])
+        assertEquals("0", j2Parts[1])
+        assertEquals("16384", j2Parts[2])
+        assertEquals("1", j2Parts[3])
+        assertEquals("-8192", j2Parts[4])
     }
 }

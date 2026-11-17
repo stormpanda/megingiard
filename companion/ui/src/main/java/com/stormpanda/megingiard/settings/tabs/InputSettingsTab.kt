@@ -91,6 +91,8 @@ fun DeadzonesSubPage(
     deadzoneRight: Float,
     onLeftChange: (Float) -> Unit,
     onRightChange: (Float) -> Unit,
+    onLeftChangeFinished: (() -> Unit)? = null,
+    onRightChangeFinished: (() -> Unit)? = null,
 ) {
     GamepadSliderCard(
         title = stringResource(R.string.privd_deadzone_left),
@@ -101,6 +103,7 @@ fun DeadzonesSubPage(
         icon = Icons.Rounded.NearMe,
         valueLabel = "${(deadzoneLeft * IST_PERCENT_MULTIPLIER).roundToInt()}%",
         onValueChange = onLeftChange,
+        onValueChangeFinished = onLeftChangeFinished,
         modifier = Modifier.firstDeckItem(),
     )
 
@@ -113,5 +116,6 @@ fun DeadzonesSubPage(
         icon = Icons.Rounded.NearMe,
         valueLabel = "${(deadzoneRight * IST_PERCENT_MULTIPLIER).roundToInt()}%",
         onValueChange = onRightChange,
+        onValueChangeFinished = onRightChangeFinished,
     )
 }

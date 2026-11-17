@@ -1,13 +1,11 @@
 package com.stormpanda.megingiard.keyboard
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material.icons.automirrored.rounded.KeyboardReturn
@@ -16,10 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -67,7 +67,6 @@ private val SPECIAL_KEY_IDS =
 // ---------------------------------------------------------------------------
 
 private val KEY_CORNER = 5.dp
-private val KEY_SHAPE = RoundedCornerShape(KEY_CORNER)
 
 private val KC_ICON_SIZE = 18.dp
 private val KC_SUPER_PADDING_TOP = 2.dp
@@ -82,6 +81,7 @@ private val KC_DUAL_SHIFT_FONT_SIZE = 10.sp
 private val KC_SUPER_LABEL_FONT_SIZE = 8.sp
 private const val KC_WIDE_KEY_WEIGHT = 1.5f
 private const val KC_PRESSED_ALPHA = 0.8f
+private const val KC_PRESSED_SCALE = 0.96f
 private const val KC_ACTIVE_MODIFIER_ALPHA = 0.7f
 private const val KC_DIMMED_ALPHA = 0.5f
 
@@ -136,16 +136,20 @@ internal fun KeyCap(
         modifier =
             modifier
                 .fillMaxSize()
-                .onGloballyPositioned { coords ->
+                .onPlaced { coords ->
                     onBoundsUpdate(coords)
                 }.padding(horizontal = KB_KEY_PADDING_H, vertical = KB_KEY_PADDING_V)
-                .clip(KEY_SHAPE)
-                .background(bg),
+                .graphicsLayer {
+                    val s = if (isPressed) KC_PRESSED_SCALE else 1f
+                    scaleX = s
+                    scaleY = s
+                }.drawBehind {
+                    drawRoundRect(color = bg, cornerRadius = CornerRadius(KEY_CORNER.toPx()))
+                },
         contentAlignment = Alignment.Center,
     ) {
         KeyCapContent(
             keyDef = keyDef,
-            isPressed = isPressed,
             isModifierActive = isModifierActive,
             isShiftActive = isShiftActive,
             isCapsActive = isCapsActive,
@@ -159,7 +163,6 @@ internal fun KeyCap(
 @Composable
 private fun KeyCapContent(
     keyDef: KeyDef,
-    isPressed: Boolean,
     isModifierActive: Boolean,
     isShiftActive: Boolean,
     isCapsActive: Boolean,
@@ -257,7 +260,7 @@ private fun KeyCapContent(
                         text = displayLabel,
                         color = contentColor,
                         fontSize = if (keyDef.widthWeight >= KC_WIDE_KEY_WEIGHT) KC_LABEL_WIDE_FONT_SIZE else KC_LABEL_FONT_SIZE,
-                        fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
+                        fontWeight = if (isModifierActive) FontWeight.Bold else FontWeight.Normal,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                     )

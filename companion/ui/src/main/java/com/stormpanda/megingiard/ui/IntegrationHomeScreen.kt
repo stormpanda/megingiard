@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.os.BatteryManager
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -54,6 +53,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -214,6 +214,32 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val profiles by MacroPadState.profiles.collectAsStateWithLifecycle()
     val installedApps by InstalledAppsManager.installedApps.collectAsStateWithLifecycle()
+    var cachedLabelsVersion by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(focusState.hoveredAppPackageName, focusState.focusedAppPackageName, profiles) {
+        val packagesToWarm =
+            buildSet<String> {
+                focusState.hoveredAppPackageName?.takeIf { it.isNotBlank() }?.let { add(it) }
+                focusState.focusedAppPackageName?.takeIf { it.isNotBlank() }?.let { add(it) }
+                profiles.forEach { p ->
+                    p.association
+                        ?.packageName
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { add(it) }
+                }
+            }
+        var loadedAny = false
+        for (pkg in packagesToWarm) {
+            if (CompanionAppIconCache.getCachedLabel(pkg) == null) {
+                if (CompanionAppIconCache.loadLabel(context, pkg) != null) {
+                    loadedAny = true
+                }
+            }
+        }
+        if (loadedAny) {
+            cachedLabelsVersion += 1
+        }
+    }
 
     val targetInfo =
         remember(
@@ -221,13 +247,14 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
             activeSession,
             lastDetectedSession,
             installedApps,
+            cachedLabelsVersion,
         ) {
             resolveTargetAppInfo(
                 focusState = focusState,
                 activeSession = activeSession,
                 lastDetectedSession = lastDetectedSession,
                 installedApps = installedApps,
-                resolveAppLabel = { pkg -> resolveAppLabel(context, pkg) },
+                resolveAppLabel = { pkg -> resolveAppLabel(pkg) },
             )
         }
 
@@ -401,7 +428,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
         profileToRelink?.let { pendingProfile ->
             val currentTarget =
                 resolveAssociationTargetLabel(pendingProfile.association) { pkg ->
-                    resolveAppLabel(context, pkg)
+                    resolveAppLabel(pkg)
                 } ?: pendingProfile.name
             val newTarget =
                 targetLabel
@@ -812,7 +839,7 @@ private fun HeroCompanionCard(
                                             val linkedTarget =
                                                 if (isAlreadyLinked) {
                                                     resolveAssociationTargetLabel(profile.association) { pkg ->
-                                                        resolveAppLabel(context, pkg)
+                                                        resolveAppLabel(pkg)
                                                     }
                                                 } else {
                                                     null
@@ -1227,19 +1254,9 @@ internal fun resolveTargetAppInfo(
     }
 }
 
-@Suppress("DEPRECATION")
-private fun resolveAppLabel(
-    context: Context,
-    packageName: String?,
-): String? {
-    if (packageName == null) return null
-    return try {
-        val pm = context.packageManager
-        val appInfo = pm.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0L))
-        pm.getApplicationLabel(appInfo).toString()
-    } catch (e: Exception) {
-        packageName
-    }
+private fun resolveAppLabel(packageName: String?): String? {
+    if (packageName.isNullOrBlank()) return null
+    return CompanionAppIconCache.getCachedLabel(packageName) ?: packageName
 }
 
 internal fun resolveAssociationTargetLabel(

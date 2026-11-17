@@ -340,6 +340,61 @@ static void test_gamepad_protocol_parsing(void) {
     res = parse_gamepad_command("INVALID\n", MOCK_FD);
     assert(res == 0);
 
+    // Dual-axis stick command J2 <axisX> <valX> <axisY> <valY>
+    g_event_count = 0;
+    assert(is_gamepad_command_line("J2 0 16384 1 -8192\n") == 1);
+    res = parse_gamepad_command("J2 0 16384 1 -8192\n", MOCK_FD);
+    assert(res == 1);
+    assert(g_event_count == 3);
+    assert(g_events[0].type == EV_ABS && g_events[0].code == ABS_X && g_events[0].value == 16384);
+    assert(g_events[1].type == EV_ABS && g_events[1].code == ABS_Y && g_events[1].value == -8192);
+    assert(g_events[2].type == EV_SYN && g_events[2].code == SYN_REPORT && g_events[2].value == 0);
+
+    // Reject J2 with non-stick trigger axis or out-of-bounds value
+    assert(parse_gamepad_command("J2 10 100 9 100\n", MOCK_FD) == 0);
+    assert(parse_gamepad_command("J2 0 50000 1 0\n", MOCK_FD) == 0);
+
+    printf("PASS\n");
+}
+
+static void test_buffered_line_reader(void) {
+    printf("[TEST] Buffered socket line reader (4KB chunks, boundaries, truncation)... ");
+    int pipe_fds[2];
+    assert(pipe(pipe_fds) == 0);
+
+    const char* payload =
+        "MM 12 -4\n"
+        "J2 0 16384 1 -16384\n"
+        "\n"
+        "OVERLONG_COMMAND_EXCEEDING_TINY_CAP\n"
+        "PING\n";
+    size_t payload_len = strlen(payload);
+    assert(write(pipe_fds[1], payload, payload_len) == (ssize_t)payload_len);
+    close(pipe_fds[1]);
+
+    PrivdLineReader lr;
+    privd_line_reader_init(&lr);
+    char out[24];
+
+    int n1 = privd_line_reader_next(&lr, pipe_fds[0], out, sizeof(out));
+    assert(n1 == 8 && strcmp(out, "MM 12 -4") == 0);
+
+    int n2 = privd_line_reader_next(&lr, pipe_fds[0], out, sizeof(out));
+    assert(n2 == 19 && strcmp(out, "J2 0 16384 1 -16384") == 0);
+
+    // Empty line is skipped; overlong line is truncated to sizeof(out)-1 and drained up to '\n'
+    int n3 = privd_line_reader_next(&lr, pipe_fds[0], out, sizeof(out));
+    assert(n3 == (int)sizeof(out) - 1);
+    assert(strncmp(out, "OVERLONG_COMMAND_EXCEED", sizeof(out) - 1) == 0);
+
+    int n4 = privd_line_reader_next(&lr, pipe_fds[0], out, sizeof(out));
+    assert(n4 == 4 && strcmp(out, "PING") == 0);
+
+    // Clean EOF returns 0
+    int n5 = privd_line_reader_next(&lr, pipe_fds[0], out, sizeof(out));
+    assert(n5 == 0);
+
+    close(pipe_fds[0]);
     printf("PASS\n");
 }
 
@@ -672,6 +727,7 @@ int main(void) {
     test_mouse_protocol_parsing();
     test_touch_protocol_parsing();
     test_gamepad_protocol_parsing();
+    test_buffered_line_reader();
     test_gamepad_axis_map_and_trigger_scaling();
     test_primary_touch_device_name_filtering();
     test_dumpsys_input_primary_touch_resolution();

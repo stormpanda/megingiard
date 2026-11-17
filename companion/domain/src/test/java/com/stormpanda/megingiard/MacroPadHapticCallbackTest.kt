@@ -55,7 +55,7 @@ class MacroPadHapticCallbackTest {
         button: PadButton,
         x: Float = 500f,
         y: Float = 500f,
-    ) = onPress(0L, x, y, canvasW, canvasH, listOf(button), false)
+    ) = onPress(0L, x, y, canvasW, canvasH, listOf(button))
 
     private fun MacroPadHitTestEngine.move(
         button: PadButton,

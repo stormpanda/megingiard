@@ -6,8 +6,16 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.util.LruCache
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.macropad.toImageBitmap
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -104,7 +112,39 @@ internal object CompanionAppIconCache {
 
     fun getCachedLabel(packageName: String): String? {
         if (packageName.isBlank()) return null
-        return synchronized(labelCache) { labelCache.get(packageName) }
+        synchronized(labelCache) { labelCache.get(packageName) }?.let { return it }
+        val fromCatalog =
+            InstalledAppsManager.installedApps.value
+                .firstOrNull { it.packageName == packageName }
+                ?.label
+        if (!fromCatalog.isNullOrBlank()) {
+            synchronized(labelCache) { labelCache.put(packageName, fromCatalog) }
+            return fromCatalog
+        }
+        return null
+    }
+
+    fun resolveLabelCachedOrSync(
+        context: Context,
+        packageName: String,
+    ): String {
+        if (packageName.isBlank()) return ""
+        val appContext = context.applicationContext
+        ensureReceiverRegistered(appContext)
+        getCachedLabel(packageName)?.let { return it }
+        return try {
+            val pm = appContext.packageManager
+            val appInfo = pm.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0L))
+            val label = pm.getApplicationLabel(appInfo).toString()
+            synchronized(labelCache) {
+                labelCache.put(packageName, label)
+            }
+            AppLog.d(TAG, "Cached sync app label for $packageName -> '$label'")
+            label
+        } catch (e: Exception) {
+            AppLog.d(TAG, "Could not resolve app name for $packageName: ${e.message}")
+            packageName
+        }
     }
 
     suspend fun loadIcon(
@@ -183,4 +223,24 @@ internal object CompanionAppIconCache {
         synchronized(iconCache) { iconCache.evictAll() }
         synchronized(labelCache) { labelCache.evictAll() }
     }
+}
+
+@Composable
+internal fun rememberResolvedAppLabel(packageName: String?): String? {
+    val context = LocalContext.current
+    var resolved by remember(packageName) {
+        mutableStateOf(
+            if (packageName.isNullOrBlank()) {
+                null
+            } else {
+                CompanionAppIconCache.getCachedLabel(packageName)
+            },
+        )
+    }
+    LaunchedEffect(packageName) {
+        if (!packageName.isNullOrBlank() && resolved == null) {
+            resolved = CompanionAppIconCache.loadLabel(context, packageName) ?: packageName
+        }
+    }
+    return resolved ?: packageName?.takeIf { it.isNotBlank() }
 }

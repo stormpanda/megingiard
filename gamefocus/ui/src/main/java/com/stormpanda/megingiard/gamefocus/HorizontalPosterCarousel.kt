@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -311,6 +310,12 @@ private fun CarouselPosterCard(
                     val spreadPx = HPC_VIBRANT_SHADOW_SPREAD.toPx()
                     val baseAccentAlpha = appColors.accent.alpha
                     val opaqueAccentArgb = appColors.accent.copy(alpha = HPC_FULL_COLOR_ALPHA).toArgb()
+                    val selectedBorderWidthPx = HPC_BORDER_SELECTED_WIDTH.toPx()
+                    val unselectedBorderWidthPx = HPC_BORDER_UNSELECTED_WIDTH.toPx()
+                    val selectedStroke = Stroke(width = selectedBorderWidthPx)
+                    val unselectedStroke = Stroke(width = unselectedBorderWidthPx)
+                    val selectedHalfBorder = selectedBorderWidthPx / HPC_STROKE_INSET_DIVISOR
+                    val unselectedHalfBorder = unselectedBorderWidthPx / HPC_STROKE_INSET_DIVISOR
                     val glowPaint =
                         NativePaint().apply {
                             isAntiAlias = true
@@ -319,7 +324,7 @@ private fun CarouselPosterCard(
                             maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
                         }
 
-                    onDrawBehind {
+                    onDrawWithContent {
                         val currentShadowAlpha = shadowAlphaAnim?.value ?: 0f
                         if (currentShadowAlpha > 0f) {
                             val paintAlpha =
@@ -347,23 +352,21 @@ private fun CarouselPosterCard(
                             color = currentBgColor.copy(alpha = currentHiddenAlpha),
                             cornerRadius = cornerRadius,
                         )
-                    }
-                }.clip(posterShape)
-                .drawWithContent {
-                    drawContent()
 
-                    val cornerRadiusPx = posterCornerRadius.toPx()
-                    val borderWidthDp = if (isSelected) HPC_BORDER_SELECTED_WIDTH else HPC_BORDER_UNSELECTED_WIDTH
-                    val borderWidthPx = borderWidthDp.toPx()
-                    val borderColor = if (isSelected) appColors.accent else appColors.divider
-                    val halfBorder = borderWidthPx / HPC_STROKE_INSET_DIVISOR
-                    drawRoundRect(
-                        color = borderColor,
-                        topLeft = Offset(halfBorder, halfBorder),
-                        size = Size(size.width - borderWidthPx, size.height - borderWidthPx),
-                        cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
-                        style = Stroke(width = borderWidthPx),
-                    )
+                        drawContent()
+
+                        val borderWidthPx = if (isSelected) selectedBorderWidthPx else unselectedBorderWidthPx
+                        val halfBorder = if (isSelected) selectedHalfBorder else unselectedHalfBorder
+                        val borderColor = if (isSelected) appColors.accent else appColors.divider
+                        val borderStroke = if (isSelected) selectedStroke else unselectedStroke
+                        drawRoundRect(
+                            color = borderColor,
+                            topLeft = Offset(halfBorder, halfBorder),
+                            size = Size(size.width - borderWidthPx, size.height - borderWidthPx),
+                            cornerRadius = cornerRadius,
+                            style = borderStroke,
+                        )
+                    }
                 }.noFocusClickable(onClick = handleCardClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -372,9 +375,12 @@ private fun CarouselPosterCard(
                 if (cardHiddenAlphaAnim != null) {
                     Modifier
                         .fillMaxSize()
+                        .clip(posterShape)
                         .graphicsLayer { alpha = cardHiddenAlphaAnim.value }
                 } else {
-                    Modifier.fillMaxSize()
+                    Modifier
+                        .fillMaxSize()
+                        .clip(posterShape)
                 },
         ) {
             itemContent(actualIndex, isSelected)

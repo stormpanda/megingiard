@@ -211,7 +211,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_mouse_button">Mouse Button</string>
     <string name="macropad_action_scroll_wheel">Scroll Wheel</string>
     <string name="macropad_action_trackpoint">Trackpoint (relative mouse)</string>
-    <string name="macropad_action_ambient_peek">Background Peek</string>
     <string name="macropad_action_layout_next">Next Layout</string>
     <string name="macropad_action_layout_previous">Previous Layout</string>
     <string name="macropad_action_profile_switcher">Profile Switcher</string>
@@ -1164,7 +1163,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_mirror_freeze_desc">Freeze or resume mirror capture</string>
     <string name="macropad_action_mirror_viewport_edit_desc">Adjust zoom, pan, and crop on mirror</string>
     <string name="macropad_action_mirror_touch_projection_desc">Project touches directly to mirrored display</string>
-    <string name="macropad_action_ambient_peek_desc">Hold or toggle to reveal display underneath</string>
     <string name="macropad_action_fullscreen_mouse_desc">Open full-screen virtual touchpad overlay</string>
     <string name="macropad_action_fullscreen_keyboard_desc">Open full-screen virtual keyboard overlay</string>
     <string name="macropad_action_screenshot_top_desc">Capture and save a screenshot of the top display</string>

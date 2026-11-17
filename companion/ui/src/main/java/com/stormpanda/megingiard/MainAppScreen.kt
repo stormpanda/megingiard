@@ -70,13 +70,13 @@ import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.GamepadRecordingState
 import com.stormpanda.megingiard.macropad.HapticStrength
+import com.stormpanda.megingiard.macropad.LivePhysicalGamepadRecordingSheet
+import com.stormpanda.megingiard.macropad.LiveTouchRecordingSheet
 import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
-import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingSheet
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
-import com.stormpanda.megingiard.macropad.TouchRecordingSheet
 import com.stormpanda.megingiard.macropad.TouchRecordingState
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.mirror.AnchorPositioningSheet
@@ -107,6 +107,8 @@ import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -135,7 +137,9 @@ fun MainAppScreen() {
 
     val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsStateWithLifecycle()
     val showEmptyCutoutsDialog by AppStateManager.showEmptyCutoutsDialog.collectAsStateWithLifecycle()
-    val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsStateWithLifecycle()
+    val isPhysicalRecording by remember {
+        PhysicalGamepadRecordingManager.state.map { it is GamepadRecordingState.Recording }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = PhysicalGamepadRecordingManager.state.value is GamepadRecordingState.Recording)
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
     val welcomeTourCompletedVersion by SettingsManager.welcomeTourCompletedVersion.collectAsStateWithLifecycle()
 
@@ -360,7 +364,9 @@ fun MainAppScreen() {
             }
 
             val recordingRequested by TouchRecordingManager.recordingRequested.collectAsStateWithLifecycle()
-            val touchRecordingState by TouchRecordingManager.state.collectAsStateWithLifecycle()
+            val isTouchRecording by remember {
+                TouchRecordingManager.state.map { it is TouchRecordingState.Recording }.distinctUntilChanged()
+            }.collectAsStateWithLifecycle(initialValue = TouchRecordingManager.state.value is TouchRecordingState.Recording)
 
             val modalEnter =
                 remember(overlayAtBottom) {
@@ -401,9 +407,8 @@ fun MainAppScreen() {
                 CutoutLayoutEditor()
             }
 
-            if (recordingRequested && touchRecordingState is TouchRecordingState.Recording) {
-                TouchRecordingSheet(
-                    state = touchRecordingState,
+            if (recordingRequested && isTouchRecording) {
+                LiveTouchRecordingSheet(
                     onStop = {
                         TouchRecordingManager.finishRecording()
                         AppStateManager.resumeSuspended()
@@ -415,9 +420,8 @@ fun MainAppScreen() {
                 )
             }
 
-            if (physicalRecordingState is GamepadRecordingState.Recording) {
-                PhysicalGamepadRecordingSheet(
-                    state = physicalRecordingState,
+            if (isPhysicalRecording) {
+                LivePhysicalGamepadRecordingSheet(
                     swapFaceButtons = swapFaceButtons,
                     onStop = {
                         PhysicalGamepadRecordingManager.finishRecording()

@@ -40,7 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -313,13 +312,10 @@ private fun PairAppGridItem(
                         .fillMaxWidth()
                         .then(
                             if (isFocused) {
-                                Modifier
-                                    .graphicsLayer {
-                                        compositingStrategy = CompositingStrategy.Offscreen
-                                    }.basicMarquee(
-                                        iterations = Int.MAX_VALUE,
-                                        initialDelayMillis = PFD_MARQUEE_INITIAL_DELAY_MS,
-                                    )
+                                Modifier.basicMarquee(
+                                    iterations = Int.MAX_VALUE,
+                                    initialDelayMillis = PFD_MARQUEE_INITIAL_DELAY_MS,
+                                )
                             } else {
                                 Modifier
                             },

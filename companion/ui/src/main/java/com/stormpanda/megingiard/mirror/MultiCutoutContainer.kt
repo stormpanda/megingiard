@@ -69,11 +69,16 @@ internal open class MultiCutoutContainer(
     private var aboveMaskCutouts: List<ScreenCutout> = emptyList()
     private var belowMaskCutouts: List<ScreenCutout> = emptyList()
     private var designCanvasSpec: LayoutCanvasSpec? = null
+    private var cachedViewportHostW: Float = Float.NaN
+    private var cachedViewportHostH: Float = Float.NaN
+    private var cachedViewportSpec: LayoutCanvasSpec? = null
+    private var cachedViewport: DesignViewport? = null
 
     fun setDesignCanvas(spec: LayoutCanvasSpec?) {
         if (designCanvasSpec != spec) {
             AppLog.d(TAG, "setDesignCanvas: $designCanvasSpec -> $spec")
             designCanvasSpec = spec
+            cachedViewport = null
             requestLayout()
             invalidate()
         }
@@ -84,21 +89,35 @@ internal open class MultiCutoutContainer(
         hostH: Float = height.toFloat(),
     ): DesignViewport {
         val spec = designCanvasSpec
-        return if (spec != null) {
-            ViewportMath.calculateDesignViewport(
-                hostWidthPx = hostW,
-                hostHeightPx = hostH,
-                designWidthPx = spec.widthPx.toFloat(),
-                designHeightPx = spec.heightPx.toFloat(),
-            )
-        } else {
-            ViewportMath.calculateDesignViewport(
-                hostWidthPx = hostW,
-                hostHeightPx = hostH,
-                designWidthPx = hostW,
-                designHeightPx = hostH,
-            )
+        val existing = cachedViewport
+        if (existing != null &&
+            cachedViewportHostW == hostW &&
+            cachedViewportHostH == hostH &&
+            cachedViewportSpec == spec
+        ) {
+            return existing
         }
+        val computed =
+            if (spec != null) {
+                ViewportMath.calculateDesignViewport(
+                    hostWidthPx = hostW,
+                    hostHeightPx = hostH,
+                    designWidthPx = spec.widthPx.toFloat(),
+                    designHeightPx = spec.heightPx.toFloat(),
+                )
+            } else {
+                ViewportMath.calculateDesignViewport(
+                    hostWidthPx = hostW,
+                    hostHeightPx = hostH,
+                    designWidthPx = hostW,
+                    designHeightPx = hostH,
+                )
+            }
+        cachedViewportHostW = hostW
+        cachedViewportHostH = hostH
+        cachedViewportSpec = spec
+        cachedViewport = computed
+        return computed
     }
 
     var cutouts: List<ScreenCutout> = emptyList()
@@ -429,6 +448,20 @@ internal open class MultiCutoutContainer(
     private val cutoutRenderNodeBitmaps = mutableMapOf<String, Bitmap>()
     private val cutoutRenderNodeWidths = mutableMapOf<String, Int>()
     private val cutoutRenderNodeHeights = mutableMapOf<String, Int>()
+    private val cutoutRenderNodeLiveMode = mutableMapOf<String, Boolean>()
+    private val cachedFrozenBlurEffect: RenderEffect by lazy(LazyThreadSafetyMode.NONE) {
+        RenderEffect.createBlurEffect(
+            TARGET_BLUR_RADIUS,
+            TARGET_BLUR_RADIUS,
+            Shader.TileMode.CLAMP,
+        )
+    }
+    private val cachedLiveBlurChainEffect: RenderEffect by lazy(LazyThreadSafetyMode.NONE) {
+        RenderEffect.createChainEffect(
+            cachedFrozenBlurEffect,
+            RenderEffect.createColorFilterEffect(frozenInactiveColorFilter),
+        )
+    }
     private val layerBoundsRect = RectF()
 
     private fun pruneStaleCutoutResources(activeCutouts: List<ScreenCutout>) {
@@ -442,6 +475,7 @@ internal open class MultiCutoutContainer(
                     cutoutRenderNodeBitmaps.remove(entry.key)
                     cutoutRenderNodeWidths.remove(entry.key)
                     cutoutRenderNodeHeights.remove(entry.key)
+                    cutoutRenderNodeLiveMode.remove(entry.key)
                 }
             }
         }
@@ -813,23 +847,18 @@ internal open class MultiCutoutContainer(
                                     cutoutRenderNodeHeights[cutout.id] != intContentH
 
                             if (needsRecord) {
-                                node.setPosition(0, 0, intContentW, intContentH)
-                                val blurEffect =
-                                    RenderEffect.createBlurEffect(
-                                        TARGET_BLUR_RADIUS,
-                                        TARGET_BLUR_RADIUS,
-                                        Shader.TileMode.CLAMP,
+                                val isLiveBlur = bitmapToBlur == null
+                                if (cutoutRenderNodeWidths[cutout.id] != intContentW ||
+                                    cutoutRenderNodeHeights[cutout.id] != intContentH
+                                ) {
+                                    node.setPosition(0, 0, intContentW, intContentH)
+                                }
+                                if (cutoutRenderNodeLiveMode[cutout.id] != isLiveBlur) {
+                                    node.setRenderEffect(
+                                        if (isLiveBlur) cachedLiveBlurChainEffect else cachedFrozenBlurEffect,
                                     )
-                                node.setRenderEffect(
-                                    if (bitmapToBlur != null) {
-                                        blurEffect
-                                    } else {
-                                        RenderEffect.createChainEffect(
-                                            blurEffect,
-                                            RenderEffect.createColorFilterEffect(frozenInactiveColorFilter),
-                                        )
-                                    },
-                                )
+                                    cutoutRenderNodeLiveMode[cutout.id] = isLiveBlur
+                                }
                                 val recCanvas = node.beginRecording()
                                 try {
                                     if (bitmapToBlur != null) {

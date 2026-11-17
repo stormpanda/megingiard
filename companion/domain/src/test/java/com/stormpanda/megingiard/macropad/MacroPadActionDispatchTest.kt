@@ -113,7 +113,6 @@ class MacroPadActionDispatchTest {
     fun injectActionDown_navigationAndNoOpActions() {
         injectActionDown(PadAction.ScrollWheel)
         injectActionDown(PadAction.TrackpointMove())
-        injectActionDown(PadAction.BackgroundPeek)
         injectActionDown(PadAction.LayoutNext)
         injectActionDown(PadAction.LayoutPrevious)
         injectActionDown(PadAction.ProfileSwitcher)
@@ -121,7 +120,6 @@ class MacroPadActionDispatchTest {
 
         injectActionUp(PadAction.ScrollWheel)
         injectActionUp(PadAction.TrackpointMove())
-        injectActionUp(PadAction.BackgroundPeek)
         injectActionUp(PadAction.LayoutNext)
         injectActionUp(PadAction.LayoutPrevious)
         injectActionUp(PadAction.ProfileSwitcher)
@@ -181,7 +179,7 @@ class MacroPadActionDispatchTest {
                 posY = 0.5f,
                 action = holdAction,
             )
-        engine.onPress(7L, 500f, 500f, 1000f, 1000f, listOf(shiftBtn), false)
+        engine.onPress(7L, 500f, 500f, 1000f, 1000f, listOf(shiftBtn))
         assertEquals("layout-b", MacroPadState.activeLayout.value?.id)
         engine.onRelease(7L, emptyList())
         assertEquals("layout-a", MacroPadState.activeLayout.value?.id)

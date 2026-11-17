@@ -151,13 +151,24 @@ class MacroPadHitTestEngine(
         )
     }
 
-    private fun injectStickAxis(
-        axisCode: Int,
-        rawValue: Int,
+    private fun injectStickAxes(
+        axisX: Int,
+        rawX: Int,
+        axisY: Int,
+        rawY: Int,
     ) {
-        if (lastInjectedStickAxis[axisCode] != rawValue) {
-            lastInjectedStickAxis[axisCode] = rawValue
-            GamepadInjector.joystick(axisCode, rawValue)
+        val changedX = lastInjectedStickAxis[axisX] != rawX
+        val changedY = lastInjectedStickAxis[axisY] != rawY
+        if (changedX && changedY) {
+            lastInjectedStickAxis[axisX] = rawX
+            lastInjectedStickAxis[axisY] = rawY
+            GamepadInjector.joystickDualAxis(axisX, rawX, axisY, rawY)
+        } else if (changedX) {
+            lastInjectedStickAxis[axisX] = rawX
+            GamepadInjector.joystick(axisX, rawX)
+        } else if (changedY) {
+            lastInjectedStickAxis[axisY] = rawY
+            GamepadInjector.joystick(axisY, rawY)
         }
     }
 
@@ -166,8 +177,7 @@ class MacroPadHitTestEngine(
         val axisY = if (stick == JoystickStick.LEFT) GamepadKeycodes.ABS_Y else GamepadKeycodes.ABS_RZ
         lastInjectedStickAxis.remove(axisX)
         lastInjectedStickAxis.remove(axisY)
-        GamepadInjector.joystick(axisX, 0)
-        GamepadInjector.joystick(axisY, 0)
+        GamepadInjector.joystickDualAxis(axisX, 0, axisY, 0)
     }
 
     private fun updateAnalogStickDeflection(
@@ -198,8 +208,7 @@ class MacroPadHitTestEngine(
 
         state.lastRawX = rawX
         state.lastRawY = rawY
-        injectStickAxis(axisX, rawX)
-        injectStickAxis(axisY, rawY)
+        injectStickAxes(axisX, rawX, axisY, rawY)
 
         val prevPoint = _stickDeflections.value[state.buttonId]
         if (
@@ -251,7 +260,6 @@ class MacroPadHitTestEngine(
      * @param canvasW       host canvas width in pixels
      * @param canvasH       host canvas height in pixels
      * @param buttons       buttons of the currently visible layout
-     * @param isPeekActive  true if ambient-peek mode is active
      * @param viewport      fitted design viewport mapping designCanvas coordinates onto host pixels
      * @return true if a button consumed the press, false otherwise
      */
@@ -262,11 +270,9 @@ class MacroPadHitTestEngine(
         canvasW: Float,
         canvasH: Float,
         buttons: List<PadButton>,
-        isPeekActive: Boolean,
         viewport: DesignViewport = ViewportMath.calculateDesignViewport(canvasW, canvasH, canvasW, canvasH),
     ): Boolean {
-        val hitList = if (isPeekActive) buttons.filter { it.action is PadAction.BackgroundPeek } else buttons
-        val hitButton = hitList.firstOrNull { btn -> isPointInsideButton(btn, px, py, viewport) } ?: return false
+        val hitButton = buttons.firstOrNull { btn -> isPointInsideButton(btn, px, py, viewport) } ?: return false
 
         val wasAlreadyHeldByPointer =
             pointerMap.entries.any { (existingPointerId, buttonId) ->
@@ -534,8 +540,7 @@ class MacroPadHitTestEngine(
                             } else {
                                 GamepadKeycodes.ABS_RZ
                             }
-                        injectStickAxis(axisX, remainingSameStick.lastRawX)
-                        injectStickAxis(axisY, remainingSameStick.lastRawY)
+                        injectStickAxes(axisX, remainingSameStick.lastRawX, axisY, remainingSameStick.lastRawY)
                         AppLog.d(
                             TAG,
                             "AnalogStick up: button=$mapped stick=$targetStick -> restored button=${remainingSameStick.buttonId}",

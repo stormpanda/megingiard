@@ -252,16 +252,16 @@ class PadActionDefaultsTest {
             )
         assertNull(afterClearedSwitch.iconName)
 
-        // Switching to a fixed-face action (ScrollWheel / BackgroundPeek) always forces iconName = null
-        val toPeek =
+        // Switching to a fixed-face action (ScrollWheel) always forces iconName = null
+        val toScroll =
             customized.withActionDefaultsResolved(
-                newAction = PadAction.BackgroundPeek,
+                newAction = PadAction.ScrollWheel,
                 newButtonPlaceholder = "New Button",
                 oldDefaultLabel = "Play / Pause",
-                newDefaultLabel = "Background Peek",
+                newDefaultLabel = "Scroll Wheel",
             )
-        assertEquals("My Tunes", toPeek.label)
-        assertNull(toPeek.iconName)
+        assertEquals("My Tunes", toScroll.label)
+        assertNull(toScroll.iconName)
     }
 
     @Test

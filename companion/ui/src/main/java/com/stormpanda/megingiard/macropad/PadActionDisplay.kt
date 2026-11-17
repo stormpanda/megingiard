@@ -30,7 +30,6 @@ import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.TouchApp
-import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -42,6 +41,8 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.CompanionAppIconCache
+import com.stormpanda.megingiard.ui.rememberResolvedAppLabel
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -176,12 +177,6 @@ internal enum class ActionCategory(
                     ?.id ?: "",
             )
         },
-    ),
-    BACKGROUND_PEEK(
-        Icons.Rounded.Visibility,
-        R.string.macropad_action_ambient_peek,
-        ActionGroup.MIRROR,
-        { PadAction.BackgroundPeek },
     ),
     LAYOUT_NEXT(
         Icons.AutoMirrored.Rounded.ArrowForward,
@@ -383,10 +378,6 @@ internal fun PadAction.toCategory(): ActionCategory =
             ActionCategory.MACRO
         }
 
-        is PadAction.BackgroundPeek -> {
-            ActionCategory.BACKGROUND_PEEK
-        }
-
         is PadAction.LayoutNext -> {
             ActionCategory.LAYOUT_NEXT
         }
@@ -478,7 +469,6 @@ internal fun ActionCategory.isAvailable(hasMacros: Boolean): Boolean =
 
 @Composable
 internal fun PadAction.displayLabel(): String {
-    val context = LocalContext.current
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsStateWithLifecycle()
     val allProfiles by MacroPadState.profiles.collectAsStateWithLifecycle()
     val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
@@ -548,10 +538,6 @@ internal fun PadAction.displayLabel(): String {
             } else {
                 stringResource(R.string.macropad_action_macro)
             }
-        }
-
-        is PadAction.BackgroundPeek -> {
-            stringResource(R.string.macropad_action_ambient_peek)
         }
 
         is PadAction.LayoutNext -> {
@@ -668,7 +654,7 @@ internal fun PadAction.displayLabel(): String {
         }
 
         is PadAction.AppLauncher -> {
-            val name = resolveAppName(context, packageName)
+            val name = rememberResolvedAppLabel(packageName).orEmpty()
             if (name.isNotBlank()) {
                 stringResource(R.string.app_launcher_button_label_format, name)
             } else {
@@ -694,15 +680,11 @@ internal fun resolveAppName(
     context: Context,
     packageName: String,
 ): String {
-    if (packageName.isBlank()) return ""
-    return try {
-        val pm = context.packageManager
-        val info = pm.getApplicationInfo(packageName, 0)
-        pm.getApplicationLabel(info).toString()
-    } catch (e: Exception) {
-        AppLog.d(TAG, "Could not resolve app name for $packageName: ${e.message}")
-        packageName
+    val resolved = CompanionAppIconCache.resolveLabelCachedOrSync(context, packageName)
+    if (resolved == packageName && packageName.isNotBlank()) {
+        AppLog.d(TAG, "Fallback package name used for app label: $packageName")
     }
+    return resolved
 }
 
 internal fun GridMode.labelResId(): Int =

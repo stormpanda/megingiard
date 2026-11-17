@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -58,11 +59,13 @@ private const val TAG = "MirrorSettingsEditor"
 
 private const val MSE_DIM_MAX = 0.9f
 private const val MSE_DIM_STEP = 0.05f
+private const val MSE_DIM_FINE_STEP = 0.01f
 private const val MSE_PERCENT_DIVISOR = 100f
 
 private const val MSE_EDGE_BLEND_MIN = 0f
 private const val MSE_EDGE_BLEND_MAX = 100f
 private const val MSE_EDGE_BLEND_STEP = 5f
+private const val MSE_EDGE_BLEND_FINE_STEP = 1f
 
 private const val MSE_SMOOTHING_VAL_LIGHT = 75
 private const val MSE_SMOOTHING_VAL_MEDIUM = 80
@@ -397,8 +400,10 @@ internal fun CutoutAdvancedSettingsSubPageContent(
     cutout: ScreenCutout,
     accentColor: Color,
     onUpdateCutout: (ScreenCutout) -> Unit,
+    onUpdateCutoutLive: (ScreenCutout) -> Unit = onUpdateCutout,
 ) {
     AppLog.d(TAG, "CutoutAdvancedSettingsSubPageContent: cutout=${cutout.id}")
+    val latestCutout by rememberUpdatedState(cutout)
     val context = LocalContext.current
     val autoTuneState by VisualAutoTuneCoordinator.uiState.collectAsStateWithLifecycle()
     val isCalibrating = autoTuneState.isCalibrating
@@ -481,9 +486,14 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                 icon = Icons.Rounded.Tune,
                 valueLabel = sensitivityLabel,
                 onValueChange = { newVal ->
+                    val cur = latestCutout
                     val newSens = newVal.roundToInt().coerceIn(MIN_SENSITIVITY, MAX_SENSITIVITY)
-                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskSensitivity: $newSens")
-                    onUpdateCutout(cutout.copy(maskSensitivity = newSens))
+                    onUpdateCutoutLive(cur.copy(maskSensitivity = newSens))
+                },
+                onValueChangeFinished = {
+                    val cur = latestCutout
+                    AppLog.d(TAG, "Committed cutout ${cur.id} maskSensitivity: ${cur.maskSensitivity}")
+                    onUpdateCutout(cur)
                 },
             )
 
@@ -503,9 +513,14 @@ internal fun CutoutAdvancedSettingsSubPageContent(
                 icon = Icons.Rounded.Layers,
                 valueLabel = translucencyLabel,
                 onValueChange = { newVal ->
+                    val cur = latestCutout
                     val newTranslucency = newVal.roundToInt().coerceIn(MIN_TRANSLUCENCY, MAX_TRANSLUCENCY)
-                    AppLog.d(TAG, "Updating cutout ${cutout.id} maskTranslucency: $newTranslucency%")
-                    onUpdateCutout(cutout.copy(maskTranslucency = newTranslucency))
+                    onUpdateCutoutLive(cur.copy(maskTranslucency = newTranslucency))
+                },
+                onValueChangeFinished = {
+                    val cur = latestCutout
+                    AppLog.d(TAG, "Committed cutout ${cur.id} maskTranslucency: ${cur.maskTranslucency}%")
+                    onUpdateCutout(cur)
                 },
             )
 
@@ -584,6 +599,17 @@ internal fun MirrorAdvancedSettingsSubPageContent(
         MacroPadState.updateLayout(updated.block())
     }
 
+    fun updateLayoutLive(block: PadLayout.() -> PadLayout) {
+        val updated = MacroPadState.activeLayout.value ?: return
+        MacroPadState.updateLayoutLive(updated.block())
+    }
+
+    fun commitActiveLayout(logLabel: String) {
+        val updated = MacroPadState.activeLayout.value ?: return
+        AppLog.d(TAG, logLabel)
+        MacroPadState.updateLayout(updated)
+    }
+
     // 1. Ambient Dimming
     GamepadSliderCard(
         modifier = Modifier.firstDeckItem(),
@@ -592,12 +618,14 @@ internal fun MirrorAdvancedSettingsSubPageContent(
         value = layout.ambientDim,
         valueRange = 0f..MSE_DIM_MAX,
         step = MSE_DIM_STEP,
-        fineStep = 0.01f,
+        fineStep = MSE_DIM_FINE_STEP,
         icon = Icons.Rounded.Opacity,
         valueLabel = "${(layout.ambientDim * MSE_PERCENT_DIVISOR).roundToInt()}%",
         onValueChange = { newVal ->
-            AppLog.d(TAG, "Updating ambientDim: $newVal")
-            commitLayout { copy(ambientDim = newVal) }
+            updateLayoutLive { copy(ambientDim = newVal) }
+        },
+        onValueChangeFinished = {
+            commitActiveLayout("Committed ambientDim: ${MacroPadState.activeLayout.value?.ambientDim}")
         },
     )
 
@@ -614,12 +642,14 @@ internal fun MirrorAdvancedSettingsSubPageContent(
         value = layout.mirrorEdgeBlendWidth,
         valueRange = MSE_EDGE_BLEND_MIN..MSE_EDGE_BLEND_MAX,
         step = MSE_EDGE_BLEND_STEP,
-        fineStep = 1f,
+        fineStep = MSE_EDGE_BLEND_FINE_STEP,
         icon = Icons.Rounded.Grain,
         valueLabel = edgeBlendLabel,
         onValueChange = { newVal ->
-            AppLog.d(TAG, "Updating mirrorEdgeBlendWidth: $newVal")
-            commitLayout { copy(mirrorEdgeBlendWidth = newVal) }
+            updateLayoutLive { copy(mirrorEdgeBlendWidth = newVal) }
+        },
+        onValueChangeFinished = {
+            commitActiveLayout("Committed mirrorEdgeBlendWidth: ${MacroPadState.activeLayout.value?.mirrorEdgeBlendWidth}")
         },
     )
 

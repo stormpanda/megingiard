@@ -68,6 +68,8 @@ class KeyboardGestureProcessor(
     var bkspDragPointerId: Long? = null
     private var modeSwitchSlidePointerId: Long? = null
     private var modeSwitchSlideMoved = false
+    private var lastFoundGrid: List<List<KeyDef>>? = null
+    private var lastFoundKey: KeyDef? = null
 
     fun updateBounds(
         id: String,
@@ -84,12 +86,23 @@ class KeyboardGestureProcessor(
         x: Float,
         y: Float,
     ): KeyDef? {
+        val cached = lastFoundKey
+        if (cached != null && lastFoundGrid === grid) {
+            val cachedBounds = keyBounds[cached.id]
+            if (cachedBounds != null && cachedBounds.contains(x, y)) {
+                return cached
+            }
+        }
         var nearestKey: KeyDef? = null
         var minDistanceSq = Float.POSITIVE_INFINITY
         for (row in grid) {
             for (key in row) {
                 val bounds = keyBounds[key.id] ?: continue
-                if (bounds.contains(x, y)) return key
+                if (bounds.contains(x, y)) {
+                    lastFoundGrid = grid
+                    lastFoundKey = key
+                    return key
+                }
                 val distSq = bounds.distanceSquaredTo(x, y)
                 if (distSq < minDistanceSq) {
                     minDistanceSq = distSq
@@ -97,6 +110,8 @@ class KeyboardGestureProcessor(
                 }
             }
         }
+        lastFoundGrid = grid
+        lastFoundKey = nearestKey
         return nearestKey
     }
 
@@ -215,9 +230,9 @@ class KeyboardGestureProcessor(
             if (hoveredKeyDef != null && isCharKey(hoveredKeyDef)) {
                 val bounds = keyBounds[keyId]
                 if (bounds != null) {
-                    val label = hoveredKeyDef.resolveDisplayLabel(isShiftActive(), isCapsActive(), isAltGrActive())
                     val currentPopup = _activePopupState.value
                     if (currentPopup == null || currentPopup.keyDef.id != keyId) {
+                        val label = hoveredKeyDef.resolveDisplayLabel(isShiftActive(), isCapsActive(), isAltGrActive())
                         _activePopupState.value =
                             PopupState(
                                 hoveredKeyDef,

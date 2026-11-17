@@ -67,7 +67,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 24
+#define PRIVD_VERSION 25
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
@@ -832,36 +832,6 @@ static int bind_listening_socket(int *out_port) {
     return -1;
 }
 
-/*
- * Reads exactly one newline-terminated line from `fd` into `out` (size MAX_LINE).
- * Returns the number of bytes read excluding the newline, 0 on EOF, -1 on error.
- * Lines longer than MAX_LINE-1 are truncated (the rest is discarded up to newline).
- */
-static int read_line(int fd, char *out) {
-    int n = 0;
-    char ch;
-    while (n < MAX_LINE - 1) {
-        ssize_t r = read(fd, &ch, 1);
-        if (r == 0) return 0;
-        if (r < 0) {
-            if (errno == EINTR) continue;
-            return -1;
-        }
-        if (ch == '\n') {
-            out[n] = '\0';
-            return n;
-        }
-        out[n++] = ch;
-    }
-    /* Drain rest of overlong line. */
-    while (1) {
-        ssize_t r = read(fd, &ch, 1);
-        if (r <= 0 || ch == '\n') break;
-    }
-    out[n] = '\0';
-    return n;
-}
-
 static int start_direct_mirror_child(int width, int height) {
     if (g_mirror_pid > 0) return 0; /* already running */
     if (g_dex_file_path == NULL || g_dex_file_path[0] == '\0' || access(g_dex_file_path, R_OK) != 0) {
@@ -1410,63 +1380,6 @@ static void handle_read_file(int client_fd, const char *path) {
     pthread_mutex_unlock(&g_send_mutex);
 }
 
-static void handle_list_processes(int client_fd) {
-    pthread_mutex_lock(&g_send_mutex);
-    DIR *dir = opendir("/proc");
-    if (!dir) {
-        (void)write(client_fd, "PROC_ERR OPENDIR_FAILED\n", 24);
-        pthread_mutex_unlock(&g_send_mutex);
-        return;
-    }
-
-    (void)write(client_fd, "PROC_BEGIN\n", 11);
-
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
-        char *endptr;
-        long pid = strtol(entry->d_name, &endptr, 10);
-        if (*endptr == '\0' && pid > 0) {
-            char path[256];
-            snprintf(path, sizeof(path), "/proc/%ld/cmdline", pid);
-            FILE *fp = fopen(path, "r");
-            if (fp) {
-                char cmdline[1024];
-                memset(cmdline, 0, sizeof(cmdline));
-                size_t n = fread(cmdline, 1, sizeof(cmdline) - 1, fp);
-                fclose(fp);
-                if (n > 0) {
-                    for (size_t i = 0; i < n; i++) {
-                        if (cmdline[i] == '\0') {
-                            cmdline[i] = ' ';
-                        }
-                    }
-                    while (n > 0 && (cmdline[n - 1] == ' ' || cmdline[n - 1] == '\n' || cmdline[n - 1] == '\r')) {
-                        cmdline[n - 1] = '\0';
-                        n--;
-                    }
-                    if (n > 0) {
-                        struct stat st;
-                        snprintf(path, sizeof(path), "/proc/%ld", pid);
-                        uid_t uid = 0;
-                        if (stat(path, &st) == 0) {
-                            uid = st.st_uid;
-                        }
-                        char resp[2048];
-                        int len = snprintf(resp, sizeof(resp), "PROC %ld %u %s\n", pid, (unsigned int)uid, cmdline);
-                        if (len > 0) {
-                            (void)write(client_fd, resp, (size_t)len);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    closedir(dir);
-
-    (void)write(client_fd, "PROC_END\n", 9);
-    pthread_mutex_unlock(&g_send_mutex);
-}
-
 static int write_all(int fd, const char *buf, size_t len) {
     size_t sent = 0;
     while (sent < len) {
@@ -1479,6 +1392,133 @@ static int write_all(int fd, const char *buf, size_t len) {
         sent += (size_t)r;
     }
     return 0;
+}
+
+#define PROC_BUF_INITIAL_CAP 65536
+#define PROC_BUF_MAX_CAP (4 * 1024 * 1024)
+
+static pthread_t g_proc_worker_thread;
+static int g_proc_worker_joinable = 0;
+static int g_proc_worker_client_fd = -1;
+
+static int append_proc_bytes(char **buf, size_t *len, size_t *cap, const char *src, size_t src_len) {
+    if (*len + src_len > *cap) {
+        size_t next_cap = *cap * 2;
+        while (next_cap < *len + src_len) {
+            next_cap *= 2;
+        }
+        if (next_cap > PROC_BUF_MAX_CAP) return -1;
+        char *grown = (char *)realloc(*buf, next_cap);
+        if (!grown) return -1;
+        *buf = grown;
+        *cap = next_cap;
+    }
+    memcpy(*buf + *len, src, src_len);
+    *len += src_len;
+    return 0;
+}
+
+static void handle_list_processes_sync(int client_fd) {
+    DIR *dir = opendir("/proc");
+    if (!dir) {
+        pthread_mutex_lock(&g_send_mutex);
+        (void)write_all(client_fd, "PROC_ERR OPENDIR_FAILED\n", 24);
+        pthread_mutex_unlock(&g_send_mutex);
+        return;
+    }
+
+    size_t out_cap = PROC_BUF_INITIAL_CAP;
+    size_t out_len = 0;
+    char *out_buf = (char *)malloc(out_cap);
+    if (!out_buf) {
+        closedir(dir);
+        pthread_mutex_lock(&g_send_mutex);
+        (void)write_all(client_fd, "PROC_ERR OOM\n", 13);
+        pthread_mutex_unlock(&g_send_mutex);
+        return;
+    }
+
+    (void)append_proc_bytes(&out_buf, &out_len, &out_cap, "PROC_BEGIN\n", 11);
+
+    int proc_dir_fd = dirfd(dir);
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        char *endptr;
+        long pid = strtol(entry->d_name, &endptr, 10);
+        if (*endptr == '\0' && pid > 0) {
+            char rel_path[64];
+            snprintf(rel_path, sizeof(rel_path), "%ld/cmdline", pid);
+            int cmd_fd = openat(proc_dir_fd, rel_path, O_RDONLY | O_CLOEXEC);
+            if (cmd_fd >= 0) {
+                char cmdline[1024];
+                ssize_t n_read = read(cmd_fd, cmdline, sizeof(cmdline) - 1);
+                close(cmd_fd);
+                if (n_read > 0) {
+                    size_t n = (size_t)n_read;
+                    cmdline[n] = '\0';
+                    for (size_t i = 0; i < n; i++) {
+                        if (cmdline[i] == '\0') {
+                            cmdline[i] = ' ';
+                        }
+                    }
+                    while (n > 0 && (cmdline[n - 1] == ' ' || cmdline[n - 1] == '\n' || cmdline[n - 1] == '\r')) {
+                        cmdline[n - 1] = '\0';
+                        n--;
+                    }
+                    if (n > 0) {
+                        struct stat st;
+                        uid_t uid = 0;
+                        if (fstatat(proc_dir_fd, entry->d_name, &st, AT_SYMLINK_NOFOLLOW) == 0) {
+                            uid = st.st_uid;
+                        }
+                        char resp[1152];
+                        int len = snprintf(resp, sizeof(resp), "PROC %ld %u %s\n", pid, (unsigned int)uid, cmdline);
+                        if (len > 0) {
+                            size_t write_len = (size_t)len < sizeof(resp) ? (size_t)len : (sizeof(resp) - 1);
+                            (void)append_proc_bytes(&out_buf, &out_len, &out_cap, resp, write_len);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    closedir(dir);
+
+    (void)append_proc_bytes(&out_buf, &out_len, &out_cap, "PROC_END\n", 9);
+
+    pthread_mutex_lock(&g_send_mutex);
+    (void)write_all(client_fd, out_buf, out_len);
+    pthread_mutex_unlock(&g_send_mutex);
+
+    free(out_buf);
+}
+
+static void *proc_list_worker_entry(void *arg) {
+    (void)arg;
+    int fd = g_proc_worker_client_fd;
+    if (fd >= 0) {
+        handle_list_processes_sync(fd);
+    }
+    return NULL;
+}
+
+static void join_proc_list_worker_if_needed(void) {
+    if (g_proc_worker_joinable) {
+        pthread_join(g_proc_worker_thread, NULL);
+        g_proc_worker_joinable = 0;
+        g_proc_worker_client_fd = -1;
+    }
+}
+
+static void dispatch_list_processes_async(int client_fd) {
+    join_proc_list_worker_if_needed();
+    g_proc_worker_client_fd = client_fd;
+    if (pthread_create(&g_proc_worker_thread, NULL, proc_list_worker_entry, NULL) == 0) {
+        g_proc_worker_joinable = 1;
+    } else {
+        g_proc_worker_client_fd = -1;
+        handle_list_processes_sync(client_fd);
+    }
 }
 
 /*
@@ -1716,12 +1756,14 @@ static int serve_client(int client_fd) {
     char action[5];
     int a, b;
     int active_slots_mask = 0;
+    PrivdLineReader line_reader;
+    privd_line_reader_init(&line_reader);
 
     /* Publish this fd so evdev_reader_thread can send EVT lines to it. */
     g_client_fd_for_reader = client_fd;
 
     while (!g_should_exit) {
-        int n = read_line(client_fd, line);
+        int n = privd_line_reader_next(&line_reader, client_fd, line, MAX_LINE);
         if (n <= 0) break;  /* EOF or error */
 
         if (line[0] == 'P' && strcmp(line, "PING") == 0) {
@@ -1740,6 +1782,7 @@ static int serve_client(int client_fd) {
             }
             stop_reader_thread();
             stop_touch_reader_thread();
+            join_proc_list_worker_if_needed();
             stop_mirror_child();
             return 1;
         }
@@ -1880,7 +1923,7 @@ static int serve_client(int client_fd) {
         }
 
         if (strncmp(line, "LIST_PROCESSES", 14) == 0) {
-            handle_list_processes(client_fd);
+            dispatch_list_processes_async(client_fd);
             continue;
         }
 
@@ -1925,6 +1968,7 @@ static int serve_client(int client_fd) {
     }
     stop_reader_thread();
     stop_touch_reader_thread();
+    join_proc_list_worker_if_needed();
     stop_mirror_child();
     return 0;
 }

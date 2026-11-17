@@ -178,7 +178,7 @@ object PcEmulatorDetector : EmulatorDetector {
         if (!procList.isNullOrBlank()) {
             val session = parseSessionFromProcesses(packageName, procList, focusedRomPath, focusedRomIdentifier)
             if (session != null) {
-                AppLog.i(TAG, "Resolved session via process list: ${session.gameTitle} (${session.systemId})")
+                AppLog.d(TAG, "Resolved session via process list: ${session.gameTitle} (${session.systemId})")
                 return session
             }
         }

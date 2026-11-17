@@ -39,16 +39,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageShader
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
@@ -59,7 +63,6 @@ import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 private const val TAG = "AnchorPositioningSheet"
@@ -230,8 +233,7 @@ internal fun AnchorPositioningSheet(
                 }
 
                 // ── Live Magnified Preview Box with Checkerboard Transparency Background ──
-                val checkerColor1 = colors.surfaceVariant
-                val checkerColor2 = colors.surface
+                val checkerBrush = rememberCheckerboardBrush(colors.surfaceVariant, colors.surface, CHECKER_SIZE)
                 Box(
                     modifier =
                         Modifier
@@ -243,19 +245,7 @@ internal fun AnchorPositioningSheet(
                                 brush = bezelBrush,
                                 shape = RoundedCornerShape(PREVIEW_CORNER_RADIUS),
                             ).drawBehind {
-                                val checkPx = CHECKER_SIZE.toPx()
-                                val cols = ceil(size.width / checkPx).toInt()
-                                val rows = ceil(size.height / checkPx).toInt()
-                                for (r in 0 until rows) {
-                                    for (c in 0 until cols) {
-                                        val color = if ((r + c) % 2 == 0) checkerColor1 else checkerColor2
-                                        drawRect(
-                                            color = color,
-                                            topLeft = Offset(c * checkPx, r * checkPx),
-                                            size = Size(checkPx, checkPx),
-                                        )
-                                    }
-                                }
+                                drawRect(brush = checkerBrush)
                             },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -325,5 +315,34 @@ internal fun AnchorPositioningSheet(
                 }
             }
         }
+    }
+}
+
+@Composable
+internal fun rememberCheckerboardBrush(
+    color1: Color,
+    color2: Color,
+    cellSize: Dp,
+): ShaderBrush {
+    val density = LocalDensity.current
+    val cellPx = with(density) { cellSize.toPx().roundToInt().coerceAtLeast(1) }
+    return remember(color1, color2, cellPx) {
+        val tileSize = cellPx * 2
+        val argb1 = color1.toArgb()
+        val argb2 = color2.toArgb()
+        val pixels = IntArray(tileSize * tileSize)
+        for (y in 0 until tileSize) {
+            val rowOffset = y * tileSize
+            val topHalf = y < cellPx
+            for (x in 0 until tileSize) {
+                val leftHalf = x < cellPx
+                pixels[rowOffset + x] = if (topHalf == leftHalf) argb1 else argb2
+            }
+        }
+        val bitmap =
+            Bitmap
+                .createBitmap(pixels, tileSize, tileSize, Bitmap.Config.ARGB_8888)
+                .apply { prepareToDraw() }
+        ShaderBrush(ImageShader(bitmap.asImageBitmap(), TileMode.Repeated, TileMode.Repeated))
     }
 }

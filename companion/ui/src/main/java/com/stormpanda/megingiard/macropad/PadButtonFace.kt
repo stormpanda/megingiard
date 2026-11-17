@@ -1,18 +1,15 @@
 package com.stormpanda.megingiard.macropad
 
 import android.util.LruCache
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -20,7 +17,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -167,32 +165,7 @@ internal fun PadButtonFace(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    val density = LocalDensity.current
     val contentOffset = (shape as? PolygonButtonShape)?.contentCenterOffset ?: PBF_ZERO_OFFSET
-
-    val bgBrush =
-        if (isIconOnly) {
-            null
-        } else {
-            remember(bgColor, width, height, density, contentOffset) {
-                val wPx = with(density) { width.toPx() }
-                val hPx = with(density) { height.toPx() }
-                val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
-                val maxAlpha = bgColor.alpha.coerceIn(0f, 1f)
-                Brush.radialGradient(
-                    0.00f to bgColor.copy(alpha = 0f),
-                    PBF_GRADIENT_MID_STOP_1 to bgColor.copy(alpha = maxAlpha * PBF_GRADIENT_MID_ALPHA_1),
-                    PBF_GRADIENT_MID_STOP_2 to bgColor.copy(alpha = maxAlpha * PBF_GRADIENT_MID_ALPHA_2),
-                    1.00f to bgColor.copy(alpha = maxAlpha),
-                    center =
-                        Offset(
-                            wPx * (PBF_CENTER_NORM + contentOffset.x),
-                            hPx * (PBF_CENTER_NORM + contentOffset.y),
-                        ),
-                    radius = halfDiag,
-                )
-            }
-        }
 
     val faceModifier =
         if (isIconOnly) {
@@ -200,15 +173,34 @@ internal fun PadButtonFace(
         } else {
             modifier
                 .size(width, height)
-                .clip(shape)
-                .drawWithContent {
+                .drawWithCache {
+                    val outline = shape.createOutline(size, layoutDirection, this)
+                    val borderStroke = Stroke(width = PBF_BORDER_WIDTH.toPx())
+                    val halfDiag = (sqrt(size.width * size.width + size.height * size.height) / 2f).coerceAtLeast(1f)
+                    val maxAlpha = bgColor.alpha.coerceIn(0f, 1f)
+                    val radialBrush =
+                        Brush.radialGradient(
+                            0.00f to bgColor.copy(alpha = 0f),
+                            PBF_GRADIENT_MID_STOP_1 to bgColor.copy(alpha = maxAlpha * PBF_GRADIENT_MID_ALPHA_1),
+                            PBF_GRADIENT_MID_STOP_2 to bgColor.copy(alpha = maxAlpha * PBF_GRADIENT_MID_ALPHA_2),
+                            1.00f to bgColor.copy(alpha = maxAlpha),
+                            center =
+                                Offset(
+                                    size.width * (PBF_CENTER_NORM + contentOffset.x),
+                                    size.height * (PBF_CENTER_NORM + contentOffset.y),
+                                ),
+                            radius = halfDiag,
+                        )
                     val effectiveBackingColor = PBF_BACKING_COLOR.copy(alpha = PBF_BACKING_COLOR.alpha * bgColor.alpha)
-                    drawRect(color = effectiveBackingColor)
-                    if (bgBrush != null) {
-                        drawRect(brush = bgBrush)
+                    onDrawWithContent {
+                        drawOutline(outline = outline, color = effectiveBackingColor)
+                        drawOutline(outline = outline, brush = radialBrush)
+                        drawContent()
+                        if (borderColor.alpha > 0f) {
+                            drawOutline(outline = outline, color = borderColor, style = borderStroke)
+                        }
                     }
-                    drawContent()
-                }.border(PBF_BORDER_WIDTH, borderColor, shape)
+                }
         }
 
     Box(

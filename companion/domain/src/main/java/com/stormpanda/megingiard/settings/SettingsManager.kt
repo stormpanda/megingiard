@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -38,6 +39,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
+import java.io.File
 import java.time.LocalDate
 
 private val backupsJson =
@@ -47,6 +49,10 @@ private val backupsJson =
     }
 
 private const val SETTINGS_DATASTORE_NAME = "megingiard_settings"
+private const val INTERNAL_BACKUPS_DIR = "backups"
+private const val INTERNAL_BACKUPS_FILENAME = "internal_backups.json"
+private const val INTERNAL_BACKUPS_TMP_SUFFIX = ".tmp"
+private const val MAX_INTERNAL_BACKUPS = 5
 
 /** Per-app language preference. [SYSTEM] follows the device locale. */
 enum class AppLanguage { SYSTEM, EN, DE, ZH_TW }
@@ -75,7 +81,14 @@ object SettingsManager {
     // duration of the process. Cancellation is handled by process termination.
     internal var scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var dataStore: DataStore<Preferences>
+    private var appFilesDir: File? = null
     private var initialized = false
+    private val settingsLoadLock = Any()
+    private val backupsLock = Any()
+    private val backupsPersistLock = Any()
+
+    @Volatile
+    private var isSettingsLoaded = false
 
     @Volatile
     private var isInternalBackupsLoaded = false
@@ -139,7 +152,16 @@ object SettingsManager {
         AppLog.level = AppLog.Level.WARN
         _welcomeTourCompletedVersion.value = 0
         _internalBackups.value = emptyList()
+        isSettingsLoaded = false
         isInternalBackupsLoaded = false
+        val dirsToClean = listOfNotNull(appFilesDir, context?.applicationContext?.filesDir).distinct()
+        for (dir in dirsToClean) {
+            runCatching {
+                internalBackupsFile(dir).delete()
+                File(dir, "$INTERNAL_BACKUPS_DIR/$INTERNAL_BACKUPS_FILENAME$INTERNAL_BACKUPS_TMP_SUFFIX").delete()
+            }
+        }
+        appFilesDir = null
         TouchpadSettings.resetForTesting()
         MirrorSettings.resetForTesting()
         MacroPadState.resetForTesting()
@@ -164,6 +186,7 @@ object SettingsManager {
         if (initialized) return
         initialized = true
         val appContext = context.applicationContext
+        appFilesDir = appContext.filesDir
         dataStore = appContext.settingsDataStore
 
         DisplayDetector.resolveSecondaryDisplaySize(appContext)?.let { size ->
@@ -173,12 +196,21 @@ object SettingsManager {
         }
         TouchInjector.updatePrimaryDisplayRotation(DisplayDetector.resolvePrimaryDisplayRotation(appContext))
 
+        // Hand the shared DataStore + scope to feature-scoped sub-managers before reading
+        // bootstrap preferences so all sub-managers are ready for load-once hydration.
+        KeyboardSettings.init(dataStore, scope)
+        TouchpadSettings.init(dataStore, scope)
+        MirrorSettings.init(dataStore, scope)
+        MacroPadSettings.init(dataStore, scope)
+        UpdateManager.init(dataStore, scope)
+
         // Apply bootstrap settings (log level, theme, accent, SteamGridDB token,
         // and MacroPad profiles) synchronously before returning so that code
         // running immediately after init() (e.g. SignatureGuard, initial UI frame)
         // already uses the user-configured state. A bounded timeout prevents ANR on
         // pathological I/O — if DataStore does not respond within the window,
-        // defaults are retained and startup proceeds normally.
+        // defaults are retained and async load-once hydration finishes in the background.
+        var bootstrapPrefs: Preferences? = null
         runBlocking(Dispatchers.IO) {
             try {
                 val prefs =
@@ -186,7 +218,8 @@ object SettingsManager {
                         dataStore.data.first()
                     }
                 if (prefs != null) {
-                    applyBootstrapPrefs(prefs)
+                    bootstrapPrefs = prefs
+                    ensureSettingsLoadedOnce(prefs)
                 } else {
                     AppLog.w(TAG, "DataStore bootstrap timed out — retaining default log level")
                 }
@@ -198,27 +231,24 @@ object SettingsManager {
             }
         }
 
-        // Hand the shared DataStore + scope to feature-scoped sub-managers so they
-        // can persist their own settings without each one opening its own DataStore.
-        KeyboardSettings.init(dataStore, scope)
-        TouchpadSettings.init(dataStore, scope)
-        MirrorSettings.init(dataStore, scope)
-        MacroPadSettings.init(dataStore, scope)
-        UpdateManager.init(dataStore, scope)
-
         scope.launch {
-            dataStore.data
-                .catch { emit(emptyPreferences()) }
-                .collect { prefs ->
-                    AppLog.i(TAG, "settings loaded from DataStore")
-                    applyLoadedPrefs(prefs)
+            val prefs =
+                bootstrapPrefs
+                    ?: dataStore.data
+                        .catch { emit(emptyPreferences()) }
+                        .first()
+            ensureSettingsLoadedOnce(prefs)
+            ensureInternalBackupsLoaded(appContext, prefs)
+            triggerAutoBackupIfNeeded(appContext)
+        }
+    }
 
-                    if (!isInternalBackupsLoaded) {
-                        isInternalBackupsLoaded = true
-                        _internalBackups.value = decodeBackups(prefs[KEY_INTERNAL_BACKUPS])
-                        triggerAutoBackupIfNeeded(context.applicationContext)
-                    }
-                }
+    private fun ensureSettingsLoadedOnce(prefs: Preferences) {
+        synchronized(settingsLoadLock) {
+            if (isSettingsLoaded) return
+            isSettingsLoaded = true
+            AppLog.i(TAG, "settings loaded once from DataStore")
+            applyLoadedPrefs(prefs)
         }
     }
 
@@ -425,6 +455,71 @@ object SettingsManager {
         applyLoadedPrefs(updatedPrefs)
     }
 
+    internal fun internalBackupsFile(filesDir: File): File = File(File(filesDir, INTERNAL_BACKUPS_DIR), INTERNAL_BACKUPS_FILENAME)
+
+    private fun writeBackupsFile(
+        file: File,
+        backups: List<InternalBackup>,
+    ) {
+        synchronized(backupsPersistLock) {
+            val dir = file.parentFile
+            if (dir != null && !dir.exists()) {
+                dir.mkdirs()
+            }
+            val encoded = backupsJson.encodeToString(backups)
+            val tmpFile = File(file.parentFile, "${file.name}$INTERNAL_BACKUPS_TMP_SUFFIX")
+            tmpFile.writeText(encoded)
+            if (!tmpFile.renameTo(file)) {
+                file.writeText(encoded)
+                tmpFile.delete()
+            }
+        }
+    }
+
+    private suspend fun ensureInternalBackupsLoaded(
+        context: Context,
+        initialPrefs: Preferences? = null,
+    ) {
+        val shouldScrubLegacyKey: Boolean
+        synchronized(backupsLock) {
+            if (isInternalBackupsLoaded) return
+            val file = internalBackupsFile(context.filesDir)
+            if (file.exists()) {
+                val loaded = runCatching { decodeBackups(file.readText()) }.getOrElse { emptyList() }
+                _internalBackups.value = loaded
+                isInternalBackupsLoaded = true
+                shouldScrubLegacyKey = initialPrefs?.get(KEY_INTERNAL_BACKUPS) != null
+            } else {
+                val legacyRaw = initialPrefs?.get(KEY_INTERNAL_BACKUPS)
+                if (legacyRaw != null) {
+                    val migrated = decodeBackups(legacyRaw)
+                    runCatching { writeBackupsFile(file, migrated) }
+                        .onSuccess {
+                            AppLog.i(TAG, "Migrated ${migrated.size} internal backup(s) from DataStore to ${file.name}")
+                        }.onFailure { err ->
+                            AppLog.e(TAG, "Failed to migrate internal backups to file: ${err.message}", err)
+                        }
+                    _internalBackups.value = migrated
+                    isInternalBackupsLoaded = true
+                    shouldScrubLegacyKey = file.exists()
+                } else {
+                    _internalBackups.value = emptyList()
+                    isInternalBackupsLoaded = true
+                    shouldScrubLegacyKey = false
+                }
+            }
+        }
+        if (shouldScrubLegacyKey && ::dataStore.isInitialized) {
+            runCatching {
+                dataStore.edit { mutPrefs ->
+                    mutPrefs.remove(KEY_INTERNAL_BACKUPS)
+                }
+            }.onFailure { err ->
+                AppLog.w(TAG, "Failed to scrub legacy internal_backups key from DataStore: ${err.message}")
+            }
+        }
+    }
+
     private fun decodeBackups(jsonStr: String?): List<InternalBackup> {
         if (jsonStr == null) return emptyList()
         return runCatching {
@@ -437,13 +532,58 @@ object SettingsManager {
 
     suspend fun saveBackup(backup: InternalBackup) {
         AppLog.d(TAG, "saveBackup: date=${backup.dateString}")
+        val filesDir = appFilesDir
+        if (filesDir != null && !isInternalBackupsLoaded) {
+            val prefs =
+                if (::dataStore.isInitialized) {
+                    dataStore.data.catch { emit(emptyPreferences()) }.first()
+                } else {
+                    null
+                }
+            synchronized(backupsLock) {
+                if (!isInternalBackupsLoaded) {
+                    val file = internalBackupsFile(filesDir)
+                    val initial =
+                        when {
+                            file.exists() -> runCatching { decodeBackups(file.readText()) }.getOrElse { emptyList() }
+                            prefs?.get(KEY_INTERNAL_BACKUPS) != null -> decodeBackups(prefs[KEY_INTERNAL_BACKUPS])
+                            else -> emptyList()
+                        }
+                    _internalBackups.value = initial
+                    isInternalBackupsLoaded = true
+                }
+            }
+        }
         val newList =
-            (_internalBackups.value.filter { it.dateString != backup.dateString } + backup)
-                .sortedByDescending { it.timestampMs }
-                .take(5)
-        _internalBackups.value = newList
-        dataStore.edit { prefs ->
-            prefs[KEY_INTERNAL_BACKUPS] = backupsJson.encodeToString(newList)
+            synchronized(backupsLock) {
+                val updated =
+                    (_internalBackups.value.filter { it.dateString != backup.dateString } + backup)
+                        .sortedByDescending { it.timestampMs }
+                        .take(MAX_INTERNAL_BACKUPS)
+                _internalBackups.value = updated
+                updated
+            }
+        if (filesDir != null) {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    writeBackupsFile(internalBackupsFile(filesDir), newList)
+                }.onFailure { err ->
+                    AppLog.e(TAG, "Failed to write internal backups file: ${err.message}", err)
+                }
+            }
+            if (::dataStore.isInitialized) {
+                runCatching {
+                    dataStore.edit { prefs ->
+                        if (prefs.contains(KEY_INTERNAL_BACKUPS)) {
+                            prefs.remove(KEY_INTERNAL_BACKUPS)
+                        }
+                    }
+                }
+            }
+        } else if (::dataStore.isInitialized) {
+            dataStore.edit { prefs ->
+                prefs[KEY_INTERNAL_BACKUPS] = backupsJson.encodeToString(newList)
+            }
         }
     }
 

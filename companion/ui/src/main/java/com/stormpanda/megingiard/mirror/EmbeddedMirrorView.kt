@@ -38,6 +38,7 @@ private const val EMV_DEFAULT_UNTHROTTLED_FPS = 60
 private const val EMV_MAX_FPS = 120
 private const val EMV_SYSTEM_DEFAULT_FRAME_RATE_VOTE = 0f
 private const val EMV_NS_PER_SECOND = 1_000_000_000L
+private const val EMV_VSYNC_SLOP_NS = 1_000_000L
 
 internal fun resolveEffectiveMirrorFpsCap(
     configuredMaxFps: Int,
@@ -364,12 +365,24 @@ fun EmbeddedMirrorView(
                         return true
                     }
 
+                    private var cachedDisplayHz = 0f
+
                     override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
+                        val configuredMaxFps = ScreenCaptureManager.maxFps.value
+                        if (configuredMaxFps >= EMV_DEFAULT_UNTHROTTLED_FPS) {
+                            mcc.invalidate()
+                            return
+                        }
                         val nowNs = SystemClock.elapsedRealtimeNanos()
-                        val displayHz = mcc.display?.refreshRate ?: 0f
-                        val fps = resolveEffectiveMirrorFpsCap(ScreenCaptureManager.maxFps.value, displayHz)
+                        val displayHz =
+                            if (cachedDisplayHz > 0f) {
+                                cachedDisplayHz
+                            } else {
+                                (mcc.display?.refreshRate ?: 0f).also { cachedDisplayHz = it }
+                            }
+                        val fps = resolveEffectiveMirrorFpsCap(configuredMaxFps, displayHz)
                         val intervalNs = EMV_NS_PER_SECOND / fps
-                        if (nowNs - lastUpdateTimeNs >= intervalNs) {
+                        if (nowNs - lastUpdateTimeNs >= intervalNs - EMV_VSYNC_SLOP_NS) {
                             mcc.invalidate()
                             lastUpdateTimeNs = nowNs
                         }

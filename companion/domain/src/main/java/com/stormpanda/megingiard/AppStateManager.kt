@@ -725,12 +725,12 @@ object AppStateManager {
     val fullscreenKeyboardLayout: StateFlow<KbLayout> = KeyboardSettings.kbLayout
 
     /**
-     * True whenever any modal dialog, peek overlay, or non-macropad fullscreen surface is showing.
+     * True whenever any modal dialog or non-macropad fullscreen surface is showing.
      * Used by [handleEdgeSwipe] to determine if an edge swipe should close an active modal or overlay.
      */
     val isAnyModalActive: StateFlow<Boolean> =
-        combine(activePrimaryModal, MacroPadState.isPeekActive, _companionSurfaceMode) { modal, peek, surface ->
-            modal != null || peek || surface != CompanionSurfaceMode.MACROPAD
+        combine(activePrimaryModal, _companionSurfaceMode) { modal, surface ->
+            modal != null || surface != CompanionSurfaceMode.MACROPAD
         }.stateIn(scope, SharingStarted.Eagerly, false)
 
     /**
@@ -808,12 +808,11 @@ object AppStateManager {
     fun closeActiveModal() {
         AppLog.i(
             TAG,
-            "closeActiveModal: surface=${_companionSurfaceMode.value} peek=${MacroPadState.isPeekActive.value} primaryModal=${_activePrimaryModal.value?.type}",
+            "closeActiveModal: surface=${_companionSurfaceMode.value} primaryModal=${_activePrimaryModal.value?.type}",
         )
         closePrimaryModal()
         _companionSurfaceMode.value = CompanionSurfaceMode.MACROPAD
         _fullscreenMouseSensitivity.value = 1.0f
-        MacroPadState.resetPeek()
     }
 
     /**

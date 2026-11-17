@@ -527,11 +527,21 @@ class MainActivity : ComponentActivity() {
                             dismissed = dismissed,
                         )
                     }
+                val policyLayoutFlow =
+                    MacroPadState.activeLayout.distinctUntilChanged { old, new ->
+                        old?.id == new?.id && old?.mirrorAutoStart == new?.mirrorAutoStart
+                    }
+                val policyProfileFlow =
+                    MacroPadState.activeProfile.distinctUntilChanged { old, new ->
+                        old?.id == new?.id &&
+                            old?.autoLayoutSwitching == new?.autoLayoutSwitching &&
+                            old?.layouts?.any { it.visualAnchor.enabled } == new?.layouts?.any { it.visualAnchor.enabled }
+                    }
                 combine(
                     AppStateManager.promptInFlight,
                     ScreenCaptureManager.isCapturing,
-                    MacroPadState.activeLayout,
-                    MacroPadState.activeProfile,
+                    policyLayoutFlow,
+                    policyProfileFlow,
                     AppStateManager.companionViewMode,
                     AppStateManager.isOnValidScreen,
                     OnboardingWizardManager.isWizardActive,

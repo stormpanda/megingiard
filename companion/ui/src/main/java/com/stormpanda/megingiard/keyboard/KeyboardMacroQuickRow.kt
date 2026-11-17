@@ -66,18 +66,18 @@ internal fun KeyboardMacroQuickRow(
     visible: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val colors = LocalAppColors.current
-    val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
-    val runningMacroIds by MacroExecutor.runningMacroIds.collectAsStateWithLifecycle()
-    val allMacros = activeProfile?.macros ?: emptyList()
-    val keyboardMacros = remember(allMacros) { allMacros.filter { it.hasKeyboardSteps } }
-
     AnimatedVisibility(
         visible = visible,
         enter = expandVertically() + fadeIn(),
         exit = shrinkVertically() + fadeOut(),
         modifier = modifier,
     ) {
+        val colors = LocalAppColors.current
+        val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
+        val runningMacroIds by MacroExecutor.runningMacroIds.collectAsStateWithLifecycle()
+        val allMacros = activeProfile?.macros ?: emptyList()
+        val keyboardMacros = remember(allMacros) { allMacros.filter { it.hasKeyboardSteps } }
+
         Box(
             modifier =
                 Modifier

@@ -72,8 +72,10 @@ import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.DialogToastPill
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
+import com.stormpanda.megingiard.ui.pruneNonScreenReaderSemantics
 import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
+import com.stormpanda.megingiard.ui.rememberScreenReaderActive
 import kotlinx.coroutines.launch
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -140,12 +142,10 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    // Reset peek state when leaving MACROPAD mode
     DisposableEffect(Unit) {
         AppLog.i(TAG, "MacroPadScreen visible")
         onDispose {
             AppLog.i(TAG, "MacroPadScreen disposed")
-            MacroPadState.resetPeek()
         }
     }
 
@@ -281,7 +281,6 @@ private fun LayoutTransitionSnapshotOverlay() {
 internal fun PadSurface(
     layout: PadLayout,
     accentColor: Color,
-    isPeekActive: Boolean = false,
     transparentBackground: Boolean = false,
     viewport: DesignViewport? = null,
 ) {
@@ -415,7 +414,6 @@ internal fun PadSurface(
     val currentDesignViewport by rememberUpdatedState(designViewport)
     val currentBgTouchpadActive by rememberUpdatedState(bgTouchpadActive)
     val currentBgTouchpadProcessor by rememberUpdatedState(bgTouchpadProcessor)
-    val currentIsPeekActive by rememberUpdatedState(isPeekActive)
 
     DisposableEffect(engine) {
         onDispose {
@@ -431,9 +429,14 @@ internal fun PadSurface(
         }
     }
 
+    val isScreenReaderActive = rememberScreenReaderActive(context)
+
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .pruneNonScreenReaderSemantics(isScreenReaderActive),
     ) {
         Box(
             modifier =
@@ -544,7 +547,6 @@ internal fun PadSurface(
                                                             canvasW = w,
                                                             canvasH = h,
                                                             buttons = activeLayout.buttons,
-                                                            isPeekActive = currentIsPeekActive,
                                                             viewport = activeViewport,
                                                         )
                                                     ) {
@@ -674,16 +676,7 @@ internal fun PadSurface(
                 )
             }
 
-            // Render buttons (filtered by peek state)
-            val visibleButtons =
-                remember(layout.buttons, isPeekActive) {
-                    if (isPeekActive) {
-                        layout.buttons.filter { it.action is PadAction.BackgroundPeek }
-                    } else {
-                        layout.buttons
-                    }
-                }
-            visibleButtons.forEach { btn ->
+            layout.buttons.forEach { btn ->
                 key(btn.id) {
                     val isPressed = btn.id in pressedIds
                     val isRunning =

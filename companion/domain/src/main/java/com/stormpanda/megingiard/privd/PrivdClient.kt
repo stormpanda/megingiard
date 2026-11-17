@@ -42,6 +42,7 @@ private const val MIRROR_DIRECT_START_TIMEOUT_MS = 7_500L
 private const val MIRROR_STOP_TIMEOUT_MS = 3_000L
 private const val SCREENSHOT_TIMEOUT_MS = 6_000L
 private const val READ_FILE_TIMEOUT_MS = 5_000L
+private const val PRIVD_WRITE_BATCH_MAX = 64
 private const val WRITER_THREAD_NAME = "PrivdClientWriter"
 private const val READER_THREAD_NAME = "PrivdClientReader"
 private const val HANDSHAKE_TIMEOUT_MS = 5_000
@@ -483,7 +484,7 @@ object PrivdClient {
                         errorPrefix = "PROC_ERR",
                     ),
             )
-        AppLog.i(TAG, "getRunningProcesses() fetched ${result?.length ?: 0} bytes")
+        AppLog.d(TAG, "getRunningProcesses() fetched ${result?.length ?: 0} bytes")
         return result
     }
 
@@ -502,8 +503,9 @@ object PrivdClient {
     // -------------------------------------------------------------------------
 
     private fun writerLoop() {
+        val batch = ArrayList<String>(PRIVD_WRITE_BATCH_MAX)
         while (running) {
-            val line =
+            val firstLine =
                 try {
                     queue.take()
                 } catch (_: InterruptedException) {
@@ -511,7 +513,12 @@ object PrivdClient {
                 }
             val w = writer ?: break
             try {
-                w.write(line)
+                w.write(firstLine)
+                batch.clear()
+                queue.drainTo(batch, PRIVD_WRITE_BATCH_MAX - 1)
+                for (i in 0 until batch.size) {
+                    w.write(batch[i])
+                }
                 if (queue.isEmpty()) {
                     w.flush()
                 }

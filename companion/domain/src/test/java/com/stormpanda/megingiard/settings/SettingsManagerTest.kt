@@ -1,8 +1,10 @@
 package com.stormpanda.megingiard.settings
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.InternalBackup
 import com.stormpanda.megingiard.config.MegingiardExport
+import com.stormpanda.megingiard.config.SCHEMA_VERSION
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -114,5 +116,55 @@ class SettingsManagerTest {
             testDispatcher.scheduler.advanceUntilIdle()
             assertTrue(KeyboardSettings.kbAutoOpenOnFocus.value)
             assertFalse(KeyboardSettings.kbAutoHideOnFocusLoss.value)
+        }
+
+    @Test
+    fun testSaveBackupPersistsToDedicatedFileOutOfDataStore() =
+        runTest(testDispatcher) {
+            val app = RuntimeEnvironment.getApplication()
+            val backupFile = SettingsManager.internalBackupsFile(app.filesDir)
+            val customBackup =
+                InternalBackup(
+                    dateString = "2026-01-15",
+                    timestampMs = 1768435200000L,
+                    export =
+                        MegingiardExport(
+                            schemaVersion = SCHEMA_VERSION,
+                            metadata =
+                                ExportMetadata(
+                                    appVersionCode = 1,
+                                    appVersionName = "1.0.0",
+                                    exportedAt = "2026-01-15T00:00:00Z",
+                                    deviceModel = "TestDevice",
+                                ),
+                            checksum = "sha256:test",
+                            settings = emptyMap(),
+                            profiles = emptyList(),
+                        ),
+                )
+
+            SettingsManager.saveBackup(customBackup)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertTrue("Internal backups file must exist under filesDir/backups/", backupFile.exists())
+            assertTrue(SettingsManager.internalBackups.value.any { it.dateString == "2026-01-15" })
+            assertTrue(backupFile.readText().contains("2026-01-15"))
+        }
+
+    @Test
+    fun testLiveDeadzoneUpdateIsNotOverwrittenByUnrelatedSettingSave() =
+        runTest(testDispatcher) {
+            MacroPadSettings.setDeadzoneLeft(0.15f)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Simulate an in-flight 120 Hz slider drag (live in-memory update before commit)
+            MacroPadSettings.updateDeadzoneLeftLive(0.32f)
+            assertEquals(0.32f, MacroPadSettings.deadzoneLeft.value, 0.0001f)
+
+            // Trigger an unrelated DataStore write; load-once guard must not echo stale 0.15f back over 0.32f
+            SettingsManager.setOverlayAtBottom(true)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(0.32f, MacroPadSettings.deadzoneLeft.value, 0.0001f)
         }
 }

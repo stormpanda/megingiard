@@ -38,9 +38,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +59,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppDivider
@@ -116,11 +120,56 @@ private val PR_BADGE_PAD_H = 8.dp
 private val PR_BADGE_PAD_V = 2.dp
 private val PR_BADGE_MARGIN_H = 2.dp
 private val PR_SPACING_XS = 4.dp
+private val PR_SPACING_SM = 6.dp
 private val PR_SPACING_S = 8.dp
 private val PR_SPACING_M = 10.dp
+private val PR_SPACING_MD = 12.dp
 private val PR_SPACING_L = 14.dp
 private val PR_CONTAINER_PADDING = 20.dp
 private val PR_BORDER_WIDTH = 1.dp
+private val PR_RADAR_OUTER_STROKE = 1.5.dp
+private val PR_RADAR_VECTOR_STROKE = 2.dp
+private val PR_ACTION_BTN_HEIGHT = 46.dp
+private val PR_CLOSE_ICON_SIZE = 18.dp
+private val PR_STOP_ICON_SIZE = 20.dp
+private val PR_STICK_RADAR_SIZE = PR_STICK_RADAR_SIZE_DP.dp
+private val PR_STICK_THUMB_RADIUS = PR_STICK_THUMB_RADIUS_DP.dp
+private const val PR_CONTAINER_WIDTH_FRACTION = 0.92f
+private const val PR_DEADZONE_RING_ALPHA = 0.35f
+private const val PR_DEADZONE_RING_FRACTION = 0.2f
+private const val PR_VECTOR_ALPHA = 0.6f
+private const val PR_DEFLECTION_THRESHOLD = 0.05f
+private const val PR_DEFLECTION_PERCENT_THRESHOLD = 5
+
+@Composable
+internal fun LivePhysicalGamepadRecordingSheet(
+    swapFaceButtons: Boolean,
+    onStop: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val stateState = PhysicalGamepadRecordingManager.state.collectAsStateWithLifecycle()
+    PhysicalGamepadRecordingSheet(
+        stateState = stateState,
+        swapFaceButtons = swapFaceButtons,
+        onStop = onStop,
+        onCancel = onCancel,
+    )
+}
+
+@Composable
+internal fun PhysicalGamepadRecordingSheet(
+    state: GamepadRecordingState,
+    swapFaceButtons: Boolean,
+    onStop: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    PhysicalGamepadRecordingSheet(
+        stateState = rememberUpdatedState(state),
+        swapFaceButtons = swapFaceButtons,
+        onStop = onStop,
+        onCancel = onCancel,
+    )
+}
 
 /**
  * Full-screen companion HUD shown on the secondary bottom display while a physical
@@ -130,18 +179,21 @@ private val PR_BORDER_WIDTH = 1.dp
  * active button pills, duration timer, step counter) and touch action buttons to finish
  * or discard the recording and resume the top-screen editor.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PhysicalGamepadRecordingSheet(
-    state: GamepadRecordingState,
+    stateState: State<GamepadRecordingState>,
     swapFaceButtons: Boolean,
     onStop: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val colors = LocalAppColors.current
-    val context = LocalContext.current
     val bezelBrush = rememberBezelBrush()
-    val recording = state as? GamepadRecordingState.Recording
+    val startEpoch by remember(stateState) {
+        derivedStateOf { (stateState.value as? GamepadRecordingState.Recording)?.startElapsedRealtime ?: 0L }
+    }
+    val hasRecording by remember(stateState) {
+        derivedStateOf { stateState.value is GamepadRecordingState.Recording }
+    }
 
     BackHandler {
         onCancel()
@@ -151,8 +203,6 @@ internal fun PhysicalGamepadRecordingSheet(
         AppLog.i(TAG, "PhysicalGamepadRecordingSheet visible")
         onDispose { AppLog.i(TAG, "PhysicalGamepadRecordingSheet disposed") }
     }
-
-    val startEpoch = recording?.startElapsedRealtime ?: 0L
 
     Box(
         modifier =
@@ -165,7 +215,7 @@ internal fun PhysicalGamepadRecordingSheet(
         Box(
             modifier =
                 Modifier
-                    .fillMaxWidth(0.92f)
+                    .fillMaxWidth(PR_CONTAINER_WIDTH_FRACTION)
                     .clip(PR_CONTAINER_SHAPE)
                     .background(colors.surface)
                     .border(
@@ -213,168 +263,37 @@ internal fun PhysicalGamepadRecordingSheet(
                         )
                     }
 
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(PR_SPACING_S))
 
                     // Live Step Count badge
-                    val stepCount = recording?.stepCount ?: 0
-                    Box(
-                        modifier =
-                            Modifier
-                                .clip(PR_PILL_SHAPE)
-                                .background(colors.surfaceVariant)
-                                .border(width = 1.dp, color = colors.divider, shape = PR_PILL_SHAPE)
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.privd_recording_physical_actions_count, stepCount),
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
+                    PhysicalRecordingStepBadge(stateState = stateState)
                 }
 
                 AppDivider()
 
                 // ── Telemetry View (Dual Radars + D-Pad + Active Buttons) ─────
-                if (recording != null) {
+                if (hasRecording) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // Left Stick Radar
                         StickRadar(
                             label = stringResource(R.string.privd_recording_physical_stick_l_label),
-                            x = recording.leftStickX,
-                            y = recording.leftStickY,
+                            isRightStick = false,
+                            stateState = stateState,
                         )
 
-                        // Center: D-Pad Direction + Active Buttons cluster
-                        Column(
-                            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            // D-Pad direction
-                            val dpadArrow = dirArrow(recording.dpadDirectionX, recording.dpadDirectionY)
-                            val isDpadActive = recording.dpadDirectionX != 0 || recording.dpadDirectionY != 0
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .clip(PR_PILL_SHAPE)
-                                        .background(
-                                            if (isDpadActive) colors.actionColorSystem.copy(alpha = 0.2f) else colors.surfaceVariant,
-                                        ).border(
-                                            width = 1.dp,
-                                            color = if (isDpadActive) colors.actionColorSystem else colors.divider,
-                                            shape = PR_PILL_SHAPE,
-                                        ).padding(horizontal = 10.dp, vertical = 4.dp),
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.privd_recording_physical_dpad_title, dpadArrow),
-                                    color = if (isDpadActive) colors.actionColorSystem else colors.onSurfaceSecondary,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                            }
+                        PhysicalRecordingCenterCluster(
+                            stateState = stateState,
+                            swapFaceButtons = swapFaceButtons,
+                            modifier = Modifier.weight(1f).padding(horizontal = PR_SPACING_MD),
+                        )
 
-                            // Live Analog Trigger Badges
-                            val showLeftTrigger = recording.leftTrigger > PR_TRIGGER_DISPLAY_THRESHOLD
-                            val showRightTrigger = recording.rightTrigger > PR_TRIGGER_DISPLAY_THRESHOLD
-                            if (showLeftTrigger || showRightTrigger) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(PR_SPACING_XS),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    if (showLeftTrigger) {
-                                        val pct = (recording.leftTrigger * PR_PERCENT_SCALE).roundToInt()
-                                        Box(
-                                            modifier =
-                                                Modifier
-                                                    .clip(PR_BADGE_SHAPE)
-                                                    .background(colors.actionColorGamepad.copy(alpha = PR_ACTIVE_PILL_BG_ALPHA))
-                                                    .border(
-                                                        width = PR_BORDER_WIDTH,
-                                                        color = colors.actionColorGamepad,
-                                                        shape = PR_BADGE_SHAPE,
-                                                    ).padding(horizontal = PR_BADGE_PAD_H, vertical = PR_BADGE_PAD_V),
-                                        ) {
-                                            Text(
-                                                text = stringResource(R.string.privd_recording_physical_trigger_l_badge, pct),
-                                                color = colors.onSurface,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                            )
-                                        }
-                                    }
-                                    if (showRightTrigger) {
-                                        val pct = (recording.rightTrigger * PR_PERCENT_SCALE).roundToInt()
-                                        Box(
-                                            modifier =
-                                                Modifier
-                                                    .clip(PR_BADGE_SHAPE)
-                                                    .background(colors.actionColorGamepad.copy(alpha = PR_ACTIVE_PILL_BG_ALPHA))
-                                                    .border(
-                                                        width = PR_BORDER_WIDTH,
-                                                        color = colors.actionColorGamepad,
-                                                        shape = PR_BADGE_SHAPE,
-                                                    ).padding(horizontal = PR_BADGE_PAD_H, vertical = PR_BADGE_PAD_V),
-                                        ) {
-                                            Text(
-                                                text = stringResource(R.string.privd_recording_physical_trigger_r_badge, pct),
-                                                color = colors.onSurface,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Active Pressed Buttons
-                            if (recording.pressedButtons.isNotEmpty()) {
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalArrangement = Arrangement.spacedBy(PR_SPACING_XS),
-                                ) {
-                                    recording.pressedButtons.forEach { code ->
-                                        val label = gamepadCodeDisplayLabel(code, swapFaceButtons, context)
-                                        if (label.isNotBlank()) {
-                                            Box(
-                                                modifier =
-                                                    Modifier
-                                                        .padding(horizontal = PR_BADGE_MARGIN_H)
-                                                        .clip(PR_BADGE_SHAPE)
-                                                        .background(colors.accent.copy(alpha = PR_RADAR_CROSSHAIR_ALPHA))
-                                                        .border(width = PR_BORDER_WIDTH, color = colors.accent, shape = PR_BADGE_SHAPE)
-                                                        .padding(horizontal = PR_BADGE_PAD_H, vertical = PR_BADGE_PAD_V),
-                                            ) {
-                                                Text(
-                                                    text = label,
-                                                    color = colors.onSurface,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            } else {
-                                Text(
-                                    text = stringResource(R.string.privd_recording_physical_no_buttons),
-                                    color = colors.onSurfaceSecondary,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
-                        }
-
-                        // Right Stick Radar
                         StickRadar(
                             label = stringResource(R.string.privd_recording_physical_stick_r_label),
-                            x = recording.rightStickX,
-                            y = recording.rightStickY,
+                            isRightStick = true,
+                            stateState = stateState,
                         )
                     }
 
@@ -392,20 +311,20 @@ internal fun PhysicalGamepadRecordingSheet(
                 // ── Action Buttons (Cancel / Stop & Save) ─────────────────────
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(PR_SPACING_MD),
                 ) {
                     OutlinedButton(
                         onClick = onCancel,
-                        modifier = Modifier.weight(1f).height(46.dp),
+                        modifier = Modifier.weight(1f).height(PR_ACTION_BTN_HEIGHT),
                         shape = PR_BUTTON_SHAPE,
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(PR_CLOSE_ICON_SIZE),
                             tint = colors.onSurfaceSecondary,
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(PR_SPACING_SM))
                         Text(
                             text = stringResource(R.string.privd_recording_physical_cancel),
                             color = colors.onSurfaceSecondary,
@@ -415,16 +334,16 @@ internal fun PhysicalGamepadRecordingSheet(
 
                     Button(
                         onClick = onStop,
-                        modifier = Modifier.weight(1f).height(46.dp),
+                        modifier = Modifier.weight(1f).height(PR_ACTION_BTN_HEIGHT),
                         colors = ButtonDefaults.buttonColors(containerColor = colors.error),
                         shape = PR_BUTTON_SHAPE,
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Stop,
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(PR_STOP_ICON_SIZE),
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(PR_SPACING_SM))
                         Text(
                             text = stringResource(R.string.privd_recording_physical_stop),
                             style = MaterialTheme.typography.labelLarge,
@@ -438,24 +357,190 @@ internal fun PhysicalGamepadRecordingSheet(
 }
 
 @Composable
+private fun PhysicalRecordingStepBadge(stateState: State<GamepadRecordingState>) {
+    val colors = LocalAppColors.current
+    val stepCount by remember(stateState) {
+        derivedStateOf { (stateState.value as? GamepadRecordingState.Recording)?.stepCount ?: 0 }
+    }
+    Box(
+        modifier =
+            Modifier
+                .clip(PR_PILL_SHAPE)
+                .background(colors.surfaceVariant)
+                .border(width = PR_BORDER_WIDTH, color = colors.divider, shape = PR_PILL_SHAPE)
+                .padding(horizontal = PR_SPACING_M, vertical = PR_SPACING_XS),
+    ) {
+        Text(
+            text = stringResource(R.string.privd_recording_physical_actions_count, stepCount),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PhysicalRecordingCenterCluster(
+    stateState: State<GamepadRecordingState>,
+    swapFaceButtons: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val context = LocalContext.current
+    val dpadXY by remember(stateState) {
+        derivedStateOf {
+            val rec = stateState.value as? GamepadRecordingState.Recording
+            (rec?.dpadDirectionX ?: 0) to (rec?.dpadDirectionY ?: 0)
+        }
+    }
+    val triggerPctPair by remember(stateState) {
+        derivedStateOf {
+            val rec = stateState.value as? GamepadRecordingState.Recording
+            val lt = rec?.leftTrigger ?: 0f
+            val rt = rec?.rightTrigger ?: 0f
+            val ltPct = if (lt > PR_TRIGGER_DISPLAY_THRESHOLD) (lt * PR_PERCENT_SCALE).roundToInt() else -1
+            val rtPct = if (rt > PR_TRIGGER_DISPLAY_THRESHOLD) (rt * PR_PERCENT_SCALE).roundToInt() else -1
+            ltPct to rtPct
+        }
+    }
+    val pressedButtons by remember(stateState) {
+        derivedStateOf {
+            (stateState.value as? GamepadRecordingState.Recording)?.pressedButtons.orEmpty()
+        }
+    }
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(PR_SPACING_S),
+    ) {
+        val (dpadX, dpadY) = dpadXY
+        val dpadArrow = dirArrow(dpadX, dpadY)
+        val isDpadActive = dpadX != 0 || dpadY != 0
+        Box(
+            modifier =
+                Modifier
+                    .clip(PR_PILL_SHAPE)
+                    .background(
+                        if (isDpadActive) colors.actionColorSystem.copy(alpha = PR_ACTIVE_PILL_BG_ALPHA) else colors.surfaceVariant,
+                    ).border(
+                        width = PR_BORDER_WIDTH,
+                        color = if (isDpadActive) colors.actionColorSystem else colors.divider,
+                        shape = PR_PILL_SHAPE,
+                    ).padding(horizontal = PR_SPACING_M, vertical = PR_SPACING_XS),
+        ) {
+            Text(
+                text = stringResource(R.string.privd_recording_physical_dpad_title, dpadArrow),
+                color = if (isDpadActive) colors.actionColorSystem else colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+
+        val (ltPct, rtPct) = triggerPctPair
+        if (ltPct >= 0 || rtPct >= 0) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(PR_SPACING_XS),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (ltPct >= 0) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .clip(PR_BADGE_SHAPE)
+                                .background(colors.actionColorGamepad.copy(alpha = PR_ACTIVE_PILL_BG_ALPHA))
+                                .border(
+                                    width = PR_BORDER_WIDTH,
+                                    color = colors.actionColorGamepad,
+                                    shape = PR_BADGE_SHAPE,
+                                ).padding(horizontal = PR_BADGE_PAD_H, vertical = PR_BADGE_PAD_V),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.privd_recording_physical_trigger_l_badge, ltPct),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+                if (rtPct >= 0) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .clip(PR_BADGE_SHAPE)
+                                .background(colors.actionColorGamepad.copy(alpha = PR_ACTIVE_PILL_BG_ALPHA))
+                                .border(
+                                    width = PR_BORDER_WIDTH,
+                                    color = colors.actionColorGamepad,
+                                    shape = PR_BADGE_SHAPE,
+                                ).padding(horizontal = PR_BADGE_PAD_H, vertical = PR_BADGE_PAD_V),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.privd_recording_physical_trigger_r_badge, rtPct),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+        }
+
+        if (pressedButtons.isNotEmpty()) {
+            FlowRow(
+                horizontalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.spacedBy(PR_SPACING_XS),
+            ) {
+                pressedButtons.forEach { code ->
+                    val label = gamepadCodeDisplayLabel(code, swapFaceButtons, context)
+                    if (label.isNotBlank()) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .padding(horizontal = PR_BADGE_MARGIN_H)
+                                    .clip(PR_BADGE_SHAPE)
+                                    .background(colors.accent.copy(alpha = PR_RADAR_CROSSHAIR_ALPHA))
+                                    .border(width = PR_BORDER_WIDTH, color = colors.accent, shape = PR_BADGE_SHAPE)
+                                    .padding(horizontal = PR_BADGE_PAD_H, vertical = PR_BADGE_PAD_V),
+                        ) {
+                            Text(
+                                text = label,
+                                color = colors.onSurface,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            Text(
+                text = stringResource(R.string.privd_recording_physical_no_buttons),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
 private fun StickRadar(
     label: String,
-    x: Float,
-    y: Float,
+    isRightStick: Boolean,
+    stateState: State<GamepadRecordingState>,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     val accentColor = colors.actionColorGamepad
     val borderColor = colors.divider
     val textColor = colors.onSurface
-    val secondaryTextColor = colors.onSurfaceSecondary
-    val mag = sqrt(x * x + y * y).coerceIn(0f, 1f)
-    val magPercent = (mag * 100).roundToInt()
 
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(PR_SPACING_XS),
     ) {
         Text(
             text = label,
@@ -465,14 +550,17 @@ private fun StickRadar(
         )
 
         Box(
-            modifier = Modifier.size(PR_STICK_RADAR_SIZE_DP.dp),
+            modifier = Modifier.size(PR_STICK_RADAR_SIZE),
             contentAlignment = Alignment.Center,
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
+                val rec = stateState.value as? GamepadRecordingState.Recording
+                val x = if (isRightStick) (rec?.rightStickX ?: 0f) else (rec?.leftStickX ?: 0f)
+                val y = if (isRightStick) (rec?.rightStickY ?: 0f) else (rec?.leftStickY ?: 0f)
+                val mag = sqrt(x * x + y * y).coerceIn(0f, 1f)
                 val radius = size.minDimension / 2f
                 val center = Offset(size.width / 2f, size.height / 2f)
 
-                // Outer radar circle
                 drawCircle(
                     color = borderColor.copy(alpha = PR_RADAR_BG_ALPHA),
                     radius = radius,
@@ -482,68 +570,90 @@ private fun StickRadar(
                     color = borderColor,
                     radius = radius,
                     center = center,
-                    style = Stroke(width = 1.5.dp.toPx()),
+                    style = Stroke(width = PR_RADAR_OUTER_STROKE.toPx()),
                 )
 
-                // Crosshairs
                 drawLine(
                     color = borderColor.copy(alpha = PR_RADAR_CROSSHAIR_ALPHA),
                     start = Offset(center.x - radius, center.y),
                     end = Offset(center.x + radius, center.y),
-                    strokeWidth = 1.dp.toPx(),
+                    strokeWidth = PR_BORDER_WIDTH.toPx(),
                 )
                 drawLine(
                     color = borderColor.copy(alpha = PR_RADAR_CROSSHAIR_ALPHA),
                     start = Offset(center.x, center.y - radius),
                     end = Offset(center.x, center.y + radius),
-                    strokeWidth = 1.dp.toPx(),
+                    strokeWidth = PR_BORDER_WIDTH.toPx(),
                 )
 
-                // Center deadzone circle
                 drawCircle(
-                    color = borderColor.copy(alpha = 0.35f),
-                    radius = radius * 0.2f,
+                    color = borderColor.copy(alpha = PR_DEADZONE_RING_ALPHA),
+                    radius = radius * PR_DEADZONE_RING_FRACTION,
                     center = center,
-                    style = Stroke(width = 1.dp.toPx()),
+                    style = Stroke(width = PR_BORDER_WIDTH.toPx()),
                 )
 
-                // Thumb Position
+                val thumbRadiusPx = PR_STICK_THUMB_RADIUS.toPx()
                 val thumbOffset =
                     Offset(
-                        x = center.x + (x.coerceIn(-1f, 1f) * (radius - PR_STICK_THUMB_RADIUS_DP.dp.toPx())),
-                        y = center.y + (y.coerceIn(-1f, 1f) * (radius - PR_STICK_THUMB_RADIUS_DP.dp.toPx())),
+                        x = center.x + (x.coerceIn(-1f, 1f) * (radius - thumbRadiusPx)),
+                        y = center.y + (y.coerceIn(-1f, 1f) * (radius - thumbRadiusPx)),
                     )
 
-                if (mag > 0.05f) {
-                    // Vector line from center
+                if (mag > PR_DEFLECTION_THRESHOLD) {
                     drawLine(
-                        color = accentColor.copy(alpha = 0.6f),
+                        color = accentColor.copy(alpha = PR_VECTOR_ALPHA),
                         start = center,
                         end = thumbOffset,
-                        strokeWidth = 2.dp.toPx(),
+                        strokeWidth = PR_RADAR_VECTOR_STROKE.toPx(),
                     )
                 }
 
                 drawCircle(
-                    color = if (mag > 0.05f) accentColor else borderColor,
-                    radius = PR_STICK_THUMB_RADIUS_DP.dp.toPx(),
+                    color = if (mag > PR_DEFLECTION_THRESHOLD) accentColor else borderColor,
+                    radius = thumbRadiusPx,
                     center = thumbOffset,
                 )
             }
         }
 
-        val statusText =
-            if (magPercent > 5) {
-                "${"%.2f".format(x)}, ${"%.2f".format(y)} ($magPercent%)"
-            } else {
-                stringResource(R.string.privd_recording_physical_stick_neutral)
-            }
-
-        Text(
-            text = statusText,
-            color = if (magPercent > 5) accentColor else secondaryTextColor,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (magPercent > 5) FontWeight.Bold else FontWeight.Normal,
+        StickRadarStatusText(
+            isRightStick = isRightStick,
+            stateState = stateState,
         )
     }
+}
+
+@Composable
+private fun StickRadarStatusText(
+    isRightStick: Boolean,
+    stateState: State<GamepadRecordingState>,
+) {
+    val colors = LocalAppColors.current
+    val stickXY by remember(isRightStick, stateState) {
+        derivedStateOf {
+            val rec = stateState.value as? GamepadRecordingState.Recording
+            if (isRightStick) {
+                (rec?.rightStickX ?: 0f) to (rec?.rightStickY ?: 0f)
+            } else {
+                (rec?.leftStickX ?: 0f) to (rec?.leftStickY ?: 0f)
+            }
+        }
+    }
+    val (x, y) = stickXY
+    val mag = sqrt(x * x + y * y).coerceIn(0f, 1f)
+    val magPercent = (mag * PR_PERCENT_SCALE).roundToInt()
+    val isDeflected = magPercent > PR_DEFLECTION_PERCENT_THRESHOLD
+    val statusText =
+        if (isDeflected) {
+            "${"%.2f".format(x)}, ${"%.2f".format(y)} ($magPercent%)"
+        } else {
+            stringResource(R.string.privd_recording_physical_stick_neutral)
+        }
+    Text(
+        text = statusText,
+        color = if (isDeflected) colors.actionColorGamepad else colors.onSurfaceSecondary,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = if (isDeflected) FontWeight.Bold else FontWeight.Normal,
+    )
 }

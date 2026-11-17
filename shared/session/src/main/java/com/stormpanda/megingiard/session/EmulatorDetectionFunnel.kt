@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "EmulatorDetectionFunnel"
 private const val POLLING_DELAY_MS = 1000L
+private const val CONFIRMED_POLLING_DELAY_MS = 2500L
 
 /**
  * Central router singleton that intercepts foreground application changes, dispatches
@@ -50,7 +51,7 @@ object EmulatorDetectionFunnel {
                 var lastSession = target.initialSession
                 var confirmedLive = target.hasConfirmedLiveSession
                 while (true) {
-                    delay(POLLING_DELAY_MS)
+                    delay(if (confirmedLive && lastSession != null) CONFIRMED_POLLING_DELAY_MS else POLLING_DELAY_MS)
                     val currentSession =
                         target.detector.detectActiveSession(
                             target.packageName,

@@ -716,16 +716,50 @@ class PadButtonSerializationTest {
 
         assertFalse(PadAction.ScrollWheel.supportsCustomIcon())
         assertFalse(PadAction.TrackpointMove().supportsCustomIcon())
-        assertFalse(PadAction.BackgroundPeek.supportsCustomIcon())
+        assertFalse(PadAction.AnalogStick().supportsCustomIcon())
         assertFalse(PadAction.AppLauncher("com.example").supportsCustomIcon())
         assertTrue(PadAction.LayoutNext.supportsCustomIcon())
         assertTrue(PadAction.SwitchToProfile("p1").supportsCustomIcon())
 
         assertNull(base.withActionSizing(PadAction.ScrollWheel).iconName)
         assertNull(base.withActionSizing(PadAction.TrackpointMove()).iconName)
-        assertNull(base.withActionSizing(PadAction.BackgroundPeek).iconName)
+        assertNull(base.withActionSizing(PadAction.AnalogStick()).iconName)
         assertNull(base.withActionSizing(PadAction.AppLauncher("com.example")).iconName)
         assertEquals("star", base.withActionSizing(PadAction.SwitchToHub).iconName)
+    }
+
+    @Test
+    fun `legacy PadLayout JSON containing removed ambient_peek button strips it cleanly`() {
+        val legacyLayoutJson =
+            """
+            {
+                "id": "layout-legacy",
+                "name": "Legacy",
+                "buttons": [
+                    {
+                        "id": "btn-keep",
+                        "label": "Enter",
+                        "posX": 0.25,
+                        "posY": 0.5,
+                        "widthPx": 136.0,
+                        "heightPx": 136.0,
+                        "action": { "type": "keyboard_key", "keycode": 28, "label": "Enter" }
+                    },
+                    {
+                        "id": "btn-removed-peek",
+                        "label": "Peek",
+                        "posX": 0.75,
+                        "posY": 0.5,
+                        "widthPx": 136.0,
+                        "heightPx": 136.0,
+                        "action": { "type": "ambient_peek" }
+                    }
+                ]
+            }
+            """.trimIndent()
+        val decoded = json.decodeFromString<PadLayout>(legacyLayoutJson)
+        assertEquals(1, decoded.buttons.size)
+        assertEquals("btn-keep", decoded.buttons[0].id)
     }
 
     @Test

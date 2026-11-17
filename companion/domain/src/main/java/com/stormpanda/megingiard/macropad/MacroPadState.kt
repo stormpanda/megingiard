@@ -281,7 +281,6 @@ object MacroPadState {
             _isCroppingBackground.value = false
             _isCroppingMask.value = false
             _gridMode.value = GridMode.OFF
-            _isPeekActive.value = false
             clearShiftState()
         }
     }
@@ -1401,23 +1400,5 @@ object MacroPadState {
         if (changed) {
             AppLog.d(TAG, "setLayoutMirrorFollowActive layoutId=$layoutId value=$value")
         }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Ambient Peek state
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private val _isPeekActive = MutableStateFlow(false)
-    val isPeekActive: StateFlow<Boolean> = _isPeekActive.asStateFlow()
-
-    fun togglePeek() {
-        val next = !_isPeekActive.value
-        AppLog.d(TAG, "togglePeek → $next")
-        _isPeekActive.value = next
-    }
-
-    fun resetPeek() {
-        AppLog.d(TAG, "resetPeek")
-        _isPeekActive.value = false
     }
 }

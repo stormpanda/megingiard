@@ -357,8 +357,10 @@ fun GlobalSettingsScreen(
                             DeadzonesSubPage(
                                 deadzoneLeft = deadzoneLeft,
                                 deadzoneRight = deadzoneRight,
-                                onLeftChange = { MacroPadSettings.setDeadzoneLeft(it) },
-                                onRightChange = { MacroPadSettings.setDeadzoneRight(it) },
+                                onLeftChange = { MacroPadSettings.updateDeadzoneLeftLive(it) },
+                                onRightChange = { MacroPadSettings.updateDeadzoneRightLive(it) },
+                                onLeftChangeFinished = { MacroPadSettings.setDeadzoneLeft(MacroPadSettings.deadzoneLeft.value) },
+                                onRightChangeFinished = { MacroPadSettings.setDeadzoneRight(MacroPadSettings.deadzoneRight.value) },
                             )
                         }
                     }

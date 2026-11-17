@@ -238,31 +238,37 @@ static inline int parse_touch_command(const char* line, int fd, int* active_slot
         if (slot < 0 || slot >= MAX_TOUCH_SLOTS) return 0;
         // Multi-touch protocol format: D/M <slot> <x> <y>
         if (strcmp(action, "D") == 0) {
-            write_event(fd, EV_ABS, ABS_MT_SLOT, slot);
-            write_event(fd, EV_ABS, ABS_MT_TRACKING_ID, slot + 1);
-            write_event(fd, EV_ABS, ABS_MT_POSITION_X, x);
-            write_event(fd, EV_ABS, ABS_MT_POSITION_Y, y);
+            struct input_event evs[6];
+            set_input_event(&evs[0], EV_ABS, ABS_MT_SLOT, slot);
+            set_input_event(&evs[1], EV_ABS, ABS_MT_TRACKING_ID, slot + 1);
+            set_input_event(&evs[2], EV_ABS, ABS_MT_POSITION_X, x);
+            set_input_event(&evs[3], EV_ABS, ABS_MT_POSITION_Y, y);
             if (active_slots_mask) *active_slots_mask |= (1 << slot);
-            write_event(fd, EV_KEY, BTN_TOUCH, 1);
-            write_event(fd, EV_SYN, SYN_REPORT, 0);
+            set_input_event(&evs[4], EV_KEY, BTN_TOUCH, 1);
+            set_input_event(&evs[5], EV_SYN, SYN_REPORT, 0);
+            write_events_batch(fd, evs, 6);
             return 1;
         } else if (strcmp(action, "M") == 0) {
-            write_event(fd, EV_ABS, ABS_MT_SLOT, slot);
-            write_event(fd, EV_ABS, ABS_MT_POSITION_X, x);
-            write_event(fd, EV_ABS, ABS_MT_POSITION_Y, y);
-            write_event(fd, EV_SYN, SYN_REPORT, 0);
+            struct input_event evs[4];
+            set_input_event(&evs[0], EV_ABS, ABS_MT_SLOT, slot);
+            set_input_event(&evs[1], EV_ABS, ABS_MT_POSITION_X, x);
+            set_input_event(&evs[2], EV_ABS, ABS_MT_POSITION_Y, y);
+            set_input_event(&evs[3], EV_SYN, SYN_REPORT, 0);
+            write_events_batch(fd, evs, 4);
             return 1;
         }
     } else if (parsed == 2) {
         if (slot < 0 || slot >= MAX_TOUCH_SLOTS) return 0;
         // Multi-touch UP format: U <slot>
         if (strcmp(action, "U") == 0) {
-            write_event(fd, EV_ABS, ABS_MT_SLOT, slot);
-            write_event(fd, EV_ABS, ABS_MT_TRACKING_ID, -1);
             if (active_slots_mask) *active_slots_mask &= ~(1 << slot);
             int is_active = (active_slots_mask && *active_slots_mask != 0) ? 1 : 0;
-            write_event(fd, EV_KEY, BTN_TOUCH, is_active);
-            write_event(fd, EV_SYN, SYN_REPORT, 0);
+            struct input_event evs[4];
+            set_input_event(&evs[0], EV_ABS, ABS_MT_SLOT, slot);
+            set_input_event(&evs[1], EV_ABS, ABS_MT_TRACKING_ID, -1);
+            set_input_event(&evs[2], EV_KEY, BTN_TOUCH, is_active);
+            set_input_event(&evs[3], EV_SYN, SYN_REPORT, 0);
+            write_events_batch(fd, evs, 4);
             return 1;
         }
     }
@@ -306,30 +312,41 @@ static inline int parse_mouse_command(const char* line, int fd) {
             else return 0;
 
             int32_t val = (du == 'D') ? 1 : 0;
-            write_event(fd, EV_KEY, btn, val);
-            write_event(fd, EV_SYN, SYN_REPORT, 0);
+            struct input_event evs[2];
+            set_input_event(&evs[0], EV_KEY, btn, val);
+            set_input_event(&evs[1], EV_SYN, SYN_REPORT, 0);
+            write_events_batch(fd, evs, 2);
             return 1;
         }
     } else if (line[0] == 'M' && line[1] == 'M') {
         int dx, dy;
         if (sscanf(line, "MM %d %d", &dx, &dy) == 2) {
-            if (dx != 0) write_event(fd, EV_REL, REL_X, dx);
-            if (dy != 0) write_event(fd, EV_REL, REL_Y, dy);
-            if (dx != 0 || dy != 0) write_event(fd, EV_SYN, SYN_REPORT, 0);
+            struct input_event evs[3];
+            int count = 0;
+            if (dx != 0) set_input_event(&evs[count++], EV_REL, REL_X, dx);
+            if (dy != 0) set_input_event(&evs[count++], EV_REL, REL_Y, dy);
+            if (count > 0) {
+                set_input_event(&evs[count++], EV_SYN, SYN_REPORT, 0);
+                write_events_batch(fd, evs, count);
+            }
             return 1;
         }
     } else if (line[0] == 'M' && line[1] == 'W') {
         int delta;
         if (sscanf(line, "MW %d", &delta) == 1) {
-            write_event(fd, EV_REL, REL_WHEEL, delta);
-            write_event(fd, EV_SYN, SYN_REPORT, 0);
+            struct input_event evs[2];
+            set_input_event(&evs[0], EV_REL, REL_WHEEL, delta);
+            set_input_event(&evs[1], EV_SYN, SYN_REPORT, 0);
+            write_events_batch(fd, evs, 2);
             return 1;
         }
     } else if (line[0] == 'M' && line[1] == 'H') {
         int delta;
         if (sscanf(line, "MH %d", &delta) == 1) {
-            write_event(fd, EV_REL, REL_HWHEEL, delta);
-            write_event(fd, EV_SYN, SYN_REPORT, 0);
+            struct input_event evs[2];
+            set_input_event(&evs[0], EV_REL, REL_HWHEEL, delta);
+            set_input_event(&evs[1], EV_SYN, SYN_REPORT, 0);
+            write_events_batch(fd, evs, 2);
             return 1;
         }
     }
@@ -350,12 +367,16 @@ static inline int parse_key_command(const char* line, int fd) {
         if (sscanf(line, "%3s %d", action, &code) == 2) {
             if (code >= 1 && code <= 464) {
                 if (strcmp(action, "KD") == 0) {
-                    write_event(fd, EV_KEY, (uint16_t)code, 1);
-                    write_event(fd, EV_SYN, SYN_REPORT, 0);
+                    struct input_event evs[2];
+                    set_input_event(&evs[0], EV_KEY, (uint16_t)code, 1);
+                    set_input_event(&evs[1], EV_SYN, SYN_REPORT, 0);
+                    write_events_batch(fd, evs, 2);
                     return 1;
                 } else if (strcmp(action, "KU") == 0) {
-                    write_event(fd, EV_KEY, (uint16_t)code, 0);
-                    write_event(fd, EV_SYN, SYN_REPORT, 0);
+                    struct input_event evs[2];
+                    set_input_event(&evs[0], EV_KEY, (uint16_t)code, 0);
+                    set_input_event(&evs[1], EV_SYN, SYN_REPORT, 0);
+                    write_events_batch(fd, evs, 2);
                     return 1;
                 }
             }
@@ -754,7 +775,19 @@ static inline int is_gamepad_command_line(const char* line) {
     return (strncmp(line, "GD ", 3) == 0 ||
             strncmp(line, "GU ", 3) == 0 ||
             strncmp(line, "HD ", 3) == 0 ||
-            strncmp(line, "JS ", 3) == 0) ? 1 : 0;
+            strncmp(line, "JS ", 3) == 0 ||
+            strncmp(line, "J2 ", 3) == 0) ? 1 : 0;
+}
+
+static inline const GamepadAxisBinding* resolve_stick_axis_binding(
+    const GamepadAxisMap* axis_map,
+    int axis_code
+) {
+    if (axis_code == ABS_X) return &axis_map->left_x;
+    if (axis_code == ABS_Y) return &axis_map->left_y;
+    if (axis_code == ABS_Z) return &axis_map->right_x;
+    if (axis_code == ABS_RZ) return &axis_map->right_y;
+    return NULL;
 }
 
 /**
@@ -762,9 +795,10 @@ static inline int is_gamepad_command_line(const char* line) {
  *   GD <code> / GU <code>
  *   HD <axis> <value>
  *   JS <canonical_axis_code> <value>
+ *   J2 <axisX> <valX> <axisY> <valY>
  *     - Sticks (ABS_X=0, ABS_Y=1, ABS_Z=2, ABS_RZ=5): value in -32768..32767
  *     - Triggers (ABS_BRAKE=10 [L2], ABS_GAS=9 [R2]): value in 0..32767
- * If a kernel `write_event` fails and `out_write_errno` is non-NULL, stores `errno`
+ * If a kernel `write_events_batch` fails and `out_write_errno` is non-NULL, stores `errno`
  * in `*out_write_errno` and returns 0 so callers can recover from `ENODEV`.
  * Returns 1 if handled and written successfully, 0 otherwise.
  */
@@ -786,16 +820,12 @@ static inline int parse_gamepad_command_mapped_ex(
         int code;
         if (sscanf(line, "%3s %d", action, &code) == 2) {
             if (code >= BTN_MISC && code <= KEY_MAX) {
-                if (strcmp(action, "GD") == 0) {
-                    if (write_event(fd, EV_KEY, (uint16_t)code, 1) < 0 ||
-                        write_event(fd, EV_SYN, SYN_REPORT, 0) < 0) {
-                        if (out_write_errno) *out_write_errno = errno;
-                        return 0;
-                    }
-                    return 1;
-                } else if (strcmp(action, "GU") == 0) {
-                    if (write_event(fd, EV_KEY, (uint16_t)code, 0) < 0 ||
-                        write_event(fd, EV_SYN, SYN_REPORT, 0) < 0) {
+                if (strcmp(action, "GD") == 0 || strcmp(action, "GU") == 0) {
+                    int32_t val = (action[1] == 'D') ? 1 : 0;
+                    struct input_event evs[2];
+                    set_input_event(&evs[0], EV_KEY, (uint16_t)code, val);
+                    set_input_event(&evs[1], EV_SYN, SYN_REPORT, 0);
+                    if (write_events_batch(fd, evs, 2) < 0) {
                         if (out_write_errno) *out_write_errno = errno;
                         return 0;
                     }
@@ -808,8 +838,10 @@ static inline int parse_gamepad_command_mapped_ex(
         if (sscanf(line, "%3s %d %d", action, &axis, &value) == 3) {
             if (axis >= 0 && axis <= 1 && value >= -1 && value <= 1 && strcmp(action, "HD") == 0) {
                 uint16_t hat_code = (axis == 0) ? ABS_HAT0X : ABS_HAT0Y;
-                if (write_event(fd, EV_ABS, hat_code, value) < 0 ||
-                    write_event(fd, EV_SYN, SYN_REPORT, 0) < 0) {
+                struct input_event evs[2];
+                set_input_event(&evs[0], EV_ABS, hat_code, value);
+                set_input_event(&evs[1], EV_SYN, SYN_REPORT, 0);
+                if (write_events_batch(fd, evs, 2) < 0) {
                     if (out_write_errno) *out_write_errno = errno;
                     return 0;
                 }
@@ -817,19 +849,41 @@ static inline int parse_gamepad_command_mapped_ex(
             }
         }
     } else if (line[0] == 'J') {
+        if (line[1] == '2' && line[2] == ' ') {
+            int axis_x, val_x, axis_y, val_y;
+            if (sscanf(line + 3, "%d %d %d %d", &axis_x, &val_x, &axis_y, &val_y) == 4) {
+                if (val_x < CANONICAL_STICK_MIN || val_x > CANONICAL_STICK_MAX ||
+                    val_y < CANONICAL_STICK_MIN || val_y > CANONICAL_STICK_MAX) {
+                    return 0;
+                }
+                const GamepadAxisBinding* bx = resolve_stick_axis_binding(axis_map, axis_x);
+                const GamepadAxisBinding* by = resolve_stick_axis_binding(axis_map, axis_y);
+                if (!bx || !by || !bx->supported || !by->supported) return 0;
+                int32_t raw_x = scale_canonical_stick_to_raw(val_x, bx->raw_min, bx->raw_max);
+                int32_t raw_y = scale_canonical_stick_to_raw(val_y, by->raw_min, by->raw_max);
+                struct input_event evs[3];
+                set_input_event(&evs[0], EV_ABS, bx->raw_axis, raw_x);
+                set_input_event(&evs[1], EV_ABS, by->raw_axis, raw_y);
+                set_input_event(&evs[2], EV_SYN, SYN_REPORT, 0);
+                if (write_events_batch(fd, evs, 3) < 0) {
+                    if (out_write_errno) *out_write_errno = errno;
+                    return 0;
+                }
+                return 1;
+            }
+            return 0;
+        }
         int axis_code, value;
         if (sscanf(line, "%3s %d %d", action, &axis_code, &value) == 3 && strcmp(action, "JS") == 0) {
-            if (axis_code == ABS_X || axis_code == ABS_Y || axis_code == ABS_Z || axis_code == ABS_RZ) {
+            const GamepadAxisBinding* b = resolve_stick_axis_binding(axis_map, axis_code);
+            if (b != NULL) {
                 if (value < CANONICAL_STICK_MIN || value > CANONICAL_STICK_MAX) return 0;
-                const GamepadAxisBinding* b = NULL;
-                if (axis_code == ABS_X) b = &axis_map->left_x;
-                else if (axis_code == ABS_Y) b = &axis_map->left_y;
-                else if (axis_code == ABS_Z) b = &axis_map->right_x;
-                else b = &axis_map->right_y;
                 if (!b->supported) return 0;
                 int32_t raw_val = scale_canonical_stick_to_raw(value, b->raw_min, b->raw_max);
-                if (write_event(fd, EV_ABS, b->raw_axis, raw_val) < 0 ||
-                    write_event(fd, EV_SYN, SYN_REPORT, 0) < 0) {
+                struct input_event evs[2];
+                set_input_event(&evs[0], EV_ABS, b->raw_axis, raw_val);
+                set_input_event(&evs[1], EV_SYN, SYN_REPORT, 0);
+                if (write_events_batch(fd, evs, 2) < 0) {
                     if (out_write_errno) *out_write_errno = errno;
                     return 0;
                 }
@@ -840,25 +894,19 @@ static inline int parse_gamepad_command_mapped_ex(
                     (axis_code == ABS_BRAKE) ? &axis_map->left_trigger : &axis_map->right_trigger;
                 const GamepadAxisBinding* alt =
                     (axis_code == ABS_BRAKE) ? &axis_map->left_trigger_alt : &axis_map->right_trigger_alt;
-                int wrote = 0;
+                struct input_event evs[3];
+                int count = 0;
                 if (primary->supported) {
                     int32_t raw_val = scale_canonical_trigger_to_raw(value, primary->raw_min, primary->raw_max);
-                    if (write_event(fd, EV_ABS, primary->raw_axis, raw_val) < 0) {
-                        if (out_write_errno) *out_write_errno = errno;
-                        return 0;
-                    }
-                    wrote = 1;
+                    set_input_event(&evs[count++], EV_ABS, primary->raw_axis, raw_val);
                 }
                 if (alt->supported && (!primary->supported || alt->raw_axis != primary->raw_axis)) {
                     int32_t alt_val = scale_canonical_trigger_to_raw(value, alt->raw_min, alt->raw_max);
-                    if (write_event(fd, EV_ABS, alt->raw_axis, alt_val) < 0) {
-                        if (out_write_errno) *out_write_errno = errno;
-                        return 0;
-                    }
-                    wrote = 1;
+                    set_input_event(&evs[count++], EV_ABS, alt->raw_axis, alt_val);
                 }
-                if (wrote) {
-                    if (write_event(fd, EV_SYN, SYN_REPORT, 0) < 0) {
+                if (count > 0) {
+                    set_input_event(&evs[count++], EV_SYN, SYN_REPORT, 0);
+                    if (write_events_batch(fd, evs, count) < 0) {
                         if (out_write_errno) *out_write_errno = errno;
                         return 0;
                     }

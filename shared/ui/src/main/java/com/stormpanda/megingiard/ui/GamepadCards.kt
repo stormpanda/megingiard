@@ -2,7 +2,6 @@ package com.stormpanda.megingiard.ui
 
 import android.view.KeyEvent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
@@ -104,6 +103,7 @@ fun GamepadFocusCard(
     enabled: Boolean = true,
     shape: Shape = GC_CARD_SHAPE,
     cardBgColor: Color? = null,
+    cardBgColorProvider: (() -> Color)? = null,
     unfocusedBorderColor: Color = LocalAppColors.current.subduedBorder,
     onCustomKeyEvent: ((ComposeKeyEvent) -> Boolean)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
@@ -168,7 +168,7 @@ fun GamepadFocusCard(
             null
         }
     val animatedBgColorState: State<Color>? =
-        if (cardBgColor == null && hasEverBeenEffectivelyFocused) {
+        if (cardBgColor == null && cardBgColorProvider == null && hasEverBeenEffectivelyFocused) {
             val targetBg =
                 if (isEffectivelyFocused) {
                     colors.surface.copy(alpha = GC_CARD_FOCUSED_BG_ALPHA)
@@ -286,7 +286,7 @@ fun GamepadFocusCard(
                     onDrawWithContent {
                         drawOutline(
                             outline = outline,
-                            color = cardBgColor ?: animatedBgColorState?.value ?: defaultUnfocusedBgColor,
+                            color = cardBgColorProvider?.invoke() ?: cardBgColor ?: animatedBgColorState?.value ?: defaultUnfocusedBgColor,
                             style = Fill,
                         )
                         drawContent()
@@ -310,7 +310,7 @@ fun GamepadFocusCard(
                     onDrawBehind {
                         drawOutline(
                             outline = outline,
-                            color = cardBgColor ?: animatedBgColorState?.value ?: defaultUnfocusedBgColor,
+                            color = cardBgColorProvider?.invoke() ?: cardBgColor ?: animatedBgColorState?.value ?: defaultUnfocusedBgColor,
                             style = Fill,
                         )
                         drawOutline(
@@ -432,7 +432,7 @@ fun GamepadCardText(
 ) {
     val colors = LocalAppColors.current
     Column(
-        modifier = modifier.animateContentSize(),
+        modifier = modifier,
     ) {
         Text(
             text = title,
@@ -769,26 +769,25 @@ fun GamepadActionCard(
 ) {
     val colors = LocalAppColors.current
 
-    val effectiveBg =
-        if (cardBgColor != null) {
-            cardBgColor
-        } else if (pulseOnChanges) {
+    val pulseBgProvider: (() -> Color)? =
+        if (cardBgColor == null && pulseOnChanges) {
             val pulseTransition = rememberInfiniteTransition(label = "actionPulse")
-            val pulseFraction by pulseTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = 1f,
-                animationSpec =
-                    infiniteRepeatable(
-                        animation = tween(durationMillis = GC_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse,
-                    ),
-                label = "actionPulseFraction",
-            )
-            lerp(
-                colors.surface.copy(alpha = GC_PULSE_SURFACE_ALPHA),
-                colors.accent.copy(alpha = GC_PULSE_ACCENT_ALPHA),
-                pulseFraction,
-            )
+            val pulseFractionState =
+                pulseTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec =
+                        infiniteRepeatable(
+                            animation = tween(durationMillis = GC_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                    label = "actionPulseFraction",
+                )
+            val surfaceBase = colors.surface.copy(alpha = GC_PULSE_SURFACE_ALPHA)
+            val accentBase = colors.accent.copy(alpha = GC_PULSE_ACCENT_ALPHA)
+            remember(surfaceBase, accentBase, pulseFractionState) {
+                { lerp(surfaceBase, accentBase, pulseFractionState.value) }
+            }
         } else {
             null
         }
@@ -799,7 +798,8 @@ fun GamepadActionCard(
         modifier = modifier,
         cardFocusRequester = cardFocusRequester,
         itemKey = itemKey,
-        cardBgColor = effectiveBg,
+        cardBgColor = cardBgColor,
+        cardBgColorProvider = pulseBgProvider,
         onFocusChanged = onFocusChanged,
     ) { isFocused ->
         GamepadCardRow(

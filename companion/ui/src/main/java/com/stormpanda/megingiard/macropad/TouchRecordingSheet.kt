@@ -39,8 +39,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,6 +62,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppDivider
@@ -102,9 +106,19 @@ private val TRS_SPACING_M = 8.dp
 private val TRS_SPACING_L = 10.dp
 private val TRS_SPACING_XL = 12.dp
 private val TRS_ICON_SIZE = 16.dp
+private val TRS_BORDER_WIDTH = 1.dp
+private val TRS_ZERO_DP = 0.dp
+private val TRS_CONTAINER_MAX_WIDTH = TRS_CONTAINER_MAX_WIDTH_DP.dp
+private val TRS_TOUCH_INDICATOR_RADIUS = TRS_TOUCH_INDICATOR_RADIUS_DP.dp
+private val TRS_TOUCH_PULSE_RADIUS = TRS_TOUCH_PULSE_RADIUS_DP.dp
+private val TRS_TRAIL_STROKE_WIDTH = TRS_TRAIL_STROKE_WIDTH_DP.dp
 private const val TRS_TOUCH_INDICATOR_RADIUS_DP = 10f
 private const val TRS_TOUCH_PULSE_RADIUS_DP = 22f
 private const val TRS_TRAIL_STROKE_WIDTH_DP = 3.5f
+private const val TRS_MODE_BADGE_ALPHA = 0.15f
+private const val TRS_PULSE_FILL_ALPHA = 0.35f
+private const val TRS_INNER_DOT_FRACTION = 0.45f
+private const val TRS_PERCENT_SCALE = 100f
 
 private val TRS_POINTER_PALETTE = AppPalettes.touchPointerSlots
 
@@ -118,6 +132,36 @@ private fun pointerColor(
         TRS_POINTER_PALETTE[(slot - 1) % TRS_POINTER_PALETTE.size]
     }
 
+@Composable
+internal fun LiveTouchRecordingSheet(
+    onStop: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val stateState = TouchRecordingManager.state.collectAsStateWithLifecycle()
+    TouchRecordingSheet(
+        stateState = stateState,
+        onStop = onStop,
+        onCancel = onCancel,
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun TouchRecordingSheet(
+    state: TouchRecordingState,
+    onStop: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TouchRecordingSheet(
+        stateState = rememberUpdatedState(state),
+        onStop = onStop,
+        onCancel = onCancel,
+        modifier = modifier,
+    )
+}
+
 /**
  * Companion HUD rendered on Display 4 (Secondary Display) during a touch macro recording session.
  *
@@ -126,14 +170,20 @@ private fun pointerColor(
  */
 @Composable
 internal fun TouchRecordingSheet(
-    state: TouchRecordingState,
+    stateState: State<TouchRecordingState>,
     onStop: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     val bezelBrush = rememberBezelBrush()
-    val recording = state as? TouchRecordingState.Recording
+    val sessionMeta by remember(stateState) {
+        derivedStateOf {
+            val rec = stateState.value as? TouchRecordingState.Recording
+            (rec?.startElapsedRealtime ?: 0L) to (rec?.mode ?: TouchRecordingMode.TAP)
+        }
+    }
+    val (startEpoch, mode) = sessionMeta
 
     BackHandler {
         onCancel()
@@ -143,9 +193,6 @@ internal fun TouchRecordingSheet(
         AppLog.i(TAG, "TouchRecordingSheet mounted on Display 4")
         onDispose { AppLog.i(TAG, "TouchRecordingSheet unmounted from Display 4") }
     }
-
-    val startEpoch = recording?.startElapsedRealtime ?: 0L
-    val mode = recording?.mode ?: TouchRecordingMode.TAP
 
     Box(
         modifier =
@@ -186,13 +233,13 @@ internal fun TouchRecordingSheet(
         Box(
             modifier =
                 Modifier
-                    .widthIn(max = TRS_CONTAINER_MAX_WIDTH_DP.dp)
+                    .widthIn(max = TRS_CONTAINER_MAX_WIDTH)
                     .fillMaxWidth()
                     .padding(horizontal = TRS_SCREEN_PADDING_H, vertical = TRS_SCREEN_PADDING_V)
                     .clip(TRS_CONTAINER_SHAPE)
                     .background(colors.surface)
                     .border(
-                        width = 1.dp,
+                        width = TRS_BORDER_WIDTH,
                         brush = bezelBrush,
                         shape = TRS_CONTAINER_SHAPE,
                     ).padding(TRS_CONTAINER_PADDING),
@@ -231,25 +278,6 @@ internal fun TouchRecordingSheet(
                         TouchRecordingMode.GESTURE -> stringResource(R.string.touch_recording_mode_gesture)
                     }
 
-                val badgeText =
-                    when (mode) {
-                        TouchRecordingMode.TAP -> {
-                            stringResource(R.string.touch_recording_actions_tap, if (recording?.liveNormX != null) 1 else 0)
-                        }
-
-                        TouchRecordingMode.SINGLE_GESTURE -> {
-                            val activeCount = recording?.activePointersCount ?: 0
-                            val trailPoints = recording?.activeTrailPoints?.size ?: 0
-                            stringResource(R.string.touch_recording_actions_single_gesture, activeCount, trailPoints)
-                        }
-
-                        TouchRecordingMode.GESTURE -> {
-                            val count = recording?.recordedGestureCount ?: 0
-                            val sampleCount = recording?.totalRecordedSampleCount ?: 0
-                            stringResource(R.string.touch_recording_actions_gestures, count, sampleCount)
-                        }
-                    }
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(TRS_SPACING_M, Alignment.CenterHorizontally),
@@ -261,8 +289,8 @@ internal fun TouchRecordingSheet(
                             Modifier
                                 .height(TRS_BADGE_HEIGHT)
                                 .clip(TRS_PILL_SHAPE)
-                                .background(colors.accent.copy(alpha = 0.15f))
-                                .border(width = 1.dp, color = colors.accent, shape = TRS_PILL_SHAPE)
+                                .background(colors.accent.copy(alpha = TRS_MODE_BADGE_ALPHA))
+                                .border(width = TRS_BORDER_WIDTH, color = colors.accent, shape = TRS_PILL_SHAPE)
                                 .padding(horizontal = TRS_SPACING_L),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -292,7 +320,7 @@ internal fun TouchRecordingSheet(
                                 .height(TRS_BADGE_HEIGHT)
                                 .clip(TRS_PILL_SHAPE)
                                 .background(colors.surfaceVariant)
-                                .border(width = 1.dp, color = colors.divider, shape = TRS_PILL_SHAPE)
+                                .border(width = TRS_BORDER_WIDTH, color = colors.divider, shape = TRS_PILL_SHAPE)
                                 .padding(horizontal = TRS_SPACING_L),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -304,23 +332,10 @@ internal fun TouchRecordingSheet(
                     }
 
                     // Live Step Count Badge
-                    Box(
-                        modifier =
-                            Modifier
-                                .height(TRS_BADGE_HEIGHT)
-                                .clip(TRS_PILL_SHAPE)
-                                .background(colors.surfaceVariant)
-                                .border(width = 1.dp, color = colors.divider, shape = TRS_PILL_SHAPE)
-                                .padding(horizontal = TRS_SPACING_L),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = badgeText,
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
+                    TouchRecordingStepBadge(
+                        stateState = stateState,
+                        mode = mode,
+                    )
                 }
 
                 AppDivider()
@@ -343,7 +358,7 @@ internal fun TouchRecordingSheet(
 
                 // ── 16:9 Screen Touch Radar ─────────────────────────────────
                 TouchScreenRadar(
-                    recording = recording,
+                    stateState = stateState,
                     modifier =
                         Modifier
                             .height(TRS_RADAR_HEIGHT)
@@ -351,47 +366,7 @@ internal fun TouchRecordingSheet(
                 )
 
                 // ── Coords Readout ──────────────────────────────────────────
-                val activePointers = recording?.activePointers ?: emptyList()
-                val fallbackX = recording?.liveNormX
-                val fallbackY = recording?.liveNormY
-                val coordsText =
-                    when {
-                        activePointers.size > 1 -> {
-                            activePointers.joinToString(separator = "  •  ") { pointer ->
-                                val pName = "P${pointer.slot + 1}"
-                                val px = pointer.normX * 100f
-                                val py = pointer.normY * 100f
-                                "$pName: %1$.1f%%, %2$.1f%%".format(px, py)
-                            }
-                        }
-
-                        activePointers.size == 1 -> {
-                            val p = activePointers.first()
-                            val pctX = p.normX * 100f
-                            val pctY = p.normY * 100f
-                            stringResource(R.string.touch_recording_radar_coords, pctX, pctY)
-                        }
-
-                        fallbackX != null && fallbackY != null -> {
-                            val pctX = fallbackX * 100f
-                            val pctY = fallbackY * 100f
-                            stringResource(R.string.touch_recording_radar_coords, pctX, pctY)
-                        }
-
-                        else -> {
-                            stringResource(R.string.touch_recording_radar_waiting)
-                        }
-                    }
-
-                val isTracking = activePointers.isNotEmpty() || fallbackX != null
-                Text(
-                    text = coordsText,
-                    color = if (isTracking) colors.accent else colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                )
+                TouchRecordingCoordsReadout(stateState = stateState)
 
                 AppDivider()
 
@@ -405,7 +380,7 @@ internal fun TouchRecordingSheet(
                         onClick = onCancel,
                         shape = TRS_BUTTON_SHAPE,
                         modifier = Modifier.height(TRS_BUTTON_HEIGHT),
-                        contentPadding = PaddingValues(horizontal = TRS_BUTTON_PADDING_H, vertical = 0.dp),
+                        contentPadding = PaddingValues(horizontal = TRS_BUTTON_PADDING_H, vertical = TRS_ZERO_DP),
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
@@ -427,7 +402,7 @@ internal fun TouchRecordingSheet(
                             colors = ButtonDefaults.buttonColors(containerColor = colors.error),
                             shape = TRS_BUTTON_SHAPE,
                             modifier = Modifier.height(TRS_BUTTON_HEIGHT),
-                            contentPadding = PaddingValues(horizontal = TRS_BUTTON_PADDING_H, vertical = 0.dp),
+                            contentPadding = PaddingValues(horizontal = TRS_BUTTON_PADDING_H, vertical = TRS_ZERO_DP),
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Stop,
@@ -449,22 +424,128 @@ internal fun TouchRecordingSheet(
 }
 
 @Composable
+private fun TouchRecordingStepBadge(
+    stateState: State<TouchRecordingState>,
+    mode: TouchRecordingMode,
+) {
+    val colors = LocalAppColors.current
+    val counts by remember(stateState, mode) {
+        derivedStateOf {
+            val recording = stateState.value as? TouchRecordingState.Recording
+            when (mode) {
+                TouchRecordingMode.TAP -> (if (recording?.liveNormX != null) 1 else 0) to 0
+                TouchRecordingMode.SINGLE_GESTURE -> (recording?.activePointersCount ?: 0) to (recording?.activeTrailPoints?.size ?: 0)
+                TouchRecordingMode.GESTURE -> (recording?.recordedGestureCount ?: 0) to (recording?.totalRecordedSampleCount ?: 0)
+            }
+        }
+    }
+    val (primaryCount, secondaryCount) = counts
+    val badgeText =
+        when (mode) {
+            TouchRecordingMode.TAP -> {
+                stringResource(R.string.touch_recording_actions_tap, primaryCount)
+            }
+
+            TouchRecordingMode.SINGLE_GESTURE -> {
+                stringResource(
+                    R.string.touch_recording_actions_single_gesture,
+                    primaryCount,
+                    secondaryCount,
+                )
+            }
+
+            TouchRecordingMode.GESTURE -> {
+                stringResource(R.string.touch_recording_actions_gestures, primaryCount, secondaryCount)
+            }
+        }
+    Box(
+        modifier =
+            Modifier
+                .height(TRS_BADGE_HEIGHT)
+                .clip(TRS_PILL_SHAPE)
+                .background(colors.surfaceVariant)
+                .border(width = TRS_BORDER_WIDTH, color = colors.divider, shape = TRS_PILL_SHAPE)
+                .padding(horizontal = TRS_SPACING_L),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = badgeText,
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+@Composable
+private fun TouchRecordingCoordsReadout(stateState: State<TouchRecordingState>) {
+    val colors = LocalAppColors.current
+    val recording = stateState.value as? TouchRecordingState.Recording
+    val activePointers = recording?.activePointers ?: emptyList()
+    val fallbackX = recording?.liveNormX
+    val fallbackY = recording?.liveNormY
+    val coordsText =
+        when {
+            activePointers.size > 1 -> {
+                activePointers.joinToString(separator = "  •  ") { pointer ->
+                    val pName = "P${pointer.slot + 1}"
+                    val px = pointer.normX * TRS_PERCENT_SCALE
+                    val py = pointer.normY * TRS_PERCENT_SCALE
+                    "$pName: %1$.1f%%, %2$.1f%%".format(px, py)
+                }
+            }
+
+            activePointers.size == 1 -> {
+                val p = activePointers.first()
+                val pctX = p.normX * TRS_PERCENT_SCALE
+                val pctY = p.normY * TRS_PERCENT_SCALE
+                stringResource(R.string.touch_recording_radar_coords, pctX, pctY)
+            }
+
+            fallbackX != null && fallbackY != null -> {
+                val pctX = fallbackX * TRS_PERCENT_SCALE
+                val pctY = fallbackY * TRS_PERCENT_SCALE
+                stringResource(R.string.touch_recording_radar_coords, pctX, pctY)
+            }
+
+            else -> {
+                stringResource(R.string.touch_recording_radar_waiting)
+            }
+        }
+
+    val isTracking = activePointers.isNotEmpty() || fallbackX != null
+    Text(
+        text = coordsText,
+        color = if (isTracking) colors.accent else colors.onSurfaceSecondary,
+        style = MaterialTheme.typography.labelSmall,
+        fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.Medium,
+        textAlign = TextAlign.Center,
+    )
+}
+
+@Composable
 private fun TouchScreenRadar(
-    recording: TouchRecordingState.Recording?,
+    stateState: State<TouchRecordingState>,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     val density = LocalDensity.current
 
-    val touchIndicatorRadiusPx = with(density) { TRS_TOUCH_INDICATOR_RADIUS_DP.dp.toPx() }
-    val touchPulseRadiusPx = with(density) { TRS_TOUCH_PULSE_RADIUS_DP.dp.toPx() }
-    val trailStrokeWidthPx = with(density) { TRS_TRAIL_STROKE_WIDTH_DP.dp.toPx() }
+    val touchIndicatorRadiusPx = with(density) { TRS_TOUCH_INDICATOR_RADIUS.toPx() }
+    val touchPulseRadiusPx = with(density) { TRS_TOUCH_PULSE_RADIUS.toPx() }
+    val trailStrokeWidthPx = with(density) { TRS_TRAIL_STROKE_WIDTH.toPx() }
 
     val accentColor = colors.accent
     val dividerColor = colors.divider
     val surfaceVariant = colors.surfaceVariant
 
-    val hasActiveTouch = !recording?.activePointers.isNullOrEmpty() || recording?.isTouchDown == true
+    val hasActiveTouch by remember(stateState) {
+        derivedStateOf {
+            val rec = stateState.value as? TouchRecordingState.Recording
+            rec?.activePointers?.isNotEmpty() == true || rec?.isTouchDown == true
+        }
+    }
     val pulseTransition =
         if (hasActiveTouch) {
             rememberInfiniteTransition(label = "radarTouchPulse")
@@ -490,9 +571,10 @@ private fun TouchScreenRadar(
             modifier
                 .clip(TRS_PILL_SHAPE)
                 .background(surfaceVariant.copy(alpha = TRS_RADAR_BG_ALPHA))
-                .border(1.dp, dividerColor, TRS_PILL_SHAPE),
+                .border(TRS_BORDER_WIDTH, dividerColor, TRS_PILL_SHAPE),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
+            val recording = stateState.value as? TouchRecordingState.Recording
             val width = size.width
             val height = size.height
             val livePulseScale = livePulseScaleState?.value ?: 1.0f
@@ -567,8 +649,8 @@ private fun DrawScope.drawPointerDot(
     indicatorRadius: Float,
 ) {
     if (pulseRadius != null) {
-        drawCircle(color = color.copy(alpha = 0.35f), radius = pulseRadius, center = center)
+        drawCircle(color = color.copy(alpha = TRS_PULSE_FILL_ALPHA), radius = pulseRadius, center = center)
     }
     drawCircle(color = color, radius = indicatorRadius, center = center)
-    drawCircle(color = Color.White, radius = indicatorRadius * 0.45f, center = center)
+    drawCircle(color = Color.White, radius = indicatorRadius * TRS_INNER_DOT_FRACTION, center = center)
 }

@@ -2,14 +2,12 @@ package com.stormpanda.megingiard.ui
 
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -47,6 +46,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.coerceAtLeast
@@ -254,75 +255,67 @@ fun GamepadSaveExitActionRow(
             description
         }
 
-    BoxWithConstraints(
-        modifier = modifier.then(bivrModifier).fillMaxWidth().animateContentSize(),
-    ) {
-        val totalWidth = maxWidth
-        val targetCardWidth = ((totalWidth - GC_SPACING_10) / 2f).coerceAtLeast(GC_ZERO_WIDTH)
-        val currentSpacing = GC_SPACING_10 * splitFraction
-        val card2VisibleWidth = targetCardWidth * splitFraction
-        val card1VisibleWidth =
-            (
-                totalWidth - (
-                    if (splitFraction >
-                        GC_SPLIT_VISIBLE_EPSILON
-                    ) {
-                        card2VisibleWidth + currentSpacing
-                    } else {
-                        GC_ZERO_WIDTH
-                    }
-                )
-            ).coerceAtLeast(GC_ZERO_WIDTH)
+    val density = LocalDensity.current
+    var rowWidthPx by remember { mutableIntStateOf(0) }
+    val isSplitting = splitFraction > GC_SPLIT_VISIBLE_EPSILON && rowWidthPx > 0
+    val totalWidth = with(density) { rowWidthPx.toDp() }
+    val targetCardWidth = ((totalWidth - GC_SPACING_10) / 2f).coerceAtLeast(GC_ZERO_WIDTH)
+    val currentSpacing = GC_SPACING_10 * splitFraction
+    val card2VisibleWidth = targetCardWidth * splitFraction
+    val card1VisibleWidth = (totalWidth - (card2VisibleWidth + currentSpacing)).coerceAtLeast(GC_ZERO_WIDTH)
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            GamepadActionCard(
-                title = effectiveTitle,
-                description = effectiveDescription,
-                actionText = saveActionText,
-                icon = saveIcon,
-                pulseOnChanges = pulseOnChanges,
-                enabled = enabled,
-                onClick = onSave,
-                itemKey = title,
+    Row(
+        modifier =
+            modifier
+                .then(bivrModifier)
+                .fillMaxWidth()
+                .onSizeChanged { rowWidthPx = it.width },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        GamepadActionCard(
+            title = effectiveTitle,
+            description = effectiveDescription,
+            actionText = saveActionText,
+            icon = saveIcon,
+            pulseOnChanges = pulseOnChanges,
+            enabled = enabled,
+            onClick = onSave,
+            itemKey = title,
+            modifier =
+                Modifier
+                    .then(if (isSplitting) Modifier.width(card1VisibleWidth) else Modifier.fillMaxWidth())
+                    .then(saveReqModifier)
+                    .onFocusChanged { isSaveFocused = it.hasFocus },
+        )
+
+        if (isSplitting) {
+            Spacer(modifier = Modifier.width(currentSpacing))
+
+            Box(
                 modifier =
                     Modifier
-                        .width(card1VisibleWidth)
-                        .then(saveReqModifier)
-                        .onFocusChanged { isSaveFocused = it.hasFocus },
-            )
-
-            if (splitFraction > GC_SPLIT_VISIBLE_EPSILON) {
-                Spacer(modifier = Modifier.width(currentSpacing))
-
-                Box(
+                        .width(card2VisibleWidth)
+                        .clipToBounds()
+                        .graphicsLayer {
+                            alpha = splitFraction
+                        }.focusProperties {
+                            canFocus = showExitPrompt
+                        },
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                GamepadActionCard(
+                    title = stringResource(R.string.gamepad_action_discard_and_exit),
+                    description = stringResource(R.string.gamepad_action_discard_and_exit_desc),
+                    actionText = stringResource(R.string.gamepad_action_discard),
+                    icon = Icons.Rounded.Close,
+                    isDestructive = true,
+                    onClick = onDiscard,
+                    itemKey = "discard_and_exit",
                     modifier =
                         Modifier
-                            .width(card2VisibleWidth)
-                            .clipToBounds()
-                            .graphicsLayer {
-                                alpha = splitFraction
-                            }.focusProperties {
-                                canFocus = showExitPrompt
-                            },
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    GamepadActionCard(
-                        title = stringResource(R.string.gamepad_action_discard_and_exit),
-                        description = stringResource(R.string.gamepad_action_discard_and_exit_desc),
-                        actionText = stringResource(R.string.gamepad_action_discard),
-                        icon = Icons.Rounded.Close,
-                        isDestructive = true,
-                        onClick = onDiscard,
-                        itemKey = "discard_and_exit",
-                        modifier =
-                            Modifier
-                                .requiredWidth(targetCardWidth)
-                                .onFocusChanged { isDiscardFocused = it.hasFocus },
-                    )
-                }
+                            .requiredWidth(targetCardWidth)
+                            .onFocusChanged { isDiscardFocused = it.hasFocus },
+                )
             }
         }
     }

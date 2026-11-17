@@ -160,6 +160,14 @@ object MacroPadSettings {
         )
     }
 
+    fun updateDeadzoneLeftLive(value: Float) {
+        _deadzoneLeft.value = value
+    }
+
+    fun updateDeadzoneRightLive(value: Float) {
+        _deadzoneRight.value = value
+    }
+
     fun setDeadzoneLeft(value: Float) {
         updateSettingPref(KEY_PRIVD_DEADZONE_LEFT, value, _deadzoneLeft, optionalScope, optionalDataStore, TAG, "setDeadzoneLeft")
     }

@@ -103,7 +103,10 @@ data class KeyDef(
     val superscript: String? = null,
     val autoModifiers: List<Int> = emptyList(),
     val popupOptions: List<String> = emptyList(),
-)
+) {
+    val resolvedSuperscriptLabel: String? =
+        if (popupOptions.isNotEmpty()) popupOptions.joinToString(" ") else superscript
+}
 
 val KeyDef.isControlKey: Boolean
     get() = id == "bksp" || id == "enter" || id == "del" || id == "up" || id == "down" || id == "left" || id == "right"
@@ -160,12 +163,7 @@ fun getPopupOptions(keyDef: KeyDef): List<String> {
     return listOf(superscript)
 }
 
-fun getSuperscriptDisplayLabel(keyDef: KeyDef): String? {
-    if (keyDef.popupOptions.isNotEmpty()) {
-        return keyDef.popupOptions.joinToString(" ")
-    }
-    return keyDef.superscript
-}
+fun getSuperscriptDisplayLabel(keyDef: KeyDef): String? = keyDef.resolvedSuperscriptLabel
 
 // ---------------------------------------------------------------------------
 // Layout factories

@@ -30,7 +30,7 @@
   - In **use mode** (`MacroPadButton`) and the **editor canvas** (`PadCanvas`, via shared `PadButtonFace`): the icon is rendered centred inside the button face instead of the label text, sized directly from the rendered pixel footprint (`min(renderedWidthPx, renderedHeightPx) * MP_BTN_ICON_RATIO * contentScale`, where `MP_BTN_ICON_RATIO = (44f * THOR_BOTTOM_DENSITY) / 136f ≈ 0.746f`, `renderedWidthPx = widthPx * viewport.scale`, `renderedHeightPx = heightPx * viewport.scale`, converted via `with(density) { iconPx.toDp() }`) so icon proportions remain invariant to display DPI and OS Display Size zoom.
   - In the **button list** (`MacroPadEditor`, `ButtonsDeck`): the icon is shown at 18 dp in the indicator box instead of the two-character label abbreviation.
 - When `iconName` is `null`, the existing label rendering is used unchanged; the label field is still stored and used in the editor button list.
-- When `PadAction.supportsCustomIcon()` is `false` (`ScrollWheel`, `TrackpointMove`, `AnalogStick`, `BackgroundPeek`, and `AppLauncher`), `iconName` is forced to `null` via `PadButton.withActionSizing(newAction, canvas)` (which also enforces `canvas.largeControlMinSizePx` minimums on `TrackpointMove`, `AnalogStick`, and `ScrollWheel`) and the Icon Picker card is hidden in `EditButtonSubPageContent` (these action types render fixed glyphs or real APK icons).
+- When `PadAction.supportsCustomIcon()` is `false` (`ScrollWheel`, `TrackpointMove`, `AnalogStick`, and `AppLauncher`), `iconName` is forced to `null` via `PadButton.withActionSizing(newAction, canvas)` (which also enforces `canvas.largeControlMinSizePx` minimums on `TrackpointMove`, `AnalogStick`, and `ScrollWheel`) and the Icon Picker card is hidden in `EditButtonSubPageContent` (these action types render fixed glyphs or real APK icons).
 - Icon selection opens `ChooseIconSubPageContent` (`IconPickerDialog.kt`), an in-deck sub-page with a search field, a current-selection two-step clear card (when an icon is selected), and a 5-column `LazyVerticalGrid` of all available icons (`ALL_ROUNDED_ICON_NAMES` in `RoundedIconNames.kt`).
 - The `iconName` field defaults to `null`, so existing saved profiles load without any migration.
 - No runtime reflection or Proguard keep-rules are required.
@@ -64,7 +64,7 @@
   | `TouchTap` / `SingleTouchGesture` | Localized category label | _(null)_ |
   | `MediaControl(PLAY_PAUSE / NEXT_TRACK / PREVIOUS_TRACK / STOP / MUTE)` | Localized category label | `play_pause` / `skip_next` / `skip_previous` / `stop` / `volume_off` |
   | `AppLauncher` | Resolved app label (or category fallback) | _(null — uses real APK icon)_ |
-  | `ScrollWheel` / `TrackpointMove` / `AnalogStick` / `BackgroundPeek` | Localized display label (for editor list) | _(null — fixed custom face)_ |
+  | `ScrollWheel` / `TrackpointMove` / `AnalogStick` | Localized display label (for editor list) | _(null — fixed custom face)_ |
 
 ### FR-P12: Grouped Action Selection in Button Editor
 
@@ -96,7 +96,7 @@
 
 - Each `PadButton` carries a `hapticStrength: HapticStrength` field (serialised; default `OFF` — existing profiles load without migration).
 - Five strength levels are available: `OFF`, `LIGHT`, `MEDIUM`, `STRONG`, `CUSTOM`.
-- The strength selector is displayed in `PadButtonEditDialog` as a choice card (`GamepadChoiceCard`). It is shown for all action types, including `BackgroundPeek`, `TrackpointMove`, and `ScrollWheel`.
+- The strength selector is displayed in `PadButtonEditDialog` as a choice card (`GamepadChoiceCard`). It is shown for all action types, including `TrackpointMove` and `ScrollWheel`.
 - When haptics are enabled (`LIGHT`, `MEDIUM`, `STRONG`, or `CUSTOM`), two sliders appear beneath the chip row:
   - **Duration** — 1 to 200 ms (integer steps)
   - **Amplitude** — 5 to 100 in steps of 5 (20 discrete user-facing values; the value is mapped proportionally to Android's 1–255 amplitude range, so 100 maps to 255)

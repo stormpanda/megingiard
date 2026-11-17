@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.mirror
 
 import android.graphics.Bitmap
+import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -394,6 +395,55 @@ class CutoutMaskManagerTest {
             assertEquals(1, CutoutMaskManager.staticAssetCacheSizeForTest(cutoutId))
             assertFalse("Evicted tuned bitmap must not be imperatively recycled", firstTuned!!.isRecycled)
         } finally {
+            CutoutMaskManager.deleteMask(context, cutoutId)
+        }
+    }
+
+    @Test
+    fun `getCachedMaskOrLoadAsync and getCachedStaticAssetOrLoadAsync serve prior cached bitmap while computing new step`() {
+        val context = RuntimeEnvironment.getApplication()
+        val cutoutId = "test_async_slider_fallback"
+        val maskBitmap = Bitmap.createBitmap(12, 12, Bitmap.Config.ARGB_8888)
+        val varianceMap = ByteArray(144) { (it % 40).toByte() }
+        val freezeBitmap = Bitmap.createBitmap(12, 12, Bitmap.Config.ARGB_8888)
+        val pausedDispatcher = StandardTestDispatcher()
+
+        try {
+            CutoutMaskManager.saveMask(
+                context = context,
+                cutoutId = cutoutId,
+                bitmap = maskBitmap,
+                varianceMap = varianceMap,
+                freezeFrame = freezeBitmap,
+            )
+            val initialTuned = CutoutMaskManager.getMask(context, cutoutId, translucency = 20, sensitivity = 20)
+            val initialStatic = CutoutMaskManager.getStaticAsset(context, cutoutId, translucency = 20, sensitivity = 20)
+            assertNotNull(initialTuned)
+            assertNotNull(initialStatic)
+
+            // Pause background generation so the next slider step misses the exact key
+            CutoutMaskManager.ioDispatcher = pausedDispatcher
+            val fallbackTuned =
+                CutoutMaskManager.getCachedMaskOrLoadAsync(
+                    context = context,
+                    cutoutId = cutoutId,
+                    translucency = 30,
+                    sensitivity = 20,
+                )
+            val fallbackStatic =
+                CutoutMaskManager.getCachedStaticAssetOrLoadAsync(
+                    context = context,
+                    cutoutId = cutoutId,
+                    translucency = 30,
+                    sensitivity = 20,
+                )
+
+            assertEquals("Must serve prior tuned mask instead of reverting to base mask mid-drag", initialTuned, fallbackTuned)
+            assertEquals("Must serve prior static asset instead of blinking null mid-drag", initialStatic, fallbackStatic)
+
+            pausedDispatcher.scheduler.advanceUntilIdle()
+        } finally {
+            CutoutMaskManager.resetDispatcherForTesting()
             CutoutMaskManager.deleteMask(context, cutoutId)
         }
     }

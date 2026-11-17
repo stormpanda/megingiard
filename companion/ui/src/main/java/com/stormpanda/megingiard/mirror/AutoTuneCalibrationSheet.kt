@@ -42,8 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -63,7 +61,6 @@ import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
-import kotlin.math.ceil
 
 private const val TAG = "AutoTuneCalibSheet"
 
@@ -390,8 +387,7 @@ private fun CalibrationPreviewBox(
     val canFinish = uiState.canFinish
     val dynamicPercent = uiState.dynamicPercent
 
-    val checkerColor1 = colors.surfaceVariant
-    val checkerColor2 = colors.surface
+    val checkerBrush = rememberCheckerboardBrush(colors.surfaceVariant, colors.surface, CHECKER_SIZE)
     Box(
         modifier =
             Modifier
@@ -403,19 +399,7 @@ private fun CalibrationPreviewBox(
                     brush = bezelBrush,
                     shape = RoundedCornerShape(PREVIEW_CORNER_RADIUS),
                 ).drawBehind {
-                    val checkPx = CHECKER_SIZE.toPx()
-                    val cols = ceil(size.width / checkPx).toInt()
-                    val rows = ceil(size.height / checkPx).toInt()
-                    for (r in 0 until rows) {
-                        for (c in 0 until cols) {
-                            val color = if ((r + c) % 2 == 0) checkerColor1 else checkerColor2
-                            drawRect(
-                                color = color,
-                                topLeft = Offset(c * checkPx, r * checkPx),
-                                size = Size(checkPx, checkPx),
-                            )
-                        }
-                    }
+                    drawRect(brush = checkerBrush)
                 },
         contentAlignment = Alignment.Center,
     ) {

@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.gamefocus
 
-import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.ComponentName
 import android.content.Context
 import android.graphics.Bitmap
@@ -8,7 +7,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.util.LruCache
-import android.view.accessibility.AccessibilityManager
 import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -126,6 +124,10 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
+import com.stormpanda.megingiard.ui.isScreenReaderAccessibilityActive as sharedIsScreenReaderAccessibilityActive
+import com.stormpanda.megingiard.ui.isScreenReaderFeedbackMask as sharedIsScreenReaderFeedbackMask
+import com.stormpanda.megingiard.ui.isScreenReaderService as sharedIsScreenReaderService
+import com.stormpanda.megingiard.ui.rememberScreenReaderActive as sharedRememberScreenReaderActive
 
 private const val TAG = "FocusTopLauncherScreen"
 
@@ -2806,54 +2808,14 @@ class RomPagerState(
         get() = pageCountProvider()
 }
 
-internal fun isScreenReaderFeedbackMask(feedbackType: Int): Boolean =
-    (feedbackType and (AccessibilityServiceInfo.FEEDBACK_SPOKEN or AccessibilityServiceInfo.FEEDBACK_BRAILLE)) != 0
+internal fun isScreenReaderFeedbackMask(feedbackType: Int): Boolean = sharedIsScreenReaderFeedbackMask(feedbackType)
 
 internal fun isScreenReaderService(
     feedbackType: Int,
     capabilities: Int,
-): Boolean =
-    isScreenReaderFeedbackMask(feedbackType) &&
-        (capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_RETRIEVE_WINDOW_CONTENT) != 0
+): Boolean = sharedIsScreenReaderService(feedbackType, capabilities)
 
-internal fun isScreenReaderAccessibilityActive(context: Context): Boolean {
-    val am = context.getSystemService(AccessibilityManager::class.java) ?: return false
-    if (!am.isEnabled) return false
-    if (am.isTouchExplorationEnabled) return true
-    return am
-        .getEnabledAccessibilityServiceList(
-            AccessibilityServiceInfo.FEEDBACK_SPOKEN or AccessibilityServiceInfo.FEEDBACK_BRAILLE,
-        ).any { isScreenReaderService(it.feedbackType, it.capabilities) }
-}
+internal fun isScreenReaderAccessibilityActive(context: Context): Boolean = sharedIsScreenReaderAccessibilityActive(context)
 
 @Composable
-private fun rememberScreenReaderActive(context: Context): Boolean {
-    var isActive by remember(context) { mutableStateOf(isScreenReaderAccessibilityActive(context)) }
-    DisposableEffect(context) {
-        val am = context.getSystemService(AccessibilityManager::class.java)
-        if (am == null) {
-            onDispose {}
-        } else {
-            val a11yListener =
-                AccessibilityManager.AccessibilityStateChangeListener {
-                    val updated = isScreenReaderAccessibilityActive(context)
-                    AppLog.d(TAG, "Accessibility state changed -> isScreenReaderActive=$updated")
-                    isActive = updated
-                }
-            val touchListener =
-                AccessibilityManager.TouchExplorationStateChangeListener {
-                    val updated = isScreenReaderAccessibilityActive(context)
-                    AppLog.d(TAG, "Touch exploration state changed -> isScreenReaderActive=$updated")
-                    isActive = updated
-                }
-            am.addAccessibilityStateChangeListener(a11yListener)
-            am.addTouchExplorationStateChangeListener(touchListener)
-            isActive = isScreenReaderAccessibilityActive(context)
-            onDispose {
-                am.removeAccessibilityStateChangeListener(a11yListener)
-                am.removeTouchExplorationStateChangeListener(touchListener)
-            }
-        }
-    }
-    return isActive
-}
+private fun rememberScreenReaderActive(context: Context): Boolean = sharedRememberScreenReaderActive(context)

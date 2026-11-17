@@ -4,7 +4,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Cast
-import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.runtime.Composable
@@ -78,20 +77,6 @@ internal fun ActionPicker(
                 onOpenPicker = onOpenMousePicker,
                 onChange = loggedOnChange,
                 isFirstItem = isFirstItem,
-            )
-        }
-
-        is PadAction.BackgroundPeek -> {
-            GamepadActionCard(
-                title = stringResource(R.string.macropad_action_ambient_peek),
-                description = stringResource(R.string.macropad_action_ambient_peek_desc),
-                actionText = stringResource(R.string.macropad_action_ambient_peek),
-                icon = Icons.Rounded.Layers,
-                onClick = {
-                    AppLog.d(TAG, "Opening mirror action picker from BackgroundPeek")
-                    onOpenMirrorPicker()
-                },
-                modifier = Modifier.firstDeckItem(isFirstItem),
             )
         }
 

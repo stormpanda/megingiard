@@ -164,51 +164,65 @@ internal object MirrorFrameSampler {
             return null
         }
 
-        return withContext(Dispatchers.Main.immediate) {
-            val tv = activeTextureView?.get()
-            if (tv != null && tv.isAvailable && tv.isAttachedToWindow && tv.width > 0 && tv.height > 0) {
-                val fullW = tv.width
-                val fullH = tv.height
-                var fullFrame = reusableFullFrameBitmap
-                if (fullFrame == null || fullFrame.width != fullW || fullFrame.height != fullH || fullFrame.isRecycled) {
-                    fullFrame =
+        val capturedFullFrame =
+            withContext(Dispatchers.Main.immediate) {
+                val tv = activeTextureView?.get()
+                if (tv != null && tv.isAvailable && tv.isAttachedToWindow && tv.width > 0 && tv.height > 0) {
+                    val fullW = tv.width
+                    val fullH = tv.height
+                    var fullFrame = reusableFullFrameBitmap
+                    if (fullFrame == null || fullFrame.width != fullW || fullFrame.height != fullH || fullFrame.isRecycled) {
+                        fullFrame =
+                            try {
+                                Bitmap.createBitmap(fullW, fullH, Bitmap.Config.ARGB_8888)
+                            } catch (e: OutOfMemoryError) {
+                                AppLog.e(TAG, "OOM allocating reusable full frame bitmap (${fullW}x$fullH)", e)
+                                null
+                            }
+                        reusableFullFrameBitmap = fullFrame
+                    }
+                    if (fullFrame != null && !fullFrame.isRecycled) {
                         try {
-                            Bitmap.createBitmap(fullW, fullH, Bitmap.Config.ARGB_8888)
-                        } catch (e: OutOfMemoryError) {
-                            AppLog.e(TAG, "OOM allocating reusable full frame bitmap (${fullW}x$fullH)", e)
+                            tv.getBitmap(fullFrame)
+                            fullFrame
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "Error capturing full frame for crop from TextureView", e)
                             null
                         }
-                    reusableFullFrameBitmap = fullFrame
-                }
-
-                if (fullFrame != null && !fullFrame.isRecycled) {
-                    try {
-                        tv.getBitmap(fullFrame)
-                        val target =
-                            if (reusableBitmap != null &&
-                                reusableBitmap.width == cropW &&
-                                reusableBitmap.height == cropH &&
-                                !reusableBitmap.isRecycled
-                            ) {
-                                reusableBitmap
-                            } else {
-                                Bitmap.createBitmap(cropW, cropH, Bitmap.Config.ARGB_8888)
-                            }
-                        synchronized(reusableCanvas) {
-                            reusableCanvas.setBitmap(target)
-                            reusableSrcRect.set(cropRect)
-                            reusableDstRect.set(0, 0, cropW, cropH)
-                            reusableCanvas.drawBitmap(fullFrame, reusableSrcRect, reusableDstRect, null)
-                            reusableCanvas.setBitmap(null)
-                        }
-                        return@withContext target
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Error capturing crop from TextureView", e)
+                    } else {
+                        null
                     }
+                } else {
+                    null
                 }
-            }
+            } ?: return null
 
-            null
+        return withContext(Dispatchers.Default) {
+            try {
+                if (capturedFullFrame.isRecycled) return@withContext null
+                val target =
+                    if (reusableBitmap != null &&
+                        reusableBitmap.width == cropW &&
+                        reusableBitmap.height == cropH &&
+                        !reusableBitmap.isRecycled
+                    ) {
+                        reusableBitmap
+                    } else {
+                        Bitmap.createBitmap(cropW, cropH, Bitmap.Config.ARGB_8888)
+                    }
+                synchronized(reusableCanvas) {
+                    if (capturedFullFrame.isRecycled) return@withContext null
+                    reusableCanvas.setBitmap(target)
+                    reusableSrcRect.set(cropRect)
+                    reusableDstRect.set(0, 0, cropW, cropH)
+                    reusableCanvas.drawBitmap(capturedFullFrame, reusableSrcRect, reusableDstRect, null)
+                    reusableCanvas.setBitmap(null)
+                }
+                target
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Error extracting crop off Main thread", e)
+                null
+            }
         }
     }
 

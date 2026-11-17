@@ -67,7 +67,9 @@ import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.detectHoldPointerEvents
+import com.stormpanda.megingiard.ui.pruneNonScreenReaderSemantics
 import com.stormpanda.megingiard.ui.rememberBezelBrush
+import com.stormpanda.megingiard.ui.rememberScreenReaderActive
 
 private const val TAG = "FullscreenMouseOverlay"
 
@@ -124,49 +126,37 @@ fun rememberGlobalTouchpadProcessor(forceMouseMode: Boolean = false): TouchpadGe
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val vibrator = remember { context.getSystemService(Vibrator::class.java) }
+    val currentForceMouseMode by rememberUpdatedState(forceMouseMode)
 
-    val touchpadUseMouse by TouchpadSettings.touchpadUseMouse.collectAsStateWithLifecycle()
-    val sensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsStateWithLifecycle()
-    val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsStateWithLifecycle()
-    val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsStateWithLifecycle()
-    val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsStateWithLifecycle()
-    val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsStateWithLifecycle()
-    val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsStateWithLifecycle()
-    val tapDrag by TouchpadSettings.touchpadTapDrag.collectAsStateWithLifecycle()
-    val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsStateWithLifecycle()
-    val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsStateWithLifecycle()
-    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsStateWithLifecycle()
-
-    val effectiveUseMouse = forceMouseMode || touchpadUseMouse
-    val finalSensitivity =
-        if (forceMouseMode) {
-            touchpadSensitivity
-        } else {
-            touchpadSensitivity * sensitivity
-        }
-    val gestureConfig by rememberUpdatedState(
-        TouchpadGestureConfig(
-            useMouse = effectiveUseMouse,
-            sensitivity = finalSensitivity,
-            twoFingerScrollEnabled = twoFingerScroll,
-            naturalScrollEnabled = touchpadNaturalScroll,
-            scrollSpeed = touchpadScrollSpeed,
-            tapToClick = tapToClick,
-            twoFingerTap = twoFingerTap,
-            threeFingerTap = threeFingerTap,
-            tapDrag = tapDrag,
-        ),
-    )
-    val currentOnHapticFeedback by rememberUpdatedState {
-        if (touchpadHapticsEnabled && vibrator != null) {
-            triggerHaptic(vibrator, HapticStrength.LIGHT)
-        }
-    }
-    return remember(coroutineScope) {
+    return remember(coroutineScope, vibrator) {
         TouchpadGestureProcessor(
             scope = coroutineScope,
-            config = { gestureConfig },
-            onHapticFeedback = { currentOnHapticFeedback() },
+            config = {
+                val forceMouse = currentForceMouseMode
+                val baseSens = TouchpadSettings.touchpadSensitivity.value
+                val finalSensitivity =
+                    if (forceMouse) {
+                        baseSens
+                    } else {
+                        baseSens * AppStateManager.fullscreenMouseSensitivity.value
+                    }
+                TouchpadGestureConfig(
+                    useMouse = forceMouse || TouchpadSettings.touchpadUseMouse.value,
+                    sensitivity = finalSensitivity,
+                    twoFingerScrollEnabled = TouchpadSettings.touchpadTwoFingerScroll.value,
+                    naturalScrollEnabled = TouchpadSettings.touchpadNaturalScroll.value,
+                    scrollSpeed = TouchpadSettings.touchpadScrollSpeed.value,
+                    tapToClick = TouchpadSettings.touchpadTapToClick.value,
+                    twoFingerTap = TouchpadSettings.touchpadTwoFingerTap.value,
+                    threeFingerTap = TouchpadSettings.touchpadThreeFingerTap.value,
+                    tapDrag = TouchpadSettings.touchpadTapDrag.value,
+                )
+            },
+            onHapticFeedback = {
+                if (TouchpadSettings.touchpadHapticsEnabled.value && vibrator != null) {
+                    triggerHaptic(vibrator, HapticStrength.LIGHT)
+                }
+            },
         )
     }
 }
@@ -266,6 +256,7 @@ fun FullscreenMouseOverlay() {
     val processor = rememberGlobalTouchpadProcessor(forceMouseMode = false)
 
     val insetBezelBrush = rememberBezelBrush()
+    val isScreenReaderActive = rememberScreenReaderActive()
 
     Box(
         modifier =
@@ -275,7 +266,10 @@ fun FullscreenMouseOverlay() {
     ) {
         Crossfade(
             targetState = touchpadUseMouse,
-            modifier = Modifier.fillMaxSize(),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .pruneNonScreenReaderSemantics(isScreenReaderActive),
             animationSpec = tween(TP_MODE_CROSSFADE_DURATION_MS),
             label = "Touchpad Switch",
         ) { useMouse ->

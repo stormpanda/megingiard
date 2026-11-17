@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -36,10 +35,12 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
@@ -112,16 +113,19 @@ fun AnchorSelectorOverlay(
             }
         }
 
-    BoxWithConstraints(
+    var screenSize by remember { mutableStateOf(IntSize.Zero) }
+
+    Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .then(rootKeyModifier)
-                .background(Color.Transparent),
+                .background(Color.Transparent)
+                .onSizeChanged { screenSize = it },
     ) {
-        val screenW = constraints.maxWidth.toFloat()
-        val screenH = constraints.maxHeight.toFloat()
-        if (screenW <= 0f || screenH <= 0f) return@BoxWithConstraints
+        val screenW = screenSize.width.toFloat()
+        val screenH = screenSize.height.toFloat()
+        if (screenW <= 0f || screenH <= 0f) return@Box
 
         fun getCurrentCrop(): AnchorCrop {
             val a = currentLayoutState.value.visualAnchor

@@ -135,23 +135,19 @@ object GamepadInjector {
             }
 
             GamepadKeycodes.CODE_LS_UP_LEFT -> {
-                joystick(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MIN)
-                joystick(GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MIN)
+                joystickDualAxis(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MIN, GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MIN)
             }
 
             GamepadKeycodes.CODE_LS_UP_RIGHT -> {
-                joystick(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MAX)
-                joystick(GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MIN)
+                joystickDualAxis(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MAX, GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MIN)
             }
 
             GamepadKeycodes.CODE_LS_DOWN_LEFT -> {
-                joystick(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MIN)
-                joystick(GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MAX)
+                joystickDualAxis(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MIN, GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MAX)
             }
 
             GamepadKeycodes.CODE_LS_DOWN_RIGHT -> {
-                joystick(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MAX)
-                joystick(GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MAX)
+                joystickDualAxis(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MAX, GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MAX)
             }
 
             GamepadKeycodes.CODE_RS_UP -> {
@@ -171,23 +167,19 @@ object GamepadInjector {
             }
 
             GamepadKeycodes.CODE_RS_UP_LEFT -> {
-                joystick(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MIN)
-                joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MIN)
+                joystickDualAxis(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MIN, GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MIN)
             }
 
             GamepadKeycodes.CODE_RS_UP_RIGHT -> {
-                joystick(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MAX)
-                joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MIN)
+                joystickDualAxis(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MAX, GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MIN)
             }
 
             GamepadKeycodes.CODE_RS_DOWN_LEFT -> {
-                joystick(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MIN)
-                joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MAX)
+                joystickDualAxis(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MIN, GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MAX)
             }
 
             GamepadKeycodes.CODE_RS_DOWN_RIGHT -> {
-                joystick(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MAX)
-                joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MAX)
+                joystickDualAxis(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MAX, GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MAX)
             }
 
             GamepadKeycodes.BTN_TL2 -> {
@@ -249,8 +241,7 @@ object GamepadInjector {
             GamepadKeycodes.CODE_LS_DOWN_LEFT,
             GamepadKeycodes.CODE_LS_DOWN_RIGHT,
             -> {
-                joystick(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_CENTER)
-                joystick(GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_CENTER)
+                joystickDualAxis(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_CENTER, GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_CENTER)
             }
 
             GamepadKeycodes.CODE_RS_UP,
@@ -270,8 +261,7 @@ object GamepadInjector {
             GamepadKeycodes.CODE_RS_DOWN_LEFT,
             GamepadKeycodes.CODE_RS_DOWN_RIGHT,
             -> {
-                joystick(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_CENTER)
-                joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_CENTER)
+                joystickDualAxis(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_CENTER, GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_CENTER)
             }
 
             GamepadKeycodes.BTN_TL2 -> {
@@ -352,5 +342,25 @@ object GamepadInjector {
             }
         }
         PrivdClient.send("JS $axisCode $value\n")
+    }
+
+    /**
+     * Sends a combined 2-axis stick update (`J2 <axisX> <valX> <axisY> <valY>`) so `megingiard_privd`
+     * flushes both stick axes with a single `SYN_REPORT` and a single `write()` syscall.
+     */
+    fun joystickDualAxis(
+        axisX: Int,
+        valueX: Int,
+        axisY: Int,
+        valueY: Int,
+    ) {
+        if (!PrivdClient.isConnected || isRecordingActive) return
+        require(axisX in VALID_STICK_AXES && axisY in VALID_STICK_AXES) {
+            "axisX and axisY must be stick axes (ABS_X, ABS_Y, ABS_Z, ABS_RZ)"
+        }
+        require(valueX in JOYSTICK_RAW_MIN..JOYSTICK_DEFLECTION_MAX && valueY in JOYSTICK_RAW_MIN..JOYSTICK_DEFLECTION_MAX) {
+            "stick values must be in int16 range -32768..32767"
+        }
+        PrivdClient.send("J2 $axisX $valueX $axisY $valueY\n")
     }
 }

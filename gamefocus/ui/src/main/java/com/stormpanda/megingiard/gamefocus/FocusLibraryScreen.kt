@@ -42,7 +42,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -60,19 +59,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -187,38 +182,13 @@ private class LibraryFocusOverlayState {
         isFirstPositioned = false
     }
 
-    fun updateFrom(
-        coords: LayoutCoordinates,
-        parentCoords: LayoutCoordinates,
-    ) {
-        if (coords.isAttached && parentCoords.isAttached) {
-            val positionInParent = parentCoords.localPositionOf(coords, Offset.Zero)
-            val size = coords.size
-            val newRect =
-                Rect(
-                    left = positionInParent.x,
-                    top = positionInParent.y,
-                    right = positionInParent.x + size.width,
-                    bottom = positionInParent.y + size.height,
-                )
-            if (targetRect != newRect) {
-                targetRect = newRect
-                if (!isFirstPositioned) {
-                    isFirstPositioned = true
-                }
+    fun updateRect(newRect: Rect) {
+        if (targetRect != newRect) {
+            targetRect = newRect
+            if (!isFirstPositioned) {
+                isFirstPositioned = true
             }
         }
-    }
-}
-
-private class GridCoordinatesTracker {
-    var gridContainerCoordinates: LayoutCoordinates? = null
-    var focusedItemCoordinates: LayoutCoordinates? = null
-    val visibleItemCoords = HashMap<Int, LayoutCoordinates>()
-
-    fun clear() {
-        focusedItemCoordinates = null
-        visibleItemCoords.clear()
     }
 }
 
@@ -341,7 +311,7 @@ fun FocusLibraryScreen(
                 }
             } else {
                 val overlayState = remember(activeTab) { LibraryFocusOverlayState() }
-                val coordsTracker = remember(activeTab) { GridCoordinatesTracker() }
+                val startPaddingPx = remember(density) { with(density) { FLS_GRID_PADDING.roundToPx() } }
                 val currentOnFocusedIndexChange by rememberUpdatedState(onFocusedIndexChange)
                 val currentOnAppClickTop by rememberUpdatedState(onAppClickTop)
 
@@ -352,7 +322,6 @@ fun FocusLibraryScreen(
                     gridState = gridState,
                     peekOffsetPx = peekOffsetPx,
                     overlayState = overlayState,
-                    coordsTracker = coordsTracker,
                 )
 
                 val handleItemClick: (Int, InstalledAppInfo) -> Unit =
@@ -363,22 +332,11 @@ fun FocusLibraryScreen(
                         }
                     }
 
-                val handleItemPositioned: (Int, Boolean, LayoutCoordinates) -> Unit =
-                    remember(activeTab, focusedIndexState) {
-                        { index, itemIsFocused, itemCoords ->
-                            coordsTracker.visibleItemCoords[index] = itemCoords
-                            if (itemIsFocused || index == focusedIndexState.value) {
-                                coordsTracker.focusedItemCoordinates = itemCoords
-                                coordsTracker.gridContainerCoordinates?.let { parentCoords ->
-                                    overlayState.updateFrom(itemCoords, parentCoords)
-                                }
-                            }
-                        }
-                    }
-
                 LibraryFocusPositionSync(
+                    activeTab = activeTab,
                     focusedIndexState = focusedIndexState,
-                    coordsTracker = coordsTracker,
+                    gridState = gridState,
+                    startPaddingPx = startPaddingPx,
                     overlayState = overlayState,
                 )
 
@@ -386,15 +344,7 @@ fun FocusLibraryScreen(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .clipToBounds()
-                            .onGloballyPositioned { coords ->
-                                coordsTracker.gridContainerCoordinates = coords
-                                val currentFocusedCoords =
-                                    coordsTracker.visibleItemCoords[focusedIndexState.value] ?: coordsTracker.focusedItemCoordinates
-                                currentFocusedCoords?.let { itemCoords ->
-                                    overlayState.updateFrom(itemCoords, coords)
-                                }
-                            },
+                            .clipToBounds(),
                 ) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(FLS_GRID_COLUMNS),
@@ -424,7 +374,6 @@ fun FocusLibraryScreen(
                                 isFocused = isFocused,
                                 isHidden = isHidden,
                                 onItemClick = handleItemClick,
-                                onItemPositioned = handleItemPositioned,
                             )
                         }
                     }
@@ -562,14 +511,12 @@ private fun LibraryGridFocusScroller(
     gridState: LazyGridState,
     peekOffsetPx: Int,
     overlayState: LibraryFocusOverlayState,
-    coordsTracker: GridCoordinatesTracker,
 ) {
     var lastScrolledRow by remember(activeTab) { mutableIntStateOf(-1) }
     val currentItemCount by rememberUpdatedState(itemCount)
 
     LaunchedEffect(activeTab) {
         overlayState.reset()
-        coordsTracker.clear()
         lastScrolledRow = -1
         gridState.scrollToItem(0)
     }
@@ -594,17 +541,33 @@ private fun LibraryGridFocusScroller(
 
 @Composable
 private fun LibraryFocusPositionSync(
+    activeTab: LibraryTab,
     focusedIndexState: State<Int>,
-    coordsTracker: GridCoordinatesTracker,
+    gridState: LazyGridState,
+    startPaddingPx: Int,
     overlayState: LibraryFocusOverlayState,
 ) {
-    val focusedIndex = focusedIndexState.value
-    SideEffect {
-        val currentFocusedCoords =
-            coordsTracker.visibleItemCoords[focusedIndex] ?: coordsTracker.focusedItemCoordinates
-        val parentCoords = coordsTracker.gridContainerCoordinates
-        if (currentFocusedCoords != null && parentCoords != null) {
-            overlayState.updateFrom(currentFocusedCoords, parentCoords)
+    LaunchedEffect(activeTab, gridState, startPaddingPx) {
+        snapshotFlow {
+            val focusedIndex = focusedIndexState.value
+            val info = gridState.layoutInfo
+            val item = info.visibleItemsInfo.firstOrNull { it.index == focusedIndex }
+            if (item != null) {
+                val left = (startPaddingPx + item.offset.x).toFloat()
+                val top = (info.beforeContentPadding + item.offset.y).toFloat()
+                Rect(
+                    left = left,
+                    top = top,
+                    right = left + item.size.width,
+                    bottom = top + item.size.height,
+                )
+            } else {
+                null
+            }
+        }.collect { rect ->
+            if (rect != null) {
+                overlayState.updateRect(rect)
+            }
         }
     }
 }
@@ -1048,7 +1011,6 @@ private fun LibraryGridItem(
     isFocused: Boolean,
     isHidden: Boolean = false,
     onItemClick: (Int, InstalledAppInfo) -> Unit,
-    onItemPositioned: (Int, Boolean, LayoutCoordinates) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
@@ -1137,15 +1099,10 @@ private fun LibraryGridItem(
         remember(index, appInfo, onItemClick) {
             { onItemClick(index, appInfo) }
         }
-    val handlePositioned: (LayoutCoordinates) -> Unit =
-        remember(index, isFocused, onItemPositioned) {
-            { coords -> onItemPositioned(index, isFocused, coords) }
-        }
 
     Box(
         modifier =
             modifier
-                .onGloballyPositioned(handlePositioned)
                 .graphicsLayer {
                     val scale = cardScaleAnim?.value ?: FLS_UNFOCUSED_SCALE
                     scaleX = scale
@@ -1198,13 +1155,10 @@ private fun LibraryGridItem(
                         .fillMaxWidth()
                         .then(
                             if (isFocused) {
-                                Modifier
-                                    .graphicsLayer {
-                                        compositingStrategy = CompositingStrategy.Offscreen
-                                    }.basicMarquee(
-                                        iterations = Int.MAX_VALUE,
-                                        initialDelayMillis = FLS_MARQUEE_INITIAL_DELAY_MS,
-                                    )
+                                Modifier.basicMarquee(
+                                    iterations = Int.MAX_VALUE,
+                                    initialDelayMillis = FLS_MARQUEE_INITIAL_DELAY_MS,
+                                )
                             } else {
                                 Modifier
                             },

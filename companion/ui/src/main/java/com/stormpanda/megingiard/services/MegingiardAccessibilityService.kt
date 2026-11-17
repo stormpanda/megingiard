@@ -13,6 +13,8 @@ import android.graphics.Path
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.LocaleList
 import android.provider.Settings
 import android.text.TextUtils
@@ -45,6 +47,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -75,6 +79,8 @@ private enum class AutoToggleStage {
  */
 class MegingiardAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val a11yInspectThread = HandlerThread("MgnrdA11yInspect").apply { start() }
+    private val a11yInspectHandler = Handler(a11yInspectThread.looper)
     private var autoToggleJob: Job? = null
     private var autoToggleStage = AutoToggleStage.TOGGLE_WIRELESS_DEBUG
 
@@ -114,6 +120,35 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     AutoKeyboardFocusCoordinator.reset()
                 }
             }
+        }
+
+        serviceScope.launch {
+            combine(
+                KeyboardSettings.kbAutoOpenOnFocus,
+                AutoKeyboardFocusCoordinator.isKeyboardAutoOpened,
+                _isAutoSetupActive,
+            ) { autoOpen, autoOpened, autoSetup ->
+                autoOpen || autoOpened || autoSetup
+            }.distinctUntilChanged().collect { needsFocusAndClickEvents ->
+                updateSubscribedEventTypes(needsFocusAndClickEvents)
+            }
+        }
+    }
+
+    private fun updateSubscribedEventTypes(needsFocusAndClickEvents: Boolean) {
+        val currentInfo = serviceInfo ?: return
+        val desiredTypes =
+            if (needsFocusAndClickEvents) {
+                AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+                    AccessibilityEvent.TYPE_VIEW_FOCUSED or
+                    AccessibilityEvent.TYPE_VIEW_CLICKED
+            } else {
+                AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+            }
+        if (currentInfo.eventTypes != desiredTypes) {
+            currentInfo.eventTypes = desiredTypes
+            serviceInfo = currentInfo
+            AppLog.d(TAG, "Updated subscribed accessibility eventTypes: focusAndClick=$needsFocusAndClickEvents")
         }
     }
 
@@ -155,20 +190,40 @@ class MegingiardAccessibilityService : AccessibilityService() {
             AccessibilityEvent.TYPE_VIEW_FOCUSED,
             AccessibilityEvent.TYPE_VIEW_CLICKED,
             -> {
-                val source = event.source ?: return
-                val isEditable = source.isEditable
-                val isFocused = source.isFocused
-                if (isEditable && isFocused) {
-                    val stableId = source.uniqueId ?: "${source.windowId}:${source.viewIdResourceName ?: source.className ?: "field"}"
-                    val fieldId = "$eventPackage:$stableId"
-                    val isClicked = event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED
-                    AutoKeyboardFocusCoordinator.onTextFieldFocused(
-                        fieldId = fieldId,
-                        packageName = eventPackage,
-                        isClicked = isClicked,
-                    )
-                } else if (event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED && !isEditable) {
-                    AutoKeyboardFocusCoordinator.onNonEditableFocused()
+                val eventType = event.eventType
+                val pkg = eventPackage ?: return
+
+                @Suppress("DEPRECATION")
+                val eventCopy = AccessibilityEvent.obtain(event)
+                a11yInspectHandler.post {
+                    try {
+                        val source = eventCopy.source ?: return@post
+                        val isEditable = source.isEditable
+                        val isFocused = source.isFocused
+                        if (isEditable && isFocused) {
+                            val stableId =
+                                source.uniqueId
+                                    ?: "${source.windowId}:${source.viewIdResourceName ?: source.className ?: "field"}"
+                            val fieldId = "$pkg:$stableId"
+                            val isClicked = eventType == AccessibilityEvent.TYPE_VIEW_CLICKED
+                            serviceScope.launch {
+                                AutoKeyboardFocusCoordinator.onTextFieldFocused(
+                                    fieldId = fieldId,
+                                    packageName = pkg,
+                                    isClicked = isClicked,
+                                )
+                            }
+                        } else if (eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED && !isEditable) {
+                            serviceScope.launch {
+                                AutoKeyboardFocusCoordinator.onNonEditableFocused()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        AppLog.d(TAG, "Off-thread event.source inspection skipped: ${e.message}")
+                    } finally {
+                        @Suppress("DEPRECATION")
+                        eventCopy.recycle()
+                    }
                 }
             }
 
@@ -819,6 +874,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
+        a11yInspectHandler.removeCallbacksAndMessages(null)
+        a11yInspectThread.quitSafely()
         AutoKeyboardFocusCoordinator.reset()
         if (instance == this) instance = null
         AppLog.i(TAG, "onDestroy: Accessibility Service destroyed")

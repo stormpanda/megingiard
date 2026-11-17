@@ -22,9 +22,9 @@ import kotlin.math.abs
 
 private const val TAG = "ScreenCaptureManager"
 private const val DEFAULT_MAX_FPS = 60
-private const val FOLLOW_LERP_FACTOR = 0.15f
+private const val FOLLOW_LERP_FACTOR = 0.078f
 private const val FOLLOW_EPSILON = 0.001f
-private const val FOLLOW_FRAME_DELAY_MS = 16L
+private const val FOLLOW_FRAME_DELAY_MS = 8L
 
 object ScreenCaptureManager {
     const val SCREENSHOT_SUBDIR = "Pictures/Megingiard"

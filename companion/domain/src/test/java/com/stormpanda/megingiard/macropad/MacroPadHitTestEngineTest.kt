@@ -76,7 +76,7 @@ class MacroPadHitTestEngineTest {
 
     @Test
     fun `virtual touch trackpoint injects DOWN event at center initially`() {
-        val consumed = engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), false)
+        val consumed = engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton))
         assertTrue(consumed)
         assertEquals(1, PrivdClient.queueSizeForTest)
         assertTouch(TouchAction.DOWN, 540, 960)
@@ -84,7 +84,7 @@ class MacroPadHitTestEngineTest {
 
     @Test
     fun `virtual touch trackpoint accumulates moves and coerces bounds`() {
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), false)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton))
         PrivdClient.clearQueueForTest()
 
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton))
@@ -104,7 +104,7 @@ class MacroPadHitTestEngineTest {
     fun `virtual touch trackpoint scales movement with sensitivity setting`() {
         val highSensButton =
             centeredButton(PadAction.TrackpointMove(TrackpointSize.MEDIUM, TrackpointMode.VIRTUAL_TOUCH, sensitivity = 2.0f))
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(highSensButton), false)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(highSensButton))
         PrivdClient.clearQueueForTest()
 
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(highSensButton))
@@ -114,7 +114,7 @@ class MacroPadHitTestEngineTest {
 
     @Test
     fun `virtual touch trackpoint release injects UP event at last position`() {
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), false)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton))
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton))
         PrivdClient.clearQueueForTest()
 
@@ -125,7 +125,7 @@ class MacroPadHitTestEngineTest {
 
     @Test
     fun `virtual touch trackpoint keeps internally tracked position clamped on release`() {
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), false)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton))
         PrivdClient.clearQueueForTest()
 
         engine.onMove(0L, 1500f, 1500f, 1000f, 1000f, listOf(trackpointButton))
@@ -134,25 +134,25 @@ class MacroPadHitTestEngineTest {
         engine.onRelease(0L, listOf(trackpointButton))
         assertTouch(TouchAction.UP, -540, 2880)
 
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), false)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton))
         assertTouch(TouchAction.DOWN, 0, 1920)
     }
 
     @Test
     fun `virtual touch trackpoint remembers position across swipes`() {
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), false)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton))
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton))
         engine.onRelease(0L, listOf(trackpointButton))
         PrivdClient.clearQueueForTest()
 
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), false)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton))
         assertEquals(1, PrivdClient.queueSizeForTest)
         assertTouch(TouchAction.DOWN, 600, 1110)
     }
 
     @Test
     fun `physical mouse trackpoint does not inject touch events`() {
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(mouseButton), false)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(mouseButton))
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(mouseButton))
         engine.onRelease(0L, listOf(mouseButton))
         val commands = mutableListOf<String>()
@@ -166,7 +166,7 @@ class MacroPadHitTestEngineTest {
 
     @Test
     fun `releaseAll with active virtual touch trackpoint injects UP event`() {
-        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton), false)
+        engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(trackpointButton))
         engine.onMove(0L, 550f, 480f, 50f, -20f, listOf(trackpointButton))
         PrivdClient.clearQueueForTest()
 
@@ -178,10 +178,10 @@ class MacroPadHitTestEngineTest {
     @Test
     fun `onPress returns true when coordinates fall inside button bounds and false outside`() {
         val button = centeredButton(PadAction.KeyboardKey(keycode = 1, label = "Test"))
-        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, listOf(button), false))
-        assertTrue(engine.onPress(2L, 480f, 520f, canvasW, canvasH, listOf(button), false))
-        assertFalse(engine.onPress(3L, 400f, 500f, canvasW, canvasH, listOf(button), false))
-        assertFalse(engine.onPress(4L, 500f, 540f, canvasW, canvasH, listOf(button), false))
+        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, listOf(button)))
+        assertTrue(engine.onPress(2L, 480f, 520f, canvasW, canvasH, listOf(button)))
+        assertFalse(engine.onPress(3L, 400f, 500f, canvasW, canvasH, listOf(button)))
+        assertFalse(engine.onPress(4L, 500f, 540f, canvasW, canvasH, listOf(button)))
     }
 
     @Test
@@ -190,7 +190,7 @@ class MacroPadHitTestEngineTest {
         val pointerId = 42L
 
         assertFalse(engine.isPointerTracked(pointerId))
-        engine.onPress(pointerId, 500f, 500f, canvasW, canvasH, listOf(button), false)
+        engine.onPress(pointerId, 500f, 500f, canvasW, canvasH, listOf(button))
         assertTrue(engine.isPointerTracked(pointerId))
         engine.onRelease(pointerId, listOf(button))
         assertFalse(engine.isPointerTracked(pointerId))
@@ -199,7 +199,7 @@ class MacroPadHitTestEngineTest {
     @Test
     fun `scroll wheel button handles press, drag, and release`() {
         val scrollBtn = centeredButton(PadAction.ScrollWheel)
-        engine.onPress(10L, 500f, 500f, canvasW, canvasH, listOf(scrollBtn), false)
+        engine.onPress(10L, 500f, 500f, canvasW, canvasH, listOf(scrollBtn))
         assertTrue(engine.isPointerTracked(10L))
 
         engine.onMove(10L, 500f, 450f, 0f, -50f, listOf(scrollBtn))
@@ -230,7 +230,7 @@ class MacroPadHitTestEngineTest {
                 hapticStrength = HapticStrength.MEDIUM,
             )
 
-        engineWithHaptic.onPress(5L, 500f, 500f, canvasW, canvasH, listOf(hapticBtn), false)
+        engineWithHaptic.onPress(5L, 500f, 500f, canvasW, canvasH, listOf(hapticBtn))
         assertTrue(hapticTriggered)
     }
 
@@ -249,11 +249,11 @@ class MacroPadHitTestEngineTest {
                 buttonShape = ButtonShape.SQUARE,
             )
 
-        assertFalse(engine.onPress(1L, 475f, 475f, canvasW, canvasH, listOf(diamondBtn), false))
-        assertTrue(engine.onPress(2L, 500f, 500f, canvasW, canvasH, listOf(diamondBtn), false))
+        assertFalse(engine.onPress(1L, 475f, 475f, canvasW, canvasH, listOf(diamondBtn)))
+        assertTrue(engine.onPress(2L, 500f, 500f, canvasW, canvasH, listOf(diamondBtn)))
         engine.onRelease(2L, listOf(diamondBtn))
 
-        assertTrue(engine.onPress(3L, 475f, 475f, canvasW, canvasH, listOf(squareBtn), false))
+        assertTrue(engine.onPress(3L, 475f, 475f, canvasW, canvasH, listOf(squareBtn)))
         engine.onRelease(3L, listOf(squareBtn))
     }
 
@@ -274,7 +274,7 @@ class MacroPadHitTestEngineTest {
             )
         val buttons = listOf(triDown, triUp)
 
-        assertTrue(engine.onPress(1L, 475f, 525f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(1L, 475f, 525f, canvasW, canvasH, buttons))
         assertEquals(setOf("btn-tri-up"), engine.pressedIds.value)
         engine.onRelease(1L, buttons)
     }
@@ -291,7 +291,7 @@ class MacroPadHitTestEngineTest {
                 centeredButton(PadAction.GamepadButton(btnCode = 305, label = "B")).copy(id = "btn-layout-b"),
             )
 
-        assertTrue(engine.onPress(7L, 500f, 500f, canvasW, canvasH, layoutAButtons, false))
+        assertTrue(engine.onPress(7L, 500f, 500f, canvasW, canvasH, layoutAButtons))
         assertEquals("GD 304\n", PrivdClient.pollCommandForTest())
 
         // Release occurs while layout B is active (layoutBButtons does not contain btnA)
@@ -323,13 +323,13 @@ class MacroPadHitTestEngineTest {
         val buttons = listOf(tapLeft, tapRight)
 
         // Finger 1 holds Left Tap (slot 8)
-        assertTrue(engine.onPress(1L, 200f, 500f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(1L, 200f, 500f, canvasW, canvasH, buttons))
         val down1 = PrivdClient.pollCommandForTest()
         assertNotNull(down1)
         assertTrue("Expected slot 8 DOWN, got $down1", down1!!.startsWith("D 8 "))
 
         // Finger 2 holds Right Tap simultaneously (slot 9, without colliding with slot 8)
-        assertTrue(engine.onPress(2L, 800f, 500f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(2L, 800f, 500f, canvasW, canvasH, buttons))
         val down2 = PrivdClient.pollCommandForTest()
         assertNotNull(down2)
         assertTrue("Expected slot 9 DOWN, got $down2", down2!!.startsWith("D 9 "))
@@ -342,7 +342,7 @@ class MacroPadHitTestEngineTest {
         assertEquals(setOf("btn-tap-right"), engine.pressedIds.value)
 
         // Finger 3 presses Left Tap again -> reuses freed slot 8
-        assertTrue(engine.onPress(3L, 200f, 500f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(3L, 200f, 500f, canvasW, canvasH, buttons))
         val down3 = PrivdClient.pollCommandForTest()
         assertNotNull(down3)
         assertTrue("Expected freed slot 8 DOWN, got $down3", down3!!.startsWith("D 8 "))
@@ -378,8 +378,8 @@ class MacroPadHitTestEngineTest {
         MacroPadState.loadFrom(listOf(profile), "p-shift")
 
         // Two pointers press the same Hold-to-Shift button -> stack depth becomes 2
-        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, listOf(shiftBtn), false))
-        assertTrue(engine.onPress(2L, 505f, 505f, canvasW, canvasH, listOf(shiftBtn), false))
+        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, listOf(shiftBtn)))
+        assertTrue(engine.onPress(2L, 505f, 505f, canvasW, canvasH, listOf(shiftBtn)))
         assertEquals("l-shift", MacroPadState.activeLayout.value?.id)
 
         // releaseAll must pop both Hold-to-Shift entries and restore the base layout
@@ -397,12 +397,12 @@ class MacroPadHitTestEngineTest {
         val buttons = listOf(keyBtn)
 
         // First pointer presses -> sends KD 30
-        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, buttons))
         assertEquals("KD 30\n", PrivdClient.pollCommandForTest())
         assertNull(PrivdClient.pollCommandForTest())
 
         // Second pointer presses same button -> stays pressed without duplicate KD 30
-        assertTrue(engine.onPress(2L, 505f, 505f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(2L, 505f, 505f, canvasW, canvasH, buttons))
         assertNull(PrivdClient.pollCommandForTest())
         assertEquals(setOf("btn-key-a"), engine.pressedIds.value)
 
@@ -426,7 +426,7 @@ class MacroPadHitTestEngineTest {
             ).copy(id = "btn-unrecorded-tap")
         val buttons = listOf(unrecordedTap)
 
-        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(1L, 500f, 500f, canvasW, canvasH, buttons))
         assertEquals(setOf("btn-unrecorded-tap"), engine.pressedIds.value)
         assertNull(PrivdClient.pollCommandForTest())
 
@@ -448,10 +448,10 @@ class MacroPadHitTestEngineTest {
                 hapticStrength = HapticStrength.OFF,
             )
         // Centered at (500, 500) with 136x136 -> [432, 568] x [432, 568]
-        assertTrue(engine.onPress(1L, 435f, 565f, canvasW, canvasH, listOf(defaultBtn), false))
+        assertTrue(engine.onPress(1L, 435f, 565f, canvasW, canvasH, listOf(defaultBtn)))
         engine.onRelease(1L, listOf(defaultBtn))
-        assertFalse(engine.onPress(2L, 420f, 500f, canvasW, canvasH, listOf(defaultBtn), false))
-        assertFalse(engine.onPress(3L, 580f, 500f, canvasW, canvasH, listOf(defaultBtn), false))
+        assertFalse(engine.onPress(2L, 420f, 500f, canvasW, canvasH, listOf(defaultBtn)))
+        assertFalse(engine.onPress(3L, 580f, 500f, canvasW, canvasH, listOf(defaultBtn)))
     }
 
     @Test
@@ -473,9 +473,9 @@ class MacroPadHitTestEngineTest {
             )
         // Button center is at leftPx + 0.1 * viewportW = 88.8889 + 110.2222 = 199.1111, halfWidth = 60.4444 -> [138.67..259.56]
         // Tapping uncovered left pillarbox bar at x = 40 returns false so BackgroundTouchpad receives the touch
-        assertFalse(engine.onPress(1L, 40f, 480f, 1280f, 960f, listOf(leftEdgeBtn), false, viewport))
+        assertFalse(engine.onPress(1L, 40f, 480f, 1280f, 960f, listOf(leftEdgeBtn), viewport))
         // Tapping at x = 200 hits the scaled button
-        assertTrue(engine.onPress(2L, 200f, 480f, 1280f, 960f, listOf(leftEdgeBtn), false, viewport))
+        assertTrue(engine.onPress(2L, 200f, 480f, 1280f, 960f, listOf(leftEdgeBtn), viewport))
         engine.onRelease(2L, listOf(leftEdgeBtn))
     }
 
@@ -496,7 +496,7 @@ class MacroPadHitTestEngineTest {
             )
         val expectedCenterX = viewport.normToScreenX(-0.05f)
         assertTrue(expectedCenterX < viewport.leftPx)
-        assertTrue(engine.onPress(1L, expectedCenterX, 480f, 1280f, 960f, listOf(barBtn), false, viewport))
+        assertTrue(engine.onPress(1L, expectedCenterX, 480f, 1280f, 960f, listOf(barBtn), viewport))
         assertEquals("KD 31\n", PrivdClient.pollCommandForTest())
         engine.onRelease(1L, listOf(barBtn))
     }
@@ -520,7 +520,7 @@ class MacroPadHitTestEngineTest {
             val expectedY = viewport.normToScreenY(0.5f)
 
             AppStateManager.commands.test {
-                assertTrue(engine.onPress(1L, expectedX, expectedY, 1240f, 1080f, listOf(launcherBtn), false, viewport))
+                assertTrue(engine.onPress(1L, expectedX, expectedY, 1240f, 1080f, listOf(launcherBtn), viewport))
                 val cmd = awaitItem() as CompanionCommand.LaunchApp
                 assertEquals("com.example.game", cmd.packageName)
                 assertEquals(expectedX, cmd.touchX, 0.01f)
@@ -546,7 +546,7 @@ class MacroPadHitTestEngineTest {
         val buttons = listOf(leftStickBtn)
 
         // Press halfway right of center (x = 300 -> nx = +0.5, ny = 0.0)
-        assertTrue(engine.onPress(1L, 300f, 500f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(1L, 300f, 500f, canvasW, canvasH, buttons))
         val downCmds =
             buildList {
                 while (true) {
@@ -554,7 +554,7 @@ class MacroPadHitTestEngineTest {
                     add(cmd)
                 }
             }
-        assertEquals(listOf("JS 0 16384\n", "JS 1 0\n"), downCmds)
+        assertEquals(listOf("J2 0 16384 1 0\n"), downCmds)
         assertEquals(0.5f, engine.stickDeflections.value["btn-ls"]!!.x, 0.01f)
         assertEquals(0.0f, engine.stickDeflections.value["btn-ls"]!!.y, 0.01f)
 
@@ -568,7 +568,7 @@ class MacroPadHitTestEngineTest {
                     add(cmd)
                 }
             }
-        assertEquals(listOf("JS 0 23170\n", "JS 1 -23170\n"), moveCmds)
+        assertEquals(listOf("J2 0 23170 1 -23170\n"), moveCmds)
         val deflect = engine.stickDeflections.value["btn-ls"]!!
         assertEquals(0.7071f, deflect.x, 0.01f)
         assertEquals(-0.7071f, deflect.y, 0.01f)
@@ -582,7 +582,7 @@ class MacroPadHitTestEngineTest {
                     add(cmd)
                 }
             }
-        assertEquals(listOf("JS 0 0\n", "JS 1 0\n"), upCmds)
+        assertEquals(listOf("J2 0 0 1 0\n"), upCmds)
         assertFalse("btn-ls" in engine.stickDeflections.value)
         assertTrue(engine.pressedIds.value.isEmpty())
     }
@@ -628,11 +628,11 @@ class MacroPadHitTestEngineTest {
         val buttons = listOf(leftStickBtn, rightStickBtn, jumpBtn)
 
         // Finger 1 touches Right Stick off-center at (840, 520) -> floatingCenter starts at (0, 0)!
-        assertTrue(engine.onPress(1L, 840f, 520f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(1L, 840f, 520f, canvasW, canvasH, buttons))
         // Finger 2 touches Left Stick at (250, 500) -> sensitivity 2.0 * (+50 / 100) = +1.0 full right!
-        assertTrue(engine.onPress(2L, 250f, 500f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(2L, 250f, 500f, canvasW, canvasH, buttons))
         // Finger 3 presses Jump button at (500, 500)
-        assertTrue(engine.onPress(3L, 500f, 500f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(3L, 500f, 500f, canvasW, canvasH, buttons))
 
         val initialCmds =
             buildList {
@@ -641,8 +641,8 @@ class MacroPadHitTestEngineTest {
                     add(cmd)
                 }
             }
-        assertTrue("JS 2 0\n" in initialCmds && "JS 5 0\n" in initialCmds)
-        assertTrue("JS 0 32767\n" in initialCmds)
+        assertTrue("J2 2 0 5 0\n" in initialCmds)
+        assertTrue("J2 0 32767 1 0\n" in initialCmds)
         assertTrue("GD ${GamepadKeycodes.BTN_SOUTH}\n" in initialCmds)
 
         // Move Finger 1 (floating Right Stick) left by 50px to (790, 520) -> nx = -0.5 on ABS_Z (2)
@@ -659,8 +659,8 @@ class MacroPadHitTestEngineTest {
                     add(cmd)
                 }
             }
-        assertTrue("JS 0 0\n" in cleanupCmds && "JS 1 0\n" in cleanupCmds)
-        assertTrue("JS 2 0\n" in cleanupCmds && "JS 5 0\n" in cleanupCmds)
+        assertTrue("J2 0 0 1 0\n" in cleanupCmds)
+        assertTrue("J2 2 0 5 0\n" in cleanupCmds)
         assertTrue("GU ${GamepadKeycodes.BTN_SOUTH}\n" in cleanupCmds)
         assertTrue(engine.stickDeflections.value.isEmpty())
     }
@@ -682,14 +682,14 @@ class MacroPadHitTestEngineTest {
         val buttons = listOf(leftStickBtn)
 
         // Finger 1 tilts stick halfway right (+0.5, 0.0)
-        assertTrue(engine.onPress(1L, 300f, 500f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(1L, 300f, 500f, canvasW, canvasH, buttons))
         while (PrivdClient.pollCommandForTest() != null) {
             // drain initial press commands
         }
         assertEquals(0.5f, engine.stickDeflections.value["btn-ls"]!!.x, 0.01f)
 
         // Finger 2 touches inside the same stick button while Finger 1 is held
-        assertTrue(engine.onPress(2L, 220f, 500f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(2L, 220f, 500f, canvasW, canvasH, buttons))
         assertNull(PrivdClient.pollCommandForTest())
 
         // Finger 1 lifts first: hardware axes must reset to (0, 0) and live UI deflection must clear immediately
@@ -701,7 +701,7 @@ class MacroPadHitTestEngineTest {
                     add(cmd)
                 }
             }
-        assertEquals(listOf("JS 0 0\n", "JS 1 0\n"), releaseFirstCmds)
+        assertEquals(listOf("J2 0 0 1 0\n"), releaseFirstCmds)
         assertFalse("btn-ls" in engine.stickDeflections.value)
         assertTrue("btn-ls" in engine.pressedIds.value)
 
@@ -740,13 +740,13 @@ class MacroPadHitTestEngineTest {
         val buttons = listOf(primaryLeftStick, secondaryLeftStick)
 
         // Finger 1 holds primary Left Stick at (+0.5, 0.0) -> rawX = 16384, rawY = 0
-        assertTrue(engine.onPress(1L, 250f, 500f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(1L, 250f, 500f, canvasW, canvasH, buttons))
         while (PrivdClient.pollCommandForTest() != null) {
             // drain initial press commands
         }
 
         // Finger 2 briefly taps secondary Left Stick at its exact center (800, 500) -> sends JS 0 0
-        assertTrue(engine.onPress(2L, 800f, 500f, canvasW, canvasH, buttons, false))
+        assertTrue(engine.onPress(2L, 800f, 500f, canvasW, canvasH, buttons))
         val tapCmds =
             buildList {
                 while (true) {

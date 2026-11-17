@@ -1153,12 +1153,20 @@ fun MacroPadEditor(
                                                     cutout = cutout,
                                                     accentColor = colors.accent,
                                                     onUpdateCutout = { updatedCutout ->
+                                                        val currentLay = MacroPadState.activeLayout.value ?: layout
                                                         val updatedList =
-                                                            layout.mirrorCutouts.map {
+                                                            currentLay.mirrorCutouts.map {
                                                                 if (it.id == updatedCutout.id) updatedCutout else it
                                                             }
-                                                        val updatedLayout = layout.copy(mirrorCutouts = updatedList)
-                                                        MacroPadState.updateLayout(updatedLayout)
+                                                        MacroPadState.updateLayout(currentLay.copy(mirrorCutouts = updatedList))
+                                                    },
+                                                    onUpdateCutoutLive = { updatedCutout ->
+                                                        val currentLay = MacroPadState.activeLayout.value ?: layout
+                                                        val updatedList =
+                                                            currentLay.mirrorCutouts.map {
+                                                                if (it.id == updatedCutout.id) updatedCutout else it
+                                                            }
+                                                        MacroPadState.updateLayoutLive(currentLay.copy(mirrorCutouts = updatedList))
                                                     },
                                                 )
                                             }
@@ -1870,6 +1878,7 @@ fun MacroPadEditor(
                                                     stringResource(R.string.macropad_editor_section_buttons),
                                                     stringResource(R.string.macropad_icon_picker_title),
                                                 ),
+                                            scrollable = false,
                                         ) {
                                             ChooseIconSubPageContent(
                                                 selectedIcon = parentDraftButton?.iconName,
@@ -2078,6 +2087,7 @@ fun MacroPadEditor(
                                                         macro.name.ifBlank { stringResource(R.string.macropad_editor_open_timeline_title) },
                                                         stringResource(R.string.macropad_macro_manual_steps_title),
                                                     ),
+                                                scrollable = false,
                                             ) {
                                                 ManualMacroStepsSubPageContent(
                                                     macro = macro,

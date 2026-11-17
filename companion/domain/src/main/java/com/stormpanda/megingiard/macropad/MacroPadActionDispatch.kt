@@ -79,11 +79,6 @@ fun injectActionDown(
             }
         }
 
-        is PadAction.BackgroundPeek -> {
-            AppLog.d(TAG, "actionDown: BackgroundPeek")
-            MacroPadState.togglePeek()
-        }
-
         is PadAction.LayoutNext -> {
             AppLog.d(TAG, "actionDown: LayoutNext")
             MacroPadState.nextLayout()

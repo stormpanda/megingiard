@@ -22,8 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.Visibility
-import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,7 +47,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.math.DesignViewport
 import com.stormpanda.megingiard.ui.AppPalettes
@@ -98,8 +95,6 @@ private const val MP_SCROLL_CHEVRON_GAP_BASE_DP = 4f
 private const val MP_SCROLL_CHEVRON_BASE_PX = MP_SCROLL_CHEVRON_BASE_DP * THOR_BOTTOM_DENSITY
 private const val MP_SCROLL_CHEVRON_GAP_BASE_PX = MP_SCROLL_CHEVRON_GAP_BASE_DP * THOR_BOTTOM_DENSITY
 private const val MP_SCROLL_CHEVRON_DIM_ALPHA = 0.5f
-private const val MP_PEEK_ICON_BASE_DP = 24f
-private const val MP_PEEK_ICON_BASE_PX = MP_PEEK_ICON_BASE_DP * THOR_BOTTOM_DENSITY
 
 private const val MP_STICK_GUIDE_RING_RATIO = 0.62f
 private const val MP_STICK_TICK_INNER_RATIO = 0.80f
@@ -331,15 +326,6 @@ internal fun PadButtonContent(
         ScrollWheelFace(
             accentColor = effectiveContentAccent,
             renderedWidthPx = renderedWidthPx,
-        )
-    } else if (btn.action is PadAction.BackgroundPeek) {
-        val peekIconPx =
-            MP_PEEK_ICON_BASE_PX *
-                (min(renderedWidthPx, renderedHeightPx) / MP_THOR_DEFAULT_BUTTON_SIZE_PX) *
-                contentScale
-        BackgroundPeekFace(
-            accentColor = effectiveContentAccent,
-            iconSize = with(density) { peekIconPx.toDp() },
         )
     } else if (btn.action is PadAction.AppLauncher) {
         AppLauncherFace(
@@ -614,24 +600,6 @@ internal fun ScrollWheelFace(
             modifier = Modifier.size(chevronSize),
         )
     }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Ambient Peek face — visibility toggle icon
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-internal fun BackgroundPeekFace(
-    accentColor: Color,
-    iconSize: Dp,
-) {
-    val isPeekActive by MacroPadState.isPeekActive.collectAsStateWithLifecycle()
-    Icon(
-        imageVector = if (isPeekActive) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
-        contentDescription = null,
-        tint = accentColor,
-        modifier = Modifier.size(iconSize),
-    )
 }
 
 internal fun resolveColorOption(

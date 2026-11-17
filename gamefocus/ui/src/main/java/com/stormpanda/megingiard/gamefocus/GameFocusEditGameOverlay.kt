@@ -11,7 +11,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -61,6 +60,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -119,6 +119,7 @@ private val GF_BADGE_CONTAINER_SIZE = 24.dp
 private val GF_BADGE_ICON_SIZE = 14.dp
 private val GF_ICON_THUMB_SIZE = 140.dp
 private val GF_ICON_SHAPE = RoundedCornerShape(GF_POSTER_CORNER_RADIUS)
+private val GF_ZERO_DP = 0.dp
 
 internal enum class EditGameCategory(
     val titleResId: Int,
@@ -763,69 +764,73 @@ private fun SteamGridDbArtworkDeck(
                 iconTint = appColors.onSurfaceSecondary,
             )
         } else {
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val itemWidth = thumbWidth
-                val horizontalPadding = ((maxWidth - itemWidth) / 2).coerceAtLeast(0.dp)
+            var rowContainerWidthPx by remember { mutableIntStateOf(0) }
+            val horizontalPadding =
+                with(density) {
+                    ((rowContainerWidthPx.toDp() - thumbWidth) / 2).coerceAtLeast(GF_ZERO_DP)
+                }
 
-                LazyRow(
-                    state = rowState,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = horizontalPadding, vertical = GF_ROW_V_PADDING),
-                    horizontalArrangement = Arrangement.spacedBy(GF_ROW_SPACING),
-                ) {
-                    itemsIndexed(images, key = { _, it -> it.id }) { index, image ->
-                        val isApplied =
-                            !isDefault &&
-                                appliedImageId == image.id &&
-                                (appliedImageType == null || appliedImageType == selectedArtworkType)
+            LazyRow(
+                state = rowState,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .onSizeChanged { rowContainerWidthPx = it.width },
+                contentPadding = PaddingValues(horizontal = horizontalPadding, vertical = GF_ROW_V_PADDING),
+                horizontalArrangement = Arrangement.spacedBy(GF_ROW_SPACING),
+            ) {
+                itemsIndexed(images, key = { _, it -> it.id }) { index, image ->
+                    val isApplied =
+                        !isDefault &&
+                            appliedImageId == image.id &&
+                            (appliedImageType == null || appliedImageType == selectedArtworkType)
 
-                        GamepadFocusCard(
-                            onClick = { onApplyArtwork(image) },
-                            onFocusChanged = { isFocused ->
-                                if (isFocused) {
-                                    scope.launch {
-                                        rowState.animateScrollToItem(index)
-                                    }
+                    GamepadFocusCard(
+                        onClick = { onApplyArtwork(image) },
+                        onFocusChanged = { isFocused ->
+                            if (isFocused) {
+                                scope.launch {
+                                    rowState.animateScrollToItem(index)
                                 }
+                            }
+                        },
+                        shape = thumbShape,
+                        contentPadding = PaddingValues(GF_ZERO_DP),
+                        clipToShape = true,
+                        unfocusedBorderColor = if (isApplied) accentColor else appColors.subduedBorder,
+                        modifier = Modifier.size(thumbWidth, thumbHeight),
+                        cardBgColor =
+                            if (isApplied) {
+                                accentColor.copy(alpha = GF_CARD_SELECTED_BG_ALPHA)
+                            } else {
+                                appColors.surface
                             },
-                            shape = thumbShape,
-                            contentPadding = PaddingValues(0.dp),
-                            clipToShape = true,
-                            unfocusedBorderColor = if (isApplied) accentColor else appColors.subduedBorder,
-                            modifier = Modifier.size(thumbWidth, thumbHeight),
-                            cardBgColor =
-                                if (isApplied) {
-                                    accentColor.copy(alpha = GF_CARD_SELECTED_BG_ALPHA)
-                                } else {
-                                    appColors.surface
-                                },
-                        ) {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                SteamGridDbImageThumbnail(
-                                    url = image.thumb.ifBlank { image.url },
-                                    reqWidthPx = thumbWidthPx,
-                                    reqHeightPx = thumbHeightPx,
-                                    contentDescription = stringResource(R.string.steamgriddb_cd_artwork_option),
-                                    contentScale = contentScaleForType(selectedArtworkType),
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                                if (isApplied) {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .align(Alignment.TopEnd)
-                                                .padding(GF_SPACING_8)
-                                                .size(GF_BADGE_CONTAINER_SIZE)
-                                                .background(accentColor, CircleShape),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Check,
-                                            contentDescription = stringResource(R.string.gamefocus_scraping_applied_badge_cd),
-                                            tint = appColors.onAccent,
-                                            modifier = Modifier.size(GF_BADGE_ICON_SIZE),
-                                        )
-                                    }
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            SteamGridDbImageThumbnail(
+                                url = image.thumb.ifBlank { image.url },
+                                reqWidthPx = thumbWidthPx,
+                                reqHeightPx = thumbHeightPx,
+                                contentDescription = stringResource(R.string.steamgriddb_cd_artwork_option),
+                                contentScale = contentScaleForType(selectedArtworkType),
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                            if (isApplied) {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(GF_SPACING_8)
+                                            .size(GF_BADGE_CONTAINER_SIZE)
+                                            .background(accentColor, CircleShape),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Check,
+                                        contentDescription = stringResource(R.string.gamefocus_scraping_applied_badge_cd),
+                                        tint = appColors.onAccent,
+                                        modifier = Modifier.size(GF_BADGE_ICON_SIZE),
+                                    )
                                 }
                             }
                         }

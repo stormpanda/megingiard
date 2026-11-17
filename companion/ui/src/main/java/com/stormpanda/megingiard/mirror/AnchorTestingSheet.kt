@@ -46,7 +46,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -68,7 +67,6 @@ import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
-import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 private const val TAG = "AnchorTestingSheet"
@@ -533,6 +531,8 @@ private fun AnchorPreviewCard(
             )
         }
 
+    val checkerBrush = rememberCheckerboardBrush(checkerColor1, checkerColor2, CHECKER_SIZE)
+
     Box(
         modifier =
             modifier
@@ -540,19 +540,7 @@ private fun AnchorPreviewCard(
                 .clip(RoundedCornerShape(PREVIEW_CORNER_RADIUS))
                 .then(borderModifier)
                 .drawBehind {
-                    val checkPx = CHECKER_SIZE.toPx()
-                    val cols = ceil(size.width / checkPx).toInt()
-                    val rows = ceil(size.height / checkPx).toInt()
-                    for (r in 0 until rows) {
-                        for (c in 0 until cols) {
-                            val color = if ((r + c) % 2 == 0) checkerColor1 else checkerColor2
-                            drawRect(
-                                color = color,
-                                topLeft = Offset(c * checkPx, r * checkPx),
-                                size = Size(checkPx, checkPx),
-                            )
-                        }
-                    }
+                    drawRect(brush = checkerBrush)
                 },
         contentAlignment = Alignment.Center,
     ) {

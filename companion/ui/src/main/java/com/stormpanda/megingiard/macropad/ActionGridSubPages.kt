@@ -25,7 +25,6 @@ import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.TouchApp
-import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -73,12 +72,6 @@ private val MIRROR_ACTION_ITEMS =
             R.string.macropad_action_mirror_touch_projection,
             R.string.macropad_action_mirror_touch_projection_desc,
             Icons.Rounded.TouchApp,
-        ),
-        ActionGridItem(
-            PadAction.BackgroundPeek,
-            R.string.macropad_action_ambient_peek,
-            R.string.macropad_action_ambient_peek_desc,
-            Icons.Rounded.Visibility,
         ),
     )
 

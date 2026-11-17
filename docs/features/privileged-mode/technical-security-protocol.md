@@ -28,7 +28,7 @@ OS-level peer credential checks (`SO_PEERCRED` / `peerCredentials.uid` checks) a
 
 #### Mutual HMAC-SHA256 Handshake & Protocol Version Verification
 
-Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`, currently `24`):
+Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`, currently `25`):
 
 ```
 Daemon -> App     CHAL <32-hex-nonce1>\n
@@ -88,6 +88,7 @@ the existing protocol.
 | App → D | `U <slot>\n` | Multi-touch finger UP |
 | App → D | `HD <axis> <val>\n` | D-Pad hat (axis 0=X 1=Y, val −1/0/+1) |
 | App → D | `JS <axis> <val>\n` | Analog stick (`ABS_X=0, ABS_Y=1, ABS_Z=2, ABS_RZ=5`, `-32768..32767`) or canonical analog trigger (`ABS_GAS=9` R2, `ABS_BRAKE=10` L2, `0..32767`), dynamically mapped and scaled to physical `.kl` + `EVIOCGABS` bounds |
+| App → D | `J2 <axisX> <valX> <axisY> <valY>\n` | Atomic dual-axis analog stick deflection + single `SYN_REPORT` in one batched `write()` syscall |
 | App → D | `KB_START\n` | Dynamically create virtual uinput keyboard device |
 | App → D | `KB_STOP\n` | Destroy virtual uinput keyboard device |
 | App → D | `KD <keycode>\n` | Virtual keyboard key DOWN (Linux `KEY_*` range 1..255) |
@@ -113,7 +114,7 @@ the existing protocol.
 | D → App | `READ_BEGIN\n` | Stream file contents start marker |
 | D → App | `READ_END\n` | Stream file contents end marker |
 | D → App | `READ_ERR <reason>\n` | File read failed (e.g. file not found) |
-| App → D | `LIST_PROCESSES\n` | List running processes from `/proc` under shell UID |
+| App → D | `LIST_PROCESSES\n` | List running processes from `/proc` under shell UID (executed on a detached worker thread into a single dynamically grown output buffer so `/proc` scans never block real-time input commands) |
 | D → App | `PROC_BEGIN\n` | Stream process list start marker |
 | D → App | `PROC <pid> <uid> <cmdline>\n` | Running process entry |
 | D → App | `PROC_END\n` | Stream process list end marker |
@@ -166,7 +167,7 @@ is exposed by `PrivdBootstrapper.stage` for the manual wizard UI.
 
 `PrivdClient` performs blocking TCP socket connect (`127.0.0.1:51234` / `51244`) and mutual HMAC + version handshake outside `stateLock`, then spawns two background threads:
 
-1. **Writer (`PrivdClientWriter`)** — drains a `LinkedBlockingQueue<String>` of ASCII commands into the TCP `Socket` output stream (`BufferedWriter`), flushing whenever the queue empties.
+1. **Writer (`PrivdClientWriter`)** — drains batches of up to 64 queued ASCII commands (`drainTo`) from a `LinkedBlockingQueue<String>` into the TCP `Socket` output stream (`BufferedWriter`), flushing once per drained batch.
 2. **Reader (`PrivdClientReader`)** — continuously reads `\n`-terminated daemon lines; routes `EVT ` and `EVT_TOUCH ` lines to `SharedFlow`s and dispatches request-response lines to the active `PendingRpc` (`SingleLine` or `MultiLine`).
 
 All 6 request-response RPCs (`ping`, `startDirectMirror`, `stopMirror`, `captureScreenshotPng`, `readTextFile`, `getRunningProcesses`) are serialized through `commandMutex` and share a single `@Volatile private var pendingRpc: PendingRpc?` reference (`executeSingleLineRpc` / `executeMultiLineRpc`); oversized multi-line payloads immediately cancel the RPC and call `markBroken()` so unread trailing lines can never desynchronize subsequent RPC framing.
@@ -181,8 +182,8 @@ When the socket fails, `markBroken()` acquires `stateLock`, runs `cleanupLocked(
 
 | File | Responsibility |
 | --- | --- |
-| `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` | Shared daemon version (`PRIVD_VERSION = 24`), asset names, canonical TCP ports (`51234` / `51244`), and remote file/process path helpers |
-| `companion/ui/src/main/cpp/megingiard_privd.c` | Native daemon source (TCP loopback server, HMAC-SHA256 auth, `dumpsys input` + `EVIOCGABS` primary touchscreen & gamepad `.kl` axis discovery with `ENODEV` controller hot-switch recovery, `O_CLOEXEC` evdev/uinput writers, passive gamepad/touch streams, pipe-streamed `SCREENSHOT_B64`, `READ_FILE`, `LIST_PROCESSES`) |
+| `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` | Shared daemon version (`PRIVD_VERSION = 25`), asset names, canonical TCP ports (`51234` / `51244`), and remote file/process path helpers |
+| `companion/ui/src/main/cpp/megingiard_privd.c` | Native daemon source (TCP loopback server, 4 KB `PrivdLineReader`, HMAC-SHA256 auth, `dumpsys input` + `EVIOCGABS` primary touchscreen & gamepad `.kl` axis discovery with `ENODEV` controller hot-switch recovery, batched `O_CLOEXEC` evdev/uinput writers, passive gamepad/touch streams, pipe-streamed `SCREENSHOT_B64`, `READ_FILE`, async buffered `LIST_PROCESSES`) |
 | `companion/ui/src/main/cpp/cmd_parsers.h` | Pure C command parsers (`parse_touch_command`, `parse_mouse_command`, `parse_key_command`, `parse_gamepad_command_mapped_ex`, `is_gamepad_command_line`, `is_evdev_disconnect_errno`, `parse_dumpsys_input_primary_touch_path`, `parse_dumpsys_input_gamepad_axes`, `translate_gamepad_evdev_abs`, `compute_evdev_axis_span`) shared with native unit tests |
 | `companion/ui/src/main/assets/megingiard_privd_arm64` | Pre-built static arm64 daemon binary |
 | `companion/domain/src/main/java/com/stormpanda/megingiard/privd/PrivdPairKey.kt` | Per-install Keystore-encrypted HMAC key: `generateAndStore()`, `load()`, `delete()` |
