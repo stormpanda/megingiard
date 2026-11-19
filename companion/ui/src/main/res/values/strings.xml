@@ -13,6 +13,7 @@
     <!-- Settings screen -->
     <string name="settings_close">Close</string>
     <string name="settings_support_app">Support this App</string>
+    <string name="settings_join_discord">Join Discord</string>
     <string name="cd_drag_reorder">Drag to reorder</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_global_title">Settings</string>

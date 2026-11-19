@@ -3,6 +3,14 @@
 Welcome to **Megingiard**, a companion application purpose-built for **dual-screen Android gaming handhelds** including the **AYN Thor** and **Retroid Pocket Duo**. Megingiard combines deep Android hardware video stream manipulation with modern Jetpack Compose interfaces to turn your secondary display into a fully interactive tool belt: a latency-free, multi-cutout mirror of your primary screen, a virtual keyboard, a virtual touchpad, a configurable MacroPad, and a virtual gamepad — all driven by native input injection for sub-millisecond response.
 
 <p align="center">
+  <a href="https://discord.gg/F6RtHv9YqR">
+    <img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord" height="40">
+  </a>
+  <br>
+  <em>Get help, share MacroPad profiles &amp; follow development</em>
+</p>
+
+<p align="center">
   <a href="https://youtu.be/vgs6X9piswA?si=K8TbTrWHGzLIRxe3">
     <img src="https://img.youtube.com/vi/vgs6X9piswA/hqdefault.jpg" alt="Megingiard Feature Overview by Rye J's Outpost" width="390">
   </a>
@@ -346,6 +354,8 @@ Ensure the output matches the checksum in the `.txt` file exactly before sideloa
 
 ## FAQ & Troubleshooting
 
+Need help, tips, or community troubleshooting? Join our **[Discord community](https://discord.gg/F6RtHv9YqR)** or check the common questions below.
+
 **The mirror screen is black.**
 
 > Try stopping and restarting the mirror from the Quick Menu. If the screen remains black, open a GitHub issue specifying your current app version and replication steps.
@@ -407,16 +417,25 @@ For the full terms and conditions, please refer to the [LICENSE](LICENSE) file a
 
 ## Support This App
 
-Megingiard is completely free to use for personal, non-commercial use. If you enjoy using it and want to support its ongoing development, feel free to buy me a non-existent coffee! Your support and feedback are highly appreciated. <3
+Megingiard is completely free to use for personal, non-commercial use. If you enjoy using it and want to support its ongoing development, feel free to buy me a non-existent coffee — or join our Discord to share profiles, give feedback, and connect with other dual-screen handheld gamers! Your support and feedback are highly appreciated. <3
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/stormpanda)
+<p>
+  <a href="https://discord.gg/F6RtHv9YqR">
+    <img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord" height="36">
+  </a>
+  &nbsp;
+  <a href="https://ko-fi.com/stormpanda">
+    <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="ko-fi" height="36">
+  </a>
+</p>
 
 ---
 
 ## Links
 
-📣 **Are you creating videos, guides, or posts featuring Megingiard? Reach out, and I will gladly feature your content right here!** 📣
+📣 **Are you creating videos, guides, or posts featuring Megingiard? Reach out on [Discord](https://discord.gg/F6RtHv9YqR), and I will gladly feature your content right here!** 📣
 
+- **[Megingiard Official Discord Server](https://discord.gg/F6RtHv9YqR)** - Join the community for support, `.mgrd` MacroPad profile sharing, feature discussions, and development updates.
 - [Megingiard Feature Overview by Rye J’s Outpost](https://youtu.be/vgs6X9piswA?si=K8TbTrWHGzLIRxe3) - A detailed general feature walkthrough and overview of Megingiard.
 - [Turn All Your Games Into Dual Screen Games by RoeTaKa](https://youtu.be/1Iksugqljj8) - A setup and configuration guide showing how to use Megingiard for different gaming layouts.
 - [Another Must Have App for the AYN Thor! by Joey's Retro Handhelds](https://youtu.be/CoagJc1Z0gQ) - A detailed (and funny!) setup walkthrough and app overview featuring Megingiard. focused on the screen mirroring aspect.

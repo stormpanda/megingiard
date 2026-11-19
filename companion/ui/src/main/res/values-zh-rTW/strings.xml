@@ -13,6 +13,7 @@
     <!-- Settings screen -->
     <string name="settings_close">關閉</string>
     <string name="settings_support_app">支持此應用程式</string>
+    <string name="settings_join_discord">加入 Discord</string>
     <string name="cd_drag_reorder">拖曳以重新排序</string>
     <string name="settings_section_appearance">外觀</string>
     <string name="settings_global_title">設定</string>

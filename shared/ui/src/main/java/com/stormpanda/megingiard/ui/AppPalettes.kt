@@ -79,4 +79,9 @@ object AppPalettes {
     val polaroidFrame = Color(0xFFFCFBF9) // Clean off-white Polaroid frame
     val polaroidFrameBorder = Color(0xFFE5E4E0)
     val polaroidImageBorder = Color(0x22000000)
+
+    /** Header community badge colors (Discord Blurple + dark pill matching the Ko-fi asset). */
+    val headerBadgeDarkBackground = Color(0xFF202020)
+    val discordBlurple = Color(0xFF5865F2)
+    val discordOnBlurple = Color(0xFFFFFFFF)
 }
