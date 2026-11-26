@@ -9,7 +9,7 @@
 
 ### Overview
 
-Megingiard supports user-selectable colour themes. The app provides eight themes: **Dark** (default), **Dark OLED**, **Megingiard (Norse Forest)**, **Mjölnir Steel**, **Valhalla Sunset**, **Aurora Borealis**, **Retro Phosphor**, and **Royal Asgard**. The architecture is token-based so new themes can be added without per-screen rewrites, and themes specify whether their accent colour is user-configurable or fixed.
+Megingiard supports user-selectable colour themes. The app provides nine themes: **Dark** (default), **Dark OLED**, **Megingiard (Norse Forest)**, **Mjölnir Steel**, **Valhalla Sunset**, **Aurora Borealis**, **Retro Phosphor**, **Royal Asgard**, and **Niflheim Dusk**. The architecture is token-based so new themes can be added without per-screen rewrites, and themes specify whether their accent colour is user-configurable or fixed.
 
 ### FR-TH1: Manual Theme Selection
 
@@ -20,7 +20,7 @@ Megingiard supports user-selectable colour themes. The app provides eight themes
 ### FR-TH1a: Optional Custom Accent Support
 
 - A theme MAY allow the user to override its accent colour (e.g. Dark, Dark OLED).
-- A theme MAY instead ship with a fixed built-in accent colour (e.g. Megingiard, Mjölnir, Valhalla, Aurora, Retro Phosphor, Royal Asgard).
+- A theme MAY instead ship with a fixed built-in accent colour (e.g. Megingiard, Mjölnir, Valhalla, Aurora, Retro Phosphor, Royal Asgard, Niflheim Dusk).
 - Whether the accent picker is shown MUST be derived from theme metadata (`supportsCustomAccent`).
 
 ### FR-TH2: Token-Based Colour Architecture
@@ -85,7 +85,7 @@ Twenty-three semantic `AppColors` tokens cover all theming needs:
 
 ### Palettes
 
-Eight palettes are defined:
+Nine palettes are defined:
 
 - `darkPalette` — dark-grey/black surfaces with white text (default).
 - `darkOledPalette` — pitch-black (`#000000`) screen, menu, card, picker, and keyboard surfaces with darkened grey surface variants (`0xFF161618`), soft off-white text (`#E3E3E8`) to reduce OLED eye strain, and user-customizable accent color support.
@@ -95,6 +95,7 @@ Eight palettes are defined:
 - `auroraPalette` — cosmos midnight indigo background (`#0A0A14`), dark violet-indigo surfaces (`#121222`), starry lavender text (`#E6E6FA`), and Glowing Aurora Teal accent (`#00F5D4`).
 - `retroPhosphorPalette` — dark dot-matrix olive background (`#141712`), deep dot-matrix green surfaces (`#1C2219`), phosphor mint text (`#C0D890`), and Game Boy Phosphor Mint accent (`#8BAC0F`).
 - `royalAsgardPalette` — pitch black background (`#000000`), charcoal gold-tinted surfaces (`#12110E`), warm ivory text (`#F7F3E9`), and Polished Royal Gold accent (`#FFD700`).
+- `niflheimPalette` — deep twilight slate background (`#181926`), indigo slate surfaces (`#24273A`), elevated mist slate (`#363A4F`), pressed slate (`#494D64`), pale frost lavender text (`#CAD3F5`), Dusk Mauve accent (`#C6A0F6`), soft crimson rose error (`#ED8796`), and high-contrast dark ink (`#181926`) for `onAccent` and `onError`.
 
 A new theme requires only a new `AppColors` instance and a corresponding `ThemeMode` entry — no per-screen changes.
 
@@ -126,6 +127,7 @@ A new theme requires only a new `AppColors` instance and a corresponding `ThemeM
 - `AURORA` → `false`
 - `RETRO_PHOSPHOR` → `false`
 - `ROYAL_ASGARD` → `false`
+- `NIFLHEIM` → `false`
 
 The Global Settings screen uses this metadata to decide whether to render the accent colour picker.
 

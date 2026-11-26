@@ -28,6 +28,7 @@
     <string name="theme_aurora">北極光</string>
     <string name="theme_retro_phosphor">復古磷光體</string>
     <string name="theme_royal_asgard">皇家阿斯嘉特</string>
+    <string name="theme_niflheim">尼福爾海姆暮色</string>
     <string name="settings_overlay_position">控制列置於底部</string>
     <string name="settings_overlay_fade_out">自動隱藏控制列</string>
     <string name="settings_overlay_fade_out_desc">閒置幾秒後自動隱藏快速選單列</string>
@@ -841,7 +842,7 @@ Open Settings to create a layout.</string>
     <!-- Global Settings card descriptions -->
     <string name="help_settings_overlay_position_desc">如果您的手握姿勢自然落在裝置底部附近，建議開啟此項，使快速選單更容易滑開而無需移動大拇指。</string>
     <string name="help_settings_language_desc">更改所有應用程式選單、覆蓋層與說明教學的語言。目前提供英文、德文與繁體中文。</string>
-    <string name="help_settings_theme_desc">從 8 種獨特視覺主題中選擇，包括深色、深色 OLED、Megingiard、Mjölnir 鋼鐵、英靈殿日落、北極光、復古磷光體與皇家阿斯嘉特。</string>
+    <string name="help_settings_theme_desc">從 9 種獨特視覺主題中選擇，包括深色、深色 OLED、Megingiard、Mjölnir 鋼鐵、英靈殿日落、北極光、復古磷光體、皇家阿斯嘉特與尼福爾海姆暮色。</string>
     <string name="help_settings_export_desc">建立自訂設定檔與配置的完整備份。建議在執行應用程式更新或重設設定前進行備份。</string>
     <string name="help_settings_export_profile_desc">將單個設定檔儲存到檔案中，以便與其他玩家分享配置與巨集，而無需洩露您的完整 App 配置。</string>
     <string name="help_settings_import_profile_desc">從 .mgrd 檔案匯入其他使用者分享的設定檔並新增至現有設定檔中，不會覆寫您的全域設定。</string>

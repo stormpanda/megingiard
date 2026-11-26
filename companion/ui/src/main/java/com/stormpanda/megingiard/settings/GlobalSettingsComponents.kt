@@ -45,6 +45,7 @@ internal fun ThemeMode.displayNameResId(): Int =
         ThemeMode.AURORA -> R.string.theme_aurora
         ThemeMode.RETRO_PHOSPHOR -> R.string.theme_retro_phosphor
         ThemeMode.ROYAL_ASGARD -> R.string.theme_royal_asgard
+        ThemeMode.NIFLHEIM -> R.string.theme_niflheim
     }
 
 internal fun AppLanguage.displayNameResId(): Int =

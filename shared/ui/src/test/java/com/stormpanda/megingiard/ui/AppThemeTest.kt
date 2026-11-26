@@ -77,6 +77,26 @@ class AppThemeTest {
     }
 
     @Test
+    fun testPaletteFor_niflheimDuskTokensAndFixedAccent() {
+        AppLog.d(TAG, "Testing paletteFor Niflheim Dusk palette tokens and fixed accent behavior")
+        val palette = paletteFor(ThemeMode.NIFLHEIM, null)
+        assertEquals(Color(0xFF181926), palette.appBackground)
+        assertEquals(Color(0xFF24273A), palette.surface)
+        assertEquals(Color(0xFF363A4F), palette.surfaceVariant)
+        assertEquals(Color(0xFFCAD3F5), palette.onSurface)
+        assertEquals(Color(0xFFA5ADCB), palette.onSurfaceSecondary)
+        assertEquals(Color(0xFF494D64), palette.keyPressed)
+        assertEquals(Color(0xFFC6A0F6), palette.accent)
+        assertEquals(Color(0xFF181926), palette.onAccent)
+        assertEquals(Color(0xFFED8796), palette.error)
+        assertEquals(Color(0xFF181926), palette.onError)
+
+        val overridden = paletteFor(ThemeMode.NIFLHEIM, Color.Yellow)
+        assertEquals(palette.accent, overridden.accent)
+        assertEquals(palette.onAccent, overridden.onAccent)
+    }
+
+    @Test
     fun testGamePadButton_enumMapping() {
         assertEquals("A", (GamePadButton.BUTTON_A.iconSpec as GamePadButtonIconSpec.Letter).text)
         assertEquals("B", (GamePadButton.BUTTON_B.iconSpec as GamePadButtonIconSpec.Letter).text)
