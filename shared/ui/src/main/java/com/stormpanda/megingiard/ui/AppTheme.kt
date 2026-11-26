@@ -195,6 +195,21 @@ private val royalAsgardPalette =
         error = Color(0xFFD32F2F),
     )
 
+// ─── Niflheim Dusk palette ────────────────────────────────────────────────────
+private val niflheimPalette =
+    AppColors(
+        appBackground = Color(0xFF181926), // Deep twilight slate
+        surface = Color(0xFF24273A), // Indigo slate surface
+        surfaceVariant = Color(0xFF363A4F), // Elevated mist slate
+        onSurface = Color(0xFFCAD3F5), // Pale frost lavender text
+        onSurfaceSecondary = Color(0xFFA5ADCB), // Muted twilight slate secondary text
+        keyPressed = Color(0xFF494D64), // Pressed slate surface
+        accent = Color(0xFFC6A0F6), // Dusk Mauve
+        onAccent = Color(0xFF181926), // High-contrast dark ink (8.09:1)
+        error = Color(0xFFED8796), // Soft crimson rose
+        onError = Color(0xFF181926), // High-contrast dark ink (7.05:1)
+    )
+
 // ─── Palette selector ─────────────────────────────────────────────────────────
 
 /**
@@ -228,6 +243,7 @@ fun paletteFor(
             ThemeMode.AURORA -> auroraPalette
             ThemeMode.RETRO_PHOSPHOR -> retroPhosphorPalette
             ThemeMode.ROYAL_ASGARD -> royalAsgardPalette
+            ThemeMode.NIFLHEIM -> niflheimPalette
         }
     return if (mode.supportsCustomAccent) {
         val eff = userAccent ?: base.accent

@@ -28,6 +28,7 @@
     <string name="theme_aurora">Nordlicht Aurora</string>
     <string name="theme_retro_phosphor">Retro-Phosphor</string>
     <string name="theme_royal_asgard">Königliches Asgard</string>
+    <string name="theme_niflheim">Niflheim-Dämmerung</string>
     <string name="settings_overlay_position">Quick-Menü-Leisten unten platzieren</string>
     <string name="settings_overlay_fade_out">Steuerleiste ausblenden</string>
     <string name="settings_overlay_fade_out_desc">Die Schnellmenüleiste nach einigen Sekunden Inaktivität ausblenden</string>
@@ -842,7 +843,7 @@ Open Settings to create a layout.</string>
     <!-- Global Settings card descriptions -->
     <string name="help_settings_overlay_position_desc">Empfohlen, wenn deine Hände das Gerät so halten, dass deine Daumen natürlich in der Nähe der Unterkante ruhen. Das Schnellmenü lässt sich so leichter wischen.</string>
     <string name="help_settings_language_desc">Ändert die Sprache aller App-Menüs, Overlays und Hilfeseiten. Derzeit stehen Englisch, Deutsch und Trad. Chinesisch zur Auswahl.</string>
-    <string name="help_settings_theme_desc">Wähle aus 8 verschiedenen Designs darunter Dunkel, Dunkel OLED, Megingiard, Mjölnir-Stahl, Valhalla-Sonnenuntergang, Nordlicht Aurora, Retro-Phosphor und Königliches Asgard.</string>
+    <string name="help_settings_theme_desc">Wähle aus %1$d verschiedenen Designs, darunter %2$s.</string>
     <string name="help_settings_export_desc">Erstellt ein vollständiges Backup deiner Profile und Einstellungen. Empfohlen vor App-Updates oder dem Zurücksetzen von Einstellungen.</string>
     <string name="help_settings_export_profile_desc">Speichert ein einzelnes Profil in eine Datei, um Tasten-Layout und Makros mit anderen Spielern zu teilen, ohne deine gesamte Konfiguration freizugeben.</string>
     <string name="help_settings_import_profile_desc">Importiert ein von einem anderen Benutzer geteiltes Profil aus einer .mgrd-Datei und fügt es zu deinen Profilen hinzu, ohne deine globalen Einstellungen zu überschreiben.</string>

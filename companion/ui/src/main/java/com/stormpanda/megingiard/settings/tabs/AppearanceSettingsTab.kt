@@ -10,11 +10,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.ColorWheelSubPageContent
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.settings.displayNameResId
+import com.stormpanda.megingiard.settings.formatThemeNamesList
 import com.stormpanda.megingiard.ui.AppPalettes
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -24,6 +26,7 @@ import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.cycle
 import com.stormpanda.megingiard.ui.firstDeckItem
+import java.util.Locale
 
 val GS_ACCENT_PALETTE_PRESETS = AppPalettes.accentPresets
 
@@ -42,10 +45,19 @@ fun AppearanceSettingsTab(
 ) {
     val accentColor = Color(accentColorArgb)
     val customAccentColor = Color(customAccentColorArgb)
+    val configuration = LocalConfiguration.current
+    val locale = configuration.locales.takeIf { !it.isEmpty }?.get(0) ?: Locale.getDefault()
+    val themeNames = ThemeMode.entries.map { stringResource(it.displayNameResId()) }
+    val themeDescription =
+        stringResource(
+            R.string.help_settings_theme_desc,
+            ThemeMode.entries.size,
+            formatThemeNamesList(themeNames, locale),
+        )
 
     GamepadChoiceCard(
         title = stringResource(R.string.settings_theme),
-        description = stringResource(R.string.help_settings_theme_desc),
+        description = themeDescription,
         selectedText = stringResource(themeMode.displayNameResId()),
         icon = Icons.Rounded.Palette,
         onPrevious = { onThemeModeChange(ThemeMode.entries.cycle(themeMode, BumperDirection.PREV)) },

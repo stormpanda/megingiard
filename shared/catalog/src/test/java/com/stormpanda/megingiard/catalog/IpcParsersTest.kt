@@ -48,6 +48,15 @@ class IpcParsersTest {
     }
 
     @Test
+    fun parseTheme_niflheim_returnsNiflheimMode() {
+        val cursor = MatrixCursor(arrayOf(MegingiardIpcContract.COLUMN_THEME_MODE, MegingiardIpcContract.COLUMN_ACCENT_COLOR))
+        cursor.addRow(arrayOf("NIFLHEIM", null))
+        val config = IpcThemeParser.parse(cursor)
+        assertEquals(ThemeMode.NIFLHEIM, config.themeMode)
+        assertNull(config.userAccentArgb)
+    }
+
+    @Test
     fun megingiardIpcContract_init() {
         val context = RuntimeEnvironment.getApplication()
         MegingiardIpcContract.init(context)

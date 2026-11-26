@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.settings
 
+import android.icu.text.ListFormatter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Gamepad
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.stormpanda.megingiard.R
+import java.util.Locale
 
 val SettingsCategory.titleResId: Int
     get() =
@@ -45,7 +47,14 @@ internal fun ThemeMode.displayNameResId(): Int =
         ThemeMode.AURORA -> R.string.theme_aurora
         ThemeMode.RETRO_PHOSPHOR -> R.string.theme_retro_phosphor
         ThemeMode.ROYAL_ASGARD -> R.string.theme_royal_asgard
+        ThemeMode.NIFLHEIM -> R.string.theme_niflheim
     }
+
+/** Formats [themeNames] as a locale-aware list for the theme picker description. */
+internal fun formatThemeNamesList(
+    themeNames: List<String>,
+    locale: Locale,
+): String = ListFormatter.getInstance(locale).format(themeNames)
 
 internal fun AppLanguage.displayNameResId(): Int =
     when (this) {
