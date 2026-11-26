@@ -78,7 +78,7 @@ the same device or share individual profiles with other Megingiard users.
 
 - The user MUST be able to import a shared profile `.mgrd` file from **Global Settings → Share & Backup**, **MacroPad Editor** (`Quick Actions` / `Profiles` deck), or the **Companion Hub** hero card (when no profile is linked to the detected game/app).
 - When triggered from outside Global Settings, picking a `.mgrd` file MUST transition directly into Global Settings' in-deck `RestoreReviewSubPage`.
-- When triggered from the Companion Hub hero card for an unlinked game/app, `RestoreReviewSubPage` MUST display a toggle (enabled by default) allowing the user to automatically link the imported profile to that detected game/ROM/app.
+- When triggered from the Companion Hub hero card for an unlinked game/app and the archive contains a single profile (`export.profiles.size == 1`), `RestoreReviewSubPage` MUST display a toggle (enabled by default) allowing the user to automatically link the imported profile to that detected game/ROM/app.
 - The import review deck MUST indicate that settings in the file will be ignored.
 - After a successful profile-share import, only the profiles are added (via
   `ConfigManager.applyProfileImport()`); `SettingsManager` is NOT updated.
@@ -155,10 +155,10 @@ MainActivity.onNewIntent() / onCreate()
 ConfigManager.setPendingUri(uri)   ← StateFlow bridge
         │
         ▼
-MainAppScreen.LaunchedEffect(pendingImportRequest)
+MainAppScreen.LaunchedEffect(pendingUriRequest)
         │  suspend – Dispatchers.IO
         ▼
-ConfigManager.readFromUri()  →  ConfigManager.setParsedImport(archive)
+ConfigManager.parseImportUri()  →  ConfigManager.setParsedImport(archive)
         │
         ▼
 IncomingImportDialog  ─── user confirms → ConfigManager.applyImport()
@@ -239,7 +239,7 @@ Adding a new setting requires assigning the key to a section in `SECTION_MAP` or
 | `:companion:ui` `settings/GlobalSettingsScreen.kt`         | State hoists, navigation scaffold, sections orchestrator                                                                                                                                                            |
 | `:companion:ui` `settings/tabs/ConfigurationSettingsTab.kt` | Configuration tab composable and export/import sub-pages (`CreateBackupSubPage`, `ShareProfileSubPage`, `RestoreBackupSubPage`, `RestoreReviewSubPage`)                                                            |
 | `:companion:ui` `settings/GlobalSettingsComponents.kt`     | Enum display name mapping helpers (`SettingsCategory.titleResId()`, `SettingsSubPage.titleResId()`)                                                                                                                 |
-| `:companion:ui` `MainAppScreen.kt`                         | `LaunchedEffect(pendingImportRequest)` + `IncomingImportDialog` for external file intents                                                                                                                           |
+| `:companion:ui` `MainAppScreen.kt`                         | `LaunchedEffect(pendingUriRequest)` + `IncomingImportDialog` for external file intents                                                                                                                              |
 | `:companion:ui` `LaunchTrampolineActivity.kt`              | Receives external `ACTION_VIEW` / `ACTION_SEND` intents from `AndroidManifest.xml` and forwards the `.mgrd` URI, clipData, and read permissions to `MainActivity` on the secondary display |
 | `:companion:ui` `MainActivity.kt`                          | `handleIncomingIntent()` / `onNewIntent()` (`extractIncomingConfigUri`) — routes `ACTION_VIEW`/`ACTION_SEND` uri to `ConfigManager`; holds `createDocumentLauncher` / `openDocumentLauncher` and `FileProvider` Share Sheet launcher |
 | `:companion:ui` `AndroidManifest.xml`                      | `ACTION_VIEW` (`application/vnd.megingiard.config+json` and `.mgrd` `pathSuffix`) and `ACTION_SEND` intent-filters on `LaunchTrampolineActivity`; `FileProvider` (`res/xml/file_paths.xml`) |

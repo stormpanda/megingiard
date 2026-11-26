@@ -115,6 +115,7 @@ import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
 import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -166,6 +167,7 @@ class MainActivity : ComponentActivity() {
     // Settings screens post requests to ConfigManager and these launchers pick them up.
 
     private var pendingExportKind: ConfigManager.ExportKind? = null
+    private var shareExportJob: Job? = null
 
     private val createDocumentLauncher =
         registerForActivityResult(
@@ -209,48 +211,62 @@ class MainActivity : ComponentActivity() {
         }
 
     private fun launchShareSheetExport(kind: ConfigManager.ExportKind) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            runCatching {
-                val export = buildExportForKind(kind)
-                val shareFile = ConfigManager.prepareShareFile(cacheDir, kind.suggestedFilename)
-                ConfigManager.writeToFile(this@MainActivity, shareFile, export, kind.includeBackgrounds)
-                val contentUri =
-                    FileProvider.getUriForFile(
-                        this@MainActivity,
-                        "${BuildConfig.APPLICATION_ID}.fileprovider",
-                        shareFile,
-                    )
-                val sendIntent =
-                    Intent(Intent.ACTION_SEND).apply {
-                        type = SHARE_SEND_MIME_TYPE
-                        putExtra(Intent.EXTRA_STREAM, contentUri)
-                        putExtra(Intent.EXTRA_SUBJECT, shareFile.name)
-                        clipData = ClipData.newRawUri(shareFile.name, contentUri)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
-                val chooser =
-                    Intent
-                        .createChooser(
-                            sendIntent,
-                            getString(R.string.config_share_chooser_title),
-                        ).apply {
+        if (shareExportJob?.isActive == true) {
+            AppLog.w(TAG, "launchShareSheetExport: share export already in progress, ignoring duplicate request")
+            return
+        }
+        shareExportJob =
+            lifecycleScope.launch(Dispatchers.IO) {
+                runCatching {
+                    val export = buildExportForKind(kind)
+                    val shareFile = ConfigManager.prepareShareFile(cacheDir, kind.suggestedFilename)
+                    ConfigManager.writeToFile(this@MainActivity, shareFile, export, kind.includeBackgrounds)
+                    val contentUri =
+                        FileProvider.getUriForFile(
+                            this@MainActivity,
+                            "${BuildConfig.APPLICATION_ID}.fileprovider",
+                            shareFile,
+                        )
+                    val sendIntent =
+                        Intent(Intent.ACTION_SEND).apply {
+                            type = SHARE_SEND_MIME_TYPE
+                            putExtra(Intent.EXTRA_STREAM, contentUri)
+                            putExtra(Intent.EXTRA_SUBJECT, shareFile.name)
+                            clipData = ClipData.newRawUri(shareFile.name, contentUri)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                val options =
-                    ActivityOptions.makeBasic().apply {
-                        setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                    val chooser =
+                        Intent
+                            .createChooser(
+                                sendIntent,
+                                getString(R.string.config_share_chooser_title),
+                            ).apply {
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                    val options =
+                        ActivityOptions.makeBasic().apply {
+                            setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                        }
+                    withContext(Dispatchers.Main) {
+                        // Close Display 0's WindowManager overlay so it does not obscure the Android Share Sheet.
+                        AppStateManager.closePrimaryModal()
+                        startActivity(chooser, options.toBundle())
+                        ConfigManager.clearExportResult()
                     }
-                withContext(Dispatchers.Main) {
-                    // Close Display 0's WindowManager overlay so it does not obscure the Android Share Sheet.
-                    AppStateManager.closePrimaryModal()
-                    startActivity(chooser, options.toBundle())
-                    ConfigManager.clearExportResult()
+                }.onFailure { e ->
+                    AppLog.e(TAG, "Share export failed", e)
+                    if (AppStateManager.activePrimaryModal.value != null) {
+                        ConfigManager.setExportResult(ConfigManager.ExportResult.Failure(e.message))
+                    } else {
+                        val errorMsg =
+                            e.message?.takeIf { it.isNotBlank() }
+                                ?: getString(R.string.config_error_unknown)
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, errorMsg, Toast.LENGTH_LONG).show()
+                        }
+                    }
                 }
-            }.onFailure { e ->
-                AppLog.e(TAG, "Share export failed", e)
-                ConfigManager.setExportResult(ConfigManager.ExportResult.Failure(e.message))
             }
-        }
     }
 
     private val openDocumentLauncher =
@@ -258,6 +274,7 @@ class MainActivity : ComponentActivity() {
             ActivityResultContracts.GetContent(),
         ) { uri ->
             if (uri == null) {
+                ConfigManager.clearInAppPendingImport()
                 return@registerForActivityResult
             }
             ConfigManager.setPendingInAppUri(uri)

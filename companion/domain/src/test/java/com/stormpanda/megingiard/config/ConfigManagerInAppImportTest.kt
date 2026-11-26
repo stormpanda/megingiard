@@ -219,4 +219,71 @@ class ConfigManagerInAppImportTest {
             val imported = MacroPadState.profiles.value.firstOrNull { it.name == "Community Layout" }
             assertEquals(targetAssoc, imported?.association)
         }
+
+    @Test
+    fun testPrepareShareFileUsesDefaultOnBlankAndRejectsTraversal() {
+        val context = RuntimeEnvironment.getApplication()
+        val blankTarget = ConfigManager.prepareShareFile(context.cacheDir, "   ")
+        assertEquals("megingiard_export.mgrd", blankTarget.name)
+
+        val dotDotTarget = ConfigManager.prepareShareFile(context.cacheDir, "../escape.mgrd")
+        assertEquals("escape.mgrd", dotDotTarget.name)
+        assertEquals(
+            File(context.cacheDir, SHARED_EXPORTS_DIR).canonicalPath,
+            dotDotTarget.parentFile?.canonicalPath,
+        )
+
+        var threw = false
+        try {
+            ConfigManager.prepareShareFile(context.cacheDir, "..")
+        } catch (_: IllegalStateException) {
+            threw = true
+        }
+        assertTrue("Expected prepareShareFile(\"..\") to fail safety check", threw)
+    }
+
+    @Test
+    fun testApplyProfileImportWithMultipleProfilesDoesNotOverrideAssociations() =
+        runTest(testDispatcher) {
+            val context = RuntimeEnvironment.getApplication()
+            SettingsManager.resetForTesting(context)
+
+            val metadata =
+                ExportMetadata(
+                    exportedAt = "2026-08-26T12:00:00Z",
+                    appVersionName = "1.0.0",
+                    appVersionCode = 1,
+                    deviceModel = "AYN Thor",
+                )
+            val existingAssoc = ProfileAssociation(packageName = "com.existing.emu")
+            val first =
+                PadProfile(
+                    id = "multi-1",
+                    name = "Multi Profile One",
+                    association = existingAssoc,
+                    layouts = listOf(PadLayout(id = "multi-lay-1", name = "Main")),
+                )
+            val second =
+                PadProfile(
+                    id = "multi-2",
+                    name = "Multi Profile Two",
+                    association = null,
+                    layouts = listOf(PadLayout(id = "multi-lay-2", name = "Main")),
+                )
+            val multiExport =
+                MegingiardExport(
+                    schemaVersion = 4,
+                    metadata = metadata,
+                    checksum = "ignored-for-direct-apply",
+                    profiles = listOf(first, second),
+                )
+            val targetAssoc = ProfileAssociation(packageName = "org.ppsspp.ppsspp", systemId = "psp", romFileName = "patapon.iso")
+
+            ConfigManager.applyProfileImport(context, multiExport, association = targetAssoc)
+
+            val importedFirst = MacroPadState.profiles.value.firstOrNull { it.name == "Multi Profile One" }
+            val importedSecond = MacroPadState.profiles.value.firstOrNull { it.name == "Multi Profile Two" }
+            assertEquals(existingAssoc, importedFirst?.association)
+            assertNull(importedSecond?.association)
+        }
 }

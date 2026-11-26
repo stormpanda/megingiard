@@ -60,6 +60,7 @@ private const val MIN_SUPPORTED_SCHEMA = 3
 const val SHARED_EXPORTS_DIR = "shared_exports"
 private const val SHARE_CACHE_TTL_MS = 3_600_000L
 private const val DEFAULT_SHARE_FILENAME = "megingiard_export.mgrd"
+private const val SHARE_TMP_SUFFIX = ".tmp"
 
 private val exportJson =
     Json {
@@ -495,7 +496,7 @@ object ConfigManager {
         } ?: error("Could not open output stream for URI: $uri")
     }
 
-    /** Serializes [export] as JSON (or ZIP archive if [includeBackgrounds] is true) and writes it to [file]. */
+    /** Serializes [export] as JSON (or ZIP archive if [includeBackgrounds] is true) and writes it atomically to [file]. */
     fun writeToFile(
         context: Context,
         file: File,
@@ -503,8 +504,18 @@ object ConfigManager {
         includeBackgrounds: Boolean = true,
     ) {
         AppLog.i(TAG, "writeToFile: file=${file.name} includeBackgrounds=$includeBackgrounds")
-        file.outputStream().use { out ->
-            writeToStream(context, out, export, includeBackgrounds)
+        val tmpFile = File(file.parentFile, "${file.name}$SHARE_TMP_SUFFIX")
+        try {
+            tmpFile.outputStream().use { out ->
+                writeToStream(context, out, export, includeBackgrounds)
+            }
+            if (!tmpFile.renameTo(file)) {
+                tmpFile.copyTo(file, overwrite = true)
+                tmpFile.delete()
+            }
+        } catch (e: Throwable) {
+            runCatching { tmpFile.delete() }
+            throw e
         }
     }
 
@@ -760,9 +771,10 @@ object ConfigManager {
             images
                 ?: _pendingInAppParsedImport.value?.images?.ifEmpty { null }
                 ?: _pendingParsedImport.value?.images.orEmpty()
+        val effectiveAssociation = association.takeIf { export.profiles.size == 1 }
         try {
             withContext(NonCancellable + Dispatchers.IO) {
-                importMacroPadData(appContext, export.profiles, resolvedImages, overrideAssociation = association)
+                importMacroPadData(appContext, export.profiles, resolvedImages, overrideAssociation = effectiveAssociation)
             }
         } finally {
             clearPendingImport()

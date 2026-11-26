@@ -129,6 +129,8 @@ private val IH_BUTTON_CORNER_RADIUS = 10.dp
 private val IH_BUTTON_SHAPE = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS)
 private val IH_BUTTON_ICON_SIZE = 16.dp
 private val IH_BUTTON_ICON_SPACING = 6.dp
+private val IH_BUTTON_H_PADDING = 14.dp
+private val IH_BUTTON_V_PADDING = 8.dp
 private val IH_COMPACT_ICON_BUTTON_H_PADDING = 10.dp
 private val IH_COMPACT_ICON_BUTTON_V_PADDING = 8.dp
 private val IH_COMPACT_ICON_BUTTON_MIN_WIDTH = 40.dp
@@ -708,7 +710,7 @@ private fun HeroCompanionCard(
                                     MacroPadState.setActiveProfileId(associatedProfile.id)
                                     AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                                 },
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                                contentPadding = PaddingValues(horizontal = IH_BUTTON_H_PADDING, vertical = IH_BUTTON_V_PADDING),
                                 colors =
                                     ButtonDefaults.buttonColors(
                                         containerColor = colors.accent,
@@ -738,7 +740,7 @@ private fun HeroCompanionCard(
                                     MacroPadState.setActiveProfileId(associatedProfile.id)
                                     AppStateManager.setEditorActive(true)
                                 },
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                                contentPadding = PaddingValues(horizontal = IH_BUTTON_H_PADDING, vertical = IH_BUTTON_V_PADDING),
                                 border = BorderStroke(IH_BORDER_WIDTH, colors.controlOverlayBorder),
                                 colors =
                                     ButtonDefaults.outlinedButtonColors(
@@ -804,7 +806,7 @@ private fun HeroCompanionCard(
                                         ),
                                     )
                                 },
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                                contentPadding = PaddingValues(horizontal = IH_BUTTON_H_PADDING, vertical = IH_BUTTON_V_PADDING),
                                 colors =
                                     ButtonDefaults.buttonColors(
                                         containerColor = colors.accent,
@@ -856,7 +858,7 @@ private fun HeroCompanionCard(
                             Box {
                                 OutlinedButton(
                                     onClick = { expandedDropdown = true },
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                                    contentPadding = PaddingValues(horizontal = IH_BUTTON_H_PADDING, vertical = IH_BUTTON_V_PADDING),
                                     border = BorderStroke(IH_BORDER_WIDTH, colors.controlOverlayBorder),
                                     colors =
                                         ButtonDefaults.outlinedButtonColors(
@@ -991,7 +993,7 @@ private fun HeroCompanionCard(
                             onClick = {
                                 AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                             },
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                            contentPadding = PaddingValues(horizontal = IH_BUTTON_H_PADDING, vertical = IH_BUTTON_V_PADDING),
                             colors =
                                 ButtonDefaults.buttonColors(
                                     containerColor = colors.accent,

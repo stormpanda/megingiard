@@ -7,6 +7,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -118,6 +119,13 @@ fun GlobalSettingsScreen(
             ConfigManager.clearInAppPendingImport()
         }
         wasInRestoreReview = inRestoreReview
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            if (SettingsSubPage.RESTORE_REVIEW in subPageStack) {
+                ConfigManager.clearInAppPendingImport()
+            }
+        }
     }
     val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()

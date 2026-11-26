@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.Display
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -522,8 +523,23 @@ fun MainAppScreen() {
                 export = archive.export,
                 onConfirm = {
                     coroutineScope.launch {
-                        ConfigManager.applyImport(context, archive.export, archive.images)
-                        MacroPadMediaRepository.invalidateAllCaches()
+                        runCatching {
+                            ConfigManager.applyImport(context, archive.export, archive.images)
+                            MacroPadMediaRepository.invalidateAllCaches()
+                        }.onSuccess {
+                            val msgRes =
+                                if (archive.export.settings.isEmpty()) {
+                                    R.string.config_profile_import_success
+                                } else {
+                                    R.string.config_import_success
+                                }
+                            Toast.makeText(context, context.getString(msgRes), Toast.LENGTH_SHORT).show()
+                        }.onFailure { err ->
+                            AppLog.e(TAG, "Incoming import apply failed", err)
+                            importError =
+                                err.message?.takeIf { it.isNotBlank() }
+                                    ?: context.getString(R.string.config_error_unknown)
+                        }
                     }
                 },
                 onDismiss = { ConfigManager.clearPendingImport() },

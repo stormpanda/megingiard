@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
@@ -62,6 +63,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private const val TAG = "ConfigSettingsTab"
 private const val CF_RESTORE_COUNTDOWN_SECONDS = 5
 private const val CF_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
 private const val CF_RESTORE_CONFIRM_TIMEOUT_MS = 8_000L
@@ -257,6 +259,7 @@ fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean, ConfigManager.Export
         description = stringResource(R.string.config_export_save_to_device_desc),
         icon = Icons.Rounded.FileDownload,
         onClick = {
+            AppLog.d(TAG, "CreateBackupSubPage: save to device clicked")
             SettingsManager.setDefaultExportAuthor(author.trim())
             onExport(
                 buildExportMetadata(context, author, description),
@@ -271,6 +274,7 @@ fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean, ConfigManager.Export
         description = stringResource(R.string.config_export_share_via_desc),
         icon = Icons.Rounded.Share,
         onClick = {
+            AppLog.d(TAG, "CreateBackupSubPage: share via clicked")
             SettingsManager.setDefaultExportAuthor(author.trim())
             onExport(
                 buildExportMetadata(context, author, description),
@@ -335,6 +339,7 @@ fun ShareProfileSubPage(
         enabled = currentProfile != null,
         onClick = {
             val targetProfile = currentProfile ?: return@GamepadActionCard
+            AppLog.d(TAG, "ShareProfileSubPage: share via clicked (profileId=${targetProfile.id})")
             SettingsManager.setDefaultExportAuthor(author.trim())
             onExportProfile(
                 buildExportMetadata(context, author, description),
@@ -352,6 +357,7 @@ fun ShareProfileSubPage(
         enabled = currentProfile != null,
         onClick = {
             val targetProfile = currentProfile ?: return@GamepadActionCard
+            AppLog.d(TAG, "ShareProfileSubPage: save to device clicked (profileId=${targetProfile.id})")
             SettingsManager.setDefaultExportAuthor(author.trim())
             onExportProfile(
                 buildExportMetadata(context, author, description),
@@ -537,7 +543,11 @@ fun RestoreReviewSubPage(
     }
 
     val pendingAssoc = pendingImportAssociation
-    if (pendingInAppImportMode == ConfigManager.ImportMode.PROFILE_SHARE && pendingAssoc != null) {
+    val canLinkToTarget =
+        pendingInAppImportMode == ConfigManager.ImportMode.PROFILE_SHARE &&
+            pendingAssoc != null &&
+            export.profiles.size == 1
+    if (canLinkToTarget && pendingAssoc != null) {
         GamepadToggleCard(
             title = stringResource(R.string.config_import_link_to_target, pendingAssoc.displayLabel),
             description = stringResource(R.string.config_import_link_to_target_desc),
@@ -560,11 +570,15 @@ fun RestoreReviewSubPage(
         isDestructive = true,
         onClick = {
             val associationToApply =
-                if (pendingInAppImportMode == ConfigManager.ImportMode.PROFILE_SHARE && linkToTarget) {
-                    pendingAssoc?.association
+                if (canLinkToTarget && linkToTarget && pendingAssoc != null) {
+                    pendingAssoc.association
                 } else {
                     null
                 }
+            AppLog.d(
+                TAG,
+                "RestoreReviewSubPage: confirm import clicked (mode=$pendingInAppImportMode link=${associationToApply != null})",
+            )
             onConfirmImport(export, pendingInAppImportMode, associationToApply)
         },
     )
