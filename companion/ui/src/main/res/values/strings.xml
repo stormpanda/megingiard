@@ -161,6 +161,8 @@ Open Settings to create a layout.</string>
     <string name="settings_config_import">Restore backup</string>
     <string name="settings_config_export_profile">Share profile</string>
     <string name="settings_config_import_profile">Import shared profile</string>
+    <string name="settings_config_section_sharing">Profile Sharing</string>
+    <string name="settings_config_section_backup">Backup &amp; Restore</string>
     <string name="settings_add_to_obtainium">Add to Obtainium</string>
 
     <!-- Export metadata configuration -->
@@ -169,6 +171,17 @@ Open Settings to create a layout.</string>
     <string name="config_export_description">Description</string>
     <string name="config_export_description_desc">Summary or notes about this export</string>
     <string name="config_export_include_backgrounds_desc">Bundle custom background wallpaper images in the .mgrd file</string>
+    <string name="config_export_share_via">Share via…</string>
+    <string name="config_export_share_via_desc">Send the .mgrd file directly via Android Share Sheet</string>
+    <string name="config_export_save_to_device">Save to device</string>
+    <string name="config_export_save_to_device_desc">Save the .mgrd file to a chosen folder on this device</string>
+    <string name="config_share_chooser_title">Share Megingiard file</string>
+    <string name="config_import_link_to_target">Link to %1$s</string>
+    <string name="config_import_link_to_target_desc">Automatically associate the imported profile with this game or app</string>
+    <string name="macropad_editor_share_profile_desc">Export and share this profile as a .mgrd file</string>
+    <string name="macropad_editor_import_profile_desc">Import a shared .mgrd profile alongside your existing profiles</string>
+    <string name="integration_home_share_profile_cd">Share profile</string>
+    <string name="integration_home_import_profile_cd">Import shared profile</string>
 
     <!-- Import preview dialog -->
     <string name="config_import_title">Import configuration</string>
@@ -845,7 +858,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_language_desc">Changes the language of all app menus, overlays, and help tutorials. Choose English, German, or Traditional Chinese depending on your preference.</string>
     <string name="help_settings_theme_desc">Choose from %1$d distinct visual themes including %2$s.</string>
     <string name="help_settings_export_desc">Creates a complete backup of your custom profiles and configurations. Recommended before performing app updates or resetting settings.</string>
-    <string name="help_settings_export_profile_desc">Saves a single profile to a file to share layout and macros with other players without exposing your entire app configuration.</string>
+    <string name="help_settings_export_profile_desc">Exports a single profile to share via another app or save as a .mgrd file without exposing your entire app configuration.</string>
     <string name="help_settings_import_profile_desc">Imports a profile shared by another user from a .mgrd file and adds it alongside your existing profiles without overwriting your global settings.</string>
     <string name="help_settings_add_to_obtainium_desc">Opens Obtainium (if installed) with the pre-filled Megingiard repository link. If Obtainium is not installed, it opens the Obtainium GitHub releases page in the browser.</string>
     <string name="help_settings_privd_desc">Establishes a background system connection (via the native hardware root bridge or Wireless Debugging) to access system input devices not reachable by regular apps. This enables:\n\n• Gamepad Merge: Combines virtual and physical gamepads so games see only one controller (improving compatibility).\n• Physical Gamepad Recording: Record macro inputs from your physical controller.\n• Direct Screen Mirroring: Starts mirroring without prompting for screen capture permissions on every run.\n• Screenshots: Save screenshots of the primary screen directly from the Quick Menu overlay without screen mirroring being active.</string>
@@ -891,6 +904,8 @@ Open Settings to create a layout.</string>
     <string name="help_companion_hub_hero_edit_desc">Launches the profile and layout editor to customize button positions, styling, and macro assignments.</string>
     <string name="help_companion_hub_hero_create_desc">Creates a new dedicated MacroPad control profile pre-linked to the currently active or selected game.</string>
     <string name="help_companion_hub_hero_link_desc">Links an existing custom MacroPad control profile to the currently active or selected game.</string>
+    <string name="help_companion_hub_hero_share_desc">Exports and shares the active or linked profile as a .mgrd file.</string>
+    <string name="help_companion_hub_hero_import_desc">Imports a shared .mgrd profile and optionally links it to the currently detected game or app.</string>
     <string name="help_companion_hub_sec_tools">Companion Tools</string>
     <string name="help_companion_hub_macropad_desc">Quick shortcut to open the active MacroPad touch control surface.</string>
     <string name="help_companion_hub_settings_desc">Access app-wide settings including theme colors, system service status, input deadzones, and configuration backups.</string>

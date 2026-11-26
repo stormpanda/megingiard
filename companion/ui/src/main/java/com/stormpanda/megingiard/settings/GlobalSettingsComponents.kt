@@ -2,11 +2,11 @@ package com.stormpanda.megingiard.settings
 
 import android.icu.text.ListFormatter
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.HealthAndSafety
 import androidx.compose.material.icons.rounded.ImageSearch
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -31,7 +31,7 @@ val SettingsCategory.icon: ImageVector
             SettingsCategory.GENERAL -> Icons.Rounded.Tune
             SettingsCategory.INPUT -> Icons.Rounded.Gamepad
             SettingsCategory.APPEARANCE -> Icons.Rounded.Palette
-            SettingsCategory.CONFIGURATION -> Icons.Rounded.Build
+            SettingsCategory.CONFIGURATION -> Icons.Rounded.Share
             SettingsCategory.SCRAPING -> Icons.Rounded.ImageSearch
             SettingsCategory.UPDATES -> Icons.Rounded.SystemUpdate
             SettingsCategory.DIAGNOSTICS -> Icons.Rounded.HealthAndSafety

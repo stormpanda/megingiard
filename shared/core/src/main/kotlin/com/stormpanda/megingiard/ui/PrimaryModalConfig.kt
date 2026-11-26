@@ -34,6 +34,7 @@ sealed interface PrimaryModalPayload {
     data class GlobalSettings(
         val category: SettingsCategory = SettingsCategory.GENERAL,
         val subPage: SettingsSubPage? = null,
+        val profileId: String? = null,
     ) : PrimaryModalPayload
 
     data class MacroPad(

@@ -288,8 +288,8 @@ Both `PadSurface` and `PadCanvas` share `rememberLayoutLayerBitmaps(context, lay
 
 `MacroPadEditor` is rendered inside a bottom-anchored `PrimaryOverlayContainer` modal sheet, fully aligned with the design language and components established with Global Settings. It utilizes a **Two-Pane Console Sidebar + Content Deck** layout (`GamepadTwoPaneScaffold`) with 9 sidebar sections (`EditorSection`) and unified `MacroPadSubPage` stack navigation:
 - **Left Category Sidebar (210 dp):** Features 9 category navigation tiles with illuminated focus borders and L1/R1 bumper tab switching:
-  - **Quick Actions (`Bolt`):** Deep-link shortcuts to frequent workflows (Add Button, Create Macro, New Layout, New Profile, Position & Size Buttons, Edit Mirror Cutouts).
-  - **Profiles (`Folder`):** Active profile choice card, New Profile, Edit Profile, Duplicate Profile, Reorder Profiles, Unlink App/Game (when linked), and Delete Profile.
+  - **Quick Actions (`Bolt`):** Deep-link shortcuts to frequent workflows (Add Button, Create Macro, New Layout, New Profile, Position & Size Buttons, Edit Mirror Cutouts, Share Profile, Import Shared Profile).
+  - **Profiles (`Folder`):** Active profile choice card, New Profile, Edit Profile (including Share Profile, Unlink App/Game, Delete Profile), Duplicate Profile, Share Profile, Import Shared Profile, Reorder Profiles, and Delete Profile.
   - **Layouts (`ViewQuilt`):** Active layout choice card, New Layout, Edit Layout (name, text/border/background color sub-pages, invisible buttons default), Background Touchpad (`LayoutTouchpadSubPageContent`), Snap Grid Mode (`Off`, `Square`, `Radial`), Snap to Alignment toggle, Duplicate Layout, Copy Layout to Profile, Reorder Layouts, and Delete Layout.
   - **Automation (`AutoAwesome`):** Profile-level automatic layout switching toggle, anchor calibration overview, active layout live presence status badges (`PRESENT` / `LOST`), and direct entry to anchor configuration (`AutomaticLayoutSwitchingSubPageContent`).
   - **Mirror (`Cast`):** Mirror cutouts list, Add/Edit/Position Cutouts, background dimming, edge blending, and touch projection controls (`MirrorSettingsEditor.kt`).

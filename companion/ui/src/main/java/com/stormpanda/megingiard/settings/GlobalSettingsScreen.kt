@@ -7,6 +7,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -111,14 +112,25 @@ fun GlobalSettingsScreen(
     val pendingInAppParsedImport by ConfigManager.pendingInAppParsedImport.collectAsStateWithLifecycle()
     val configImportError by ConfigManager.inAppImportError.collectAsStateWithLifecycle()
     var lastReviewExport by remember { mutableStateOf<MegingiardExport?>(null) }
+    var wasInRestoreReview by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(subPageStack) {
-        if (SettingsSubPage.RESTORE_REVIEW !in subPageStack) {
+        val inRestoreReview = SettingsSubPage.RESTORE_REVIEW in subPageStack
+        if (wasInRestoreReview && !inRestoreReview) {
             ConfigManager.clearInAppPendingImport()
+        }
+        wasInRestoreReview = inRestoreReview
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            if (SettingsSubPage.RESTORE_REVIEW in subPageStack) {
+                ConfigManager.clearInAppPendingImport()
+            }
         }
     }
     val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.GENERAL) }
+    var preselectedShareProfileId by rememberSaveable { mutableStateOf<String?>(null) }
     var savedFocusKeys by rememberSaveable { mutableStateOf<Map<Int, Serializable>>(emptyMap()) }
     var lastAppliedPayloadKey by rememberSaveable { mutableStateOf<String?>(null) }
     var hasTriggeredManualCheck by rememberSaveable { mutableStateOf(false) }
@@ -129,11 +141,12 @@ fun GlobalSettingsScreen(
     LaunchedEffect(activePrimaryModal) {
         val payload = activePrimaryModal?.payload as? PrimaryModalPayload.GlobalSettings
         if (payload != null) {
-            val payloadKey = "${payload.category.name}:${payload.subPage?.name}"
+            val payloadKey = "${payload.category.name}:${payload.subPage?.name}:${payload.profileId}"
             if (lastAppliedPayloadKey != payloadKey) {
                 lastAppliedPayloadKey = payloadKey
                 selectedCategory = payload.category
                 subPageStack = payload.subPage?.let { listOf(it) } ?: emptyList()
+                preselectedShareProfileId = payload.profileId
                 savedFocusKeys = emptyMap()
             }
         } else {
@@ -149,7 +162,12 @@ fun GlobalSettingsScreen(
                 savedFocusKeys = emptyMap()
             }
             selectedCategory = SettingsCategory.CONFIGURATION
-            subPageStack = listOf(SettingsSubPage.RESTORE_BACKUP, SettingsSubPage.RESTORE_REVIEW)
+            subPageStack =
+                if (pendingInAppImportMode == ConfigManager.ImportMode.PROFILE_SHARE) {
+                    listOf(SettingsSubPage.RESTORE_REVIEW)
+                } else {
+                    listOf(SettingsSubPage.RESTORE_BACKUP, SettingsSubPage.RESTORE_REVIEW)
+                }
         }
     }
 
@@ -161,6 +179,7 @@ fun GlobalSettingsScreen(
             }
             selectedCategory = nextCategory
             subPageStack = emptyList()
+            preselectedShareProfileId = null
         }
     }
 
@@ -169,6 +188,9 @@ fun GlobalSettingsScreen(
         isCustomBackActive = subPageStack.isNotEmpty(),
         onCustomBack = {
             subPageStack = subPageStack.dropLast(1)
+            if (subPageStack.isEmpty()) {
+                preselectedShareProfileId = null
+            }
         },
         navigationKey = subPageStack,
         categoryKey = selectedCategory,
@@ -195,6 +217,7 @@ fun GlobalSettingsScreen(
                         }
                         selectedCategory = category
                         subPageStack = emptyList()
+                        preselectedShareProfileId = null
                     },
                 )
             }
@@ -410,10 +433,11 @@ fun GlobalSettingsScreen(
                                 ),
                         ) {
                             CreateBackupSubPage(
-                                onExport = { metadata, includeBackgrounds ->
+                                onExport = { metadata, includeBackgrounds, delivery ->
                                     ConfigManager.requestExport(
                                         metadata = metadata,
                                         includeBackgrounds = includeBackgrounds,
+                                        delivery = delivery,
                                     )
                                 },
                             )
@@ -429,11 +453,13 @@ fun GlobalSettingsScreen(
                                 ),
                         ) {
                             ShareProfileSubPage(
-                                onExportProfile = { metadata, profile, includeBackgrounds ->
+                                preselectedProfileId = preselectedShareProfileId,
+                                onExportProfile = { metadata, profile, includeBackgrounds, delivery ->
                                     ConfigManager.requestProfileExport(
                                         metadata = metadata,
                                         profile = profile,
                                         includeBackgrounds = includeBackgrounds,
+                                        delivery = delivery,
                                     )
                                 },
                             )
@@ -466,18 +492,24 @@ fun GlobalSettingsScreen(
                     SettingsSubPage.RESTORE_REVIEW -> {
                         val reviewExport = pendingInAppParsedImport?.export ?: lastReviewExport
                         if (reviewExport != null) {
+                            val reviewParentBreadcrumb =
+                                if (pendingInAppImportMode == ConfigManager.ImportMode.PROFILE_SHARE) {
+                                    stringResource(R.string.settings_config_import_profile)
+                                } else {
+                                    stringResource(R.string.config_restore_dialog_title)
+                                }
                             GamepadDeck(
                                 breadcrumbs =
                                     listOf(
                                         stringResource(R.string.settings_section_config),
-                                        stringResource(R.string.config_restore_dialog_title),
+                                        reviewParentBreadcrumb,
                                         stringResource(R.string.config_import_review_title),
                                     ),
                             ) {
                                 RestoreReviewSubPage(
                                     export = reviewExport,
                                     pendingInAppImportMode = pendingInAppImportMode,
-                                    onConfirmImport = { exp, mode ->
+                                    onConfirmImport = { exp, mode, association ->
                                         val pendingImages = pendingInAppParsedImport?.images.orEmpty()
                                         subPageStack = emptyList()
                                         coroutineScope.launch {
@@ -496,6 +528,7 @@ fun GlobalSettingsScreen(
                                                             context,
                                                             exp,
                                                             pendingImages,
+                                                            association = association,
                                                         )
                                                     }
                                                 }

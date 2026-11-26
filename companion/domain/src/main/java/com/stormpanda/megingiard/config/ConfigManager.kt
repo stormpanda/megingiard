@@ -9,6 +9,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.BackgroundScaleMode
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.macropad.normalizedOnLoad
 import com.stormpanda.megingiard.macropad.remapTargetIds
 import com.stormpanda.megingiard.mirror.CutoutMaskFileStore
@@ -36,6 +37,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
+import java.io.OutputStream
 import java.time.Instant
 import java.util.UUID
 import java.util.zip.ZipEntry
@@ -53,6 +55,12 @@ private const val READ_BUFFER_SIZE = 8192
 
 /** Minimum schema version accepted on import. Currently only v3 is supported. */
 private const val MIN_SUPPORTED_SCHEMA = 3
+
+/** Cache subdirectory for `.mgrd` files shared via Android's share sheet. */
+const val SHARED_EXPORTS_DIR = "shared_exports"
+private const val SHARE_CACHE_TTL_MS = 3_600_000L
+private const val DEFAULT_SHARE_FILENAME = "megingiard_export.mgrd"
+private const val SHARE_TMP_SUFFIX = ".tmp"
 
 private val exportJson =
     Json {
@@ -80,16 +88,21 @@ private val checksumJson =
 object ConfigManager {
     // ── Coordinator SharedFlows (export) ──────────────────────────────────────
 
+    /** How an export should be delivered once serialized. */
+    enum class ExportDelivery { SAVE_TO_FILE, SHARE_SHEET }
+
     /** Discriminates backup exports from profile-share exports. */
     sealed interface ExportKind {
         val metadata: ExportMetadata
         val includeBackgrounds: Boolean
+        val delivery: ExportDelivery
         val suggestedFilename: String
 
         /** Full-app backup: all settings + all profiles. */
         data class Backup(
             override val metadata: ExportMetadata,
             override val includeBackgrounds: Boolean = true,
+            override val delivery: ExportDelivery = ExportDelivery.SAVE_TO_FILE,
         ) : ExportKind {
             override val suggestedFilename: String
                 get() = buildExportFilename(metadata)
@@ -100,6 +113,7 @@ object ConfigManager {
             override val metadata: ExportMetadata,
             val profile: PadProfile,
             override val includeBackgrounds: Boolean = true,
+            override val delivery: ExportDelivery = ExportDelivery.SAVE_TO_FILE,
         ) : ExportKind {
             override val suggestedFilename: String
                 get() = buildProfileExportFilename(metadata, profile.name)
@@ -108,6 +122,12 @@ object ConfigManager {
 
     /** Discriminates backup restores from profile-only imports. */
     enum class ImportMode { BACKUP_RESTORE, PROFILE_SHARE }
+
+    /** Optional app/game association staged when an import is triggered from the Companion Hub Hero Card. */
+    data class PendingImportAssociation(
+        val association: ProfileAssociation,
+        val displayLabel: String,
+    )
 
     /**
      * Emits a one-shot export command to MainActivity.
@@ -124,18 +144,20 @@ object ConfigManager {
     fun requestExport(
         metadata: ExportMetadata,
         includeBackgrounds: Boolean = true,
+        delivery: ExportDelivery = ExportDelivery.SAVE_TO_FILE,
     ) {
-        AppLog.d(TAG, "requestExport includeBackgrounds=$includeBackgrounds")
-        _exportRequest.tryEmit(ExportKind.Backup(metadata, includeBackgrounds))
+        AppLog.d(TAG, "requestExport includeBackgrounds=$includeBackgrounds delivery=$delivery")
+        _exportRequest.tryEmit(ExportKind.Backup(metadata, includeBackgrounds, delivery))
     }
 
     fun requestProfileExport(
         metadata: ExportMetadata,
         profile: PadProfile,
         includeBackgrounds: Boolean = true,
+        delivery: ExportDelivery = ExportDelivery.SAVE_TO_FILE,
     ) {
-        AppLog.d(TAG, "requestProfileExport profile=${profile.name} includeBackgrounds=$includeBackgrounds")
-        _exportRequest.tryEmit(ExportKind.ProfileShare(metadata, profile, includeBackgrounds))
+        AppLog.d(TAG, "requestProfileExport profile=${profile.name} includeBackgrounds=$includeBackgrounds delivery=$delivery")
+        _exportRequest.tryEmit(ExportKind.ProfileShare(metadata, profile, includeBackgrounds, delivery))
     }
 
     // ── Coordinator SharedFlows (import from Settings) ────────────────────────
@@ -152,9 +174,22 @@ object ConfigManager {
         )
     val importRequest: SharedFlow<ImportMode> = _importRequest.asSharedFlow()
 
-    fun requestImport(mode: ImportMode = ImportMode.BACKUP_RESTORE) {
-        AppLog.d(TAG, "requestImport mode=$mode")
+    private val _pendingImportAssociation = MutableStateFlow<PendingImportAssociation?>(null)
+    val pendingImportAssociation: StateFlow<PendingImportAssociation?> = _pendingImportAssociation.asStateFlow()
+
+    fun requestImport(
+        mode: ImportMode = ImportMode.BACKUP_RESTORE,
+        association: ProfileAssociation? = null,
+        associationLabel: String? = null,
+    ) {
+        AppLog.d(TAG, "requestImport mode=$mode hasAssociation=${association != null}")
         _pendingInAppImportMode.value = mode
+        _pendingImportAssociation.value =
+            if (association != null && !associationLabel.isNullOrBlank()) {
+                PendingImportAssociation(association, associationLabel)
+            } else {
+                null
+            }
         _importRequest.tryEmit(mode)
     }
 
@@ -263,6 +298,7 @@ object ConfigManager {
         _pendingInAppParsedImport.value = null
         _inAppImportError.value = null
         _pendingInAppImportMode.value = ImportMode.BACKUP_RESTORE
+        _pendingImportAssociation.value = null
     }
 
     // ── Export result feedback ────────────────────────────────────────────────
@@ -455,6 +491,66 @@ object ConfigManager {
         includeBackgrounds: Boolean = true,
     ) {
         AppLog.i(TAG, "writeToUri: uri=$uri includeBackgrounds=$includeBackgrounds")
+        context.contentResolver.openOutputStream(uri)?.use { out ->
+            writeToStream(context, out, export, includeBackgrounds)
+        } ?: error("Could not open output stream for URI: $uri")
+    }
+
+    /** Serializes [export] as JSON (or ZIP archive if [includeBackgrounds] is true) and writes it atomically to [file]. */
+    fun writeToFile(
+        context: Context,
+        file: File,
+        export: MegingiardExport,
+        includeBackgrounds: Boolean = true,
+    ) {
+        AppLog.i(TAG, "writeToFile: file=${file.name} includeBackgrounds=$includeBackgrounds")
+        val tmpFile = File(file.parentFile, "${file.name}$SHARE_TMP_SUFFIX")
+        try {
+            tmpFile.outputStream().use { out ->
+                writeToStream(context, out, export, includeBackgrounds)
+            }
+            if (!tmpFile.renameTo(file)) {
+                tmpFile.copyTo(file, overwrite = true)
+                tmpFile.delete()
+            }
+        } catch (e: Throwable) {
+            runCatching { tmpFile.delete() }
+            throw e
+        }
+    }
+
+    /**
+     * Prepares a cache file under `<cacheDir>/shared_exports/` for sharing via `FileProvider`,
+     * pruning stale entries older than [SHARE_CACHE_TTL_MS] and validating path safety.
+     */
+    fun prepareShareFile(
+        cacheDir: File,
+        suggestedFilename: String,
+        nowMs: Long = System.currentTimeMillis(),
+    ): File {
+        val sharedDir = File(cacheDir, SHARED_EXPORTS_DIR)
+        if (!sharedDir.exists()) {
+            sharedDir.mkdirs()
+        }
+        sharedDir.listFiles()?.forEach { existing ->
+            if (existing.isFile && nowMs - existing.lastModified() > SHARE_CACHE_TTL_MS) {
+                runCatching { existing.delete() }
+            }
+        }
+        val safeName = File(suggestedFilename).name.ifBlank { DEFAULT_SHARE_FILENAME }
+        val target = File(sharedDir, safeName)
+        check(isSafeFileInDir(sharedDir, target)) {
+            "Unsafe share export path: $suggestedFilename"
+        }
+        return target
+    }
+
+    private fun writeToStream(
+        context: Context,
+        out: OutputStream,
+        export: MegingiardExport,
+        includeBackgrounds: Boolean,
+    ) {
         val json = exportJson.encodeToString(export)
         val imageFilesToBundle =
             if (includeBackgrounds) {
@@ -469,37 +565,35 @@ object ConfigManager {
                 emptyMap()
             }
 
-        context.contentResolver.openOutputStream(uri)?.use { out ->
-            if (imageFilesToBundle.isNotEmpty() || cutoutMaskFilesToBundle.isNotEmpty()) {
-                ZipOutputStream(out).use { zip ->
-                    // 1. Write config.json
-                    zip.putNextEntry(ZipEntry("config.json"))
-                    zip.write(json.toByteArray(Charsets.UTF_8))
+        if (imageFilesToBundle.isNotEmpty() || cutoutMaskFilesToBundle.isNotEmpty()) {
+            ZipOutputStream(out).use { zip ->
+                // 1. Write config.json
+                zip.putNextEntry(ZipEntry("config.json"))
+                zip.write(json.toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+
+                // 2. Write background and layout mask image entries
+                for ((entryName, file) in imageFilesToBundle) {
+                    zip.putNextEntry(ZipEntry("backgrounds/$entryName"))
+                    zip.write(file.readBytes())
                     zip.closeEntry()
-
-                    // 2. Write background and layout mask image entries
-                    for ((entryName, file) in imageFilesToBundle) {
-                        zip.putNextEntry(ZipEntry("backgrounds/$entryName"))
-                        zip.write(file.readBytes())
-                        zip.closeEntry()
-                    }
-
-                    // 3. Write cutout mask, variance, and freeze frame entries
-                    for ((entryPath, file) in cutoutMaskFilesToBundle) {
-                        zip.putNextEntry(ZipEntry(entryPath))
-                        zip.write(file.readBytes())
-                        zip.closeEntry()
-                    }
                 }
-                AppLog.i(
-                    TAG,
-                    "Wrote ZIP package with config.json, ${imageFilesToBundle.size} image(s), and ${cutoutMaskFilesToBundle.size} cutout asset(s)",
-                )
-            } else {
-                out.write(json.toByteArray(Charsets.UTF_8))
-                AppLog.i(TAG, "Wrote plain JSON config export")
+
+                // 3. Write cutout mask, variance, and freeze frame entries
+                for ((entryPath, file) in cutoutMaskFilesToBundle) {
+                    zip.putNextEntry(ZipEntry(entryPath))
+                    zip.write(file.readBytes())
+                    zip.closeEntry()
+                }
             }
-        } ?: error("Could not open output stream for URI: $uri")
+            AppLog.i(
+                TAG,
+                "Wrote ZIP package with config.json, ${imageFilesToBundle.size} image(s), and ${cutoutMaskFilesToBundle.size} cutout asset(s)",
+            )
+        } else {
+            out.write(json.toByteArray(Charsets.UTF_8))
+            AppLog.i(TAG, "Wrote plain JSON config export")
+        }
     }
 
     // ── Import ───────────────────────────────────────────────────────────────
@@ -665,17 +759,22 @@ object ConfigManager {
         context: Context,
         export: MegingiardExport,
         images: Map<String, ByteArray>? = null,
+        association: ProfileAssociation? = null,
     ) {
-        AppLog.i(TAG, "applyProfileImport: schema=${export.schemaVersion} profiles=${export.profiles.size}")
+        AppLog.i(
+            TAG,
+            "applyProfileImport: schema=${export.schemaVersion} profiles=${export.profiles.size} hasAssociation=${association != null}",
+        )
         check(export.profiles.isNotEmpty()) { "The file does not contain any profiles" }
         val appContext = context.applicationContext
         val resolvedImages =
             images
                 ?: _pendingInAppParsedImport.value?.images?.ifEmpty { null }
                 ?: _pendingParsedImport.value?.images.orEmpty()
+        val effectiveAssociation = association.takeIf { export.profiles.size == 1 }
         try {
             withContext(NonCancellable + Dispatchers.IO) {
-                importMacroPadData(appContext, export.profiles, resolvedImages)
+                importMacroPadData(appContext, export.profiles, resolvedImages, overrideAssociation = effectiveAssociation)
             }
         } finally {
             clearPendingImport()
@@ -783,6 +882,7 @@ object ConfigManager {
         context: Context,
         profiles: List<PadProfile>,
         images: Map<String, ByteArray> = emptyMap(),
+        overrideAssociation: ProfileAssociation? = null,
     ) {
         AppLog.d(TAG, "importMacroPadData: ${profiles.size} profiles (images map size=${images.size})")
         val backgroundsDir = File(context.filesDir, "backgrounds")
@@ -941,6 +1041,7 @@ object ConfigManager {
                 profile.copy(
                     id = newProfileId,
                     name = profile.name,
+                    association = overrideAssociation ?: profile.association,
                     layouts = remappedLayouts,
                     macros = remappedMacros,
                     activeLayoutId = preservedActiveLayoutId,

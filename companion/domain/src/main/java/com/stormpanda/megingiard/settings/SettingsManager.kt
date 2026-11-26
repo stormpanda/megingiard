@@ -117,6 +117,9 @@ object SettingsManager {
     private val _steamGridDbApiToken = MutableStateFlow("")
     val steamGridDbApiToken: StateFlow<String> = _steamGridDbApiToken.asStateFlow()
 
+    private val _defaultExportAuthor = MutableStateFlow("")
+    val defaultExportAuthor: StateFlow<String> = _defaultExportAuthor.asStateFlow()
+
     const val CURRENT_WELCOME_TOUR_VERSION = 1
 
     private val _welcomeTourCompletedVersion = MutableStateFlow(0)
@@ -148,6 +151,7 @@ object SettingsManager {
         _overlayFadeOut.value = false
         _excludeFromRecents.value = false
         _steamGridDbApiToken.value = ""
+        _defaultExportAuthor.value = ""
         _appLanguage.value = AppLanguage.SYSTEM
         AppLog.level = AppLog.Level.WARN
         _welcomeTourCompletedVersion.value = 0
@@ -277,6 +281,7 @@ object SettingsManager {
         prefs[KEY_ACCENT_COLOR]?.let { _accentColor.value = it }
         prefs[KEY_CUSTOM_ACCENT_COLOR]?.let { _customAccentColor.value = it }
         prefs[KEY_STEAMGRIDDB_API_TOKEN]?.let { _steamGridDbApiToken.value = it }
+        prefs[KEY_DEFAULT_EXPORT_AUTHOR]?.let { _defaultExportAuthor.value = it }
         prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION]?.let { _welcomeTourCompletedVersion.value = it }
         MacroPadSettings.loadFrom(prefs)
         UpdateManager.loadFrom(prefs)
@@ -357,6 +362,18 @@ object SettingsManager {
             TAG,
             "setSteamGridDbApiToken(redacted)",
             onChanged = { onSettingsChangedListener?.invoke() },
+        )
+    }
+
+    fun setDefaultExportAuthor(value: String) {
+        updateSettingPref(
+            KEY_DEFAULT_EXPORT_AUTHOR,
+            value,
+            _defaultExportAuthor,
+            scope,
+            optionalDataStore,
+            TAG,
+            "setDefaultExportAuthor",
         )
     }
 

@@ -39,6 +39,8 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.Info
@@ -83,10 +85,12 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.math.formatButtonDimensionPx
 import com.stormpanda.megingiard.mirror.CutoutMaskManager
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.settings.tabs.ShareProfileSubPage
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeSubPageContent
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.BumperDirection
@@ -349,6 +353,39 @@ fun MacroPadEditor(
         }
     }
 
+    val exportResult by ConfigManager.exportResult.collectAsStateWithLifecycle()
+    LaunchedEffect(exportResult) {
+        when (val result = exportResult) {
+            is ConfigManager.ExportResult.Success -> {
+                val toastMsg =
+                    if (result.kind is ConfigManager.ExportKind.ProfileShare) {
+                        context.getString(R.string.config_profile_export_success)
+                    } else {
+                        context.getString(R.string.config_export_success)
+                    }
+                DialogToastManager.show(toastMsg)
+                ConfigManager.clearExportResult()
+                if (subPageStack.lastOrNull() is MacroPadSubPage.ShareProfile) {
+                    MacroPadNavState.pop()
+                }
+            }
+
+            is ConfigManager.ExportResult.Failure -> {
+                val errorMsg =
+                    result.message?.takeIf { it.isNotBlank() }
+                        ?: context.getString(R.string.config_error_unknown)
+                DialogToastManager.show(
+                    message = errorMsg,
+                    icon = Icons.Rounded.ErrorOutline,
+                    isError = true,
+                )
+                ConfigManager.clearExportResult()
+            }
+
+            null -> {}
+        }
+    }
+
     Column(
         modifier =
             modifier
@@ -452,6 +489,12 @@ fun MacroPadEditor(
                                                 onEditMirrorLayout = {
                                                     AppStateManager.setViewportEditActive(true)
                                                 },
+                                                onShareProfile = {
+                                                    MacroPadNavState.setStack(listOf(MacroPadSubPage.ShareProfile(profile.id)))
+                                                },
+                                                onImportProfile = {
+                                                    ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE)
+                                                },
                                             )
                                         }
 
@@ -500,6 +543,12 @@ fun MacroPadEditor(
                                                             context.getString(R.string.macropad_profile_duplicated_toast, duplicatedName),
                                                         )
                                                     }
+                                                },
+                                                onShareProfile = {
+                                                    MacroPadNavState.push(MacroPadSubPage.ShareProfile(profile.id))
+                                                },
+                                                onImportProfile = {
+                                                    ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE)
                                                 },
                                                 onReorderProfiles = {
                                                     MacroPadNavState.push(MacroPadSubPage.ReorderProfiles)
@@ -826,6 +875,9 @@ fun MacroPadEditor(
                                                 onAutoLayoutSwitchingChange = { enabled ->
                                                     MacroPadState.updateProfile(prof.copy(autoLayoutSwitching = enabled))
                                                 },
+                                                onShareProfile = {
+                                                    MacroPadNavState.push(MacroPadSubPage.ShareProfile(prof.id))
+                                                },
                                                 onUnlinkApp = {
                                                     val unlinked = prof.copy(association = null)
                                                     MacroPadState.updateProfile(unlinked)
@@ -848,6 +900,30 @@ fun MacroPadEditor(
                                                             context.getString(R.string.macropad_profile_cannot_delete_last_toast),
                                                         )
                                                     }
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ShareProfile -> {
+                                        val prof = profiles.firstOrNull { it.id == currentSubPage.profileId } ?: profile
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.quick_menu_profile_label),
+                                                    stringResource(R.string.settings_config_export_profile),
+                                                ),
+                                        ) {
+                                            ShareProfileSubPage(
+                                                preselectedProfileId = prof.id,
+                                                showProfilePicker = false,
+                                                onExportProfile = { metadata, targetProfile, includeBackgrounds, delivery ->
+                                                    ConfigManager.requestProfileExport(
+                                                        metadata = metadata,
+                                                        profile = targetProfile,
+                                                        includeBackgrounds = includeBackgrounds,
+                                                        delivery = delivery,
+                                                    )
                                                 },
                                             )
                                         }
@@ -2396,6 +2472,8 @@ private fun ProfilesDeck(
     onNewProfile: () -> Unit,
     onEditProfile: () -> Unit,
     onDuplicateProfile: () -> Unit,
+    onShareProfile: () -> Unit,
+    onImportProfile: () -> Unit,
     onReorderProfiles: () -> Unit,
     onDeleteProfile: () -> Unit,
 ) {
@@ -2439,6 +2517,20 @@ private fun ProfilesDeck(
                 }
             }
         },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.settings_config_export_profile),
+        description = stringResource(R.string.macropad_editor_share_profile_desc),
+        icon = Icons.Rounded.Share,
+        onClick = onShareProfile,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.settings_config_import_profile),
+        description = stringResource(R.string.macropad_editor_import_profile_desc),
+        icon = Icons.Rounded.FileUpload,
+        onClick = onImportProfile,
     )
 
     GamepadActionCard(

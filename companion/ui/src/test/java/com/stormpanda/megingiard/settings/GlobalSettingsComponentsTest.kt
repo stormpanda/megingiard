@@ -1,5 +1,8 @@
 package com.stormpanda.megingiard.settings
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Share
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -11,6 +14,7 @@ class GlobalSettingsComponentsTest {
             assertTrue(category.titleResId > 0)
             assertNotNull(category.icon)
         }
+        assertEquals(Icons.Rounded.Share, SettingsCategory.CONFIGURATION.icon)
     }
 
     @Test

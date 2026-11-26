@@ -102,6 +102,20 @@ class SettingsManagerTest {
     }
 
     @Test
+    fun testDefaultExportAuthorPersistenceAndReset() =
+        runTest(testDispatcher) {
+            assertEquals("", SettingsManager.defaultExportAuthor.value)
+
+            SettingsManager.setDefaultExportAuthor("StormPanda")
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertEquals("StormPanda", SettingsManager.defaultExportAuthor.value)
+
+            SettingsManager.resetForTesting(RuntimeEnvironment.getApplication(), CoroutineScope(testDispatcher))
+            testDispatcher.scheduler.advanceUntilIdle()
+            assertEquals("", SettingsManager.defaultExportAuthor.value)
+        }
+
+    @Test
     fun testImportKeyboardAutoOpenOnFocus() =
         runTest(testDispatcher) {
             val payload =

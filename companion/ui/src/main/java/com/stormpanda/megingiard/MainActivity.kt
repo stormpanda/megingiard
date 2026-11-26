@@ -3,6 +3,7 @@ package com.stormpanda.megingiard
 import android.app.ActivityManager
 import android.app.ActivityOptions
 import android.app.LocaleManager
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -11,6 +12,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.hardware.display.DisplayManager
 import android.media.MediaScannerConnection
+import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
@@ -59,6 +61,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -72,6 +75,7 @@ import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.catalog.SystemRoleClassifier
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
+import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.input.InjectorLifecycleManager
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.log.LogReportManager
@@ -111,6 +115,7 @@ import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
 import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -126,6 +131,29 @@ import kotlin.coroutines.resume
 private const val TAG = "MainActivity"
 private const val SCREENSHOT_EXIT_DELAY_MS = 200L
 private const val SCREENSHOT_COMPRESS_QUALITY = 100
+private const val SHARE_SEND_MIME_TYPE = "application/octet-stream"
+
+internal fun extractIncomingConfigUri(intent: Intent?): Uri? =
+    when (intent?.action) {
+        Intent.ACTION_VIEW -> {
+            intent.data ?: intent.clipData
+                ?.takeIf { it.itemCount > 0 }
+                ?.getItemAt(0)
+                ?.uri
+        }
+
+        Intent.ACTION_SEND -> {
+            intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                ?: intent.clipData
+                    ?.takeIf { it.itemCount > 0 }
+                    ?.getItemAt(0)
+                    ?.uri
+        }
+
+        else -> {
+            null
+        }
+    }
 
 private data class ExportedProfileMetadata(
     val id: String,
@@ -139,6 +167,7 @@ class MainActivity : ComponentActivity() {
     // Settings screens post requests to ConfigManager and these launchers pick them up.
 
     private var pendingExportKind: ConfigManager.ExportKind? = null
+    private var shareExportJob: Job? = null
 
     private val createDocumentLauncher =
         registerForActivityResult(
@@ -149,25 +178,7 @@ class MainActivity : ComponentActivity() {
             if (uri == null) return@registerForActivityResult
             lifecycleScope.launch(Dispatchers.IO) {
                 runCatching {
-                    val export =
-                        when (kind) {
-                            is ConfigManager.ExportKind.Backup -> {
-                                ConfigManager.buildExport(
-                                    kind.metadata,
-                                    this@MainActivity,
-                                    kind.includeBackgrounds,
-                                )
-                            }
-
-                            is ConfigManager.ExportKind.ProfileShare -> {
-                                ConfigManager.buildProfileExport(
-                                    kind.metadata,
-                                    kind.profile,
-                                    this@MainActivity,
-                                    kind.includeBackgrounds,
-                                )
-                            }
-                        }
+                    val export = buildExportForKind(kind)
                     ConfigManager.writeToUri(this@MainActivity, uri, export, kind.includeBackgrounds)
                 }.onSuccess {
                     AppLog.i(TAG, "Export written to $uri")
@@ -179,11 +190,91 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    private suspend fun buildExportForKind(kind: ConfigManager.ExportKind): MegingiardExport =
+        when (kind) {
+            is ConfigManager.ExportKind.Backup -> {
+                ConfigManager.buildExport(
+                    kind.metadata,
+                    this@MainActivity,
+                    kind.includeBackgrounds,
+                )
+            }
+
+            is ConfigManager.ExportKind.ProfileShare -> {
+                ConfigManager.buildProfileExport(
+                    kind.metadata,
+                    kind.profile,
+                    this@MainActivity,
+                    kind.includeBackgrounds,
+                )
+            }
+        }
+
+    private fun launchShareSheetExport(kind: ConfigManager.ExportKind) {
+        if (shareExportJob?.isActive == true) {
+            AppLog.w(TAG, "launchShareSheetExport: share export already in progress, ignoring duplicate request")
+            return
+        }
+        shareExportJob =
+            lifecycleScope.launch(Dispatchers.IO) {
+                runCatching {
+                    val export = buildExportForKind(kind)
+                    val shareFile = ConfigManager.prepareShareFile(cacheDir, kind.suggestedFilename)
+                    ConfigManager.writeToFile(this@MainActivity, shareFile, export, kind.includeBackgrounds)
+                    val contentUri =
+                        FileProvider.getUriForFile(
+                            this@MainActivity,
+                            "${BuildConfig.APPLICATION_ID}.fileprovider",
+                            shareFile,
+                        )
+                    val sendIntent =
+                        Intent(Intent.ACTION_SEND).apply {
+                            type = SHARE_SEND_MIME_TYPE
+                            putExtra(Intent.EXTRA_STREAM, contentUri)
+                            putExtra(Intent.EXTRA_SUBJECT, shareFile.name)
+                            clipData = ClipData.newRawUri(shareFile.name, contentUri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                    val chooser =
+                        Intent
+                            .createChooser(
+                                sendIntent,
+                                getString(R.string.config_share_chooser_title),
+                            ).apply {
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                    val options =
+                        ActivityOptions.makeBasic().apply {
+                            setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                        }
+                    withContext(Dispatchers.Main) {
+                        // Close Display 0's WindowManager overlay so it does not obscure the Android Share Sheet.
+                        AppStateManager.closePrimaryModal()
+                        startActivity(chooser, options.toBundle())
+                        ConfigManager.clearExportResult()
+                    }
+                }.onFailure { e ->
+                    AppLog.e(TAG, "Share export failed", e)
+                    if (AppStateManager.activePrimaryModal.value != null) {
+                        ConfigManager.setExportResult(ConfigManager.ExportResult.Failure(e.message))
+                    } else {
+                        val errorMsg =
+                            e.message?.takeIf { it.isNotBlank() }
+                                ?: getString(R.string.config_error_unknown)
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@MainActivity, errorMsg, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+    }
+
     private val openDocumentLauncher =
         registerForActivityResult(
             ActivityResultContracts.GetContent(),
         ) { uri ->
             if (uri == null) {
+                ConfigManager.clearInAppPendingImport()
                 return@registerForActivityResult
             }
             ConfigManager.setPendingInAppUri(uri)
@@ -419,8 +510,16 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 ConfigManager.exportRequest.collect { kind ->
-                    pendingExportKind = kind
-                    createDocumentLauncher.launch(kind.suggestedFilename)
+                    when (kind.delivery) {
+                        ConfigManager.ExportDelivery.SAVE_TO_FILE -> {
+                            pendingExportKind = kind
+                            createDocumentLauncher.launch(kind.suggestedFilename)
+                        }
+
+                        ConfigManager.ExportDelivery.SHARE_SHEET -> {
+                            launchShareSheetExport(kind)
+                        }
+                    }
                 }
             }
         }
@@ -812,17 +911,13 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Checks whether [intent] is an ACTION_VIEW intent carrying a `.mgrd` URI and, if so,
+     * Checks whether [intent] carries a `.mgrd` URI (via ACTION_VIEW or ACTION_SEND) and, if so,
      * notifies [ConfigManager] so the Compose UI can show the import preview dialog.
      */
     private fun handleIncomingIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_VIEW) {
-            val uri = intent.data
-            if (uri != null) {
-                AppLog.i(TAG, "handleIncomingIntent: .mgrd URI received: $uri")
-                ConfigManager.setPendingUri(uri)
-            }
-        }
+        val uri = extractIncomingConfigUri(intent) ?: return
+        AppLog.i(TAG, "handleIncomingIntent: .mgrd URI received (action=${intent?.action}): $uri")
+        ConfigManager.setPendingUri(uri)
     }
 
     private suspend fun captureWindowBitmap(targetWindow: Window): Bitmap? =

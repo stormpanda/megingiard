@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -127,6 +128,7 @@ internal fun EditProfileSubPageContent(
     accentColor: Color,
     onNameChange: (String) -> Unit,
     onAutoLayoutSwitchingChange: (Boolean) -> Unit = {},
+    onShareProfile: () -> Unit = {},
     onUnlinkApp: () -> Unit,
     onDeleteProfile: () -> Unit,
 ) {
@@ -187,6 +189,14 @@ internal fun EditProfileSubPageContent(
     GamepadSectionHeader(
         text = stringResource(R.string.macropad_editor_section_actions),
         color = accentColor,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.settings_config_export_profile),
+        description = stringResource(R.string.macropad_editor_share_profile_desc),
+        icon = Icons.Rounded.Share,
+        itemKey = "profile_${profile.id}_share",
+        onClick = onShareProfile,
     )
 
     val hasAssociation = profile.association != null

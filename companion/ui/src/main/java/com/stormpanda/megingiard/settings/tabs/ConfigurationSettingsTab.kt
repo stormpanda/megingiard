@@ -12,6 +12,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Share
@@ -33,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.ExportMetadata
@@ -40,6 +42,8 @@ import com.stormpanda.megingiard.config.InternalBackup
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.ProfileAssociation
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -59,6 +63,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private const val TAG = "ConfigSettingsTab"
 private const val CF_RESTORE_COUNTDOWN_SECONDS = 5
 private const val CF_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
 private const val CF_RESTORE_CONFIRM_TIMEOUT_MS = 8_000L
@@ -92,19 +97,11 @@ fun ConfigurationSettingsTab(
         }
     }
 
-    GamepadActionCard(
-        title = stringResource(R.string.settings_config_export),
-        description = stringResource(R.string.help_settings_export_desc),
-        icon = Icons.Rounded.FileDownload,
-        onClick = onExportBackup,
-        modifier = Modifier.firstDeckItem(),
-    )
+    val colors = LocalAppColors.current
 
-    GamepadActionCard(
-        title = stringResource(R.string.settings_config_import),
-        description = stringResource(R.string.settings_config_import_card_desc),
-        icon = Icons.Rounded.FileUpload,
-        onClick = onRestoreBackup,
+    GamepadSectionHeader(
+        text = stringResource(R.string.settings_config_section_sharing),
+        color = colors.accent,
     )
 
     GamepadActionCard(
@@ -112,6 +109,7 @@ fun ConfigurationSettingsTab(
         description = stringResource(R.string.help_settings_export_profile_desc),
         icon = Icons.Rounded.Share,
         onClick = onShareProfile,
+        modifier = Modifier.firstDeckItem(),
     )
 
     GamepadActionCard(
@@ -119,6 +117,25 @@ fun ConfigurationSettingsTab(
         description = stringResource(R.string.help_settings_import_profile_desc),
         icon = Icons.Rounded.FileUpload,
         onClick = onImportProfile,
+    )
+
+    GamepadSectionHeader(
+        text = stringResource(R.string.settings_config_section_backup),
+        color = colors.accent,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.settings_config_export),
+        description = stringResource(R.string.help_settings_export_desc),
+        icon = Icons.Rounded.FileDownload,
+        onClick = onExportBackup,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.settings_config_import),
+        description = stringResource(R.string.settings_config_import_card_desc),
+        icon = Icons.Rounded.FileUpload,
+        onClick = onRestoreBackup,
     )
 
     val deleteBadgeText =
@@ -221,9 +238,9 @@ fun buildExportMetadata(
     )
 
 @Composable
-fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean) -> Unit) {
+fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean, ConfigManager.ExportDelivery) -> Unit) {
     val context = LocalContext.current
-    var author by rememberSaveable { mutableStateOf("") }
+    var author by rememberSaveable { mutableStateOf(SettingsManager.defaultExportAuthor.value) }
     var description by rememberSaveable { mutableStateOf("") }
     var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
 
@@ -238,31 +255,62 @@ fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean) -> Unit) {
     )
 
     GamepadActionCard(
-        title = stringResource(R.string.settings_config_export),
-        description = stringResource(R.string.help_settings_export_desc),
+        title = stringResource(R.string.config_export_save_to_device),
+        description = stringResource(R.string.config_export_save_to_device_desc),
         icon = Icons.Rounded.FileDownload,
         onClick = {
-            onExport(buildExportMetadata(context, author, description), includeBackgrounds)
+            AppLog.d(TAG, "CreateBackupSubPage: save to device clicked")
+            SettingsManager.setDefaultExportAuthor(author.trim())
+            onExport(
+                buildExportMetadata(context, author, description),
+                includeBackgrounds,
+                ConfigManager.ExportDelivery.SAVE_TO_FILE,
+            )
+        },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.config_export_share_via),
+        description = stringResource(R.string.config_export_share_via_desc),
+        icon = Icons.Rounded.Share,
+        onClick = {
+            AppLog.d(TAG, "CreateBackupSubPage: share via clicked")
+            SettingsManager.setDefaultExportAuthor(author.trim())
+            onExport(
+                buildExportMetadata(context, author, description),
+                includeBackgrounds,
+                ConfigManager.ExportDelivery.SHARE_SHEET,
+            )
         },
     )
 }
 
 @Composable
-fun ShareProfileSubPage(onExportProfile: (ExportMetadata, PadProfile, Boolean) -> Unit) {
+fun ShareProfileSubPage(
+    preselectedProfileId: String? = null,
+    showProfilePicker: Boolean = true,
+    onExportProfile: (ExportMetadata, PadProfile, Boolean, ConfigManager.ExportDelivery) -> Unit,
+) {
     val context = LocalContext.current
     val rawProfiles by MacroPadState.profiles.collectAsStateWithLifecycle()
     val profiles = remember(rawProfiles) { rawProfiles.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }) }
     val activeProfile by MacroPadState.activeProfile.collectAsStateWithLifecycle()
-    var selectedProfile by remember(profiles, activeProfile) {
-        mutableStateOf(profiles.firstOrNull { it.id == activeProfile?.id } ?: activeProfile ?: profiles.firstOrNull())
+    var selectedProfile by remember(profiles, activeProfile, preselectedProfileId) {
+        mutableStateOf(
+            preselectedProfileId?.let { targetId -> profiles.firstOrNull { it.id == targetId } }
+                ?: profiles.firstOrNull { it.id == activeProfile?.id }
+                ?: activeProfile
+                ?: profiles.firstOrNull(),
+        )
     }
     val currentProfile = selectedProfile ?: activeProfile ?: profiles.firstOrNull()
 
-    var author by rememberSaveable { mutableStateOf("") }
+    var author by rememberSaveable { mutableStateOf(SettingsManager.defaultExportAuthor.value) }
     var description by rememberSaveable { mutableStateOf("") }
     var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
 
-    if (profiles.size > 1) {
+    val showPicker = showProfilePicker && profiles.size > 1
+    if (showPicker) {
         GamepadChoiceCard(
             title = stringResource(R.string.config_profile_export_select),
             description = stringResource(R.string.config_profile_export_select_desc),
@@ -281,17 +329,42 @@ fun ShareProfileSubPage(onExportProfile: (ExportMetadata, PadProfile, Boolean) -
         onDescriptionChange = { description = it },
         includeBackgrounds = includeBackgrounds,
         onIncludeBackgroundsChange = { includeBackgrounds = it },
-        isFirstDeckItem = profiles.size <= 1,
+        isFirstDeckItem = !showPicker,
     )
 
     GamepadActionCard(
-        title = stringResource(R.string.settings_config_export_profile),
-        description = stringResource(R.string.help_settings_export_profile_desc),
+        title = stringResource(R.string.config_export_share_via),
+        description = stringResource(R.string.config_export_share_via_desc),
         icon = Icons.Rounded.Share,
         enabled = currentProfile != null,
         onClick = {
             val targetProfile = currentProfile ?: return@GamepadActionCard
-            onExportProfile(buildExportMetadata(context, author, description), targetProfile, includeBackgrounds)
+            AppLog.d(TAG, "ShareProfileSubPage: share via clicked (profileId=${targetProfile.id})")
+            SettingsManager.setDefaultExportAuthor(author.trim())
+            onExportProfile(
+                buildExportMetadata(context, author, description),
+                targetProfile,
+                includeBackgrounds,
+                ConfigManager.ExportDelivery.SHARE_SHEET,
+            )
+        },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.config_export_save_to_device),
+        description = stringResource(R.string.config_export_save_to_device_desc),
+        icon = Icons.Rounded.FileDownload,
+        enabled = currentProfile != null,
+        onClick = {
+            val targetProfile = currentProfile ?: return@GamepadActionCard
+            AppLog.d(TAG, "ShareProfileSubPage: save to device clicked (profileId=${targetProfile.id})")
+            SettingsManager.setDefaultExportAuthor(author.trim())
+            onExportProfile(
+                buildExportMetadata(context, author, description),
+                targetProfile,
+                includeBackgrounds,
+                ConfigManager.ExportDelivery.SAVE_TO_FILE,
+            )
         },
     )
 }
@@ -353,9 +426,11 @@ fun RestoreBackupSubPage(
 fun RestoreReviewSubPage(
     export: MegingiardExport,
     pendingInAppImportMode: ConfigManager.ImportMode,
-    onConfirmImport: (MegingiardExport, ConfigManager.ImportMode) -> Unit,
+    onConfirmImport: (MegingiardExport, ConfigManager.ImportMode, ProfileAssociation?) -> Unit,
 ) {
     var isDetailsExpanded by rememberSaveable(export) { mutableStateOf(false) }
+    val pendingImportAssociation by ConfigManager.pendingImportAssociation.collectAsStateWithLifecycle()
+    var linkToTarget by rememberSaveable(export, pendingImportAssociation) { mutableStateOf(true) }
     val colors = LocalAppColors.current
 
     val metadata = export.metadata
@@ -467,6 +542,21 @@ fun RestoreReviewSubPage(
         }
     }
 
+    val pendingAssoc = pendingImportAssociation
+    val canLinkToTarget =
+        pendingInAppImportMode == ConfigManager.ImportMode.PROFILE_SHARE &&
+            pendingAssoc != null &&
+            export.profiles.size == 1
+    if (canLinkToTarget && pendingAssoc != null) {
+        GamepadToggleCard(
+            title = stringResource(R.string.config_import_link_to_target, pendingAssoc.displayLabel),
+            description = stringResource(R.string.config_import_link_to_target_desc),
+            checked = linkToTarget,
+            onCheckedChange = { linkToTarget = it },
+            icon = Icons.Rounded.Link,
+        )
+    }
+
     val warningText =
         when (pendingInAppImportMode) {
             ConfigManager.ImportMode.BACKUP_RESTORE -> stringResource(R.string.config_import_warning_backup)
@@ -479,7 +569,17 @@ fun RestoreReviewSubPage(
         icon = Icons.Rounded.Restore,
         isDestructive = true,
         onClick = {
-            onConfirmImport(export, pendingInAppImportMode)
+            val associationToApply =
+                if (canLinkToTarget && linkToTarget && pendingAssoc != null) {
+                    pendingAssoc.association
+                } else {
+                    null
+                }
+            AppLog.d(
+                TAG,
+                "RestoreReviewSubPage: confirm import clicked (mode=$pendingInAppImportMode link=${associationToApply != null})",
+            )
+            onConfirmImport(export, pendingInAppImportMode, associationToApply)
         },
     )
 }
