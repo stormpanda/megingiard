@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,10 +32,12 @@ import androidx.compose.material.icons.rounded.BatteryAlert
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.TrackChanges
 import androidx.compose.material.icons.rounded.Visibility
@@ -76,12 +79,15 @@ import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
+import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.session.ActiveGameSession
 import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
+import com.stormpanda.megingiard.settings.SettingsCategory
+import com.stormpanda.megingiard.settings.SettingsSubPage
 import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.delay
 import java.io.File
@@ -123,6 +129,9 @@ private val IH_BUTTON_CORNER_RADIUS = 10.dp
 private val IH_BUTTON_SHAPE = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS)
 private val IH_BUTTON_ICON_SIZE = 16.dp
 private val IH_BUTTON_ICON_SPACING = 6.dp
+private val IH_COMPACT_ICON_BUTTON_H_PADDING = 10.dp
+private val IH_COMPACT_ICON_BUTTON_V_PADDING = 8.dp
+private val IH_COMPACT_ICON_BUTTON_MIN_WIDTH = 40.dp
 private const val IH_HIGHLIGHT_ALPHA = 0.15f
 private val IH_BUTTON_SPACING = 10.dp
 private val IH_DROPDOWN_LINKED_ICON_SIZE = 16.dp
@@ -539,6 +548,16 @@ private fun CompanionHubHelpModal(
             label = stringResource(R.string.integration_home_link_existing),
             description = stringResource(R.string.help_companion_hub_hero_link_desc),
         )
+        HelpEntry(
+            icon = Icons.Rounded.Share,
+            label = stringResource(R.string.settings_config_export_profile),
+            description = stringResource(R.string.help_companion_hub_hero_share_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.FileUpload,
+            label = stringResource(R.string.settings_config_import_profile),
+            description = stringResource(R.string.help_companion_hub_hero_import_desc),
+        )
 
         HelpSection(stringResource(R.string.help_companion_hub_sec_tools))
         HelpEntry(
@@ -742,6 +761,25 @@ private fun HeroCompanionCard(
                                     )
                                 }
                             }
+
+                            HubCompactIconButton(
+                                icon = Icons.Rounded.Share,
+                                contentDescription = stringResource(R.string.integration_home_share_profile_cd),
+                                colors = colors,
+                                onClick = {
+                                    AppStateManager.openPrimaryModal(
+                                        PrimaryModalConfig(
+                                            type = PrimaryModalType.GLOBAL_SETTINGS,
+                                            payload =
+                                                PrimaryModalPayload.GlobalSettings(
+                                                    category = SettingsCategory.CONFIGURATION,
+                                                    subPage = SettingsSubPage.SHARE_PROFILE,
+                                                    profileId = associatedProfile.id,
+                                                ),
+                                        ),
+                                    )
+                                },
+                            )
                         }
                     } else {
                         Row(horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING)) {
@@ -790,6 +828,30 @@ private fun HeroCompanionCard(
                                     )
                                 }
                             }
+
+                            HubCompactIconButton(
+                                icon = Icons.Rounded.FileUpload,
+                                contentDescription = stringResource(R.string.integration_home_import_profile_cd),
+                                colors = colors,
+                                onClick = {
+                                    val assoc =
+                                        buildTargetProfileAssociation(
+                                            pkg = targetPackage,
+                                            targetRom = targetRomPath,
+                                            targetRomIdentifier = targetRomIdentifier,
+                                            targetSystem = targetSystemId,
+                                        )
+                                    val displayLabel =
+                                        targetLabel
+                                            ?: targetRomIdentifier
+                                            ?: targetPackage
+                                    ConfigManager.requestImport(
+                                        mode = ConfigManager.ImportMode.PROFILE_SHARE,
+                                        association = assoc,
+                                        associationLabel = displayLabel,
+                                    )
+                                },
+                            )
 
                             Box {
                                 OutlinedButton(
@@ -924,37 +986,92 @@ private fun HeroCompanionCard(
                         )
                     }
 
-                    Button(
-                        onClick = {
-                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                        },
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = colors.accent,
-                                contentColor = colors.onAccent,
-                            ),
-                        shape = IH_BUTTON_SHAPE,
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_ICON_SPACING),
+                    Row(horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING)) {
+                        Button(
+                            onClick = {
+                                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                            },
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = colors.accent,
+                                    contentColor = colors.onAccent,
+                                ),
+                            shape = IH_BUTTON_SHAPE,
                         ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Visibility,
-                                contentDescription = null,
-                                modifier = Modifier.size(IH_BUTTON_ICON_SIZE),
-                            )
-                            Text(
-                                text = stringResource(R.string.integration_home_launch_controls),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_ICON_SPACING),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Visibility,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(IH_BUTTON_ICON_SIZE),
+                                )
+                                Text(
+                                    text = stringResource(R.string.integration_home_launch_controls),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
                         }
+
+                        HubCompactIconButton(
+                            icon = Icons.Rounded.Share,
+                            contentDescription = stringResource(R.string.integration_home_share_profile_cd),
+                            colors = colors,
+                            onClick = {
+                                AppStateManager.openPrimaryModal(
+                                    PrimaryModalConfig(
+                                        type = PrimaryModalType.GLOBAL_SETTINGS,
+                                        payload =
+                                            PrimaryModalPayload.GlobalSettings(
+                                                category = SettingsCategory.CONFIGURATION,
+                                                subPage = SettingsSubPage.SHARE_PROFILE,
+                                                profileId = activeProfile.id,
+                                            ),
+                                    ),
+                                )
+                            },
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun HubCompactIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    colors: AppColors,
+    onClick: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier =
+            Modifier.defaultMinSize(
+                minWidth = IH_COMPACT_ICON_BUTTON_MIN_WIDTH,
+                minHeight = ButtonDefaults.MinHeight,
+            ),
+        contentPadding =
+            PaddingValues(
+                horizontal = IH_COMPACT_ICON_BUTTON_H_PADDING,
+                vertical = IH_COMPACT_ICON_BUTTON_V_PADDING,
+            ),
+        border = BorderStroke(IH_BORDER_WIDTH, colors.controlOverlayBorder),
+        colors =
+            ButtonDefaults.outlinedButtonColors(
+                contentColor = colors.onSurface,
+            ),
+        shape = IH_BUTTON_SHAPE,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(IH_BUTTON_ICON_SIZE),
+        )
     }
 }
 

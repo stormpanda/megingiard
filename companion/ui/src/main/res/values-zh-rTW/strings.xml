@@ -161,6 +161,8 @@ Open Settings to create a layout.</string>
     <string name="settings_config_import">還原備份</string>
     <string name="settings_config_export_profile">分享設定檔</string>
     <string name="settings_config_import_profile">匯入分享的設定檔</string>
+    <string name="settings_config_section_sharing">設定檔分享</string>
+    <string name="settings_config_section_backup">備份與還原</string>
     <string name="settings_add_to_obtainium">新增到 Obtainium</string>
 
     <!-- Export metadata configuration -->
@@ -169,6 +171,18 @@ Open Settings to create a layout.</string>
     <string name="config_export_description">描述</string>
     <string name="config_export_description_desc">關於此匯出的摘要或備註</string>
     <string name="config_export_include_backgrounds_desc">在 .mgrd 檔案中打包自訂背景圖片</string>
+    <string name="config_export_share_via">透過其他應用程式分享…</string>
+    <string name="config_export_share_via_desc">直接透過 Android 分享選單傳送 .mgrd 檔案</string>
+    <string name="config_export_save_to_device">儲存至裝置</string>
+    <string name="config_export_save_to_device_desc">將 .mgrd 檔案儲存至裝置上選擇的資料夾</string>
+    <string name="config_share_chooser_title">分享 Megingiard 檔案</string>
+    <string name="config_import_link_to_target">連結至 %1$s</string>
+    <string name="config_import_link_to_target_desc">自動將匯入的設定檔與此遊戲或應用程式關聯</string>
+    <string name="macropad_editor_share_profile_desc">將此設定檔匯出並分享為 .mgrd 檔案</string>
+    <string name="macropad_editor_import_profile_desc">將分享的 .mgrd 設定檔匯入至現有設定檔旁</string>
+    <string name="integration_home_share_profile_cd">分享設定檔</string>
+    <string name="integration_home_import_profile_cd">匯入分享的設定檔</string>
+    <string name="quick_menu_share_profile_cd">分享使用中的設定檔</string>
 
     <!-- Import preview dialog -->
     <string name="config_import_title">匯入配置</string>
@@ -844,7 +858,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_language_desc">更改所有應用程式選單、覆蓋層與說明教學的語言。目前提供英文、德文與繁體中文。</string>
     <string name="help_settings_theme_desc">從 %1$d 種獨特視覺主題中選擇，包括%2$s。</string>
     <string name="help_settings_export_desc">建立自訂設定檔與配置的完整備份。建議在執行應用程式更新或重設設定前進行備份。</string>
-    <string name="help_settings_export_profile_desc">將單個設定檔儲存到檔案中，以便與其他玩家分享配置與巨集，而無需洩露您的完整 App 配置。</string>
+    <string name="help_settings_export_profile_desc">匯出單個設定檔以透過其他應用程式分享，或儲存為 .mgrd 檔案，而無需洩露您的完整 App 配置。</string>
     <string name="help_settings_import_profile_desc">從 .mgrd 檔案匯入其他使用者分享的設定檔並新增至現有設定檔中，不會覆寫您的全域設定。</string>
     <string name="help_settings_add_to_obtainium_desc">開啟 Obtainium (如果已安裝) 並預填 Megingiard 儲存庫連結。如果未安裝 Obtainium，則會在瀏覽器中開啟 Obtainium 的 GitHub 版本發佈頁面。</string>
     <string name="help_settings_privd_desc">透過無線偵錯或原廠硬體橋接建立背景系統連線，以寫入一般應用程式無法存取的系統輸入裝置。這將啟用：\n\n• 手把合併：結合虛擬與實體手把，使遊戲僅看到一個控制器 (提高相容性)。\n• 實體手把錄製：錄製來自實體控制器的巨集輸入。\n• 直接螢幕投影：無需在每次啟動時提示螢幕擷取權限即可開始投影。\n• 螢幕截圖：在未開啟螢幕投影的情況下，直接從快速選單覆蓋層儲存上螢幕截圖。</string>
@@ -870,6 +884,8 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_screenshot_both_desc">同時截取兩個螢幕畫面，並垂直組合成單張雙螢幕圖片。</string>
     <string name="help_quickmenu_section_macropad">MacroPad 控制項 (底端卡片)</string>
     <string name="help_quickmenu_profiles_desc">輕觸標籤即可立即切換到不同的巨集設定檔。目前使用中的設定檔會醒目顯示。設定檔及其配置在「編輯設定檔／配置」畫面中建立與管理。</string>
+    <string name="help_quickmenu_share_profile_label">分享使用中的設定檔</string>
+    <string name="help_quickmenu_share_profile_desc">開啟已預選目前使用中設定檔的分享畫面，讓您透過 Android 分享選單傳送或儲存為 .mgrd 檔案。</string>
     <string name="help_quickmenu_layouts_desc">輕觸標籤即可切換到目前設定檔中的不同按鈕配置。此處只會顯示在編輯器中標記為啟用的配置。</string>
     <string name="help_quickmenu_auto_switch_label">自動切換</string>
     <string name="help_quickmenu_auto_switch_desc">切換動態設定檔自動比對開啟/關閉。開啟時，設定檔與下螢幕檢視將根據目前執行中的遊戲或模擬器自動切換。關閉時，設定檔自動比對將會暫停。</string>
@@ -890,6 +906,8 @@ Open Settings to create a layout.</string>
     <string name="help_companion_hub_hero_edit_desc">開啟設定檔與版面編輯器，以自訂按鈕位置、樣式及巨集設定。</string>
     <string name="help_companion_hub_hero_create_desc">為目前執行或選取的遊戲建立並預先連結一個全新的專屬 MacroPad 控制設定檔。</string>
     <string name="help_companion_hub_hero_link_desc">將既有的自訂 MacroPad 控制設定檔連結至目前執行或選取的遊戲。</string>
+    <string name="help_companion_hub_hero_share_desc">將使用中或已關聯的設定檔匯出並分享為 .mgrd 檔案。</string>
+    <string name="help_companion_hub_hero_import_desc">匯入分享的 .mgrd 設定檔，並可選擇自動連結至目前偵測到的遊戲或應用程式。</string>
     <string name="help_companion_hub_sec_tools">下螢幕工具</string>
     <string name="help_companion_hub_macropad_desc">快速捷徑，用於開啟目前使用中的 MacroPad 觸控控制介面。</string>
     <string name="help_companion_hub_settings_desc">存取全域應用程式設定，包括主題色彩、系統服務狀態、輸入死區與設定檔備份。</string>

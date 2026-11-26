@@ -24,6 +24,7 @@ internal val KEY_CUSTOM_ACCENT_COLOR = intPreferencesKey("custom_accent_color")
 internal val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
 internal val KEY_OVERLAY_FADE_OUT = booleanPreferencesKey("overlay_fade_out")
 internal val KEY_STEAMGRIDDB_API_TOKEN = stringPreferencesKey("steamgriddb_api_token")
+internal val KEY_DEFAULT_EXPORT_AUTHOR = stringPreferencesKey("default_export_author")
 
 // Mirror settings
 internal val KEY_MIRROR_SNAP_ALIGNMENT = booleanPreferencesKey("mirror_snap_alignment")
@@ -98,6 +99,7 @@ private val GLOBAL_KEYS: Set<Preferences.Key<*>> =
         KEY_LOG_LEVEL,
         KEY_EXCLUDE_FROM_RECENTS,
         KEY_STEAMGRIDDB_API_TOKEN,
+        KEY_DEFAULT_EXPORT_AUTHOR,
         KEY_AUTO_UPDATE_CHECK_ENABLED,
     )
 private val MIRROR_KEYS: Set<Preferences.Key<*>> =
@@ -203,6 +205,7 @@ internal val FLOAT_KEYS: Set<Preferences.Key<*>> =
 internal val STRING_KEYS: Set<Preferences.Key<*>> =
     setOf(
         KEY_STEAMGRIDDB_API_TOKEN,
+        KEY_DEFAULT_EXPORT_AUTHOR,
         KEY_THEME_MODE,
         KEY_KB_LAYOUT,
         KEY_APP_LANGUAGE,

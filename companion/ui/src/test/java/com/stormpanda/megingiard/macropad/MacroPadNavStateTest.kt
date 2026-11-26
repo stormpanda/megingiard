@@ -206,13 +206,25 @@ class MacroPadNavStateTest {
     }
 
     @Test
-    fun `NewProfile and EditProfile have correct parentSection PROFILES`() {
+    fun `NewProfile and EditProfile and ShareProfile have correct parentSection PROFILES`() {
         assertEquals(EditorSection.PROFILES, MacroPadSubPage.NewProfile().parentSection)
         val editProfile = MacroPadSubPage.EditProfile(profileId = "prof-new-1")
         assertEquals(EditorSection.PROFILES, editProfile.parentSection)
         assertEquals("prof-new-1", editProfile.profileId)
 
+        val shareProfile = MacroPadSubPage.ShareProfile(profileId = "prof-share-1")
+        assertEquals(EditorSection.PROFILES, shareProfile.parentSection)
+        assertEquals("prof-share-1", shareProfile.profileId)
+
         MacroPadNavState.push(MacroPadSubPage.NewProfile())
+        assertEquals(listOf(MacroPadSubPage.NewProfile()), MacroPadNavState.subPageStack.value)
+
+        MacroPadNavState.push(shareProfile)
+        assertEquals(
+            listOf(MacroPadSubPage.NewProfile(), shareProfile),
+            MacroPadNavState.subPageStack.value,
+        )
+        assertTrue(MacroPadNavState.pop())
         assertEquals(listOf(MacroPadSubPage.NewProfile()), MacroPadNavState.subPageStack.value)
 
         MacroPadNavState.selectSection(EditorSection.PROFILES)

@@ -66,6 +66,12 @@ internal val PM_AUTO_SWITCH_GAP = 8.dp
 
 private val PM_ACTION_BUTTON_SHAPE = RoundedCornerShape(PM_ACTION_BUTTON_CORNER)
 private val PM_TOGGLE_CONTAINER_SHAPE = RoundedCornerShape(8.dp)
+private val PM_HEADER_ACTION_CORNER = 8.dp
+private val PM_HEADER_ACTION_SHAPE = RoundedCornerShape(PM_HEADER_ACTION_CORNER)
+private val PM_HEADER_ACTION_H_PADDING = 8.dp
+private val PM_HEADER_ACTION_V_PADDING = 4.dp
+private val PM_HEADER_ACTION_ICON_SIZE = 16.dp
+private const val PM_HEADER_ACTION_BORDER_ALPHA = 0.5f
 
 @Composable
 internal fun SectionLabel(
@@ -380,6 +386,38 @@ internal fun QuickMenuIconButton(
             contentDescription = contentDescription,
             tint = iconTint,
             modifier = Modifier.size(PM_NAV_ICON_SIZE),
+        )
+    }
+}
+
+@Composable
+internal fun QuickMenuHeaderIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    colors: AppColors,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .clip(PM_HEADER_ACTION_SHAPE)
+                .border(
+                    PM_BORDER_WIDTH,
+                    colors.accent.copy(alpha = PM_HEADER_ACTION_BORDER_ALPHA),
+                    PM_HEADER_ACTION_SHAPE,
+                ).clickable(onClick = {
+                    AppLog.d(TAG, "QuickMenuHeaderIconButton clicked: $contentDescription")
+                    onClick()
+                })
+                .padding(horizontal = PM_HEADER_ACTION_H_PADDING, vertical = PM_HEADER_ACTION_V_PADDING),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = colors.accent,
+            modifier = Modifier.size(PM_HEADER_ACTION_ICON_SIZE),
         )
     }
 }

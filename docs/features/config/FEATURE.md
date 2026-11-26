@@ -16,16 +16,15 @@ the same device or share individual profiles with other Megingiard users.
 
 - The user MUST be able to export all app settings (Global, Mirror, Touchpad, Keyboard) and all
   MacroPad profiles (each containing its own macros) to a single `.mgrd` backup file.
-- The export file MUST be created via the Android Storage Access Framework (SAF) so the user
-  controls the destination folder.
-- The user MAY optionally provide author and description before exporting (community metadata; the schema also supports an optional `tags` list, which is displayed on import if present in the archive but is not exposed in the export UI).
+- The user MAY choose between **Save to device** (Android Storage Access Framework `CreateDocument` so the user controls the destination folder) and **Share via…** (writing the `.mgrd` archive to `cacheDir/shared_exports/` and opening the Android Share Sheet via `FileProvider` on `Display.DEFAULT_DISPLAY`).
+- The user MAY optionally provide author and description before exporting (community metadata; the schema also supports an optional `tags` list, which is displayed on import if present in the archive but is not exposed in the export UI). The last-used author name is persisted in `SettingsManager.defaultExportAuthor` (`KEY_DEFAULT_EXPORT_AUTHOR`) and pre-filled on subsequent exports.
 - The suggested default filename MUST include the application version name (prefixed with "v"), the current date, and, if provided, the author
   (up to 20 chars) and description (up to 30 chars) to help users identify files.
   Format: `megingiard_v<versionName>_<date>[_<author>][_<description>].mgrd`.
 - The export MUST embed an SHA-256 checksum to detect file corruption or unintended modification.
   This is a data-integrity check, distinct from the application / daemon hardening layers
   summarized in [SECURITY_CONCEPT.md](../../../SECURITY_CONCEPT.md).
-- An animated toast notification ("Configuration exported successfully") MUST be shown after the backup is saved without interrupting the user with a modal dialog.
+- An animated toast notification ("Configuration exported successfully") MUST be shown after the backup is saved to a device folder without interrupting the user with a modal dialog.
 
 ### FR-CF2: Backup Restore (Import)
 
@@ -33,8 +32,8 @@ the same device or share individual profiles with other Megingiard users.
   picker that shows all files (`*/*` filter — the custom MIME type is not registered in the Android
   MIME database, so filtering by MIME type would produce an empty list).
 - The app MUST also respond to `ACTION_VIEW` intents with MIME type
-  `application/vnd.megingiard.config+json`, so files can be opened from any file manager or
-  sharing app.
+  `application/vnd.megingiard.config+json` or `content:` / `file:` URIs whose path ends in `.mgrd`
+  (`android:pathSuffix=".mgrd"`), as well as `ACTION_SEND` single-file intents (`application/vnd.megingiard.config+json`, `application/octet-stream`, `application/json`, `application/zip`), so files can be opened or shared directly from Discord, browsers, file managers, or share sheets.
 - On import the user MUST be shown a preview of the file's metadata and which sections it contains
   before any changes are applied.
 - If the imported file's checksum does not match its contents, the import MUST be rejected with an
@@ -65,19 +64,22 @@ the same device or share individual profiles with other Megingiard users.
 ### FR-CF6: Per-Profile Share Export
 
 - The user MUST be able to export a single MacroPad profile as a `.mgrd` file for sharing with
-  other users.
-- The user MUST be able to select which profile to export when more than one profile exists.
+  other users — both from **Global Settings → Share & Backup** (ordered at the top under **Profile Sharing**, with sidebar icon `Icons.Rounded.Share`) and directly from **MacroPad Editor** (`Quick Actions`, `Profiles` deck, and `Edit Profile`), the **Companion Hub** hero card, and the **Quick Menu** profiles header (pre-selecting the active or linked profile).
+- Both **Share via…** (Android Share Sheet via `FileProvider` + `ACTION_SEND`) and **Save to device** (SAF `CreateDocument`) MUST be available.
+- The user MUST be able to select which profile to export when more than one profile exists and the screen was not opened for a specific locked profile.
 - The export file MUST contain an empty `settings` map — app settings are never included in
   a profile-share export, so importing it cannot overwrite another user's app preferences.
-- The user MAY optionally provide author and description before exporting (`tags` is supported in the schema and displayed on import, though not exposed in the export UI).
+- The user MAY optionally provide author (pre-filled from `SettingsManager.defaultExportAuthor`) and description before exporting (`tags` is supported in the schema and displayed on import, though not exposed in the export UI).
 - The suggested filename format is:
   `megingiard_profile_v<versionName>_<date>[_<profileName up to 30 chars>][_<author up to 20 chars>].mgrd`.
 - An animated toast notification ("Profile exported successfully") MUST be shown after the profile export is saved without interrupting the user with a modal dialog.
 
 ### FR-CF7: Per-Profile Share Import
 
-- The user MUST be able to import a shared profile `.mgrd` file from Global Settings.
-- The import preview dialog MUST indicate that settings in the file will be ignored.
+- The user MUST be able to import a shared profile `.mgrd` file from **Global Settings → Share & Backup**, **MacroPad Editor** (`Quick Actions` / `Profiles` deck), or the **Companion Hub** hero card (when no profile is linked to the detected game/app).
+- When triggered from outside Global Settings, picking a `.mgrd` file MUST transition directly into Global Settings' in-deck `RestoreReviewSubPage`.
+- When triggered from the Companion Hub hero card for an unlinked game/app, `RestoreReviewSubPage` MUST display a toggle (enabled by default) allowing the user to automatically link the imported profile to that detected game/ROM/app.
+- The import review deck MUST indicate that settings in the file will be ignored.
 - After a successful profile-share import, only the profiles are added (via
   `ConfigManager.applyProfileImport()`); `SettingsManager` is NOT updated.
 - An animated toast notification ("Profile imported successfully") MUST be shown after the profile is imported without interrupting the user with a modal dialog.
@@ -109,47 +111,46 @@ GlobalSettingsScreen (Compose UI, 2-Pane Console Navigation)
 ConfigManager  ← StateFlow bridge (GlobalSettingsScreen has no direct ActivityResultRegistryOwner
         │         when rendered inside PrimaryOverlayActivity)
         │
-        │  exportRequest: SharedFlow<ExportKind>   (Backup | ProfileShare)
+        │  exportRequest: SharedFlow<ExportKind>   (Backup | ProfileShare, delivery: SAVE_TO_FILE | SHARE_SHEET)
         │  importRequest: SharedFlow<ImportMode>   (BACKUP_RESTORE | PROFILE_SHARE)
         │  pendingInAppImportMode: StateFlow<ImportMode>
         ▼
-MainActivity  ← holds ActivityResultLaunchers
-        │  createDocumentLauncher (export) / openDocumentLauncher (*/* — all files, import)
+MainActivity  ← holds ActivityResultLaunchers + FileProvider Share Sheet launcher
+        │  createDocumentLauncher (SAVE_TO_FILE) / FileProvider ACTION_SEND chooser (SHARE_SHEET)
+        │  openDocumentLauncher (*/* — all files, import)
         │
-        ├── Export path (Backup):
-        │       ConfigManager.buildExport() → ConfigManager.writeToUri()
-        │       → ConfigManager.setExportResult()
-        │
-        ├── Export path (ProfileShare):
-        │       ConfigManager.buildProfileExport() → ConfigManager.writeToUri()
-        │       → ConfigManager.setExportResult()
+        ├── Export path (Backup / ProfileShare):
+        │       ConfigManager.buildExport() / buildProfileExport()
+        │       ├── SAVE_TO_FILE → ConfigManager.writeToUri() → ConfigManager.setExportResult()
+        │       └── SHARE_SHEET  → ConfigManager.prepareShareFile() → ConfigManager.writeToFile()
+        │                         → closePrimaryModal() + ACTION_SEND chooser on DEFAULT_DISPLAY
         │
         └── Import path:
                 ConfigManager.setPendingInAppUri(uri, mode)
                         │
                         ▼
-                MainAppScreen.LaunchedEffect(pendingImportRequest)
+                MainAppScreen.LaunchedEffect(pendingUriRequest)
                         │  suspend – Dispatchers.IO
                         ▼
-                ConfigManager.readFromUri()  →  ConfigManager.setInAppParsedImport(archive)
-                        │
+                ConfigManager.parseImportUri()  →  ConfigManager.setInAppParsedImport(archive)
+                        │  (opens GlobalSettingsScreen RESTORE_REVIEW if triggered outside settings)
                         ▼
                 GlobalSettingsScreen RestoreReviewSubPage (In-Deck Review & Apply)
                         ├── BACKUP_RESTORE → ConfigManager.applyImport()
-                        └── PROFILE_SHARE  → ConfigManager.applyProfileImport()
+                        └── PROFILE_SHARE  → ConfigManager.applyProfileImport(association = …)
 ```
 
-For external file intents (`ACTION_VIEW`):
+For external file intents (`ACTION_VIEW` / `ACTION_SEND`):
 
 ```
-File manager / share sheet
-        │  Intent(ACTION_VIEW, uri, mimeType=application/vnd.megingiard.config+json)
+File manager / Discord / browser / share sheet
+        │  Intent(ACTION_VIEW or ACTION_SEND, uri / EXTRA_STREAM)
         ▼
 LaunchTrampolineActivity.onCreate()
-        │  forwards ACTION_VIEW + uri + FLAG_GRANT_READ_URI_PERMISSION to secondary display
+        │  forwards action + setDataAndType / EXTRA_STREAM + clipData + FLAG_GRANT_READ_URI_PERMISSION
         ▼
 MainActivity.onNewIntent() / onCreate()
-        │
+        │  extractIncomingConfigUri()
         ▼
 ConfigManager.setPendingUri(uri)   ← StateFlow bridge
         │
@@ -239,9 +240,9 @@ Adding a new setting requires assigning the key to a section in `SECTION_MAP` or
 | `:companion:ui` `settings/tabs/ConfigurationSettingsTab.kt` | Configuration tab composable and export/import sub-pages (`CreateBackupSubPage`, `ShareProfileSubPage`, `RestoreBackupSubPage`, `RestoreReviewSubPage`)                                                            |
 | `:companion:ui` `settings/GlobalSettingsComponents.kt`     | Enum display name mapping helpers (`SettingsCategory.titleResId()`, `SettingsSubPage.titleResId()`)                                                                                                                 |
 | `:companion:ui` `MainAppScreen.kt`                         | `LaunchedEffect(pendingImportRequest)` + `IncomingImportDialog` for external file intents                                                                                                                           |
-| `:companion:ui` `LaunchTrampolineActivity.kt`              | Receives external `ACTION_VIEW` intents from `AndroidManifest.xml` and forwards the `.mgrd` URI + read permissions to `MainActivity` on the secondary display                                                        |
-| `:companion:ui` `MainActivity.kt`                          | `handleIncomingIntent()` / `onNewIntent()` — routes `ACTION_VIEW` uri to `ConfigManager`; holds `createDocumentLauncher` / `openDocumentLauncher`; discriminates `ExportKind` to call correct build function        |
-| `:companion:ui` `AndroidManifest.xml`                      | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json` on `LaunchTrampolineActivity`                                                                                                               |
+| `:companion:ui` `LaunchTrampolineActivity.kt`              | Receives external `ACTION_VIEW` / `ACTION_SEND` intents from `AndroidManifest.xml` and forwards the `.mgrd` URI, clipData, and read permissions to `MainActivity` on the secondary display |
+| `:companion:ui` `MainActivity.kt`                          | `handleIncomingIntent()` / `onNewIntent()` (`extractIncomingConfigUri`) — routes `ACTION_VIEW`/`ACTION_SEND` uri to `ConfigManager`; holds `createDocumentLauncher` / `openDocumentLauncher` and `FileProvider` Share Sheet launcher |
+| `:companion:ui` `AndroidManifest.xml`                      | `ACTION_VIEW` (`application/vnd.megingiard.config+json` and `.mgrd` `pathSuffix`) and `ACTION_SEND` intent-filters on `LaunchTrampolineActivity`; `FileProvider` (`res/xml/file_paths.xml`) |
 | `:companion:ui` `res/values/strings.xml`                   | All user-visible strings for the feature (prefix `config_`, `settings_config_`)                                                                                                                                     |
 
 ### UUID Remapping on Import

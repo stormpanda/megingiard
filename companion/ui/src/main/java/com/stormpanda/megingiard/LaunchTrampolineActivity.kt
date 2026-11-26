@@ -2,7 +2,9 @@ package com.stormpanda.megingiard
 
 import android.app.Activity
 import android.app.ActivityOptions
+import android.content.ClipData
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.Display
 import com.stormpanda.megingiard.catalog.DisplayDetector
@@ -32,9 +34,17 @@ class LaunchTrampolineActivity : Activity() {
             val targetIntent =
                 Intent(this, MainActivity::class.java).apply {
                     action = intent?.action
-                    data = intent?.data
-                    type = intent?.type
-                    intent?.clipData?.let { clipData = it }
+                    setDataAndType(intent?.data, intent?.type)
+                    val incomingClip = intent?.clipData
+                    if (incomingClip != null) {
+                        clipData = incomingClip
+                    } else if (intent?.action == Intent.ACTION_SEND) {
+                        val streamUri = intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                        if (streamUri != null) {
+                            clipData = ClipData.newRawUri("", streamUri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                    }
                     intent?.extras?.let { putExtras(it) }
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                     intent?.flags?.let { originalFlags ->

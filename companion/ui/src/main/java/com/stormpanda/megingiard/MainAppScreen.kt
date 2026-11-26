@@ -38,6 +38,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -91,12 +92,16 @@ import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.settings.SettingsCategory
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.SettingsSubPage
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppColors
+import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.IntegrationHomeScreen
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
 import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
@@ -170,6 +175,18 @@ fun MainAppScreen() {
                 AppLog.i(TAG, "Import parsed: ${archive.export.profiles.size} profile(s)")
                 if (request.isInApp) {
                     ConfigManager.setInAppParsedImport(archive)
+                    if (AppStateManager.activePrimaryModal.value?.type != PrimaryModalType.GLOBAL_SETTINGS) {
+                        AppStateManager.openPrimaryModal(
+                            PrimaryModalConfig(
+                                type = PrimaryModalType.GLOBAL_SETTINGS,
+                                payload =
+                                    PrimaryModalPayload.GlobalSettings(
+                                        category = SettingsCategory.CONFIGURATION,
+                                        subPage = SettingsSubPage.RESTORE_REVIEW,
+                                    ),
+                            ),
+                        )
+                    }
                 } else {
                     ConfigManager.setParsedImport(archive)
                 }
@@ -178,7 +195,24 @@ fun MainAppScreen() {
                 val errorMsg = err.message ?: context.getString(R.string.config_error_unknown)
                 if (request.isInApp) {
                     ConfigManager.clearInAppPendingImport()
-                    ConfigManager.setInAppImportError(errorMsg)
+                    val activeModalType = AppStateManager.activePrimaryModal.value?.type
+                    when (activeModalType) {
+                        PrimaryModalType.GLOBAL_SETTINGS -> {
+                            ConfigManager.setInAppImportError(errorMsg)
+                        }
+
+                        null -> {
+                            importError = errorMsg
+                        }
+
+                        else -> {
+                            DialogToastManager.show(
+                                message = errorMsg,
+                                icon = Icons.Rounded.ErrorOutline,
+                                isError = true,
+                            )
+                        }
+                    }
                 } else {
                     ConfigManager.clearPendingImport()
                     importError = errorMsg

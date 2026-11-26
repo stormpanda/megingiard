@@ -121,6 +121,12 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.PROFILES
     }
 
+    data class ShareProfile(
+        val profileId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.PROFILES
+    }
+
     data object AppPicker : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }

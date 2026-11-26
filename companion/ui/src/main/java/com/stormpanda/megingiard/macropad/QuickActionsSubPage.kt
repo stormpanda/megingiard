@@ -4,8 +4,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.Crop
+import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.OpenWith
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,11 +37,22 @@ internal fun QuickActionsDeckContent(
     onNewProfile: () -> Unit,
     onArrangeButtons: () -> Unit,
     onEditMirrorLayout: () -> Unit,
+    onShareProfile: () -> Unit,
+    onImportProfile: () -> Unit,
 ) {
     AppLog.d(TAG, "Rendering QuickActionsDeckContent")
 
     val items =
-        remember(onNewButton, onNewMacro, onNewLayout, onNewProfile, onArrangeButtons, onEditMirrorLayout) {
+        remember(
+            onNewButton,
+            onNewMacro,
+            onNewLayout,
+            onNewProfile,
+            onArrangeButtons,
+            onEditMirrorLayout,
+            onShareProfile,
+            onImportProfile,
+        ) {
             buildList {
                 add(
                     QuickActionItem(
@@ -87,6 +100,22 @@ internal fun QuickActionsDeckContent(
                         descRes = R.string.mirror_editor_arrange_cutouts_desc,
                         icon = Icons.Rounded.Crop,
                         onClick = onEditMirrorLayout,
+                    ),
+                )
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.settings_config_export_profile,
+                        descRes = R.string.macropad_editor_share_profile_desc,
+                        icon = Icons.Rounded.Share,
+                        onClick = onShareProfile,
+                    ),
+                )
+                add(
+                    QuickActionItem(
+                        titleRes = R.string.settings_config_import_profile,
+                        descRes = R.string.macropad_editor_import_profile_desc,
+                        icon = Icons.Rounded.FileUpload,
+                        onClick = onImportProfile,
                     ),
                 )
             }
