@@ -64,7 +64,7 @@ the same device or share individual profiles with other Megingiard users.
 ### FR-CF6: Per-Profile Share Export
 
 - The user MUST be able to export a single MacroPad profile as a `.mgrd` file for sharing with
-  other users — both from **Global Settings → Share & Backup** (ordered at the top under **Profile Sharing**, with sidebar icon `Icons.Rounded.Share`) and directly from **MacroPad Editor** (`Quick Actions`, `Profiles` deck, and `Edit Profile`), the **Companion Hub** hero card, and the **Quick Menu** profiles header (pre-selecting the active or linked profile).
+  other users — both from **Global Settings → Share & Backup** (ordered at the top under **Profile Sharing**, with sidebar icon `Icons.Rounded.Share`) and directly from **MacroPad Editor** (`Quick Actions`, `Profiles` deck, and `Edit Profile`) and the **Companion Hub** hero card (pre-selecting the active or linked profile).
 - Both **Share via…** (Android Share Sheet via `FileProvider` + `ACTION_SEND`) and **Save to device** (SAF `CreateDocument`) MUST be available.
 - The user MUST be able to select which profile to export when more than one profile exists and the screen was not opened for a specific locked profile.
 - The export file MUST contain an empty `settings` map — app settings are never included in

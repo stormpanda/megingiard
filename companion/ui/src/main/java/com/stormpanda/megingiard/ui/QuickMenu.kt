@@ -30,7 +30,6 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -56,8 +55,6 @@ import com.stormpanda.megingiard.macropad.LayoutTransitionManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenshotTarget
-import com.stormpanda.megingiard.settings.SettingsCategory
-import com.stormpanda.megingiard.settings.SettingsSubPage
 
 private const val TAG = "QuickMenu"
 
@@ -176,35 +173,7 @@ fun QuickMenu(
                         .padding(PM_CONTENT_PADDING),
             ) {
                 // ── Profile section ────────────────────────────────────────
-                val currentActiveProfile = activeProfile
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    SectionLabel(text = stringResource(R.string.quick_menu_profile_label), colors = colors)
-                    if (currentActiveProfile != null) {
-                        QuickMenuHeaderIconButton(
-                            icon = Icons.Rounded.Share,
-                            contentDescription = stringResource(R.string.quick_menu_share_profile_cd),
-                            colors = colors,
-                            onClick = {
-                                AppStateManager.openPrimaryModal(
-                                    PrimaryModalConfig(
-                                        type = PrimaryModalType.GLOBAL_SETTINGS,
-                                        payload =
-                                            PrimaryModalPayload.GlobalSettings(
-                                                category = SettingsCategory.CONFIGURATION,
-                                                subPage = SettingsSubPage.SHARE_PROFILE,
-                                                profileId = currentActiveProfile.id,
-                                            ),
-                                    ),
-                                )
-                                onDismiss()
-                            },
-                        )
-                    }
-                }
+                SectionLabel(text = stringResource(R.string.quick_menu_profile_label), colors = colors)
                 Spacer(Modifier.height(PM_SECTION_TITLE_SPACING))
                 ProfileRow(
                     profiles = profiles,
@@ -387,11 +356,6 @@ private fun QuickMenuHelpModal(
         HelpEntry(
             label = stringResource(R.string.quick_menu_profile_label),
             description = stringResource(R.string.help_quickmenu_profiles_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Share,
-            label = stringResource(R.string.help_quickmenu_share_profile_label),
-            description = stringResource(R.string.help_quickmenu_share_profile_desc),
         )
         HelpEntry(
             label = stringResource(R.string.quick_menu_layout_label),

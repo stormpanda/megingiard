@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -70,6 +69,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -131,9 +131,7 @@ private val IH_BUTTON_ICON_SIZE = 16.dp
 private val IH_BUTTON_ICON_SPACING = 6.dp
 private val IH_BUTTON_H_PADDING = 14.dp
 private val IH_BUTTON_V_PADDING = 8.dp
-private val IH_COMPACT_ICON_BUTTON_H_PADDING = 10.dp
-private val IH_COMPACT_ICON_BUTTON_V_PADDING = 8.dp
-private val IH_COMPACT_ICON_BUTTON_MIN_WIDTH = 40.dp
+private val IH_COMPACT_ICON_BUTTON_SIZE = 40.dp
 private const val IH_HIGHLIGHT_ALPHA = 0.15f
 private val IH_BUTTON_SPACING = 10.dp
 private val IH_DROPDOWN_LINKED_ICON_SIZE = 16.dp
@@ -704,7 +702,10 @@ private fun HeroCompanionCard(
                     }
 
                     if (associatedProfile != null) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Button(
                                 onClick = {
                                     MacroPadState.setActiveProfileId(associatedProfile.id)
@@ -784,7 +785,10 @@ private fun HeroCompanionCard(
                             )
                         }
                     } else {
-                        Row(horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Button(
                                 onClick = {
                                     val assoc =
@@ -988,7 +992,10 @@ private fun HeroCompanionCard(
                         )
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Button(
                             onClick = {
                                 AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
@@ -1050,28 +1057,19 @@ private fun HubCompactIconButton(
     colors: AppColors,
     onClick: () -> Unit,
 ) {
-    OutlinedButton(
-        onClick = onClick,
+    Box(
         modifier =
-            Modifier.defaultMinSize(
-                minWidth = IH_COMPACT_ICON_BUTTON_MIN_WIDTH,
-                minHeight = ButtonDefaults.MinHeight,
-            ),
-        contentPadding =
-            PaddingValues(
-                horizontal = IH_COMPACT_ICON_BUTTON_H_PADDING,
-                vertical = IH_COMPACT_ICON_BUTTON_V_PADDING,
-            ),
-        border = BorderStroke(IH_BORDER_WIDTH, colors.controlOverlayBorder),
-        colors =
-            ButtonDefaults.outlinedButtonColors(
-                contentColor = colors.onSurface,
-            ),
-        shape = IH_BUTTON_SHAPE,
+            Modifier
+                .size(IH_COMPACT_ICON_BUTTON_SIZE)
+                .clip(IH_BUTTON_SHAPE)
+                .border(IH_BORDER_WIDTH, colors.controlOverlayBorder, IH_BUTTON_SHAPE)
+                .clickable(role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
+            tint = colors.onSurface,
             modifier = Modifier.size(IH_BUTTON_ICON_SIZE),
         )
     }

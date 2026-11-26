@@ -182,7 +182,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_import_profile_desc">Ein geteiltes .mgrd-Profil zusätzlich zu deinen Profilen importieren</string>
     <string name="integration_home_share_profile_cd">Profil teilen</string>
     <string name="integration_home_import_profile_cd">Geteiltes Profil importieren</string>
-    <string name="quick_menu_share_profile_cd">Aktives Profil teilen</string>
 
     <!-- Import preview dialog -->
     <string name="config_import_title">Konfiguration importieren</string>
@@ -885,8 +884,6 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_screenshot_both_desc">Nimmt gleichzeitig einen Screenshot beider Bildschirme auf und fügt sie vertikal zu einem Dual-Screen-Bild zusammen.</string>
     <string name="help_quickmenu_section_macropad">MacroPad-Steuerung (untere Karte)</string>
     <string name="help_quickmenu_profiles_desc">Tippe auf einen Chip, um sofort zu einem anderen Spielprofil zu wechseln (deaktiviert den Auto-Wechsel). Das aktive Profil ist hervorgehoben. Profile werden im Bereich „Profil/Layout bearbeiten“ verwaltet.</string>
-    <string name="help_quickmenu_share_profile_label">Aktives Profil teilen</string>
-    <string name="help_quickmenu_share_profile_desc">Öffnet das Profil-Teilen-Menü mit dem aktuell aktiven Profil vorausgewählt, um es über das Android-Teilen-Menü zu versenden oder als .mgrd-Datei zu speichern.</string>
     <string name="help_quickmenu_layouts_desc">Tippe auf einen Chip, um zu einem anderen Layout im aktuellen Profil zu wechseln (deaktiviert den Auto-Wechsel). Nur als aktiviert markierte Layouts erscheinen hier.</string>
     <string name="help_quickmenu_auto_switch_label">Auto-Wechsel</string>
     <string name="help_quickmenu_auto_switch_desc">Schaltet den automatischen Wechsel EIN/AUS. Bei EIN wechseln Profile, Layouts und Ansichten automatisch basierend auf dem aktiven Spiel, Emulator und Bildschirmanckern. Bei AUS ist der automatische Wechsel pausiert.</string>

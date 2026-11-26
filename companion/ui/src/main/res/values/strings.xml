@@ -182,7 +182,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_import_profile_desc">Import a shared .mgrd profile alongside your existing profiles</string>
     <string name="integration_home_share_profile_cd">Share profile</string>
     <string name="integration_home_import_profile_cd">Import shared profile</string>
-    <string name="quick_menu_share_profile_cd">Share active profile</string>
 
     <!-- Import preview dialog -->
     <string name="config_import_title">Import configuration</string>
@@ -885,8 +884,6 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_screenshot_both_desc">Takes a simultaneous screenshot of both screens and stitches them vertically into a single dual-screen image.</string>
     <string name="help_quickmenu_section_macropad">MacroPad controls (bottom card)</string>
     <string name="help_quickmenu_profiles_desc">Tap a chip to instantly switch to a different game profile (deactivates Auto Switch). The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
-    <string name="help_quickmenu_share_profile_label">Share active profile</string>
-    <string name="help_quickmenu_share_profile_desc">Opens the profile sharing screen pre-selected to the currently active profile so you can send it via Android Share Sheet or save it as a .mgrd file.</string>
     <string name="help_quickmenu_layouts_desc">Tap a chip to switch to a different layout within the current profile (deactivates Auto Switch). Only layouts marked as enabled in the editor appear here.</string>
     <string name="help_quickmenu_auto_switch_label">Auto Switch</string>
     <string name="help_quickmenu_auto_switch_desc">Toggles dynamic auto-matching ON/OFF. When ON, profiles, layouts, and companion views switch automatically based on the active game, emulator, and on-screen anchors. When OFF, automatic switching is paused.</string>

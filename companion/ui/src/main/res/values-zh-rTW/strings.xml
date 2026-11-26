@@ -182,7 +182,6 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_import_profile_desc">將分享的 .mgrd 設定檔匯入至現有設定檔旁</string>
     <string name="integration_home_share_profile_cd">分享設定檔</string>
     <string name="integration_home_import_profile_cd">匯入分享的設定檔</string>
-    <string name="quick_menu_share_profile_cd">分享使用中的設定檔</string>
 
     <!-- Import preview dialog -->
     <string name="config_import_title">匯入配置</string>
@@ -884,8 +883,6 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_screenshot_both_desc">同時截取兩個螢幕畫面，並垂直組合成單張雙螢幕圖片。</string>
     <string name="help_quickmenu_section_macropad">MacroPad 控制項 (底端卡片)</string>
     <string name="help_quickmenu_profiles_desc">輕觸標籤即可立即切換到不同的巨集設定檔。目前使用中的設定檔會醒目顯示。設定檔及其配置在「編輯設定檔／配置」畫面中建立與管理。</string>
-    <string name="help_quickmenu_share_profile_label">分享使用中的設定檔</string>
-    <string name="help_quickmenu_share_profile_desc">開啟已預選目前使用中設定檔的分享畫面，讓您透過 Android 分享選單傳送或儲存為 .mgrd 檔案。</string>
     <string name="help_quickmenu_layouts_desc">輕觸標籤即可切換到目前設定檔中的不同按鈕配置。此處只會顯示在編輯器中標記為啟用的配置。</string>
     <string name="help_quickmenu_auto_switch_label">自動切換</string>
     <string name="help_quickmenu_auto_switch_desc">切換動態設定檔自動比對開啟/關閉。開啟時，設定檔與下螢幕檢視將根據目前執行中的遊戲或模擬器自動切換。關閉時，設定檔自動比對將會暫停。</string>
