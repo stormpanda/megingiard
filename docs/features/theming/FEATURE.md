@@ -178,7 +178,7 @@ For external applications (such as the standalone Megingiard Game Focus launcher
 
 ### Settings UI — `GlobalSettingsScreen.kt`
 
-- Theme selection uses a picker/dropdown row, not a binary switch.
+- Theme selection uses a picker/dropdown row, not a binary switch. Its description (`help_settings_theme_desc`) dynamically formats `ThemeMode.entries.size` and the localized display names of all `ThemeMode` entries using `android.icu.text.ListFormatter` (`formatThemeNamesList`).
 - The Accent Color section is only shown when `themeMode.supportsCustomAccent` is `true`.
 - Accent color selection provides an inline palette card (`GamepadColorPaletteCard`) containing preset swatches (`GS_ACCENT_PALETTE_PRESETS`, backed by `AppPalettes.accentPresets`) and an action card opening a dedicated custom accent sub-page (`CustomAccentSubPage`) with Hue, Saturation, and Brightness (HSV) sliders and a Save action card.
 - The custom accent color is persisted independently (`KEY_CUSTOM_ACCENT_COLOR` / `customAccentColor`), retaining the user's custom HSV values and preview swatch even when a `GS_ACCENT_PALETTE_PRESETS` preset is actively selected.

@@ -843,7 +843,7 @@ Open Settings to create a layout.</string>
     <!-- Global Settings card descriptions -->
     <string name="help_settings_overlay_position_desc">Recommended if your hand grip naturally rests near the bottom of the device, making the Quick Menu easier to swipe open without shifting your thumbs.</string>
     <string name="help_settings_language_desc">Changes the language of all app menus, overlays, and help tutorials. Choose English, German, or Traditional Chinese depending on your preference.</string>
-    <string name="help_settings_theme_desc">Choose from 9 distinct visual themes including Dark, Dark OLED, Megingiard, Mjölnir Steel, Valhalla Sunset, Aurora Borealis, Retro Phosphor, Royal Asgard, and Niflheim Dusk.</string>
+    <string name="help_settings_theme_desc">Choose from %1$d distinct visual themes including %2$s.</string>
     <string name="help_settings_export_desc">Creates a complete backup of your custom profiles and configurations. Recommended before performing app updates or resetting settings.</string>
     <string name="help_settings_export_profile_desc">Saves a single profile to a file to share layout and macros with other players without exposing your entire app configuration.</string>
     <string name="help_settings_import_profile_desc">Imports a profile shared by another user from a .mgrd file and adds it alongside your existing profiles without overwriting your global settings.</string>
